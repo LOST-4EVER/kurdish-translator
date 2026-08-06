@@ -72,8 +72,8 @@
 
   const stripTags = (text) => text.replace(/<[^>]+>/g, '');
 
-  function loadPreview() {
-    SubtitlePlayer.load(parsed.cues.map((c) => ({ ...c, text: stripTags(c.text) })));
+  function loadPreview(cues = parsed.cues) {
+    SubtitlePlayer.load(cues.map((c) => ({ ...c, text: stripTags(c.text) })));
     els.previewTab.classList.remove('disabled');
   }
 
@@ -220,6 +220,7 @@
         : translatedCues;
 
       prepareDownload(finalCues);
+      loadPreview(finalCues);
       showStep('done');
     } catch (err) {
       console.error(err);
@@ -265,6 +266,7 @@
 
     els.translateAgainBtn.addEventListener('click', () => {
       resultText = null;
+      loadPreview(); // revert preview to the original text
       showStep('settings');
     });
   }
