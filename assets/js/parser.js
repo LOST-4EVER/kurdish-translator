@@ -1,62 +1,64 @@
 /**
  * parser.js — Parse and serialize subtitle files.
  * Supported formats: SRT, VTT, ASS, SSA, SUB (MicroDVD), SMI (SAMI).
- * Works entirely client-side. No external dependencies.
+ * Client-side only. No dependencies.
  *
- * Cue model: { index, start (ms), end (ms), text, raw }
+ * Cue model: { index, start (ms), end (ms), text }
  */
 const SubParser = (() => {
-  // ---------- SRT / VTT ----------
-  const TC = /(\d{1,2}:\d{2}:\d{2}[,.]\d{1,3})\s*-->\s*(\d{1,2}:\d{2}:\d{2}[,.]\d{1,3})/;
-
-  // ---------- ASS timestamp h:mm:ss.cc ----------
-  const ASS_TC = /(\d+:\d{2}:\d{2}\.\d{2})/;
-
-  // ---------- MicroDVD ----------
+  // ---------- Regex ----------
+  const TIMECODE = /(\d{1,2}:\d{2}:\d{2}[,.]\d{1,3})\s*-->\s*(\d{1,2}:\d{2}:\d{2}[,.]\d{1,3})/;
+  const ASS_TIMECODE = /(\d+:\d{2}:\d{2}\.\d{2})/;
   const SUB_LINE = /^\{(\d+)\}\{(\d+)\}(.*)$/;
+  const SMI_SYNC = /<SYNC[^>]*?\bStart\s*=\s*"?(\d+)"?[^>]*>(.*?)<\/SYNC>/gi;
 
-  function toMs(str) {
-    let t = str.replace(',', '.');
-    const parts = t.split('.');
-    let ms = parts.length > 1 ? parts.pop() : '0';
-    ms = ms.padEnd(3, '0').slice(0, 3);
-    const hms = parts[0].split(':').map(Number);
-    while (hms.length < 3) hms.unshift(0);
-    return hms[0] * 3600000 + hms[1] * 60000 + hms[2] * 1000 + Number(ms);
-  }
-
+  // ---------- Time helpers ----------
   const pad = (n, len = 2) => String(n).padStart(len, '0');
 
+  function splitMs(ms) {
+    return {
+      h: Math.floor(ms / 3600000),
+      m: Math.floor((ms % 3600000) / 60000),
+      s: Math.floor((ms % 60000) / 1000),
+      ms: ms % 1000,
+    };
+  }
+
+  function toMs(str) {
+    const [time, fracRaw = '0'] = str.replace(',', '.').split('.');
+    const frac = Number(fracRaw.padEnd(3, '0').slice(0, 3));
+    const [h, m, s] = time.split(':').map(Number);
+    return h * 3600000 + m * 60000 + s * 1000 + frac;
+  }
+
   function fmtSRT(ms) {
-    const h = Math.floor(ms / 3600000);
-    const m = Math.floor((ms % 3600000) / 60000);
-    const s = Math.floor((ms % 60000) / 1000);
-    const mi = ms % 1000;
-    return `${pad(h)}:${pad(m)}:${pad(s)},${pad(mi, 3)}`;
+    const t = splitMs(ms);
+    return `${pad(t.h)}:${pad(t.m)}:${pad(t.s)},${pad(t.ms, 3)}`;
   }
   function fmtVTT(ms) {
-    const h = Math.floor(ms / 3600000);
-    const m = Math.floor((ms % 3600000) / 60000);
-    const s = Math.floor((ms % 60000) / 1000);
-    const mi = ms % 1000;
-    return `${pad(h)}:${pad(m)}:${pad(s)}.${pad(mi, 3)}`;
+    const t = splitMs(ms);
+    return `${pad(t.h)}:${pad(t.m)}:${pad(t.s)}.${pad(t.ms, 3)}`;
   }
   function fmtASS(ms) {
-    const h = Math.floor(ms / 3600000);
-    const m = Math.floor((ms % 3600000) / 60000);
-    const s = Math.floor((ms % 60000) / 1000);
-    const cs = Math.floor((ms % 1000) / 10);
-    return `${h}:${pad(m)}:${pad(s)}.${pad(cs, 2)}`;
+    const t = splitMs(ms);
+    return `${t.h}:${pad(t.m)}:${pad(t.s)}.${pad(Math.floor(t.ms / 10), 2)}`;
+  }
+  function assToMs(str) {
+    const [h, m, rest] = str.split(':');
+    const [s, cs] = rest.split('.');
+    return Number(h) * 3600000 + Number(m) * 60000 + Number(s) * 1000 + Number(cs) * 10;
   }
 
   // ---------- Format detection ----------
   function detect(content) {
     const t = content.trim();
     if (/^WEBVTT/i.test(t)) return 'vtt';
-    if (/\[Events\]/i.test(t) && /^Dialogue:/m.test(t)) return /^ScriptType[^\n]*:?\s*v4\.00\+/im.test(t) ? 'ass' : 'ssa';
+    if (/\[Events\]/i.test(t) && /^Dialogue:/m.test(t)) {
+      return /ScriptType[^\n]*v4\.00\+/i.test(t) ? 'ass' : 'ssa';
+    }
     if (/^\{\d+\}\{\d+\}/m.test(t)) return 'sub';
     if (/<sync[ >]/i.test(t)) return 'smi';
-    if (TC.test(t)) return 'srt';
+    if (TIMECODE.test(t)) return 'srt';
     return 'unknown';
   }
 
@@ -64,84 +66,69 @@ const SubParser = (() => {
   function parseSRTVTT(content, isVtt) {
     const cues = [];
     const blocks = content.replace(/\r/g, '').split(/\n{2,}/);
-    let idx = 0;
     for (const block of blocks) {
       const lines = block.split('\n').filter((l) => l.trim() !== '');
-      if (!lines.length) continue;
-      let ti = -1, m = null;
-      for (let i = 0; i < lines.length; i++) {
-        const mm = lines[i].match(TC);
-        if (mm) { ti = i; m = mm; break; }
-      }
-      if (!m) continue;
-      const start = toMs(m[1]);
-      const end = toMs(m[2]);
-      let text = lines.slice(ti + 1).join('\n').trim();
-      // drop VTT header-ish lines
-      if (isVtt) {
-        const first = lines[0];
-        if (/^WEBVTT/i.test(first) || /^NOTE\b/i.test(first)) continue;
-      }
-      text = text.replace(/^NOTE[^\n]*\n?/, '');
+      const timeIdx = lines.findIndex((l) => TIMECODE.test(l));
+      const match = timeIdx >= 0 ? lines[timeIdx].match(TIMECODE) : null;
+      if (!match) continue;
+
+      const text = lines.slice(timeIdx + 1)
+        .join('\n')
+        .replace(/^NOTE[^\n]*\n?/, '')
+        .trim();
       if (!text) continue;
-      idx++;
-      cues.push({ index: idx, start, end, text, raw: text });
+
+      cues.push({
+        index: cues.length + 1,
+        start: toMs(match[1]),
+        end: toMs(match[2]),
+        text,
+      });
     }
     return cues;
   }
 
   // ---------- ASS / SSA ----------
   function parseASS(content) {
-    const rawLines = content.replace(/\r/g, '').split('\n');
-    const isSsa = !/v4\.00\+/i.test(content);
     const header = [];
-    const fmt = [];
+    const fields = [];
     const cues = [];
-    let idx = 0;
     let inEvents = false;
 
-    for (const line of rawLines) {
+    for (const line of content.replace(/\r/g, '').split('\n')) {
       if (/^\s*\[Events\]\s*$/i.test(line)) { inEvents = true; header.push(line); continue; }
       if (/^\s*\[[^\]]+\]\s*$/.test(line)) { inEvents = false; header.push(line); continue; }
-      if (inEvents) {
-        const fm = line.match(/^\s*Format\s*:\s*(.*)$/i);
-        if (fm) {
-          fmt.push(...fm[1].split(',').map((s) => s.trim()));
-          header.push(line);
-          continue;
-        }
-        const dm = line.match(/^\s*Dialogue\s*:\s*(.*)$/i);
-        if (dm) {
-          const fields = splitAss(dm[1]);
-          const map = {};
-          fmt.forEach((f, i) => { map[f.toLowerCase()] = fields[i] !== undefined ? fields[i] : ''; });
-          const text = map.text || '';
-          const t0 = (map.start || '').match(ASS_TC);
-          const t1 = (map.end || '').match(ASS_TC);
-          if (!t0 || !t1) continue;
-          const start = assToMs(t0[1]);
-          const end = assToMs(t1[1]);
-          if (!text.trim()) continue;
-          idx++;
-          cues.push({ index: idx, start, end, text, raw: text });
-          continue;
-        }
-        header.push(line); // stray event lines like Comment:
-      } else {
-        header.push(line);
+
+      if (!inEvents) { header.push(line); continue; }
+
+      const fm = line.match(/^\s*Format\s*:\s*(.*)$/i);
+      if (fm) { fields.push(...fm[1].split(',').map((s) => s.trim())); header.push(line); continue; }
+
+      const dm = line.match(/^\s*Dialogue\s*:\s*(.*)$/i);
+      if (dm) {
+        const parts = splitAss(dm[1]);
+        const map = {};
+        fields.forEach((f, i) => { map[f.toLowerCase()] = parts[i] ?? ''; });
+        const t0 = (map.start || '').match(ASS_TIMECODE);
+        const t1 = (map.end || '').match(ASS_TIMECODE);
+        const text = (map.text || '').trim();
+        if (!t0 || !t1 || !text) continue;
+        cues.push({ index: cues.length + 1, start: assToMs(t0[1]), end: assToMs(t1[1]), text });
+        continue;
       }
+
+      header.push(line); // stray event lines (Comment: etc.)
     }
 
-    return { cues, meta: { header, fmt, isSsa } };
+    return { cues, meta: { header, fields } };
   }
 
-  // Split an ASS Dialogue payload on commas, but keep commas inside {...} tags and \N intact.
+  // Split ASS Dialogue payload on commas, keeping commas inside {...} and \N intact.
   function splitAss(str) {
     const out = [];
     let cur = '';
     let depth = 0;
-    for (let i = 0; i < str.length; i++) {
-      const ch = str[i];
+    for (const ch of str) {
       if (ch === '{') depth++;
       if (ch === '}') depth = Math.max(0, depth - 1);
       if (ch === ',' && depth === 0) { out.push(cur); cur = ''; }
@@ -151,37 +138,27 @@ const SubParser = (() => {
     return out;
   }
 
-  function assToMs(str) {
-    const [h, m, rest] = str.split(':');
-    const [s, cs] = rest.split('.');
-    return Number(h) * 3600000 + Number(m) * 60000 + Number(s) * 1000 + Number(cs) * 10;
-  }
-
   // ---------- MicroDVD SUB ----------
   function parseSUB(content) {
     const lines = content.replace(/\r/g, '').split('\n');
     let fps = 23.976;
-    const startLine = lines[0] && lines[0].trim();
-    if (startLine && /^\{\d+\}\{\d+\}\s*(\d+(\.\d+)?)\s*$/.test(startLine)) {
-      const fm = startLine.match(/(\d+(\.\d+)?)\s*$/);
-      if (fm && Number(fm[1]) > 0) fps = Number(fm[1]);
+    const first = lines[0] && lines[0].trim();
+    const fpsMatch = first && first.match(/^\{\d+\}\{\d+\}\s*(\d+(?:\.\d+)?)\s*$/);
+    if (fpsMatch && Number(fpsMatch[1]) > 0) {
+      fps = Number(fpsMatch[1]);
       lines.shift();
     }
+
     const cues = [];
-    let idx = 0;
     for (const line of lines) {
       const m = line.match(SUB_LINE);
-      if (!m) continue;
-      const text = m[3].trim();
+      const text = m && m[3].trim();
       if (!text) continue;
-      const startFrame = Number(m[1]);
-      const endFrame = Number(m[2]);
-      idx++;
       cues.push({
-        index: idx,
-        start: Math.round(startFrame / fps * 1000),
-        end: Math.round(endFrame / fps * 1000),
-        text, raw: text,
+        index: cues.length + 1,
+        start: Math.round((Number(m[1]) / fps) * 1000),
+        end: Math.round((Number(m[2]) / fps) * 1000),
+        text,
       });
     }
     return { cues, meta: { fps } };
@@ -190,19 +167,21 @@ const SubParser = (() => {
   // ---------- SAMI SMI ----------
   function parseSMI(content) {
     const cues = [];
-    const syncs = content.replace(/\r/g, '');
-    const re = /<SYNC[^>]*?\bStart\s*=\s*"?(\d+)"?[^>]*>(.*?)<\/SYNC>/gi;
-    let m, prev = null;
-    while ((m = re.exec(syncs)) !== null) {
+    let prev = -1;
+    let m;
+    while ((m = SMI_SYNC.exec(content)) !== null) {
       const start = Number(m[1]);
-      let text = m[2].replace(/<[^>]+>/g, ' ').replace(/&nbsp;/gi, ' ').replace(/\s+/g, ' ').trim();
+      const text = m[2]
+        .replace(/<[^>]+>/g, ' ')
+        .replace(/&nbsp;/gi, ' ')
+        .replace(/\s+/g, ' ')
+        .trim();
       if (!text) continue;
-      const end = 0;
-      cues.push({ start, end, text, raw: text, _order: cues.length });
-      if (prev !== null) { cues[prev].end = start; }
+      if (prev >= 0) cues[prev].end = start;
+      cues.push({ start, end: 0, text });
       prev = cues.length - 1;
     }
-    if (prev !== null && cues[prev].end === 0) cues[prev].end = cues[prev].start + 3000;
+    if (prev >= 0 && cues[prev].end === 0) cues[prev].end = cues[prev].start + 3000;
     cues.forEach((c, i) => { c.index = i + 1; });
     return cues;
   }
@@ -210,81 +189,76 @@ const SubParser = (() => {
   // ---------- Main parse ----------
   function parse(content) {
     const format = detect(content);
-    if (format === 'vtt') return { format, cues: parseSRTVTT(content, true) };
-    if (format === 'srt') return { format, cues: parseSRTVTT(content, false) };
-    if (format === 'ass' || format === 'ssa') {
-      const { cues, meta } = parseASS(content);
-      return { format, cues, meta };
+    switch (format) {
+      case 'vtt': return { format, cues: parseSRTVTT(content, true) };
+      case 'srt': return { format, cues: parseSRTVTT(content, false) };
+      case 'ass':
+      case 'ssa': {
+        const { cues, meta } = parseASS(content);
+        return { format, cues, meta };
+      }
+      case 'sub': {
+        const { cues, meta } = parseSUB(content);
+        return { format, cues, meta };
+      }
+      case 'smi': return { format, cues: parseSMI(content) };
+      default: throw new Error('Unsupported subtitle format');
     }
-    if (format === 'sub') {
-      const { cues, meta } = parseSUB(content);
-      return { format, cues, meta };
-    }
-    if (format === 'smi') {
-      return { format, cues: parseSMI(content) };
-    }
-    throw new Error('Unsupported subtitle format');
   }
 
   // ---------- Serialize ----------
+  const ASS_DEFAULT_ORDER = ['Layer', 'Start', 'End', 'Style', 'Name', 'MarginL', 'MarginR', 'MarginV', 'Effect', 'Text'];
+  const ASS_FALLBACKS = { layer: '0', style: 'Default', name: '', marginl: '0', marginr: '0', marginv: '0', effect: '' };
+
   function serialize(parsed, cues) {
-    const fmt = parsed.format;
-    if (fmt === 'vtt') {
-      let out = 'WEBVTT\n\n';
-      for (const c of cues) out += `${fmtVTT(c.start)} --> ${fmtVTT(c.end)}\n${c.text}\n\n`;
-      return out.trimEnd() + '\n';
-    }
-    if (fmt === 'srt') {
-      let out = '';
-      for (const c of cues) out += `${c.index}\n${fmtSRT(c.start)} --> ${fmtSRT(c.end)}\n${c.text}\n\n`;
-      return out.trimEnd() + '\n';
-    }
-    if (fmt === 'ass' || fmt === 'ssa') {
-      const meta = parsed.meta || { header: [], fmt: [], isSsa: fmt === 'ssa' };
-      const header = meta.header || [];
-      const clean = header.filter((l) => !/^\s*Dialogue\s*:/i.test(l));
-      const order = (meta.fmt && meta.fmt.length)
-        ? meta.fmt
-        : ['Layer', 'Start', 'End', 'Style', 'Name', 'MarginL', 'MarginR', 'MarginV', 'Effect', 'Text'];
-      const fmtLine = `Format: ${order.join(', ')}`;
-      const lower = order.map((f) => f.toLowerCase());
-      let out = clean.join('\n').replace(/^\s*$/mg, '') + '\n';
-      out = out.replace(/Format:\s*[^\n]*/i, fmtLine).replace(/\n{3,}/g, '\n\n');
-      const fallbacks = { layer: '0', style: 'Default', name: '', marginl: '0', marginr: '0', marginv: '0', effect: '' };
-      for (const c of cues) {
-        const val = {};
-        order.forEach((f) => { val[f] = fallbacks[f.toLowerCase()] !== undefined ? fallbacks[f.toLowerCase()] : ''; });
-        val['Start'] = fmtASS(c.start);
-        val['End'] = fmtASS(c.end);
-        val['Text'] = c.text.replace(/\n/g, '\\N');
-        const keyOf = (k) => order[lower.indexOf(k)];
-        val[keyOf('start')] = fmtASS(c.start);
-        val[keyOf('end')] = fmtASS(c.end);
-        val[keyOf('text')] = c.text.replace(/\n/g, '\\N');
-        const parts = order.map((f) => val[f]);
-        out += `Dialogue: ${parts.join(',')}\n`;
+    switch (parsed.format) {
+      case 'vtt':
+        return 'WEBVTT\n\n' + cues.map((c) => `${fmtVTT(c.start)} --> ${fmtVTT(c.end)}\n${c.text}`).join('\n\n') + '\n';
+      case 'srt':
+        return cues.map((c) => `${c.index}\n${fmtSRT(c.start)} --> ${fmtSRT(c.end)}\n${c.text}`).join('\n\n') + '\n';
+      case 'ass':
+      case 'ssa':
+        return serializeASS(parsed, cues);
+      case 'sub': {
+        const fps = (parsed.meta && parsed.meta.fps) || 23.976;
+        const frame = (ms) => Math.round((ms / 1000) * fps);
+        const body = cues.map((c) => `{${frame(c.start)}}{${frame(c.end)}}${c.text}`).join('\n');
+        return `{1}{1}${fps.toFixed(3)}\n${body}\n`;
       }
-      return out.trimEnd() + '\n';
+      case 'smi':
+        return '<SAMI>\n<HEAD><TITLE>Kurdish subtitles</TITLE></HEAD>\n<BODY>\n' +
+          cues.map((c) => `<SYNC Start=${c.start}><P class=KURD>${escapeXml(c.text)}</P></SYNC>`).join('\n') +
+          '\n</BODY>\n</SAMI>\n';
+      default:
+        throw new Error('Unsupported format for serialization');
     }
-    if (fmt === 'sub') {
-      const fps = (parsed.meta && parsed.meta.fps) || 23.976;
-      const sf = (ms) => Math.round(ms / 1000 * fps);
-      let out = `{1}{1}${fps.toFixed(3)}\n`;
-      for (const c of cues) out += `{${sf(c.start)}}{${sf(c.end)}}${c.text}\n`;
-      return out.trimEnd() + '\n';
-    }
-    if (fmt === 'smi') {
-      let out = '<SAMI>\n<HEAD><TITLE>Kurdish subtitles</TITLE></HEAD>\n<BODY>\n';
-      for (const c of cues) {
-        out += `<SYNC Start=${c.start}><P class=KURD>${escapeSmi(c.text)}</P></SYNC>\n`;
-      }
-      out += '</BODY>\n</SAMI>\n';
-      return out;
-    }
-    throw new Error('Unsupported format for serialization');
   }
 
-  function escapeSmi(text) {
+  function serializeASS(parsed, cues) {
+    const meta = parsed.meta || {};
+    const order = (meta.fields && meta.fields.length) ? meta.fields : ASS_DEFAULT_ORDER;
+    const lower = order.map((f) => f.toLowerCase());
+    const keyOf = (k) => order[lower.indexOf(k)];
+
+    const cleanHeader = (meta.header || []).filter((l) => !/^\s*Dialogue\s*:/i.test(l)).join('\n');
+    const fmtLine = `Format: ${order.join(', ')}`;
+    const header = cleanHeader.trim()
+      ? cleanHeader.replace(/Format:[^\n]*/i, fmtLine).replace(/\n{3,}/g, '\n\n')
+      : fmtLine;
+
+    const lines = [header];
+    for (const c of cues) {
+      const val = {};
+      order.forEach((f) => { val[f] = ASS_FALLBACKS[f.toLowerCase()] ?? ''; });
+      val[keyOf('start')] = fmtASS(c.start);
+      val[keyOf('end')] = fmtASS(c.end);
+      val[keyOf('text')] = c.text.replace(/\n/g, '\\N');
+      lines.push(`Dialogue: ${order.map((f) => val[f]).join(',')}`);
+    }
+    return lines.join('\n') + '\n';
+  }
+
+  function escapeXml(text) {
     return text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
   }
 

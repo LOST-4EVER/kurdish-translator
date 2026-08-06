@@ -2,9 +2,8 @@
  * translator.js — Batch translation engine using Google Translate's free
  * web endpoint (no API key, no backend). Works on GitHub Pages.
  *
- * Batching: we send many subtitle lines joined by "\n" in a single request,
- * then split the returned array back into lines. This is far faster and
- * cheaper than one request per cue.
+ * Batching: we send many subtitle lines joined by "\n" in one request, then
+ * split the returned string back into lines. Much faster than one call per cue.
  */
 const Translator = (() => {
   const ENDPOINT = 'https://translate.googleapis.com/translate_a/single';
@@ -12,59 +11,48 @@ const Translator = (() => {
   // Keep requests modest to avoid timeouts on mobile networks.
   const BATCH_LINES = 40;
   const MAX_CHARS_PER_REQUEST = 3500;
-  const DELAY_MS = 250; // polite spacing between batches
+  const DELAY_MS = 250;         // polite spacing between batches
+  const MAX_ATTEMPTS = 4;       // retries per chunk
 
-  // Sentinel used to protect internal line breaks inside a cue so that cue
-  // boundaries (joined with "\n") stay unambiguous after translation.
-  // Chosen to contain no regex metacharacters; used with literal replaceAll.
+  // Sentinel protecting internal line breaks inside a cue so cue boundaries
+  // (joined with "\n") stay unambiguous after translation. Contains no regex
+  // metacharacters and is used with a literal split/join.
   const NL_SENTINEL = '§§';
+
+  const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+  const restoreNewlines = (s) => s.split(NL_SENTINEL).join('\n');
 
   /**
    * Translate an array of strings.
    * @param {string[]} lines source lines
    * @param {string} srcLang source lang code ('auto' allowed)
    * @param {string} tgtLang target lang code
-   * @param {function(progress:number):void} [onProgress]
+   * @param {(progress:number)=>void} [onProgress] 0..1
    * @returns {Promise<string[]>} translated lines (same length)
    */
   async function translateLines(lines, srcLang, tgtLang, onProgress) {
     const results = new Array(lines.length).fill('');
-    const indexes = lines.map((l, i) => ({ text: l, i }))
-      .filter((o) => o.text.trim() !== '')
-      .map((o) => ({ ...o, text: o.text.replace(/\r?\n/g, NL_SENTINEL) }));
-
-    const batches = [];
-    let current = { items: [], chars: 0 };
-    for (const item of indexes) {
-      if (current.items.length >= BATCH_LINES || current.chars + item.text.length > MAX_CHARS_PER_REQUEST) {
-        if (current.items.length) batches.push(current);
-        current = { items: [], chars: 0 };
-      }
-      current.items.push(item);
-      current.chars += item.text.length;
-    }
-    if (current.items.length) batches.push(current);
-
-    let done = 0;
+    const batches = buildBatches(lines);
     const total = batches.length || 1;
 
     for (let b = 0; b < batches.length; b++) {
       const batch = batches[b];
-      const query = batch.items.map((o) => o.text).join('\n');
+      const query = batch.map((o) => o.text).join('\n');
+
       try {
         const translated = await translateChunk(query, srcLang, tgtLang);
-        const parts = splitTranslated(translated, batch.items.length);
-        batch.items.forEach((o, k) => { results[o.i] = parts[k].split(NL_SENTINEL).join('\n'); });
-      } catch (err) {
-        // Fallback: translate each line individually on batch failure.
-        for (let k = 0; k < batch.items.length; k++) {
-          const o = batch.items[k];
-          try { results[o.i] = (await translateChunk(o.text, srcLang, tgtLang)).split(NL_SENTINEL).join('\n'); }
-          catch { results[o.i] = o.text.split(NL_SENTINEL).join('\n'); }
+        splitTranslated(translated, batch.length).forEach((part, k) => {
+          results[batch[k].index] = restoreNewlines(part);
+        });
+      } catch {
+        // Batch failed — fall back to one request per line.
+        for (const o of batch) {
+          try { results[o.index] = restoreNewlines(await translateChunk(o.text, srcLang, tgtLang)); }
+          catch { results[o.index] = o.text; }
         }
       }
-      done++;
-      if (onProgress) onProgress(done / total);
+
+      if (onProgress) onProgress((b + 1) / total);
       if (b < batches.length - 1) await sleep(DELAY_MS);
     }
 
@@ -72,23 +60,39 @@ const Translator = (() => {
     return results;
   }
 
-  async function translateChunk(text, srcLang, tgtLang) {
-    const params = new URLSearchParams({
-      client: 'gtx',
-      sl: srcLang,
-      tl: tgtLang,
-      dt: 't',
-      q: text,
+  /**
+   * Group non-empty lines into batches capped by line count and character count.
+   * @returns {Array<Array<{index:number,text:string}>>}
+   */
+  function buildBatches(lines) {
+    const batches = [];
+    let current = [];
+    let chars = 0;
+
+    lines.forEach((text, index) => {
+      if (!text.trim()) return;
+      if (current.length >= BATCH_LINES || chars + text.length > MAX_CHARS_PER_REQUEST) {
+        batches.push(current);
+        current = [];
+        chars = 0;
+      }
+      current.push({ index, text: text.replace(/\r?\n/g, NL_SENTINEL) });
+      chars += text.length;
     });
-    // Retry with exponential backoff to ride out transient errors/rate limits.
-    const MAX_ATTEMPTS = 4;
+
+    if (current.length) batches.push(current);
+    return batches;
+  }
+
+  /** Translate one chunk, retrying with exponential backoff. */
+  async function translateChunk(text, srcLang, tgtLang) {
+    const params = new URLSearchParams({ client: 'gtx', sl: srcLang, tl: tgtLang, dt: 't', q: text });
+    const url = `${ENDPOINT}?${params.toString()}`;
     let lastErr;
+
     for (let attempt = 0; attempt < MAX_ATTEMPTS; attempt++) {
       try {
-        const res = await fetch(`${ENDPOINT}?${params.toString()}`, {
-          method: 'GET',
-          headers: { 'Accept': 'application/json' },
-        });
+        const res = await fetch(url, { method: 'GET', headers: { 'Accept': 'application/json' } });
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         const data = await res.json();
         const out = data[0].map((seg) => seg[0]).join('');
@@ -96,31 +100,21 @@ const Translator = (() => {
         throw new Error('Empty response');
       } catch (err) {
         lastErr = err;
-        if (attempt < MAX_ATTEMPTS - 1) await sleep(600 * Math.pow(2, attempt) + Math.random() * 400);
+        if (attempt < MAX_ATTEMPTS - 1) await sleep(600 * 2 ** attempt + Math.random() * 400);
       }
     }
     throw lastErr;
   }
 
   /**
-   * The endpoint joins our "\n" separated lines and returns them as segments.
-   * Reconstruct them. If we can't match, fall back to treating newlines as separators.
+   * Reconstruct per-line results from a batch response. Google usually keeps
+   * our "\n" separators; if it merges lines we align by padding the tail.
    */
   function splitTranslated(translated, expectedCount) {
-    const byNewline = translated.split('\n');
-    if (byNewline.length >= expectedCount) {
-      // Trim but preserve emptiness for the tail.
-      const trimmed = byNewline.slice(0, expectedCount).map((s) => s.trim());
-      while (trimmed.length < expectedCount) trimmed.push('');
-      return trimmed;
-    }
-    // Sometimes Google merges — do our best to pad/align.
-    const parts = translated.split('\n');
+    const parts = translated.split('\n').slice(0, expectedCount).map((s) => s.trim());
     while (parts.length < expectedCount) parts.push('');
     return parts;
   }
-
-  const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
   return { translateLines };
 })();
