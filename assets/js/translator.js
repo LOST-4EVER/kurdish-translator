@@ -64,7 +64,7 @@ const Translator = (() => {
     const totalLines = batches.reduce((n, b) => n + b.length, 0);
     const isArabic = ARABIC_SCRIPT.has(tgtLang);
     // Normalized originals, used to detect lines Google returned verbatim.
-    const origNorm = lines.map((l) => normalizeText(restoreNewlines(l), isArabic));
+    const origNorm = lines.map((l) => normalizeText(restoreNewlines((l || '').replace(/\r/g, '')), isArabic));
     let doneLines = 0;
 
     for (let b = 0; b < batches.length; b++) {
@@ -99,20 +99,25 @@ const Translator = (() => {
     // Optional accuracy pass: Google sometimes echoes a line back verbatim
     // instead of translating it. Retry those individually once.
     if (opts.accuracy) {
+      const retries = [];
       for (let i = 0; i < lines.length; i++) {
         const orig = lines[i] || '';
         if (!orig.trim()) continue;
-        if (!results[i]) continue;                 // already fell back to original
+        if (!results[i]) continue;                              // already fell back to original
         if (normalizeText(results[i], isArabic) !== origNorm[i]) continue; // actually translated
-        if (!/\p{L}/u.test(orig)) continue;        // skip pure numbers / punctuation
+        if (!/\p{L}/u.test(orig)) continue;                     // pure numbers / punctuation
+        retries.push(i);
+      }
+      const retryTotal = retries.length;
+      for (let k = 0; k < retryTotal; k++) {
+        const i = retries[k];
         throwIfAborted(signal);
         try {
-          const t = await translateChunk(orig, srcLang, tgtLang, signal);
+          const t = await translateChunk(lines[i], srcLang, tgtLang, signal);
           const norm = normalizeText(restoreNewlines(t.trim()), isArabic);
           if (norm && norm !== origNorm[i]) results[i] = norm;
         } catch { /* keep the previous result */ }
-        doneLines++;
-        if (onProgress) onProgress(doneLines / totalLines, doneLines, totalLines);
+        if (onProgress) onProgress((doneLines + k + 1) / (totalLines + retryTotal), doneLines + k + 1, totalLines + retryTotal);
       }
     }
 

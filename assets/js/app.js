@@ -96,6 +96,18 @@
   const stripTags = (text) => text.replace(/<[^>]+>/g, '').replace(/\{[^}]*\}/g, '');
   // ASS/SSA line breaks are stored as \N; render them as real newlines.
   const displayText = (text) => stripTags(text).replace(/\\N/g, '\n');
+  const dirFor = (text) => (hasArabic(text) ? 'rtl' : 'ltr');
+
+  /** Write a user edit into a cue: player screen, dirty flag, debounced download. */
+  function applyCueEdit(i, text) {
+    if (i < 0 || !workCues[i]) return;
+    workCues[i].text = text;
+    SubtitlePlayer.updateText(i, stripTags(text));
+    dirty = true;
+    updateStatus();
+    clearTimeout(prepareTimer);
+    prepareTimer = setTimeout(prepareDownload, 250);
+  }
 
   function loadPreview(cues = workCues) {
     SubtitlePlayer.load(cues.map((c) => ({ ...c, text: displayText(c.text) })));
@@ -159,7 +171,7 @@
       const input = document.createElement('textarea');
       input.className = 'ed-input';
       input.value = displayText(c.text);
-      input.setAttribute('dir', /[\u0600-\u06FF\u0750-\u077F]/.test(input.value) ? 'rtl' : 'ltr');
+      input.setAttribute('dir', dirFor(input.value));
       input.setAttribute('aria-label', `Cue ${i + 1} text`);
       row.appendChild(input);
       list.appendChild(row);
@@ -167,12 +179,7 @@
 
       input.addEventListener('input', () => {
         autoGrow(input);
-        workCues[i].text = input.value;
-        SubtitlePlayer.updateText(i, stripTags(input.value));
-        dirty = true;
-        updateStatus();
-        clearTimeout(prepareTimer);
-        prepareTimer = setTimeout(prepareDownload, 250);
+        applyCueEdit(i, input.value);
       });
       input.addEventListener('focus', () => row.classList.add('editing'));
       input.addEventListener('blur', () => row.classList.remove('editing'));
@@ -230,7 +237,7 @@
   function updateFsScreen() {
     const cue = activeIdx >= 0 && workCues[activeIdx] ? workCues[activeIdx] : null;
     els.fsText.textContent = cue ? displayText(cue.text) : '';
-    els.fsText.setAttribute('dir', cue && hasArabic(cue.text) ? 'rtl' : 'ltr');
+    els.fsText.setAttribute('dir', cue ? dirFor(cue.text) : 'ltr');
     els.fsCueCount.textContent = cue ? `${cue.index} / ${workCues.length}` : '';
   }
 
@@ -238,7 +245,7 @@
     if (i < 0 || !workCues[i]) return;
     fsCueIndex = i;
     els.fsInput.value = displayText(workCues[i].text);
-    els.fsInput.setAttribute('dir', hasArabic(els.fsInput.value) ? 'rtl' : 'ltr');
+    els.fsInput.setAttribute('dir', dirFor(els.fsInput.value));
   }
 
   function openFsEditor() {
@@ -275,12 +282,7 @@
 
     els.fsInput.addEventListener('input', () => {
       if (fsCueIndex < 0 || !workCues[fsCueIndex]) return;
-      workCues[fsCueIndex].text = els.fsInput.value;
-      SubtitlePlayer.updateText(fsCueIndex, stripTags(els.fsInput.value));
-      dirty = true;
-      updateStatus();
-      clearTimeout(prepareTimer);
-      prepareTimer = setTimeout(prepareDownload, 250);
+      applyCueEdit(fsCueIndex, els.fsInput.value);
       updateFsScreen();
     });
 
@@ -461,7 +463,7 @@
   }
 
   function prepareDownload() {
-    if (!parsed) return;
+    if (!parsed || !file) return;
     // Edits are included in the output only when "Save edits" is on.
     const cues = els.saveEditsToggle.checked ? workCues : baseCues;
     resultText = SubParser.serialize(parsed, cues);
@@ -498,6 +500,8 @@
     });
 
     els.translateAgainBtn.addEventListener('click', () => {
+      if (!parsed) return;
+      if (resultUrl) { URL.revokeObjectURL(resultUrl); resultUrl = null; }
       resultText = null;
       updateCues(parsed.cues); // revert preview + editor to the original text
       showStep('settings');

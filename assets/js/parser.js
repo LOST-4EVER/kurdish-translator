@@ -56,7 +56,7 @@ const SubParser = (() => {
   function detect(content) {
     const t = content.trim();
     if (/^WEBVTT/i.test(t)) return 'vtt';
-    if (/\[Events\]/i.test(t) && /^Dialogue:/m.test(t)) {
+    if (/\[Events\]/i.test(t) && /^\s*Dialogue\s*:/m.test(t)) {
       return /ScriptType[^\n]*v4\.00\+/i.test(t) ? 'ass' : 'ssa';
     }
     if (/^\{\d+\}\{\d+\}/m.test(t)) return 'sub';
