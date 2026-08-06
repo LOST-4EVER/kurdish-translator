@@ -153,6 +153,12 @@ body {
 @keyframes rise { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: none; } }
 .hidden { display: none !important; }
 
+/* Accessible keyboard focus for all interactive controls */
+:is(button, a, select, textarea, .dropzone):focus-visible {
+  outline: 2px solid var(--md-primary);
+  outline-offset: 2px;
+}
+
 /* ---------- Dropzone (M3 surface-container-highest) ---------- */
 .dropzone {
   border: 2px dashed var(--md-outline); border-radius: var(--md-shape-lg);
@@ -555,6 +561,10 @@ select:focus { outline: none; border-color: var(--md-primary); box-shadow: 0 0 0
   .ed-row { gap: 8px; }
   .ed-meta { flex-basis: 104px; }
   .ed-time { font-size: 9px; letter-spacing: 0; }
+  .controls { gap: 6px; padding: 6px 8px 12px; }
+  .ctrl-btn { width: 38px; height: 38px; font-size: 15px; }
+  .time { min-width: 0; font-size: 11px; }
+  .speed-label { display: none; }
 }
 
 /* Desktop: cap card width so long lines stay readable on big screens */

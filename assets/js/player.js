@@ -70,6 +70,7 @@ const SubtitlePlayer = (() => {
   function load(newCues) {
     stop();
     cues = newCues || [];
+    cursor = -1;
     total = cues.reduce((max, c) => Math.max(max, c.end), 0);
     buildTimeline();
     pos = 0;
@@ -80,13 +81,15 @@ const SubtitlePlayer = (() => {
   function buildTimeline() {
     el.tlCues.innerHTML = '';
     if (!total) return;
+    const frag = document.createDocumentFragment();
     for (const c of cues) {
       const seg = document.createElement('div');
       seg.className = 'tl-seg';
       seg.style.left = `${(c.start / total) * 100}%`;
       seg.style.width = `${Math.max(0.5, ((c.end - c.start) / total) * 100)}%`;
-      el.tlCues.appendChild(seg);
+      frag.appendChild(seg);
     }
+    el.tlCues.appendChild(frag);
   }
 
   function play() {
@@ -129,8 +132,24 @@ const SubtitlePlayer = (() => {
     refresh(true);
   }
 
+  /** Find the cue active at pos. Cues are sorted by start, so a cached cursor
+   *  plus binary search keeps this O(log n) worst-case and O(1) during playback. */
+  let cursor = -1;
+  function cueAt(pos) {
+    const cur = cursor >= 0 ? cues[cursor] : null;
+    if (cur && pos >= cur.start && pos < cur.end) return cursor; // still in the same cue
+    let lo = 0, hi = cues.length - 1, best = -1;
+    while (lo <= hi) {
+      const mid = (lo + hi) >> 1;
+      if (cues[mid].start <= pos) { best = mid; lo = mid + 1; }
+      else hi = mid - 1;
+    }
+    cursor = best >= 0 && pos < cues[best].end ? best : -1;
+    return cursor;
+  }
+
   function refresh(force = false) {
-    const idx = cues.findIndex((c) => pos >= c.start && pos < c.end);
+    const idx = cueAt(pos);
     const cue = idx >= 0 ? cues[idx] : null;
     const changed = cue !== activeCue;
 

@@ -147,6 +147,7 @@
       return;
     }
 
+    const frag = document.createDocumentFragment();
     workCues.forEach((c, i) => {
       const row = document.createElement('div');
       row.className = 'ed-row';
@@ -174,7 +175,7 @@
       input.setAttribute('dir', dirFor(input.value));
       input.setAttribute('aria-label', `Cue ${i + 1} text`);
       row.appendChild(input);
-      list.appendChild(row);
+      frag.appendChild(row);
       autoGrow(input);
 
       input.addEventListener('input', () => {
@@ -190,6 +191,7 @@
         if (!SubtitlePlayer.playing) SubtitlePlayer.play();
       });
     });
+    list.appendChild(frag);
   }
 
   function scrollRowIntoView(row) {
