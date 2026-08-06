@@ -48,6 +48,13 @@ branch (`https://LOST-4EVER.github.io/kurdish-translator/`).
   `Format:` field order/case when serializing (players are case-sensitive).
 - Translation is a live fetch to Google's free `translate_a/single` endpoint;
   needs network. `translator.js` retries with backoff on transient errors.
+- **Sorani punctuation** (`normalizeText`): for Arabic-script targets, comma `,` →
+  `،`, semicolon `;` → `؛`, question `?` → `؟`; period `.` and exclamation `!`
+  stay ASCII. Space before punctuation is stripped; punctuation stranded on its
+  own line is pulled up. Per r12a/Kurdish Academy orthography notes.
+- **Kurdish rendering**: RTL subtitle text uses `Noto Naskh Arabic` (via Google
+  Fonts in `index.html`) because Inter lacks Arabic-script glyphs. Applied only
+  to `.screen-text[dir="rtl"]`.
 
 ## Style
 

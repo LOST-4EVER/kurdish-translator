@@ -27,16 +27,18 @@ const Translator = (() => {
   const hasArabicScript = (s) => /[\u0600-\u06FF\u0750-\u077F]/.test(s);
 
   /**
-   * Clean up Google's typography for a subtitle line:
+   * Clean up Google's typography for a subtitle line, applying Sorani Kurdish
+   * conventions (r12a orthography notes / Kurdish Academy):
    *  - remove stray space before punctuation  ("word !" -> "word!")
    *  - pull punctuation that landed on its own line up to the previous line
-   *  - use the Arabic question mark for Sorani/Kurdish
+   *  - use the Arabic script marks: comma "،", semicolon "؛", question "؟"
+   *    (period "." and exclamation "!" stay ASCII)
    */
   function normalizeText(text, isArabic) {
     let t = text
-      .replace(/\s+([.,!?;:،؟]+)/g, '$1')
-      .replace(/\n([.,!?;:،؟]+)/g, '$1');
-    if (isArabic) t = t.replace(/\?/g, '؟');
+      .replace(/\s+([.,!?;:،؛؟]+)/g, '$1')
+      .replace(/\n([.,!?;:،؛؟]+)/g, '$1');
+    if (isArabic) t = t.replace(/,/g, '،').replace(/;/g, '؛').replace(/\?/g, '؟');
     return t;
   }
 

@@ -210,6 +210,7 @@ select:focus { outline: none; border-color: var(--accent); }
 .screen.live { border: 2px solid rgba(34, 197, 94, 0.4); }
 .screen-text[dir="rtl"] {
   direction: rtl; unicode-bidi: isolate; line-height: 1.6;
+  font-family: "Noto Naskh Arabic", "Segoe UI", "Tahoma", sans-serif;
 }
 
 .timeline {
