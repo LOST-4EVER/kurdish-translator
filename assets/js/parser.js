@@ -11,7 +11,6 @@ const SubParser = (() => {
   const TIMECODE = /(\d{1,2}:\d{2}(?::\d{2})?[,.]\d{1,3})\s*-->\s*(\d{1,2}:\d{2}(?::\d{2})?[,.]\d{1,3})/;
   const ASS_TIMECODE = /(\d+:\d{2}:\d{2}\.\d{2})/;
   const SUB_LINE = /^\{(\d+)\}\{(\d+)\}(.*)$/;
-  const SMI_SYNC = /<SYNC[^>]*?\bStart\s*=\s*"?(\d+)"?[^>]*>(.*?)<\/SYNC>/gi;
 
   // ---------- Time helpers ----------
   const pad = (n, len = 2) => String(n).padStart(len, '0');
@@ -119,6 +118,13 @@ const SubParser = (() => {
       if (dm) {
         const parts = splitAss(dm[1]);
         const map = {};
+        // The Text field is last and may itself contain commas. If splitting
+        // produced more parts than fields, fold the extras back into Text.
+        const textField = fields.findIndex((f) => f.toLowerCase() === 'text');
+        if (parts.length > fields.length && textField >= 0) {
+          parts[textField] = parts.slice(textField).join(',');
+          parts.length = fields.length;
+        }
         fields.forEach((f, i) => { map[f.toLowerCase()] = parts[i] ?? ''; });
         const t0 = (map.start || '').match(ASS_TIMECODE);
         const t1 = (map.end || '').match(ASS_TIMECODE);
@@ -163,8 +169,10 @@ const SubParser = (() => {
     const cues = [];
     for (const line of lines) {
       const m = line.match(SUB_LINE);
-      const text = m && m[3].trim();
+      let text = m && m[3].trim();
       if (!text) continue;
+      // Pipe '|' is MicroDVD's line-break marker; keep control codes {...} as-is.
+      text = text.replace(/\|/g, '\n');
       cues.push({
         index: cues.length + 1,
         start: Math.round((Number(m[1]) / fps) * 1000),
@@ -176,20 +184,42 @@ const SubParser = (() => {
   }
 
   // ---------- SAMI SMI ----------
+  // A <SYNC Start=...> block runs until the next <SYNC> (or </BODY>/EOF);
+  // many real SAMI files omit </SYNC> tags, so we must not rely on them.
+  const SMI_BLOCK = /<SYNC\b[^>]*?\bStart\s*=\s*"?(\d+)"?[^>]*>([\s\S]*?)(?=<SYNC\b|<\/BODY>|$)/gi;
+
+  // Extract the text of each <P> paragraph in a SYNC block, decoding HTML.
+  function samiParagraphs(content) {
+    const paras = [];
+    content.split(/<P\b[^>]*>/i).forEach((block) => {
+      const text = block
+        .replace(/<\/P\s*>/gi, '')
+        .replace(/<br\s*\/?>/gi, '\n')
+        .replace(/<[^>]+>/g, ' ')
+        .replace(/&nbsp;/gi, ' ')
+        .replace(/&amp;/gi, '&')
+        .replace(/&lt;/gi, '<')
+        .replace(/&gt;/gi, '>')
+        .replace(/&quot;/gi, '"')
+        .replace(/&#39;/gi, "'")
+        .replace(/\s+/g, ' ')
+        .trim();
+      if (text) paras.push(text);
+    });
+    return paras;
+  }
+
   function parseSMI(content) {
     const cues = [];
     let prev = -1;
     let m;
-    while ((m = SMI_SYNC.exec(content)) !== null) {
+    while ((m = SMI_BLOCK.exec(content)) !== null) {
       const start = Number(m[1]);
-      const text = m[2]
-        .replace(/<[^>]+>/g, ' ')
-        .replace(/&nbsp;/gi, ' ')
-        .replace(/\s+/g, ' ')
-        .trim();
-      if (!text) continue;
+      // First non-empty paragraph; a single-language file has exactly one <P>.
+      const para = samiParagraphs(m[2])[0];
+      if (!para) continue;
       if (prev >= 0) cues[prev].end = start;
-      cues.push({ start, end: 0, text });
+      cues.push({ start, end: 0, text: para });
       prev = cues.length - 1;
     }
     if (prev >= 0 && cues[prev].end === 0) cues[prev].end = cues[prev].start + 3000;
@@ -233,12 +263,12 @@ const SubParser = (() => {
       case 'sub': {
         const fps = (parsed.meta && parsed.meta.fps) || 23.976;
         const frame = (ms) => Math.round((ms / 1000) * fps);
-        const body = cues.map((c) => `{${frame(c.start)}}{${frame(c.end)}}${c.text}`).join('\n');
+        const body = cues.map((c) => `{${frame(c.start)}}{${frame(c.end)}}${c.text.replace(/\n/g, '|')}`).join('\n');
         return `{1}{1}${fps.toFixed(3)}\n${body}\n`;
       }
       case 'smi':
         return '<SAMI>\n<HEAD><TITLE>Kurdish subtitles</TITLE></HEAD>\n<BODY>\n' +
-          cues.map((c) => `<SYNC Start=${c.start}><P class=KURD>${escapeXml(c.text)}</P></SYNC>`).join('\n') +
+          cues.map((c) => `<SYNC Start=${c.start}><P class=KURD>${escapeXml(c.text).replace(/\n/g, '<br>')}</P></SYNC>`).join('\n') +
           '\n</BODY>\n</SAMI>\n';
       default:
         throw new Error('Unsupported format for serialization');

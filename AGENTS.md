@@ -57,6 +57,16 @@ Deployed to GitHub Pages from the `main` branch
 - **SRT/VTT parsing is line-based**, not blank-line-separated. A line immediately
   followed by a timing line is a cue identifier/index and is skipped. Adding
   blank-line-splitting would regress support for compact files.
+- **SAMI (`smi`)**: a `<SYNC Start=…>` block runs until the next `<SYNC>` (or
+  `</BODY>`/EOF) — real SAMI files often omit `</SYNC>`, so the parser must not
+  rely on it. `<br>` → newline; HTML tags stripped; entities decoded. Multi-`<P>`
+  blocks pick the first non-empty paragraph. On write, newlines → `<br>`.
+- **MicroDVD (`sub`)**: `|` is the line-break marker — convert to newlines on
+  parse and back to `|` on serialize. `{...}` control codes (`{y:b}`, `{c:$…}`,
+  `{P:x,y}`, `{f:…}`) are text and preserved as-is.
+- **ASS/SSA**: the `Text` field is last and may contain commas. `splitAss` splits
+  on top-level commas, but extra parts beyond the field count are folded back
+  into `Text` so "Hello, world" isn't truncated.
 - **Translator newline protection**: internal line breaks use the sentinel `§§`
   (`NL_SENTINEL`) and are restored with literal `.split()/.join()` — NOT regex.
   `§§` must stay free of regex metacharacters or every character gets split.
