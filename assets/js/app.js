@@ -39,6 +39,7 @@
     translateAgainBtn: '#translateAgainBtn', doneFormat: '#doneFormat', doneSize: '#doneSize',
     previewBtn: '#previewBtn',
     previewTab: '#previewTab', tabTranslate: '#tabTranslate', tabPreview: '#tabPreview',
+    installBtn: '#installBtn',
     toast: '#toast',
   });
   const tabButtons = $$('.tab');
@@ -297,6 +298,26 @@
     bindDropzone();
     bindActions();
     SubtitlePlayer.init();
+
+    // PWA: register service worker for installability + offline app shell.
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('./sw.js').catch(() => {});
+    }
+
+    // Show an Install button when the browser allows it (Android/desktop).
+    let deferredInstall = null;
+    window.addEventListener('beforeinstallprompt', (e) => {
+      e.preventDefault();
+      deferredInstall = e;
+      els.installBtn.hidden = false;
+    });
+    els.installBtn.addEventListener('click', async () => {
+      if (!deferredInstall) return;
+      deferredInstall.prompt();
+      await deferredInstall.userChoice;
+      deferredInstall = null;
+      els.installBtn.hidden = true;
+    });
 
     els.srcLang.value = store.get('srcLang', 'auto');
     els.keepOnly.checked = store.get('keepOnly', '0') === '1';

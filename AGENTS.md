@@ -1,8 +1,24 @@
 # AGENTS.md
 
 Static, build-free single-page app (HTML + vanilla JS/CSS). No package.json, no
-build, no test framework, no linter. Deployed to GitHub Pages from the `main`
-branch (`https://LOST-4EVER.github.io/kurdish-translator/`).
+build, no test framework, no linter. **Progressive Web App**: installable on
+Android/iOS via `manifest.json`; `sw.js` caches the app shell so the UI and
+preview player work **offline** (translation itself needs the network).
+Deployed to GitHub Pages from the `main` branch
+(`https://LOST-4EVER.github.io/kurdish-translator/`).
+
+## PWA / offline
+
+- `manifest.json` (root): name, icons, `display: standalone`, theme/background.
+  Icons live in `assets/icons/` (`icon-192`, `icon-512`, `maskable-512`,
+  `apple-touch-icon`). If you regenerate them, keep opaque `maskable-512` with
+  content in the center safe zone; don't overwrite it with the rounded version.
+- `sw.js`: precaches the app shell on install (list in `ASSETS`), cache-first
+  for same-origin GETs, network-only for cross-origin (Google Translate).
+  **Version the cache** (`kurdish-translator-v1`) whenever you change any
+  cached asset, or users get stale files.
+- `app.js` registers the service worker and shows an Install button via the
+  `beforeinstallprompt` event.
 
 ## Commands
 

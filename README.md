@@ -2,6 +2,8 @@
 
 Translate subtitle files into **Kurdish (Sorani)** right in your browser.
 No upload, no signup, no backend — 100% client-side, hosted free on GitHub Pages.
+**Installable as a PWA** on Android/iOS; the app loads and previews subtitles
+**offline**, and only translation needs a connection.
 
 Target: **Kurdish Sorani / کوردیی ناوەندی** (`ckb`).
 
@@ -31,6 +33,8 @@ Works on desktop, Android, and iOS.
 - 🎞️ Built-in preview player: play cues on a 16:9 screen, seek, speed 0.5×–2×
 - ✍️ Sorani typography: `,`→`،` `;`→`؛` `?`→`؟`, proper RTL rendering with `Noto Naskh Arabic`
 - 📱 Fully responsive mobile UI with progress bar and cancel
+- 📲 **Installable PWA** — add to home screen on Android/iOS (works standalone)
+- 🛰️ **Offline app shell** — loads and previews subtitles with no connection
 - 🔒 Files never leave your device
 
 ## 🚀 Deploy to GitHub Pages
@@ -51,14 +55,17 @@ Works on desktop, Android, and iOS.
 
 ```
 ├── index.html              # Single-page UI
+├── manifest.json           # PWA manifest (installable)
+├── sw.js                   # Service worker (offline app shell)
 ├── AGENTS.md               # Agent instructions / conventions
 ├── assets/
 │   ├── css/style.css       # Styling / responsive layout
+│   ├── icons/              # PWA icons (192, 512, maskable, apple-touch)
 │   └── js/
 │       ├── parser.js       # 6 subtitle formats: parse + serialize
 │       ├── translator.js   # Google batch translation engine (retry + backoff, Sorani normalization)
 │       ├── player.js       # Preview subtitle player (16:9 screen, RTL-aware)
-│       └── app.js          # UI logic, file drop/encoding, download
+│       └── app.js          # UI logic, file drop/encoding, download, SW registration
 ```
 
 Scripts load in this order (do not reorder): `parser.js` → `translator.js` →

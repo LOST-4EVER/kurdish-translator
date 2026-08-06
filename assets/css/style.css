@@ -26,6 +26,8 @@ body {
   display: flex;
   flex-direction: column;
   -webkit-font-smoothing: antialiased;
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
 }
 
 .app { flex: 1; display: flex; flex-direction: column; width: 100%; max-width: 640px; margin: 0 auto; padding: 0 16px; }
@@ -33,8 +35,9 @@ body {
 /* ---------- Topbar ---------- */
 .topbar {
   display: flex; align-items: center; justify-content: space-between;
-  padding: 18px 4px 14px;
+  padding: calc(18px + env(safe-area-inset-top, 0px)) 4px 14px;
 }
+.topbar-actions { display: flex; align-items: center; gap: 8px; }
 .brand { display: flex; align-items: center; gap: 12px; }
 .logo {
   width: 42px; height: 42px; border-radius: 12px; display: grid; place-items: center;
@@ -56,6 +59,7 @@ body {
 /* ---------- Tabs ---------- */
 .tabs {
   display: flex; gap: 6px; padding: 6px 4px 12px;
+  padding-top: calc(6px + env(safe-area-inset-top, 0px));
   position: sticky; top: 0; z-index: 20;
   background: linear-gradient(180deg, rgba(11, 13, 26, 0.96) 70%, transparent);
   backdrop-filter: blur(8px);
@@ -254,8 +258,11 @@ select:focus { outline: none; border-color: var(--accent); }
 .player-note { text-align: center; font-size: 12px; color: var(--muted); padding: 12px 16px 16px; }
 
 /* ---------- Footer ---------- */
-.footer { padding: 10px 0 22px; text-align: center; }
+.footer { padding: 10px 0 calc(22px + env(safe-area-inset-bottom, 0px)); text-align: center; }
 .footer p { font-size: 12px; color: var(--muted); }
+
+/* ---------- Install button ---------- */
+#installBtn { display: inline-flex; align-items: center; gap: 6px; }
 
 /* ---------- Toast ---------- */
 .toast {
@@ -272,4 +279,21 @@ select:focus { outline: none; border-color: var(--accent); }
   .settings-grid { grid-template-columns: 1fr; }
   .card { padding: 18px; }
   .dropzone { padding: 32px 16px; }
+  .tab { padding: 13px 11px; }
+  .done-actions { gap: 9px; }
+  .btn-primary, .btn-secondary, .btn-tertiary { padding: 15px; }
+  .player-note { display: none; }
+  .screen-text { font-size: clamp(18px, 6vw, 34px); }
+}
+
+/* Two-across primary actions once there's room */
+@media (min-width: 400px) {
+  .done-actions { display: grid; grid-template-columns: 1fr 1fr; }
+  .done-actions .btn-tertiary { grid-column: 1 / -1; }
+}
+
+/* Toast sits above the Android gesture bar when installed */
+@media (display-mode: standalone) {
+  .toast { bottom: calc(24px + env(safe-area-inset-bottom, 0px)); }
+  .controls { padding-bottom: calc(14px + env(safe-area-inset-bottom, 0px)); }
 }
