@@ -87,7 +87,36 @@
   tabButtons.forEach((b) => b.addEventListener('click', () => switchTab(b.dataset.tab)));
 
   // ---------- File handling ----------
-  function handleFile(f) {
+  const encodeBites = (n) => n < 1024 ? `${n} B`
+    : n < 1048576 ? `${(n / 1024).toFixed(1)} KB`
+    : `${(n / 1048576).toFixed(1)} MB`;
+
+  /** Read a file as text, auto-detecting BOM / UTF-16 / UTF-8 encoding. */
+  function readFileAsText(f) {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onerror = () => reject(reader.error);
+      reader.onload = () => {
+        const bytes = new Uint8Array(reader.result);
+        resolve(decodeBytes(bytes));
+      };
+      reader.readAsArrayBuffer(f);
+    });
+  }
+
+  function decodeBytes(bytes) {
+    let encoding = 'utf-8';
+    if (bytes.length >= 3 && bytes[0] === 0xef && bytes[1] === 0xbb && bytes[2] === 0xbf) encoding = 'utf-8';
+    else if (bytes.length >= 2 && bytes[0] === 0xff && bytes[1] === 0xfe) encoding = 'utf-16le';
+    else if (bytes.length >= 2 && bytes[0] === 0xfe && bytes[1] === 0xff) encoding = 'utf-16be';
+    try {
+      return new TextDecoder(encoding).decode(bytes).replace(/^\uFEFF/, '');
+    } catch {
+      return new TextDecoder('utf-8').decode(bytes).replace(/^\uFEFF/, '');
+    }
+  }
+
+  async function handleFile(f) {
     if (!f) return;
     const ext = f.name.split('.').pop().toLowerCase();
     if (!ALLOWED_EXT.includes(ext)) {
@@ -95,28 +124,29 @@
       return;
     }
 
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      try { parsed = SubParser.parse(e.target.result); }
-      catch { toast('Could not read this subtitle file.', true); return; }
+    let text;
+    try { text = await readFileAsText(f); }
+    catch { toast('Failed to read file.', true); return; }
 
-      if (!parsed.cues.length) { toast('No subtitles found in this file.', true); return; }
+    let parsedFile;
+    try { parsedFile = SubParser.parse(text); }
+    catch { toast('Could not detect subtitle content in this file.', true); return; }
+    if (!parsedFile.cues.length) { toast('No subtitles found in this file.', true); return; }
 
-      file = f;
-      resultText = null;
-      els.fileName.textContent = f.name;
-      els.fileMeta.textContent = `${parsed.cues.length} lines • ${LABEL[parsed.format] || parsed.format.toUpperCase()}`;
-      loadPreview();
-      showStep('settings');
-    };
-    reader.onerror = () => toast('Failed to read file.', true);
-    reader.readAsText(f, 'UTF-8');
+    file = f;
+    parsed = parsedFile;
+    resultText = null;
+    els.fileName.textContent = f.name;
+    els.fileMeta.textContent = `${parsed.cues.length} lines • ${encodeBites(f.size)} • ${LABEL[parsed.format] || parsed.format.toUpperCase()}`;
+    loadPreview();
+    showStep('settings');
   }
 
   function bindDropzone() {
     els.dropzone.addEventListener('click', () => els.fileInput.click());
     els.fileInput.addEventListener('change', (e) => { handleFile(e.target.files[0]); e.target.value = ''; });
 
+    // Dropzone highlight
     ['dragenter', 'dragover'].forEach((ev) =>
       els.dropzone.addEventListener(ev, (e) => { e.preventDefault(); els.dropzone.classList.add('dragover'); })
     );
@@ -132,6 +162,30 @@
     });
 
     els.changeFile.addEventListener('click', () => { els.fileInput.value = ''; els.fileInput.click(); });
+
+    // Whole-page drop target: accept a file dropped anywhere on the page.
+    let dragCounter = 0;
+    document.addEventListener('dragenter', (e) => {
+      if (hasFiles(e)) { e.preventDefault(); dragCounter++; document.body.classList.add('page-dropping'); }
+    });
+    document.addEventListener('dragover', (e) => {
+      if (hasFiles(e)) { e.preventDefault(); e.dataTransfer.dropEffect = 'copy'; }
+    });
+    document.addEventListener('dragleave', () => {
+      dragCounter = Math.max(0, dragCounter - 1);
+      if (dragCounter === 0) document.body.classList.remove('page-dropping');
+    });
+    document.addEventListener('drop', (e) => {
+      e.preventDefault();
+      dragCounter = 0;
+      document.body.classList.remove('page-dropping');
+      const f = e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0];
+      handleFile(f);
+    });
+  }
+
+  function hasFiles(e) {
+    return !!(e.dataTransfer && Array.from(e.dataTransfer.types).includes('Files'));
   }
 
   // ---------- Translation ----------

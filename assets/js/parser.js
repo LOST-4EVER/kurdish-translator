@@ -67,29 +67,36 @@ const SubParser = (() => {
   }
 
   // ---------- SRT / VTT ----------
-  function parseSRTVTT(content, isVtt) {
+  // Line-based parser: works whether or not cues are separated by blank lines,
+  // and ignores the WEBVTT header, cue identifiers/indexes and NOTE comments.
+  function parseSRTVTT(content) {
+    const lines = content.replace(/\r/g, '').split('\n');
     const cues = [];
-    const blocks = content.replace(/\r/g, '').split(/\n{2,}/);
-    for (const block of blocks) {
-      const lines = block.split('\n').filter((l) => l.trim() !== '');
-      const timeIdx = lines.findIndex((l) => TIMECODE.test(l));
-      const match = timeIdx >= 0 ? lines[timeIdx].match(TIMECODE) : null;
-      if (!match) continue;
+    let current = null;
 
-      const text = lines.slice(timeIdx + 1)
-        .join('\n')
-        .replace(/^NOTE[^\n]*\n?/, '')
-        .trim();
-      if (!text) continue;
-
-      cues.push({
-        index: cues.length + 1,
-        start: toMs(match[1]),
-        end: toMs(match[2]),
-        text,
-      });
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i].trim();
+      const m = line.match(TIMECODE);
+      if (m) {
+        if (current) cues.push(current);
+        current = { start: toMs(m[1]), end: toMs(m[2]), text: [] };
+        continue;
+      }
+      if (!current) continue;           // before first cue (header, etc.)
+      if (!line || /^NOTE\b/i.test(line)) continue;
+      // A line immediately followed by a timing line is a cue identifier/index.
+      const next = lines[i + 1] && lines[i + 1].trim();
+      if (TIMECODE.test(next)) continue;
+      current.text.push(line);
     }
-    return cues;
+    if (current) cues.push(current);
+
+    const out = [];
+    for (const c of cues) {
+      const text = c.text.join('\n').trim();
+      if (text) out.push({ index: out.length + 1, start: c.start, end: c.end, text });
+    }
+    return out;
   }
 
   // ---------- ASS / SSA ----------
@@ -194,8 +201,8 @@ const SubParser = (() => {
   function parse(content) {
     const format = detect(content);
     switch (format) {
-      case 'vtt': return { format, cues: parseSRTVTT(content, true) };
-      case 'srt': return { format, cues: parseSRTVTT(content, false) };
+      case 'vtt': return { format, cues: parseSRTVTT(content) };
+      case 'srt': return { format, cues: parseSRTVTT(content) };
       case 'ass':
       case 'ssa': {
         const { cues, meta } = parseASS(content);
