@@ -210,6 +210,7 @@
         if (cancelFlag) return;
         setProgress(p, `Batch ${Math.round(p * 100)}% complete`);
       });
+      if (cancelFlag) return; // cancelled mid-run: discard results, stay on settings
 
       const translatedCues = parsed.cues.map((c, i) => ({
         ...c,

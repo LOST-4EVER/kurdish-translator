@@ -22,11 +22,13 @@ Works on desktop, Android, and iOS.
 
 - 📂 Drag-and-drop + tap-to-browse file picker
 - 🎬 Supports 6 formats: SRT, VTT, ASS, SSA, SUB, SMI
-- ⚙️ Source language auto-detect or manual pick
+- ⚙️ Source language auto-detect or manual pick (target is always Sorani `ckb`)
 - 🧠 Uses Google Translate's free endpoint (no API key)
 - ⚡ Batch translation — many lines per request, with newline protection
-- 🏷️ Preserves formatting tags (`<i>`, `{\an8}`, etc.)
+- 🏷️ Preserves formatting tags (`<i>`, `{\an8}`, `\N`, etc.)
 - 🔁 Automatic retry with backoff on transient errors
+- 🎞️ Built-in preview player: play cues on a 16:9 screen, seek, speed 0.5×–2×
+- ✍️ Sorani typography: `,`→`،` `;`→`؛` `?`→`؟`, proper RTL rendering with `Noto Naskh Arabic`
 - 📱 Fully responsive mobile UI with progress bar and cancel
 - 🔒 Files never leave your device
 
@@ -48,13 +50,18 @@ Works on desktop, Android, and iOS.
 
 ```
 ├── index.html              # Single-page UI
+├── AGENTS.md               # Agent instructions / conventions
 ├── assets/
 │   ├── css/style.css       # Styling / responsive layout
 │   └── js/
 │       ├── parser.js       # 6 subtitle formats: parse + serialize
-│       ├── translator.js   # Google batch translation engine (retry + backoff)
-│       └── app.js          # UI logic, file drop, download
+│       ├── translator.js   # Google batch translation engine (retry + backoff, Sorani normalization)
+│       ├── player.js       # Preview subtitle player (16:9 screen, RTL-aware)
+│       └── app.js          # UI logic, file drop/encoding, download
 ```
+
+Scripts load in this order (do not reorder): `parser.js` → `translator.js` →
+`player.js` → `app.js`.
 
 ## ⚠️ Note
 
