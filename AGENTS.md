@@ -44,6 +44,17 @@ Deployed to GitHub Pages from the `main` branch
   `Translator.translateLines` → `prepareDownload` + `loadPreview`. Preview shows
   **translated** cues after a run, reverts to original on new file / "Translate
   another". Source language + "drop empty lines" preference persist via `localStorage`.
+- **Preview editor**: the preview tab has a live subtitle editor (`app.js`
+  `buildEditor`). Each cue is an auto-growing textarea; typing updates the cue
+  on the player screen instantly (`SubtitlePlayer.updateText`) and a debounced
+  `prepareDownload` refreshes the download blob. Clicking a row seeks/plays it.
+  `SubtitlePlayer.setCueCallback` keeps the active row highlighted and scrolled
+  into view while playing (skipped while a textarea is focused). Two toggles:
+  "Show times" hides/shows the timecode column, and "Save edits" decides whether
+  edits are written into the output — ON (default) uses `workCues`, OFF uses
+  `baseCues` (the last translated/original set). Both persist via `localStorage`.
+  Cues are tracked as two copies: `baseCues` (saved) and `workCues` (edited);
+  the player and editor always show `workCues` so edits preview live.
 
 ## Key gotchas
 
@@ -71,9 +82,17 @@ Deployed to GitHub Pages from the `main` branch
   (`NL_SENTINEL`) and are restored with literal `.split()/.join()` — NOT regex.
   `§§` must stay free of regex metacharacters or every character gets split.
   Batch cap is 40 lines / 3500 chars per request.
-- **Merged-batch fallback**: Google sometimes collapses the `\n` separators that
-  delimit lines in a batch. If a response returns fewer lines than sent, that
-  batch is re-translated one line at a time instead of silently dropping text.
+- **Batch delimiters**: lines in a batch request are joined with `\n` + a
+  `\u0001` marker line (`BATCH_SEP`). Google preserves the control char
+  verbatim, so a translation that gains or loses plain newlines still maps back
+  to its own line. `splitBatch` matches the marker with regex (safe — `\u0001`
+  never occurs in subtitle text).
+- **Merged-batch fallback**: if a batch response doesn't come back with exactly
+  the number of delimited lines sent, that batch is re-translated one line at a
+  time instead of silently dropping text.
+- **Cancellation**: `translateLines` takes an optional `AbortSignal`; `app.js`
+  aborts in-flight fetches when the user hits Cancel (before it just skipped
+  UI updates while the network kept working).
 - **ASS/SSA**: `app.js` normalizes `\N` → real newlines before translation;
   `parser.js` `serializeASS` converts `\n` back to `\N`. Preserve the original
   `Format:` field order/case when serializing (players are case-sensitive).

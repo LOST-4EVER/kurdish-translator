@@ -17,6 +17,7 @@ const SubtitlePlayer = (() => {
   let startPerf = 0;    // performance.now() at play start
   let basePos = 0;      // position when play started
   let activeCue = null; // cached cue to avoid redundant DOM writes
+  let onCue = null;     // optional callback when the active cue changes
 
   const el = {};
 
@@ -128,15 +129,13 @@ const SubtitlePlayer = (() => {
     refresh(true);
   }
 
-  function currentCue() {
-    return cues.find((c) => pos >= c.start && pos < c.end) || null;
-  }
-
   function refresh(force = false) {
-    const cue = currentCue();
+    const idx = cues.findIndex((c) => pos >= c.start && pos < c.end);
+    const cue = idx >= 0 ? cues[idx] : null;
+    const changed = cue !== activeCue;
 
     // Only touch the text DOM when the active cue actually changes.
-    if (force || cue !== activeCue) {
+    if (force || changed) {
       activeCue = cue;
       el.text.textContent = cue ? cue.text : '';
       el.text.style.display = cue ? 'block' : 'none';
@@ -153,12 +152,24 @@ const SubtitlePlayer = (() => {
     const pct = total ? (pos / total) * 100 : 0;
     el.tlFill.style.width = `${pct}%`;
     el.tlThumb.style.left = `calc(${pct}% - 6px)`;
+
+    if (changed && onCue) onCue(cue, idx);
   }
+
+  /** Replace the text of cue at an array index (used by the live editor). */
+  function updateText(index, text) {
+    if (!cues[index]) return;
+    cues[index].text = text;
+    if (activeCue === cues[index]) refresh(true);
+  }
+
+  /** Register a callback fired with (cue, index) whenever playback moves to a cue. */
+  function setCueCallback(fn) { onCue = fn; }
 
   function fmt(ms) {
     const s = Math.floor(ms / 1000);
     return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
   }
 
-  return { init, load, toggle, play, pause, seek, get playing() { return playing; } };
+  return { init, load, toggle, play, pause, seek, updateText, setCueCallback, refresh, get playing() { return playing; } };
 })();

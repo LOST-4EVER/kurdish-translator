@@ -41,6 +41,8 @@
     previewTab: '#previewTab', tabTranslate: '#tabTranslate', tabPreview: '#tabPreview',
     installBtn: '#installBtn',
     toast: '#toast',
+    editorList: '#editorList', editorStatus: '#editorStatus',
+    showTimeToggle: '#showTimeToggle', saveEditsToggle: '#saveEditsToggle',
   });
   const tabButtons = $$('.tab');
 
@@ -50,6 +52,11 @@
   let resultText = null;
   let resultUrl = null;
   let cancelFlag = false;
+  let activeController = null;
+  let workCues = null;  // editable cue set (what the player + editor show)
+  let baseCues = null;  // saved cue set (used for download when "Save edits" is off)
+  let dirty = false;    // true once the user has edited a line
+  let prepareTimer = null;
 
   // ---------- Helpers ----------
   const store = {
@@ -79,19 +86,135 @@
   }
 
   const stripTags = (text) => text.replace(/<[^>]+>/g, '').replace(/\{[^}]*\}/g, '');
+  // ASS/SSA line breaks are stored as \N; render them as real newlines.
+  const displayText = (text) => stripTags(text).replace(/\\N/g, '\n');
 
-  function loadPreview(cues = parsed.cues) {
-    SubtitlePlayer.load(cues.map((c) => ({ ...c, text: stripTags(c.text) })));
+  function loadPreview(cues = workCues) {
+    SubtitlePlayer.load(cues.map((c) => ({ ...c, text: displayText(c.text) })));
     els.previewTab.classList.remove('disabled');
+  }
+
+  // ---------- Subtitle editor ----------
+  function fmtTime(ms) {
+    const h = Math.floor(ms / 3600000);
+    const m = Math.floor((ms % 3600000) / 60000);
+    const s = Math.floor((ms % 60000) / 1000);
+    const cs = ms % 1000;
+    return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')},${String(cs).padStart(3, '0')}`;
+  }
+
+  function autoGrow(el) {
+    el.style.height = 'auto';
+    el.style.height = `${el.scrollHeight}px`;
+  }
+
+  function updateStatus() {
+    els.editorStatus.textContent = dirty
+      ? (els.saveEditsToggle.checked ? 'Unsaved edits — they go into your download' : 'Edits shown here only — not saved to download')
+      : 'Synced with the preview — edits apply live';
+  }
+
+  function buildEditor() {
+    const list = els.editorList;
+    list.innerHTML = '';
+    const showTime = els.showTimeToggle.checked;
+
+    if (!workCues || !workCues.length) {
+      const empty = document.createElement('p');
+      empty.className = 'ed-empty';
+      empty.textContent = 'Load a subtitle file to edit it here.';
+      list.appendChild(empty);
+      return;
+    }
+
+    workCues.forEach((c, i) => {
+      const row = document.createElement('div');
+      row.className = 'ed-row';
+      row.dataset.index = i;
+
+      const meta = document.createElement('div');
+      meta.className = 'ed-meta';
+
+      const idx = document.createElement('span');
+      idx.className = 'ed-idx';
+      idx.textContent = String(i + 1).padStart(2, '0');
+
+      const time = document.createElement('span');
+      time.className = 'ed-time';
+      time.textContent = `${fmtTime(c.start)} → ${fmtTime(c.end)}`;
+      time.classList.toggle('hidden', !showTime);
+
+      meta.appendChild(idx);
+      meta.appendChild(time);
+      row.appendChild(meta);
+
+      const input = document.createElement('textarea');
+      input.className = 'ed-input';
+      input.value = displayText(c.text);
+      input.setAttribute('aria-label', `Cue ${i + 1} text`);
+      row.appendChild(input);
+      list.appendChild(row);
+      autoGrow(input);
+
+      input.addEventListener('input', () => {
+        autoGrow(input);
+        workCues[i].text = input.value;
+        SubtitlePlayer.updateText(i, stripTags(input.value));
+        dirty = true;
+        updateStatus();
+        clearTimeout(prepareTimer);
+        prepareTimer = setTimeout(prepareDownload, 250);
+      });
+      input.addEventListener('focus', () => row.classList.add('editing'));
+      input.addEventListener('blur', () => row.classList.remove('editing'));
+
+      row.addEventListener('click', (e) => {
+        if (e.target.closest('.ed-input')) return;
+        SubtitlePlayer.seek(c.start);
+        if (!SubtitlePlayer.playing) SubtitlePlayer.play();
+      });
+    });
+  }
+
+  function scrollRowIntoView(row) {
+    const list = els.editorList;
+    const r = row.getBoundingClientRect();
+    const b = list.getBoundingClientRect();
+    if (r.top < b.top || r.bottom > b.bottom) {
+      row.scrollIntoView({ block: 'center', behavior: 'smooth' });
+    }
+  }
+
+  // Follow playback: highlight + scroll the editor to the cue now on screen.
+  SubtitlePlayer.setCueCallback((cue, idx) => {
+    if (!cue || idx < 0) return;
+    if (document.activeElement && document.activeElement.classList.contains('ed-input')) return;
+    els.editorList.querySelectorAll('.ed-row.active').forEach((r) => r.classList.remove('active'));
+    const row = els.editorList.querySelector(`[data-index="${idx}"]`);
+    if (row) { row.classList.add('active'); scrollRowIntoView(row); }
+  });
+
+  /** Swap in a fresh cue set (original or translated) and rebuild everything. */
+  function updateCues(cues) {
+    baseCues = cues.map((c) => ({ ...c }));
+    workCues = cues.map((c) => ({ ...c }));
+    dirty = false;
+    loadPreview(workCues);
+    buildEditor();
+    prepareDownload();
+    updateStatus();
   }
 
   // ---------- Tabs ----------
   function switchTab(name) {
+    if (name === 'preview' && !parsed) {
+      toast('Load a subtitle file first.', true);
+      return; // don't switch to an empty preview tab
+    }
     tabButtons.forEach((b) => b.classList.toggle('active', b.dataset.tab === name));
     els.tabTranslate.classList.toggle('hidden', name !== 'translate');
     els.tabPreview.classList.toggle('hidden', name !== 'preview');
     if (name !== 'preview') SubtitlePlayer.pause(); // stop playback off-screen
-    if (name === 'preview' && !parsed) toast('Load a subtitle file first.', true);
   }
   tabButtons.forEach((b) => b.addEventListener('click', () => switchTab(b.dataset.tab)));
 
@@ -145,9 +268,10 @@
     file = f;
     parsed = parsedFile;
     resultText = null;
+    if (resultUrl) { URL.revokeObjectURL(resultUrl); resultUrl = null; }
     els.fileName.textContent = f.name;
     els.fileMeta.textContent = `${parsed.cues.length} lines • ${encodeBites(f.size)} • ${LABEL[parsed.format] || parsed.format.toUpperCase()}`;
-    loadPreview();
+    updateCues(parsed.cues);
     startTranslation(); // auto-translate on load — fastest path to results
   }
 
@@ -211,13 +335,15 @@
     const tgtLang = els.tgtLang.value;
     const isAss = parsed.format === 'ass' || parsed.format === 'ssa';
     const normalize = (c) => (isAss ? c.text.replace(/\\N/g, '\n') : c.text);
+    const controller = new AbortController();
+    activeController = controller;
 
     try {
       const lines = parsed.cues.map(normalize);
       const translated = await Translator.translateLines(lines, srcLang, tgtLang, (p, done, total) => {
         if (cancelFlag) return;
         setProgress(p, `Translated ${done} / ${total} lines`);
-      });
+      }, controller.signal);
       if (cancelFlag) return; // cancelled mid-run: discard results, stay on settings
 
       const translatedCues = parsed.cues.map((c, i) => ({
@@ -229,19 +355,23 @@
         ? translatedCues.filter((c) => c.text.trim() !== '')
         : translatedCues;
 
-      prepareDownload(finalCues);
-      loadPreview(finalCues);
+      updateCues(finalCues);
       showStep('done');
     } catch (err) {
+      if (cancelFlag) return; // aborted by the user, already handled
       console.error(err);
       toast('Translation failed. Check your internet connection and try again.', true);
       showStep('settings');
     } finally {
+      activeController = null;
       els.translateBtn.disabled = false;
     }
   }
 
-  function prepareDownload(cues) {
+  function prepareDownload() {
+    if (!parsed) return;
+    // Edits are included in the output only when "Save edits" is on.
+    const cues = els.saveEditsToggle.checked ? workCues : baseCues;
     resultText = SubParser.serialize(parsed, cues);
     if (resultUrl) URL.revokeObjectURL(resultUrl);
     resultUrl = URL.createObjectURL(new Blob([resultText], { type: 'text/plain;charset=utf-8' }));
@@ -260,6 +390,7 @@
 
     els.cancelBtn.addEventListener('click', () => {
       cancelFlag = true;
+      if (activeController) activeController.abort();
       toast('Cancelled.');
       showStep('settings');
     });
@@ -276,11 +407,23 @@
 
     els.translateAgainBtn.addEventListener('click', () => {
       resultText = null;
-      loadPreview(); // revert preview to the original text
+      updateCues(parsed.cues); // revert preview + editor to the original text
       showStep('settings');
     });
 
     els.previewBtn.addEventListener('click', () => switchTab('preview'));
+
+    // Editor toggles.
+    els.showTimeToggle.addEventListener('change', () => {
+      store.set('showTime', els.showTimeToggle.checked ? '1' : '0');
+      document.querySelectorAll('.ed-time').forEach((t) => t.classList.toggle('hidden', !els.showTimeToggle.checked));
+    });
+
+    els.saveEditsToggle.addEventListener('change', () => {
+      store.set('saveEdits', els.saveEditsToggle.checked ? '1' : '0');
+      prepareDownload();
+      updateStatus();
+    });
 
     // Persist settings between visits.
     els.srcLang.addEventListener('change', () => store.set('srcLang', els.srcLang.value));
@@ -321,6 +464,9 @@
 
     els.srcLang.value = store.get('srcLang', 'auto');
     els.keepOnly.checked = store.get('keepOnly', '0') === '1';
+    els.showTimeToggle.checked = store.get('showTime', '1') === '1';
+    els.saveEditsToggle.checked = store.get('saveEdits', '1') === '1';
+    buildEditor();
   }
 
   init();

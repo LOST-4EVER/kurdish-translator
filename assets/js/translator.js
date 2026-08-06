@@ -15,9 +15,15 @@ const Translator = (() => {
   const MAX_ATTEMPTS = 4;       // retries per chunk
 
   // Sentinel protecting internal line breaks inside a cue so cue boundaries
-  // (joined with "\n") stay unambiguous after translation. Contains no regex
-  // metacharacters and is used with a literal split/join.
+  // stay unambiguous after translation. Contains no regex metacharacters and
+  // is used with a literal split/join.
   const NL_SENTINEL = '§§';
+
+  // Control character that delimits lines inside a batch request. Google keeps
+  // it verbatim, so line boundaries survive even when it adds or removes plain
+  // newlines. Never appears in real subtitle text.
+  const BATCH_SEP = '\u0001';
+  const BATCH_SEP_RE = /^[ \t]*\u0001[ \t]*$/;
 
   const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
   const restoreNewlines = (s) => s.split(NL_SENTINEL).join('\n');
@@ -47,9 +53,10 @@ const Translator = (() => {
    * @param {string} srcLang source lang code ('auto' allowed)
    * @param {string} tgtLang target lang code
    * @param {(fraction:number, doneLines:number, totalLines:number)=>void} [onProgress]
+   * @param {AbortSignal} [signal] aborts in-flight requests
    * @returns {Promise<string[]>} translated lines (same length)
    */
-  async function translateLines(lines, srcLang, tgtLang, onProgress) {
+  async function translateLines(lines, srcLang, tgtLang, onProgress, signal) {
     const results = new Array(lines.length).fill('');
     const batches = buildBatches(lines);
     const total = batches.length || 1;
@@ -59,21 +66,24 @@ const Translator = (() => {
 
     for (let b = 0; b < batches.length; b++) {
       const batch = batches[b];
-      const query = batch.map((o) => o.text).join('\n');
+      throwIfAborted(signal);
+      const query = batch.map((o) => o.text).join(`\n${BATCH_SEP}\n`);
 
       try {
-        const translated = await translateChunk(query, srcLang, tgtLang);
-        // Google sometimes collapses our "\n" separators. If fewer lines came
-        // back than we sent, the batch merged — treat it as a failure and fall
-        // back to one request per line rather than silently dropping text.
-        if (translated.split('\n').length < batch.length) throw new Error('merged batch');
-        splitTranslated(translated, batch.length).forEach((part, k) => {
-          results[batch[k].index] = normalizeText(restoreNewlines(part), isArabic);
+        const translated = await translateChunk(query, srcLang, tgtLang, signal);
+        // Google sometimes drops the marker lines. If the response doesn't line
+        // up exactly, re-translate one line at a time rather than dropping text.
+        const parts = splitBatch(translated);
+        if (parts.length !== batch.length) throw new Error('merged batch');
+        parts.forEach((part, k) => {
+          results[batch[k].index] = normalizeText(restoreNewlines(part.trim()), isArabic);
         });
-      } catch {
+      } catch (err) {
+        if (signal && signal.aborted) throw err;
         // Batch failed — fall back to one request per line.
         for (const o of batch) {
-          try { results[o.index] = normalizeText(restoreNewlines(await translateChunk(o.text, srcLang, tgtLang)), isArabic); }
+          throwIfAborted(signal);
+          try { results[o.index] = normalizeText(restoreNewlines(await translateChunk(o.text, srcLang, tgtLang, signal)), isArabic); }
           catch { results[o.index] = restoreNewlines(o.text); }
         }
       }
@@ -112,20 +122,21 @@ const Translator = (() => {
   }
 
   /** Translate one chunk, retrying with exponential backoff. */
-  async function translateChunk(text, srcLang, tgtLang) {
+  async function translateChunk(text, srcLang, tgtLang, signal) {
     const params = new URLSearchParams({ client: 'gtx', sl: srcLang, tl: tgtLang, dt: 't', q: text });
     const url = `${ENDPOINT}?${params.toString()}`;
     let lastErr;
 
     for (let attempt = 0; attempt < MAX_ATTEMPTS; attempt++) {
       try {
-        const res = await fetch(url, { method: 'GET', headers: { 'Accept': 'application/json' } });
+        const res = await fetch(url, { method: 'GET', headers: { 'Accept': 'application/json' }, signal });
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         const data = await res.json();
         const out = data[0].map((seg) => seg[0]).join('');
         if (out) return out;
         throw new Error('Empty response');
       } catch (err) {
+        if (signal && signal.aborted) throw err;
         lastErr = err;
         if (attempt < MAX_ATTEMPTS - 1) await sleep(600 * 2 ** attempt + Math.random() * 400);
       }
@@ -134,13 +145,27 @@ const Translator = (() => {
   }
 
   /**
-   * Reconstruct per-line results from a batch response. Google usually keeps
-   * our "\n" separators; if it merges lines we align by padding the tail.
+   * Reconstruct per-line results from a batch response. Lines are delimited by
+   * a standalone BATCH_SEP marker line; any other line — including newlines
+   * Google introduces inside a translation — stays attached to the current one.
    */
-  function splitTranslated(translated, expectedCount) {
-    const parts = translated.split('\n').slice(0, expectedCount).map((s) => s.trim());
-    while (parts.length < expectedCount) parts.push('');
+  function splitBatch(translated) {
+    const parts = [];
+    let cur = [];
+    for (const line of translated.split('\n')) {
+      if (BATCH_SEP_RE.test(line)) { parts.push(cur.join('\n')); cur = []; }
+      else cur.push(line);
+    }
+    parts.push(cur.join('\n'));
     return parts;
+  }
+
+  function throwIfAborted(signal) {
+    if (signal && signal.aborted) {
+      const err = new Error('Translation cancelled');
+      err.name = 'AbortError';
+      throw err;
+    }
   }
 
   return { translateLines };

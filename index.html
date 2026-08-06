@@ -173,6 +173,37 @@
           </div>
           <p class="player-note">Previews your subtitle synced to timing. Keyboard: <b>Space</b> play/pause · <b>← →</b> seek · <b>↑ ↓</b> prev/next cue</p>
         </section>
+
+        <!-- subtitle editor -->
+        <section class="card editor-card">
+          <div class="editor-toolbar">
+            <div class="editor-title">
+              <span class="ed-ic">✏️</span>
+              <div>
+                <h3>Edit subtitles</h3>
+                <p id="editorStatus">Synced with the preview — edits apply live</p>
+              </div>
+            </div>
+            <div class="editor-toggles">
+              <label class="switch-row mini">
+                <span>Show times</span>
+                <span class="switch">
+                  <input type="checkbox" id="showTimeToggle" checked />
+                  <span class="slider"></span>
+                </span>
+              </label>
+              <label class="switch-row mini">
+                <span>Save edits</span>
+                <span class="switch">
+                  <input type="checkbox" id="saveEditsToggle" checked />
+                  <span class="slider"></span>
+                </span>
+              </label>
+            </div>
+          </div>
+          <div class="editor-list" id="editorList" aria-label="Editable subtitle cues"></div>
+          <p class="editor-hint">Click a row to jump the player there · type to edit the text and watch it on the screen live</p>
+        </section>
       </div>
     </main>
 

@@ -72,6 +72,7 @@ const SubParser = (() => {
     const lines = content.replace(/\r/g, '').split('\n');
     const cues = [];
     let current = null;
+    let inNote = false;
 
     for (let i = 0; i < lines.length; i++) {
       const line = lines[i].trim();
@@ -79,10 +80,13 @@ const SubParser = (() => {
       if (m) {
         if (current) cues.push(current);
         current = { start: toMs(m[1]), end: toMs(m[2]), text: [] };
+        inNote = false;
         continue;
       }
-      if (!current) continue;           // before first cue (header, etc.)
-      if (!line || /^NOTE\b/i.test(line)) continue;
+      // NOTE blocks end at the first blank line and are never subtitle text.
+      if (inNote) { if (!line) inNote = false; continue; }
+      if (!current || !line) continue;
+      if (/^NOTE\b/i.test(line)) { inNote = true; continue; }
       // A line immediately followed by a timing line is a cue identifier/index.
       const next = lines[i + 1] && lines[i + 1].trim();
       if (TIMECODE.test(next)) continue;
