@@ -45,7 +45,7 @@
             <input type="file" id="fileInput" accept=".srt,.vtt,.ass,.ssa,.sub,.smi,text/plain" hidden />
             <div class="dz-icon">📂</div>
             <h2>Drop subtitle file here</h2>
-            <p class="dz-sub">or <span class="link">browse from device</span></p>
+            <p class="dz-sub">or <span class="link">browse from device</span> — it translates instantly</p>
             <div class="dz-hint">Supports <b>.SRT</b> <b>.VTT</b> <b>.ASS</b> <b>.SSA</b> <b>.SUB</b> <b>.SMI</b> — Android & iOS ready</div>
             <div class="pill-row">
               <span class="pill">Free</span>
@@ -86,7 +86,7 @@
           </div>
 
           <label class="switch-row">
-            <span>Translate subtitles only</span>
+            <span>Drop untranslated / empty lines</span>
             <span class="switch">
               <input type="checkbox" id="keepOnly" />
               <span class="slider"></span>
@@ -123,10 +123,11 @@
           </div>
           <div class="done-actions">
             <a class="btn-primary" id="downloadBtn" download>⬇ Download</a>
+            <button class="btn-secondary" id="previewBtn">▶ Preview subtitles</button>
             <button class="btn-secondary" id="copyBtn">📋 Copy to clipboard</button>
             <button class="btn-tertiary" id="translateAgainBtn">↺ Translate another</button>
           </div>
-          <p class="note">Processed 100% in your browser. Nothing is uploaded.</p>
+          <p class="note">Processed 100% in your browser. Nothing is uploaded. Your settings are remembered.</p>
         </section>
 
       </div>

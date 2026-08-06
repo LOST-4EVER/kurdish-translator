@@ -23,9 +23,11 @@ branch (`https://LOST-4EVER.github.io/kurdish-translator/`).
   calls `SubtitlePlayer.init()` on load.
 - `parser.js` / `translator.js` each end with a `module.exports` guard so they
   work both as classic scripts and via `require()` in Node.
-- Flow: drop file → `app.js` decodes + parses → settings → `Translator.translateLines`
-  → `prepareDownload` + `loadPreview`. Preview shows **translated** cues after a run,
-  reverts to original on new file / "Translate another".
+- Flow: drop file → `app.js` decodes + parses → **auto-translates immediately**
+  (settings step is skipped on load; reachable via "Translate another") →
+  `Translator.translateLines` → `prepareDownload` + `loadPreview`. Preview shows
+  **translated** cues after a run, reverts to original on new file / "Translate
+  another". Source language + "drop empty lines" preference persist via `localStorage`.
 
 ## Key gotchas
 
@@ -43,6 +45,9 @@ branch (`https://LOST-4EVER.github.io/kurdish-translator/`).
   (`NL_SENTINEL`) and are restored with literal `.split()/.join()` — NOT regex.
   `§§` must stay free of regex metacharacters or every character gets split.
   Batch cap is 40 lines / 3500 chars per request.
+- **Merged-batch fallback**: Google sometimes collapses the `\n` separators that
+  delimit lines in a batch. If a response returns fewer lines than sent, that
+  batch is re-translated one line at a time instead of silently dropping text.
 - **ASS/SSA**: `app.js` normalizes `\N` → real newlines before translation;
   `parser.js` `serializeASS` converts `\n` back to `\N`. Preserve the original
   `Format:` field order/case when serializing (players are case-sensitive).

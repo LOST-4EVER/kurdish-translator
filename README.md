@@ -20,11 +20,12 @@ Works on desktop, Android, and iOS.
 
 ## ✨ Features
 
-- 📂 Drag-and-drop + tap-to-browse file picker
+- 📂 Drag-and-drop + tap-to-browse file picker — **auto-translates instantly**
 - 🎬 Supports 6 formats: SRT, VTT, ASS, SSA, SUB, SMI
-- ⚙️ Source language auto-detect or manual pick (target is always Sorani `ckb`)
+- ⚙️ Source language auto-detect or manual pick (target is always Sorani `ckb`); settings remembered
 - 🧠 Uses Google Translate's free endpoint (no API key)
 - ⚡ Batch translation — many lines per request, with newline protection
+- 🛡️ Detects merged/truncated batch responses and re-translates those lines one-by-one
 - 🏷️ Preserves formatting tags (`<i>`, `{\an8}`, `\N`, etc.)
 - 🔁 Automatic retry with backoff on transient errors
 - 🎞️ Built-in preview player: play cues on a 16:9 screen, seek, speed 0.5×–2×

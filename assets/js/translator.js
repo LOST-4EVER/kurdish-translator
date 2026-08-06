@@ -46,14 +46,16 @@ const Translator = (() => {
    * @param {string[]} lines source lines
    * @param {string} srcLang source lang code ('auto' allowed)
    * @param {string} tgtLang target lang code
-   * @param {(progress:number)=>void} [onProgress] 0..1
+   * @param {(fraction:number, doneLines:number, totalLines:number)=>void} [onProgress]
    * @returns {Promise<string[]>} translated lines (same length)
    */
   async function translateLines(lines, srcLang, tgtLang, onProgress) {
     const results = new Array(lines.length).fill('');
     const batches = buildBatches(lines);
     const total = batches.length || 1;
+    const totalLines = batches.reduce((n, b) => n + b.length, 0);
     const isArabic = ARABIC_SCRIPT.has(tgtLang);
+    let doneLines = 0;
 
     for (let b = 0; b < batches.length; b++) {
       const batch = batches[b];
@@ -61,6 +63,10 @@ const Translator = (() => {
 
       try {
         const translated = await translateChunk(query, srcLang, tgtLang);
+        // Google sometimes collapses our "\n" separators. If fewer lines came
+        // back than we sent, the batch merged — treat it as a failure and fall
+        // back to one request per line rather than silently dropping text.
+        if (translated.split('\n').length < batch.length) throw new Error('merged batch');
         splitTranslated(translated, batch.length).forEach((part, k) => {
           results[batch[k].index] = normalizeText(restoreNewlines(part), isArabic);
         });
@@ -72,11 +78,12 @@ const Translator = (() => {
         }
       }
 
-      if (onProgress) onProgress((b + 1) / total);
+      doneLines += batch.length;
+      if (onProgress) onProgress((b + 1) / total, doneLines, totalLines);
       if (b < batches.length - 1) await sleep(DELAY_MS);
     }
 
-    if (onProgress) onProgress(1);
+    if (onProgress) onProgress(1, doneLines, totalLines);
     return results;
   }
 

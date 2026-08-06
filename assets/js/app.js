@@ -17,8 +17,10 @@
     de: 'German', fr: 'French', es: 'Spanish', ru: 'Russian', it: 'Italian',
     nl: 'Dutch', pt: 'Portuguese', zh: 'Chinese', ja: 'Japanese', ko: 'Korean',
     hi: 'Hindi', ur: 'Urdu', ps: 'Pashto', az: 'Azerbaijani', sv: 'Swedish',
-    no: 'Norwegian', da: 'Danish', pl: 'Polish', uk: 'Ukrainian', gr: 'Greek',
+    no: 'Norwegian', da: 'Danish', pl: 'Polish', uk: 'Ukrainian', el: 'Greek',
     sq: 'Albanian', ro: 'Romanian', fi: 'Finnish', he: 'Hebrew', id: 'Indonesian',
+    bn: 'Bengali', ta: 'Tamil', te: 'Telugu', vi: 'Vietnamese', th: 'Thai',
+    ms: 'Malay', tl: 'Filipino', sw: 'Swahili', cs: 'Czech', hu: 'Hungarian',
   };
 
   // ---------- Elements ----------
@@ -35,6 +37,7 @@
     progressDetail: '#progressDetail', lineCount: '#lineCount', cancelBtn: '#cancelBtn',
     downloadBtn: '#downloadBtn', copyBtn: '#copyBtn',
     translateAgainBtn: '#translateAgainBtn', doneFormat: '#doneFormat', doneSize: '#doneSize',
+    previewBtn: '#previewBtn',
     previewTab: '#previewTab', tabTranslate: '#tabTranslate', tabPreview: '#tabPreview',
     toast: '#toast',
   });
@@ -48,6 +51,10 @@
   let cancelFlag = false;
 
   // ---------- Helpers ----------
+  const store = {
+    get(key, fallback) { try { const v = localStorage.getItem(key); return v === null ? fallback : v; } catch { return fallback; } },
+    set(key, val) { try { localStorage.setItem(key, val); } catch {} },
+  };
   let toastTimer;
   function toast(msg, isError = false) {
     els.toast.textContent = msg;
@@ -140,7 +147,7 @@
     els.fileName.textContent = f.name;
     els.fileMeta.textContent = `${parsed.cues.length} lines • ${encodeBites(f.size)} • ${LABEL[parsed.format] || parsed.format.toUpperCase()}`;
     loadPreview();
-    showStep('settings');
+    startTranslation(); // auto-translate on load — fastest path to results
   }
 
   function bindDropzone() {
@@ -206,9 +213,9 @@
 
     try {
       const lines = parsed.cues.map(normalize);
-      const translated = await Translator.translateLines(lines, srcLang, tgtLang, (p) => {
+      const translated = await Translator.translateLines(lines, srcLang, tgtLang, (p, done, total) => {
         if (cancelFlag) return;
-        setProgress(p, `Batch ${Math.round(p * 100)}% complete`);
+        setProgress(p, `Translated ${done} / ${total} lines`);
       });
       if (cancelFlag) return; // cancelled mid-run: discard results, stay on settings
 
@@ -271,6 +278,12 @@
       loadPreview(); // revert preview to the original text
       showStep('settings');
     });
+
+    els.previewBtn.addEventListener('click', () => switchTab('preview'));
+
+    // Persist settings between visits.
+    els.srcLang.addEventListener('change', () => store.set('srcLang', els.srcLang.value));
+    els.keepOnly.addEventListener('change', () => store.set('keepOnly', els.keepOnly.checked ? '1' : '0'));
   }
 
   // ---------- Init ----------
@@ -284,6 +297,9 @@
     bindDropzone();
     bindActions();
     SubtitlePlayer.init();
+
+    els.srcLang.value = store.get('srcLang', 'auto');
+    els.keepOnly.checked = store.get('keepOnly', '0') === '1';
   }
 
   init();
