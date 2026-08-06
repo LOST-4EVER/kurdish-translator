@@ -22,6 +22,24 @@ const Translator = (() => {
   const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
   const restoreNewlines = (s) => s.split(NL_SENTINEL).join('\n');
 
+  // Arabic-script targets (Sorani/Kurdish) should use the Arabic question mark.
+  const ARABIC_SCRIPT = new Set(['ckb', 'ku', 'kmr', 'fa', 'ar', 'ur', 'ps']);
+  const hasArabicScript = (s) => /[\u0600-\u06FF\u0750-\u077F]/.test(s);
+
+  /**
+   * Clean up Google's typography for a subtitle line:
+   *  - remove stray space before punctuation  ("word !" -> "word!")
+   *  - pull punctuation that landed on its own line up to the previous line
+   *  - use the Arabic question mark for Sorani/Kurdish
+   */
+  function normalizeText(text, isArabic) {
+    let t = text
+      .replace(/\s+([.,!?;:،؟]+)/g, '$1')
+      .replace(/\n([.,!?;:،؟]+)/g, '$1');
+    if (isArabic) t = t.replace(/\?/g, '؟');
+    return t;
+  }
+
   /**
    * Translate an array of strings.
    * @param {string[]} lines source lines
@@ -34,6 +52,7 @@ const Translator = (() => {
     const results = new Array(lines.length).fill('');
     const batches = buildBatches(lines);
     const total = batches.length || 1;
+    const isArabic = ARABIC_SCRIPT.has(tgtLang);
 
     for (let b = 0; b < batches.length; b++) {
       const batch = batches[b];
@@ -42,12 +61,12 @@ const Translator = (() => {
       try {
         const translated = await translateChunk(query, srcLang, tgtLang);
         splitTranslated(translated, batch.length).forEach((part, k) => {
-          results[batch[k].index] = restoreNewlines(part);
+          results[batch[k].index] = normalizeText(restoreNewlines(part), isArabic);
         });
       } catch {
         // Batch failed — fall back to one request per line.
         for (const o of batch) {
-          try { results[o.index] = restoreNewlines(await translateChunk(o.text, srcLang, tgtLang)); }
+          try { results[o.index] = normalizeText(restoreNewlines(await translateChunk(o.text, srcLang, tgtLang)), isArabic); }
           catch { results[o.index] = o.text; }
         }
       }

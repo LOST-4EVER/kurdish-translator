@@ -82,6 +82,7 @@
     tabButtons.forEach((b) => b.classList.toggle('active', b.dataset.tab === name));
     els.tabTranslate.classList.toggle('hidden', name !== 'translate');
     els.tabPreview.classList.toggle('hidden', name !== 'preview');
+    if (name !== 'preview') SubtitlePlayer.pause(); // stop playback off-screen
     if (name === 'preview' && !parsed) toast('Load a subtitle file first.', true);
   }
   tabButtons.forEach((b) => b.addEventListener('click', () => switchTab(b.dataset.tab)));
