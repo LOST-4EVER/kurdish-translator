@@ -7,7 +7,8 @@
  */
 const SubParser = (() => {
   // ---------- Regex ----------
-  const TIMECODE = /(\d{1,2}:\d{2}:\d{2}[,.]\d{1,3})\s*-->\s*(\d{1,2}:\d{2}:\d{2}[,.]\d{1,3})/;
+  // WebVTT allows both mm:ss.mmm and hh:mm:ss.mmm (hours optional).
+  const TIMECODE = /(\d{1,2}:\d{2}(?::\d{2})?[,.]\d{1,3})\s*-->\s*(\d{1,2}:\d{2}(?::\d{2})?[,.]\d{1,3})/;
   const ASS_TIMECODE = /(\d+:\d{2}:\d{2}\.\d{2})/;
   const SUB_LINE = /^\{(\d+)\}\{(\d+)\}(.*)$/;
   const SMI_SYNC = /<SYNC[^>]*?\bStart\s*=\s*"?(\d+)"?[^>]*>(.*?)<\/SYNC>/gi;
@@ -27,8 +28,11 @@ const SubParser = (() => {
   function toMs(str) {
     const [time, fracRaw = '0'] = str.replace(',', '.').split('.');
     const frac = Number(fracRaw.padEnd(3, '0').slice(0, 3));
-    const [h, m, s] = time.split(':').map(Number);
-    return h * 3600000 + m * 60000 + s * 1000 + frac;
+    const [a, b, c] = time.split(':').map(Number);
+    // 2 parts = mm:ss.mmm ; 3 parts = hh:mm:ss.mmm
+    return c === undefined
+      ? a * 60000 + b * 1000 + frac
+      : a * 3600000 + b * 60000 + c * 1000 + frac;
   }
 
   function fmtSRT(ms) {
