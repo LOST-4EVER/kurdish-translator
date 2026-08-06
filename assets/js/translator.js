@@ -22,9 +22,8 @@ const Translator = (() => {
   const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
   const restoreNewlines = (s) => s.split(NL_SENTINEL).join('\n');
 
-  // Arabic-script targets (Sorani/Kurdish) should use the Arabic question mark.
+  // Arabic-script targets (Sorani/Kurdish) should use the Arabic punctuation.
   const ARABIC_SCRIPT = new Set(['ckb', 'ku', 'kmr', 'fa', 'ar', 'ur', 'ps']);
-  const hasArabicScript = (s) => /[\u0600-\u06FF\u0750-\u077F]/.test(s);
 
   /**
    * Clean up Google's typography for a subtitle line, applying Sorani Kurdish
@@ -69,7 +68,7 @@ const Translator = (() => {
         // Batch failed — fall back to one request per line.
         for (const o of batch) {
           try { results[o.index] = normalizeText(restoreNewlines(await translateChunk(o.text, srcLang, tgtLang)), isArabic); }
-          catch { results[o.index] = o.text; }
+          catch { results[o.index] = restoreNewlines(o.text); }
         }
       }
 

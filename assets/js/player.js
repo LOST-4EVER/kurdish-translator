@@ -45,6 +45,7 @@ const SubtitlePlayer = (() => {
     el.tl.addEventListener('pointerdown', () => { if (playing) pause(); });
 
     document.addEventListener('keydown', (e) => {
+      if (e.target.closest('select, input, button, textarea, a')) return;
       switch (e.code) {
         case 'Space': e.preventDefault(); toggle(); break;
         case 'ArrowRight': e.preventDefault(); seek(pos + 5000); break;

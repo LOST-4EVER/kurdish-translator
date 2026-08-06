@@ -70,7 +70,7 @@
     if (detail) els.progressDetail.textContent = detail;
   }
 
-  const stripTags = (text) => text.replace(/<[^>]+>/g, '');
+  const stripTags = (text) => text.replace(/<[^>]+>/g, '').replace(/\{[^}]*\}/g, '');
 
   function loadPreview(cues = parsed.cues) {
     SubtitlePlayer.load(cues.map((c) => ({ ...c, text: stripTags(c.text) })));

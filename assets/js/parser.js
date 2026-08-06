@@ -61,7 +61,7 @@ const SubParser = (() => {
       return /ScriptType[^\n]*v4\.00\+/i.test(t) ? 'ass' : 'ssa';
     }
     if (/^\{\d+\}\{\d+\}/m.test(t)) return 'sub';
-    if (/<sync[ >]/i.test(t)) return 'smi';
+    if (/^<sync[ >]/im.test(t)) return 'smi';
     if (TIMECODE.test(t)) return 'srt';
     return 'unknown';
   }
