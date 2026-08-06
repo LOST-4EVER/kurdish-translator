@@ -32,6 +32,7 @@
     dropzone: '#dropzone', fileInput: '#fileInput',
     fileName: '#fileName', fileMeta: '#fileMeta', changeFile: '#changeFile',
     srcLang: '#srcLang', tgtLang: '#tgtLang', keepOnly: '#keepOnly',
+    includeOriginal: '#includeOriginal', accuracyToggle: '#accuracyToggle',
     translateBtn: '#translateBtn',
     progressFill: '#progressFill', progressPct: '#progressPct',
     progressDetail: '#progressDetail', lineCount: '#lineCount', cancelBtn: '#cancelBtn',
@@ -43,6 +44,9 @@
     toast: '#toast',
     editorList: '#editorList', editorStatus: '#editorStatus',
     showTimeToggle: '#showTimeToggle', saveEditsToggle: '#saveEditsToggle',
+    fsEdit: '#fsEdit', fsScreen: '#fsScreen', fsText: '#fsText', fsCueCount: '#fsCueCount',
+    fsToggleBtn: '#fsToggleBtn', fsEditBtn: '#fsEditBtn', fsClose: '#fsClose',
+    fsEditor: '#fsEditor', fsInput: '#fsInput', fsDoneBtn: '#fsDoneBtn',
   });
   const tabButtons = $$('.tab');
 
@@ -57,6 +61,10 @@
   let baseCues = null;  // saved cue set (used for download when "Save edits" is off)
   let dirty = false;    // true once the user has edited a line
   let prepareTimer = null;
+  let activeIdx = -1;   // cue index currently on screen
+  let fsActive = false; // fullscreen edit mode on
+  let fsCueIndex = -1;  // cue being edited in fullscreen
+  const hasArabic = (s) => /[\u0600-\u06FF\u0750-\u077F]/.test(s);
 
   // ---------- Helpers ----------
   const store = {
@@ -188,6 +196,16 @@
 
   // Follow playback: highlight + scroll the editor to the cue now on screen.
   SubtitlePlayer.setCueCallback((cue, idx) => {
+    activeIdx = idx;
+    if (fsActive) {
+      updateFsScreen();
+      // Keep the fullscreen editor synced to the playing cue unless the user
+      // is actively typing in it.
+      if (!els.fsEditor.classList.contains('hidden') && document.activeElement !== els.fsInput && fsCueIndex !== idx) {
+        syncFsEditor(idx);
+      }
+      return; // normal editor-list highlight is hidden behind the overlay
+    }
     if (!cue || idx < 0) return;
     if (document.activeElement && document.activeElement.classList.contains('ed-input')) return;
     els.editorList.querySelectorAll('.ed-row.active').forEach((r) => r.classList.remove('active'));
@@ -200,10 +218,78 @@
     baseCues = cues.map((c) => ({ ...c }));
     workCues = cues.map((c) => ({ ...c }));
     dirty = false;
+    activeIdx = -1;
+    if (fsActive) exitFs();
     loadPreview(workCues);
     buildEditor();
     prepareDownload();
     updateStatus();
+  }
+
+  // ---------- Fullscreen edit mode ----------
+  function updateFsScreen() {
+    const cue = activeIdx >= 0 && workCues[activeIdx] ? workCues[activeIdx] : null;
+    els.fsText.textContent = cue ? displayText(cue.text) : '';
+    els.fsText.setAttribute('dir', cue && hasArabic(cue.text) ? 'rtl' : 'ltr');
+    els.fsCueCount.textContent = cue ? `${cue.index} / ${workCues.length}` : '';
+  }
+
+  function syncFsEditor(i) {
+    if (i < 0 || !workCues[i]) return;
+    fsCueIndex = i;
+    els.fsInput.value = displayText(workCues[i].text);
+    els.fsInput.setAttribute('dir', hasArabic(els.fsInput.value) ? 'rtl' : 'ltr');
+  }
+
+  function openFsEditor() {
+    const i = activeIdx;
+    if (i < 0 || !workCues[i]) return;
+    syncFsEditor(i);
+    els.fsEditor.classList.remove('hidden');
+    els.fsInput.focus(); // pops the keyboard so you can tap-edit immediately
+  }
+
+  function closeFsEditor() {
+    els.fsEditor.classList.add('hidden');
+  }
+
+  function enterFs() {
+    if (!parsed || !workCues || !workCues.length) { toast('Load a subtitle file first.', true); return; }
+    fsActive = true;
+    els.fsEdit.classList.remove('hidden');
+    updateFsScreen();
+  }
+
+  function exitFs() {
+    fsActive = false;
+    els.fsEdit.classList.add('hidden');
+    closeFsEditor();
+  }
+
+  function bindFs() {
+    els.fsToggleBtn.addEventListener('click', () => (fsActive ? exitFs() : enterFs()));
+    els.fsClose.addEventListener('click', exitFs);
+    els.fsText.addEventListener('click', openFsEditor); // tap any word → editor at the bottom
+    els.fsEditBtn.addEventListener('click', openFsEditor);
+    els.fsDoneBtn.addEventListener('click', closeFsEditor);
+
+    els.fsInput.addEventListener('input', () => {
+      if (fsCueIndex < 0 || !workCues[fsCueIndex]) return;
+      workCues[fsCueIndex].text = els.fsInput.value;
+      SubtitlePlayer.updateText(fsCueIndex, stripTags(els.fsInput.value));
+      dirty = true;
+      updateStatus();
+      clearTimeout(prepareTimer);
+      prepareTimer = setTimeout(prepareDownload, 250);
+      updateFsScreen();
+    });
+
+    document.addEventListener('keydown', (e) => {
+      if (!fsActive) return;
+      if (e.key === 'Escape') {
+        document.activeElement === els.fsInput ? closeFsEditor() : exitFs();
+      }
+    });
   }
 
   // ---------- Tabs ----------
@@ -273,7 +359,8 @@
     els.fileName.textContent = f.name;
     els.fileMeta.textContent = `${parsed.cues.length} lines • ${encodeBites(f.size)} • ${LABEL[parsed.format] || parsed.format.toUpperCase()}`;
     updateCues(parsed.cues);
-    startTranslation(); // auto-translate on load — fastest path to results
+    // Show the options first so the user picks settings before translating.
+    showStep('settings');
   }
 
   function bindDropzone() {
@@ -334,6 +421,8 @@
 
     const srcLang = els.srcLang.value;
     const tgtLang = els.tgtLang.value;
+    const includeOriginal = els.includeOriginal.checked;
+    const accuracy = els.accuracyToggle.checked;
     const isAss = parsed.format === 'ass' || parsed.format === 'ssa';
     const normalize = (c) => (isAss ? c.text.replace(/\\N/g, '\n') : c.text);
     const controller = new AbortController();
@@ -344,13 +433,15 @@
       const translated = await Translator.translateLines(lines, srcLang, tgtLang, (p, done, total) => {
         if (cancelFlag) return;
         setProgress(p, `Translated ${done} / ${total} lines`);
-      }, controller.signal);
+      }, controller.signal, { accuracy });
       if (cancelFlag) return; // cancelled mid-run: discard results, stay on settings
 
-      const translatedCues = parsed.cues.map((c, i) => ({
-        ...c,
-        text: translated[i] && translated[i].trim() ? translated[i].trim() : c.text,
-      }));
+      const translatedCues = parsed.cues.map((c, i) => {
+        const tr = translated[i] && translated[i].trim() ? translated[i].trim() : null;
+        // "Include original" stacks the source line above the translation.
+        if (includeOriginal && tr && tr !== c.text) return { ...c, text: `${c.text}\n${tr}` };
+        return { ...c, text: tr || c.text };
+      });
 
       const finalCues = els.keepOnly.checked
         ? translatedCues.filter((c) => c.text.trim() !== '')
@@ -429,6 +520,8 @@
     // Persist settings between visits.
     els.srcLang.addEventListener('change', () => store.set('srcLang', els.srcLang.value));
     els.keepOnly.addEventListener('change', () => store.set('keepOnly', els.keepOnly.checked ? '1' : '0'));
+    els.includeOriginal.addEventListener('change', () => store.set('includeOriginal', els.includeOriginal.checked ? '1' : '0'));
+    els.accuracyToggle.addEventListener('change', () => store.set('accuracy', els.accuracyToggle.checked ? '1' : '0'));
   }
 
   // ---------- Init ----------
@@ -441,6 +534,7 @@
     }
     bindDropzone();
     bindActions();
+    bindFs();
     SubtitlePlayer.init();
 
     // PWA: register service worker for installability + offline app shell.
@@ -465,6 +559,8 @@
 
     els.srcLang.value = store.get('srcLang', 'auto');
     els.keepOnly.checked = store.get('keepOnly', '0') === '1';
+    els.includeOriginal.checked = store.get('includeOriginal', '0') === '1';
+    els.accuracyToggle.checked = store.get('accuracy', '0') === '1';
     els.showTimeToggle.checked = store.get('showTime', '1') === '1';
     els.saveEditsToggle.checked = store.get('saveEdits', '1') === '1';
     buildEditor();

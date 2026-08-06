@@ -39,11 +39,13 @@ Deployed to GitHub Pages from the `main` branch
   calls `SubtitlePlayer.init()` on load.
 - `parser.js` / `translator.js` each end with a `module.exports` guard so they
   work both as classic scripts and via `require()` in Node.
-- Flow: drop file → `app.js` decodes + parses → **auto-translates immediately**
-  (settings step is skipped on load; reachable via "Translate another") →
+- Flow: drop file → `app.js` decodes + parses → **shows the settings step first**
+  with translation options (source language, include original, double-check
+  accuracy, drop empty lines) → user clicks "Translate to Kurdish" →
   `Translator.translateLines` → `prepareDownload` + `loadPreview`. Preview shows
   **translated** cues after a run, reverts to original on new file / "Translate
-  another". Source language + "drop empty lines" preference persist via `localStorage`.
+  another". All options (source lang, include original, accuracy, drop empty)
+  persist via `localStorage`.
 - **Preview editor**: the preview tab has a live subtitle editor (`app.js`
   `buildEditor`). Each cue is an auto-growing textarea; typing updates the cue
   on the player screen instantly (`SubtitlePlayer.updateText`) and a debounced

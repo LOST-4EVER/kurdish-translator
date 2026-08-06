@@ -217,6 +217,15 @@ select:focus { outline: none; border-color: var(--md-primary); box-shadow: 0 0 0
 
 /* M3 switch */
 .switch-row { display: flex; align-items: center; justify-content: space-between; margin: 18px 0 20px; font-size: 13px; color: var(--md-on-surface); }
+.settings-options { display: flex; flex-direction: column; gap: 10px; margin: 18px 0 20px; }
+.settings-options .switch-row {
+  margin: 0; align-items: center; gap: 14px; padding: 12px 14px;
+  background: var(--md-surface-container-high); border: 1px solid var(--md-outline-variant);
+  border-radius: var(--md-shape-md);
+}
+.settings-options .switch-row > span:first-child { display: flex; flex-direction: column; gap: 2px; }
+.settings-options .switch-row strong { font-size: 13px; color: var(--md-on-surface); }
+.settings-options .switch-row em { font-style: normal; font-size: 11px; color: var(--md-on-surface-variant); }
 .switch { position: relative; display: inline-block; width: 52px; height: 32px; }
 .switch input { opacity: 0; width: 0; height: 0; }
 .slider {
@@ -448,6 +457,61 @@ select:focus { outline: none; border-color: var(--md-primary); box-shadow: 0 0 0
 
 .ed-empty { padding: 26px; text-align: center; color: var(--md-on-surface-variant); font-size: 13px; }
 .editor-hint { margin-top: 12px; font-size: 11px; color: var(--md-on-surface-variant); text-align: center; }
+
+/* ---------- Fullscreen edit mode ---------- */
+.fs-edit {
+  position: fixed; inset: 0; z-index: 90;
+  display: flex; flex-direction: column;
+  background: #000; color: #fff;
+  padding: calc(env(safe-area-inset-top, 0px)) 0 calc(env(safe-area-inset-bottom, 0px));
+}
+.fs-screen {
+  flex: 1; display: flex; align-items: center; justify-content: center;
+  padding: 8% 10%; position: relative; cursor: text;
+}
+.fs-text {
+  font-size: clamp(22px, 6vw, 44px); font-weight: 600; color: #fff;
+  text-align: center; line-height: 1.5; max-width: 100%; word-wrap: break-word;
+  text-shadow: 0 2px 10px rgba(0, 0, 0, 0.9); z-index: 1;
+}
+.fs-text[dir="rtl"] {
+  direction: rtl; unicode-bidi: isolate;
+  font-family: "Noto Naskh Arabic", "Segoe UI", "Tahoma", sans-serif;
+}
+.fs-cuecount {
+  position: absolute; top: 14px; left: 16px; font-size: 12px;
+  color: rgba(255, 255, 255, 0.5); font-variant-numeric: tabular-nums;
+}
+.fs-bar {
+  display: flex; align-items: center; justify-content: flex-end; gap: 10px;
+  padding: 8px 16px 4px;
+}
+.fs-btn {
+  font-family: inherit; font-size: 13px; font-weight: 600; cursor: pointer;
+  border: none; border-radius: var(--md-shape-full); padding: 10px 16px;
+  transition: var(--md-motion) var(--md-easing);
+}
+.fs-edit-btn { background: var(--md-primary); color: var(--md-on-primary); }
+.fs-close {
+  width: 38px; height: 38px; padding: 0; display: grid; place-items: center;
+  background: rgba(255, 255, 255, 0.1); color: #fff;
+}
+.fs-editor {
+  border-top: 1px solid rgba(255, 255, 255, 0.12);
+  padding: 12px 16px calc(14px + env(safe-area-inset-bottom, 0px));
+  display: flex; flex-direction: column; gap: 10px;
+}
+.fs-editor.hidden { display: none; }
+#fsInput {
+  width: 100%; min-height: 84px; resize: none;
+  background: rgba(255, 255, 255, 0.08); color: #fff;
+  border: 1px solid rgba(255, 255, 255, 0.2); border-radius: var(--md-shape-md);
+  padding: 12px; font-size: 16px; line-height: 1.5; font-family: inherit;
+}
+#fsInput[dir="rtl"] { text-align: right; font-family: "Noto Naskh Arabic", "Segoe UI", "Tahoma", sans-serif; }
+#fsInput:focus { outline: none; border-color: var(--md-primary); background: rgba(255, 255, 255, 0.12); }
+.fs-actions { display: flex; justify-content: flex-end; }
+.fs-done { background: var(--md-secondary-container); color: var(--md-on-secondary-container); }
 
 /* ---------- Footer ---------- */
 .footer { padding: 10px 0 calc(22px + env(safe-area-inset-bottom, 0px)); text-align: center; }

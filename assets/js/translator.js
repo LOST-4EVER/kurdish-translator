@@ -54,14 +54,17 @@ const Translator = (() => {
    * @param {string} tgtLang target lang code
    * @param {(fraction:number, doneLines:number, totalLines:number)=>void} [onProgress]
    * @param {AbortSignal} [signal] aborts in-flight requests
+   * @param {{accuracy?:boolean}} [opts] accuracy re-translates lines left unchanged
    * @returns {Promise<string[]>} translated lines (same length)
    */
-  async function translateLines(lines, srcLang, tgtLang, onProgress, signal) {
+  async function translateLines(lines, srcLang, tgtLang, onProgress, signal, opts = {}) {
     const results = new Array(lines.length).fill('');
     const batches = buildBatches(lines);
     const total = batches.length || 1;
     const totalLines = batches.reduce((n, b) => n + b.length, 0);
     const isArabic = ARABIC_SCRIPT.has(tgtLang);
+    // Normalized originals, used to detect lines Google returned verbatim.
+    const origNorm = lines.map((l) => normalizeText(restoreNewlines(l), isArabic));
     let doneLines = 0;
 
     for (let b = 0; b < batches.length; b++) {
@@ -91,6 +94,26 @@ const Translator = (() => {
       doneLines += batch.length;
       if (onProgress) onProgress((b + 1) / total, doneLines, totalLines);
       if (b < batches.length - 1) await sleep(DELAY_MS);
+    }
+
+    // Optional accuracy pass: Google sometimes echoes a line back verbatim
+    // instead of translating it. Retry those individually once.
+    if (opts.accuracy) {
+      for (let i = 0; i < lines.length; i++) {
+        const orig = lines[i] || '';
+        if (!orig.trim()) continue;
+        if (!results[i]) continue;                 // already fell back to original
+        if (normalizeText(results[i], isArabic) !== origNorm[i]) continue; // actually translated
+        if (!/\p{L}/u.test(orig)) continue;        // skip pure numbers / punctuation
+        throwIfAborted(signal);
+        try {
+          const t = await translateChunk(orig, srcLang, tgtLang, signal);
+          const norm = normalizeText(restoreNewlines(t.trim()), isArabic);
+          if (norm && norm !== origNorm[i]) results[i] = norm;
+        } catch { /* keep the previous result */ }
+        doneLines++;
+        if (onProgress) onProgress(doneLines / totalLines, doneLines, totalLines);
+      }
     }
 
     if (onProgress) onProgress(1, doneLines, totalLines);

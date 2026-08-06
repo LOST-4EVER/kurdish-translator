@@ -94,13 +94,40 @@
             </div>
           </div>
 
-          <label class="switch-row">
-            <span>Drop untranslated / empty lines</span>
-            <span class="switch">
-              <input type="checkbox" id="keepOnly" />
-              <span class="slider"></span>
-            </span>
-          </label>
+          <div class="settings-options">
+            <label class="switch-row">
+              <span>
+                <strong>Include original text</strong>
+                <em>show the source line above its translation</em>
+              </span>
+              <span class="switch">
+                <input type="checkbox" id="includeOriginal" />
+                <span class="slider"></span>
+              </span>
+            </label>
+
+            <label class="switch-row">
+              <span>
+                <strong>Double-check accuracy</strong>
+                <em>re-translate lines Google left unchanged (slower)</em>
+              </span>
+              <span class="switch">
+                <input type="checkbox" id="accuracyToggle" />
+                <span class="slider"></span>
+              </span>
+            </label>
+
+            <label class="switch-row">
+              <span>
+                <strong>Drop untranslated / empty lines</strong>
+                <em>skip blank cues from the result</em>
+              </span>
+              <span class="switch">
+                <input type="checkbox" id="keepOnly" />
+                <span class="slider"></span>
+              </span>
+            </label>
+          </div>
 
           <button class="btn-primary" id="translateBtn">
             <span class="btn-icon">🌐</span> Translate to Kurdish
@@ -160,6 +187,7 @@
               <button class="ctrl-btn play" id="playBtn" title="Play / Pause">▶</button>
               <div class="time" id="timeDisplay">0:00 / 0:00</div>
               <div class="spacer"></div>
+              <button class="ctrl-btn" id="fsToggleBtn" title="Fullscreen edit mode">⛶</button>
               <span class="speed-label">Speed</span>
               <div class="select-wrap speed">
                 <select id="speedSel">
@@ -213,6 +241,24 @@
   </div>
 
   <div class="toast" id="toast" role="status"></div>
+
+  <!-- Fullscreen subtitle editor overlay -->
+  <div class="fs-edit hidden" id="fsEdit">
+    <div class="fs-screen" id="fsScreen">
+      <span class="fs-text" id="fsText"></span>
+      <span class="fs-cuecount" id="fsCueCount"></span>
+    </div>
+    <div class="fs-bar">
+      <button class="fs-btn fs-edit-btn" id="fsEditBtn">✏️ Edit text</button>
+      <button class="fs-btn fs-close" id="fsClose" title="Exit fullscreen edit">✕</button>
+    </div>
+    <div class="fs-editor hidden" id="fsEditor">
+      <textarea id="fsInput" aria-label="Edit active subtitle text"></textarea>
+      <div class="fs-actions">
+        <button class="fs-btn fs-done" id="fsDoneBtn">Done</button>
+      </div>
+    </div>
+  </div>
 
   <script src="assets/js/parser.js"></script>
   <script src="assets/js/translator.js"></script>
