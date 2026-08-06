@@ -151,6 +151,7 @@
       const input = document.createElement('textarea');
       input.className = 'ed-input';
       input.value = displayText(c.text);
+      input.setAttribute('dir', /[\u0600-\u06FF\u0750-\u077F]/.test(input.value) ? 'rtl' : 'ltr');
       input.setAttribute('aria-label', `Cue ${i + 1} text`);
       row.appendChild(input);
       list.appendChild(row);

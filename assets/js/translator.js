@@ -132,7 +132,10 @@ const Translator = (() => {
         const res = await fetch(url, { method: 'GET', headers: { 'Accept': 'application/json' }, signal });
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         const data = await res.json();
-        const out = data[0].map((seg) => seg[0]).join('');
+        // Google returns data[0] as an array of [translation, original, ...].
+        // Guard the shape so an unexpected payload falls back cleanly.
+        if (!Array.isArray(data) || !Array.isArray(data[0])) throw new Error('Unexpected response');
+        const out = data[0].map((seg) => (Array.isArray(seg) ? seg[0] : '')).join('');
         if (out) return out;
         throw new Error('Empty response');
       } catch (err) {
