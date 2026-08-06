@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <meta name="theme-color" content="#4f46e5" />
-  <meta name="description" content="Free subtitle translator into Kurdish Sorani — SRT & VTT. Drag & drop, works on mobile." />
+  <meta name="description" content="Free subtitle translator into Kurdish Sorani — SRT, VTT, ASS, SSA, SUB, SMI. Drag & drop, works on mobile." />
   <title>Kurdî Subtitle Translator | وەرگێڕی ژێرنووس</title>
   <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🎬</text></svg>" />
   <link rel="stylesheet" href="assets/css/style.css" />
@@ -22,94 +22,147 @@
           <p>وەرگێڕی ژێرنووسی فیلم</p>
         </div>
       </div>
-      <a class="gh-btn" href="https://github.com/" target="_blank" rel="noopener">GitHub</a>
+      <a class="gh-btn" href="https://github.com/LOST-4EVER/kurdish-translator" target="_blank" rel="noopener">GitHub ⭱</a>
     </header>
 
+    <!-- Tab navigation -->
+    <nav class="tabs" id="tabs">
+      <button class="tab active" data-tab="translate">
+        <span class="tab-ic">🌐</span> Translate
+      </button>
+      <button class="tab" data-tab="preview" id="previewTab">
+        <span class="tab-ic">▶</span> Preview
+      </button>
+    </nav>
+
     <main class="stage">
-      <!-- STEP 1 : upload -->
-      <section class="card upload-card" id="stepUpload">
-        <div class="dropzone" id="dropzone" tabindex="0" role="button" aria-label="Upload subtitle file">
-          <input type="file" id="fileInput" accept=".srt,.vtt,.ass,.ssa,.sub,.smi,text/plain" hidden />
-          <div class="dz-icon">📂</div>
-          <h2>Drop subtitle file here</h2>
-          <p class="dz-sub">or <span class="link">browse from device</span></p>
-          <div class="dz-hint">Supports <b>.SRT</b> <b>.VTT</b> <b>.ASS</b> <b>.SSA</b> <b>.SUB</b> <b>.SMI</b> — Android & iOS ready</div>
-          <div class="pill-row">
-            <span class="pill">Free</span>
-            <span class="pill">No signup</span>
-            <span class="pill">Private</span>
-          </div>
-        </div>
-      </section>
+      <!-- ============ TRANSLATE TAB ============ -->
+      <div id="tabTranslate">
 
-      <!-- STEP 2 : settings -->
-      <section class="card settings-card hidden" id="stepSettings">
-        <div class="file-info">
-          <span class="fi-icon">📄</span>
-          <div>
-            <strong id="fileName">movie.srt</strong>
-            <span id="fileMeta"></span>
-          </div>
-          <button class="icon-btn" id="changeFile" title="Choose another file">✕</button>
-        </div>
-
-        <div class="settings-grid">
-          <div class="field">
-            <label>Source language</label>
-            <div class="select-wrap">
-              <select id="srcLang">
-                <option value="auto" selected>Auto detect</option>
-              </select>
+        <!-- STEP 1 : upload -->
+        <section class="card upload-card" id="stepUpload">
+          <div class="dropzone" id="dropzone" tabindex="0" role="button" aria-label="Upload subtitle file">
+            <input type="file" id="fileInput" accept=".srt,.vtt,.ass,.ssa,.sub,.smi,text/plain" hidden />
+            <div class="dz-icon">📂</div>
+            <h2>Drop subtitle file here</h2>
+            <p class="dz-sub">or <span class="link">browse from device</span></p>
+            <div class="dz-hint">Supports <b>.SRT</b> <b>.VTT</b> <b>.ASS</b> <b>.SSA</b> <b>.SUB</b> <b>.SMI</b> — Android & iOS ready</div>
+            <div class="pill-row">
+              <span class="pill">Free</span>
+              <span class="pill">No signup</span>
+              <span class="pill">Private</span>
             </div>
           </div>
-          <div class="field">
-            <label>Target language</label>
-            <div class="select-wrap">
-              <select id="tgtLang">
-                <option value="ckb" selected>Kurdish (Sorani / کوردیی ناوەندی)</option>
-              </select>
+        </section>
+
+        <!-- STEP 2 : settings -->
+        <section class="card settings-card hidden" id="stepSettings">
+          <div class="file-info">
+            <span class="fi-icon">📄</span>
+            <div>
+              <strong id="fileName">movie.srt</strong>
+              <span id="fileMeta"></span>
+            </div>
+            <button class="icon-btn" id="changeFile" title="Choose another file">✕</button>
+          </div>
+
+          <div class="settings-grid">
+            <div class="field">
+              <label>Source language</label>
+              <div class="select-wrap">
+                <select id="srcLang">
+                  <option value="auto" selected>Auto detect</option>
+                </select>
+              </div>
+            </div>
+            <div class="field">
+              <label>Target language</label>
+              <div class="select-wrap">
+                <select id="tgtLang">
+                  <option value="ckb" selected>Kurdish (Sorani / کوردیی ناوەندی)</option>
+                </select>
+              </div>
             </div>
           </div>
-        </div>
 
-        <label class="switch-row">
-          <span>Translate subtitles only</span>
-          <span class="switch">
-            <input type="checkbox" id="keepOnly" />
-            <span class="slider"></span>
-          </span>
-        </label>
+          <label class="switch-row">
+            <span>Translate subtitles only</span>
+            <span class="switch">
+              <input type="checkbox" id="keepOnly" />
+              <span class="slider"></span>
+            </span>
+          </label>
 
-        <button class="btn-primary" id="translateBtn">
-          <span class="btn-icon">🌐</span> Translate to Kurdish
-        </button>
-      </section>
+          <button class="btn-primary" id="translateBtn">
+            <span class="btn-icon">🌐</span> Translate to Kurdish
+          </button>
+        </section>
 
-      <!-- STEP 3 : progress -->
-      <section class="card progress-card hidden" id="stepProgress">
-        <div class="progress-head">
-          <h2>Translating…</h2>
-          <span id="progressPct">0%</span>
-        </div>
-        <div class="progress-track"><div class="progress-fill" id="progressFill"></div></div>
-        <div class="progress-meta">
-          <span id="progressDetail">Preparing…</span>
-          <span id="lineCount"></span>
-        </div>
-        <button class="btn-ghost" id="cancelBtn">Cancel</button>
-      </section>
+        <!-- STEP 3 : progress -->
+        <section class="card progress-card hidden" id="stepProgress">
+          <div class="progress-head">
+            <h2>Translating…</h2>
+            <span id="progressPct">0%</span>
+          </div>
+          <div class="progress-track"><div class="progress-fill" id="progressFill"></div></div>
+          <div class="progress-meta">
+            <span id="progressDetail">Preparing…</span>
+            <span id="lineCount"></span>
+          </div>
+          <button class="btn-ghost" id="cancelBtn">Cancel</button>
+        </section>
 
-      <!-- STEP 4 : done -->
-      <section class="card done-card hidden" id="stepDone">
-        <div class="done-icon">✅</div>
-        <h2>Translation complete!</h2>
-        <p class="done-sub">Your subtitle is ready in Kurdish.</p>
-        <div class="done-actions">
-          <a class="btn-primary" id="downloadBtn" download>⬇ Download SRT</a>
-          <button class="btn-secondary" id="translateAgainBtn">↺ Translate another</button>
-        </div>
-        <p class="note">Subtitle file is processed 100% in your browser. Nothing is uploaded.</p>
-      </section>
+        <!-- STEP 4 : done -->
+        <section class="card done-card hidden" id="stepDone">
+          <div class="done-icon">✅</div>
+          <h2>Translation complete!</h2>
+          <p class="done-sub">Your subtitle is ready in Kurdish.</p>
+          <div class="done-meta">
+            <span id="doneFormat"></span>
+            <span id="doneSize"></span>
+          </div>
+          <div class="done-actions">
+            <a class="btn-primary" id="downloadBtn" download>⬇ Download</a>
+            <button class="btn-secondary" id="copyBtn">📋 Copy to clipboard</button>
+            <button class="btn-tertiary" id="translateAgainBtn">↺ Translate another</button>
+          </div>
+          <p class="note">Processed 100% in your browser. Nothing is uploaded.</p>
+        </section>
+
+      </div>
+
+      <!-- ============ PREVIEW TAB ============ -->
+      <div id="tabPreview" class="hidden">
+        <section class="card player-card">
+          <div class="player">
+            <div class="screen" id="playerScreen">
+              <span class="screen-text" id="playerText"></span>
+              <div class="screen-empty" id="playerEmpty">🎬 Load a subtitle to preview it here</div>
+            </div>
+            <div class="timeline" id="timeline">
+              <div class="tl-cues" id="tlCues"></div>
+              <div class="tl-fill" id="tlFill"></div>
+              <div class="tl-thumb" id="tlThumb"></div>
+            </div>
+            <div class="controls">
+              <button class="ctrl-btn" id="restartBtn" title="Restart">⏮</button>
+              <button class="ctrl-btn play" id="playBtn" title="Play / Pause">▶</button>
+              <div class="time" id="timeDisplay">0:00 / 0:00</div>
+              <div class="spacer"></div>
+              <span class="speed-label">Speed</span>
+              <div class="select-wrap speed">
+                <select id="speedSel">
+                  <option value="0.5">0.5×</option>
+                  <option value="1" selected>1×</option>
+                  <option value="1.5">1.5×</option>
+                  <option value="2">2×</option>
+                </select>
+              </div>
+            </div>
+          </div>
+          <p class="player-note">Previews your subtitle synced to timing — like a video without the video.</p>
+        </section>
+      </div>
     </main>
 
     <footer class="footer">
@@ -121,6 +174,7 @@
 
   <script src="assets/js/parser.js"></script>
   <script src="assets/js/translator.js"></script>
+  <script src="assets/js/player.js"></script>
   <script src="assets/js/app.js"></script>
 </body>
 </html>

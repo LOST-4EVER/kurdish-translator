@@ -24,7 +24,15 @@
     lineCount: $('#lineCount'),
     cancelBtn: $('#cancelBtn'),
     downloadBtn: $('#downloadBtn'),
+    copyBtn: $('#copyBtn'),
     translateAgainBtn: $('#translateAgainBtn'),
+    doneFormat: $('#doneFormat'),
+    doneSize: $('#doneSize'),
+    tabs: $('#tabs'),
+    tabButtons: document.querySelectorAll('.tab'),
+    previewTab: $('#previewTab'),
+    tabTranslate: $('#tabTranslate'),
+    tabPreview: $('#tabPreview'),
     toast: $('#toast'),
   };
 
@@ -96,11 +104,28 @@
       }
       els.fileName.textContent = f.name;
       els.fileMeta.textContent = `${parsed.cues.length} lines • ${LABEL[parsed.format] || parsed.format.toUpperCase()}`;
+      SubtitlePlayer.load(parsed.cues.map((c) => ({ ...c, text: c.text.replace(/<[^>]+>/g, '') })));
+      enablePreviewTab();
       showStep('settings');
     };
     reader.onerror = () => toast('Failed to read file.', true);
     reader.readAsText(f, 'UTF-8');
   }
+
+  // ---- Tabs
+  function switchTab(name) {
+    els.tabButtons.forEach((b) => b.classList.toggle('active', b.dataset.tab === name));
+    els.tabTranslate.classList.toggle('hidden', name !== 'translate');
+    els.tabPreview.classList.toggle('hidden', name !== 'preview');
+    if (name === 'preview') {
+      if (!parsed) toast('Load a subtitle file first.', true);
+      else window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+  }
+  function enablePreviewTab() {
+    els.previewTab.classList.remove('disabled');
+  }
+  els.tabButtons.forEach((b) => b.addEventListener('click', () => switchTab(b.dataset.tab)));
 
   // ---- Dropzone events
   els.dropzone.addEventListener('click', () => els.fileInput.click());
@@ -166,12 +191,16 @@
       }
 
       const ext = EXT_BY_FORMAT[parsed.format] || 'srt';
-      const blob = new Blob([SubParser.serialize(parsed, translatedCues)], { type: 'text/plain;charset=utf-8' });
+      const outText = SubParser.serialize(parsed, translatedCues);
+      const blob = new Blob([outText], { type: 'text/plain;charset=utf-8' });
       const url = URL.createObjectURL(blob);
       const base = file.name.replace(/\.([a-z0-9]+)$/i, '');
       els.downloadBtn.href = url;
       els.downloadBtn.download = `${base}.ckb.${ext}`;
+      els.doneFormat.textContent = LABEL[parsed.format] || parsed.format.toUpperCase();
+      els.doneSize.textContent = (blob.size / 1024).toFixed(1) + ' KB';
 
+      window.__outText = outText;
       showStep('done');
     } catch (err) {
       console.error(err);
@@ -179,6 +208,17 @@
       showStep('settings');
     } finally {
       els.translateBtn.disabled = false;
+    }
+  });
+
+  els.copyBtn.addEventListener('click', async () => {
+    const text = window.__outText;
+    if (!text) { toast('Nothing to copy yet.', true); return; }
+    try {
+      await navigator.clipboard.writeText(text);
+      toast('Copied to clipboard!');
+    } catch (err) {
+      toast('Copy failed on this device.', true);
     }
   });
 
@@ -192,4 +232,6 @@
     translatedCues = null;
     showStep('settings');
   });
+
+  SubtitlePlayer.init();
 })();
