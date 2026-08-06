@@ -46,6 +46,7 @@
     showTimeToggle: '#showTimeToggle', saveEditsToggle: '#saveEditsToggle',
     fsEdit: '#fsEdit', fsScreen: '#fsScreen', fsText: '#fsText', fsCueCount: '#fsCueCount',
     fsToggleBtn: '#fsToggleBtn', fsEditBtn: '#fsEditBtn', fsClose: '#fsClose',
+    fsPrevBtn: '#fsPrevBtn', fsNextBtn: '#fsNextBtn',
     fsEditor: '#fsEditor', fsInput: '#fsInput', fsDoneBtn: '#fsDoneBtn',
   });
   const tabButtons = $$('.tab');
@@ -64,6 +65,7 @@
   let activeIdx = -1;   // cue index currently on screen
   let fsActive = false; // fullscreen edit mode on
   let fsCueIndex = -1;  // cue being edited in fullscreen
+  let editWasPlaying = false; // true if the player was running when editing started
   const hasArabic = (s) => /[\u0600-\u06FF\u0750-\u077F]/.test(s);
 
   // ---------- Helpers ----------
@@ -182,8 +184,15 @@
         autoGrow(input);
         applyCueEdit(i, input.value);
       });
-      input.addEventListener('focus', () => row.classList.add('editing'));
-      input.addEventListener('blur', () => row.classList.remove('editing'));
+      input.addEventListener('focus', () => {
+        row.classList.add('editing');
+        editWasPlaying = SubtitlePlayer.playing;
+        SubtitlePlayer.pause();
+      });
+      input.addEventListener('blur', () => {
+        row.classList.remove('editing');
+        if (editWasPlaying) SubtitlePlayer.play();
+      });
 
       row.addEventListener('click', (e) => {
         if (e.target.closest('.ed-input')) return;
@@ -255,11 +264,14 @@
     if (i < 0 || !workCues[i]) return;
     syncFsEditor(i);
     els.fsEditor.classList.remove('hidden');
+    editWasPlaying = SubtitlePlayer.playing;
+    SubtitlePlayer.pause(); // freeze the cue so you can type without it skipping away
     els.fsInput.focus(); // pops the keyboard so you can tap-edit immediately
   }
 
   function closeFsEditor() {
     els.fsEditor.classList.add('hidden');
+    if (editWasPlaying) SubtitlePlayer.play();
   }
 
   function enterFs() {
@@ -281,6 +293,8 @@
     els.fsText.addEventListener('click', openFsEditor); // tap any word → editor at the bottom
     els.fsEditBtn.addEventListener('click', openFsEditor);
     els.fsDoneBtn.addEventListener('click', closeFsEditor);
+    els.fsPrevBtn.addEventListener('click', () => SubtitlePlayer.stepCue(-1));
+    els.fsNextBtn.addEventListener('click', () => SubtitlePlayer.stepCue(1));
 
     els.fsInput.addEventListener('input', () => {
       if (fsCueIndex < 0 || !workCues[fsCueIndex]) return;

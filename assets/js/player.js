@@ -182,6 +182,12 @@ const SubtitlePlayer = (() => {
     if (activeCue === cues[index]) refresh(true);
   }
 
+  /** Seek to the previous (-1) or next (+1) cue from the current position. */
+  function stepCue(dir) {
+    if (!cues.length) return;
+    seek(skipCue(dir));
+  }
+
   /** Register a callback fired with (cue, index) whenever playback moves to a cue. */
   function setCueCallback(fn) { onCue = fn; }
 
@@ -190,5 +196,5 @@ const SubtitlePlayer = (() => {
     return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
   }
 
-  return { init, load, toggle, play, pause, seek, updateText, setCueCallback, refresh, get playing() { return playing; } };
+  return { init, load, toggle, play, pause, seek, stepCue, updateText, setCueCallback, refresh, get playing() { return playing; } };
 })();
