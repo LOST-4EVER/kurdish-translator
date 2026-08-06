@@ -377,8 +377,11 @@
       els.dropzone.addEventListener(ev, (e) => { e.preventDefault(); els.dropzone.classList.remove('dragover'); })
     );
     els.dropzone.addEventListener('drop', (e) => {
-      const f = e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0];
-      handleFile(f);
+      e.preventDefault();
+      e.stopPropagation(); // avoid double-handling via the document-level drop
+      dragCounter = 0;
+      document.body.classList.remove('page-dropping');
+      handleFile(e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0]);
     });
     els.dropzone.addEventListener('keydown', (e) => {
       if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); els.fileInput.click(); }

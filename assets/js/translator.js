@@ -87,7 +87,7 @@ const Translator = (() => {
         for (const o of batch) {
           throwIfAborted(signal);
           try { results[o.index] = normalizeText(restoreNewlines(await translateChunk(o.text, srcLang, tgtLang, signal)), isArabic); }
-          catch { results[o.index] = restoreNewlines(o.text); }
+          catch { results[o.index] = normalizeText(restoreNewlines(o.text), isArabic); }
         }
       }
 

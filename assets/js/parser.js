@@ -60,7 +60,7 @@ const SubParser = (() => {
       return /ScriptType[^\n]*v4\.00\+/i.test(t) ? 'ass' : 'ssa';
     }
     if (/^\{\d+\}\{\d+\}/m.test(t)) return 'sub';
-    if (/^<sync[ >]/im.test(t)) return 'smi';
+    if (/<SYNC\b[^>]*\bStart\s*=/i.test(t)) return 'smi';
     if (TIMECODE.test(t)) return 'srt';
     return 'unknown';
   }
@@ -105,7 +105,8 @@ const SubParser = (() => {
   // ---------- ASS / SSA ----------
   function parseASS(content) {
     const header = [];
-    const fields = [];
+    // Fall back to the standard field order when a file omits the Format line.
+    let fields = ASS_DEFAULT_ORDER.slice();
     const cues = [];
     let inEvents = false;
 
@@ -116,7 +117,7 @@ const SubParser = (() => {
       if (!inEvents) { header.push(line); continue; }
 
       const fm = line.match(/^\s*Format\s*:\s*(.*)$/i);
-      if (fm) { fields.push(...fm[1].split(',').map((s) => s.trim())); header.push(line); continue; }
+      if (fm) { fields = fm[1].split(',').map((s) => s.trim()); header.push(line); continue; }
 
       const dm = line.match(/^\s*Dialogue\s*:\s*(.*)$/i);
       if (dm) {
@@ -285,11 +286,20 @@ const SubParser = (() => {
     const lower = order.map((f) => f.toLowerCase());
     const keyOf = (k) => order[lower.indexOf(k)];
 
-    const cleanHeader = (meta.header || []).filter((l) => !/^\s*Dialogue\s*:/i.test(l)).join('\n');
+    const cleanHeader = (meta.header || []).filter((l) => !/^\s*Dialogue\s*:/i.test(l));
     const fmtLine = `Format: ${order.join(', ')}`;
-    const header = cleanHeader.trim()
-      ? cleanHeader.replace(/Format:[^\n]*/i, fmtLine).replace(/\n{3,}/g, '\n\n')
-      : fmtLine;
+    // Place exactly one Format line, right after [Events] (replacing any old one).
+    const evIdx = cleanHeader.findIndex((l) => /^\s*\[Events\]\s*$/i.test(l));
+    let header;
+    if (evIdx >= 0) {
+      const before = cleanHeader.slice(0, evIdx + 1);
+      const after = cleanHeader.slice(evIdx + 1).filter((l) => !/^\s*Format\s*:/i.test(l));
+      header = [...before, fmtLine, ...after].join('\n');
+    } else {
+      header = cleanHeader.filter((l) => !/^\s*Format\s*:/i.test(l)).join('\n');
+      header = header.trim() ? `${header}\n${fmtLine}` : fmtLine;
+    }
+    header = header.replace(/\n{3,}/g, '\n\n');
 
     const lines = [header];
     for (const c of cues) {
