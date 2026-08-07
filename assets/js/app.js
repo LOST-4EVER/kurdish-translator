@@ -81,6 +81,7 @@
   let rowEls = [];      // editor row nodes indexed by cue index (for O(1) highlight)
   let lastActiveRow = null;  // currently highlighted editor row
   let liveSource = [];  // original source lines for the live translation reel
+  let editorObserver = null;
   const hasArabic = (s) => /[\u0600-\u06FF\u0750-\u077F]/.test(s);
   // Safari iOS ignores the `download` attribute on blob: URLs; iPadOS
   // identifies itself as a Mac, so detect touch too.
@@ -167,6 +168,21 @@
     el.style.height = `${el.scrollHeight}px`;
   }
 
+  function getEditorObserver() {
+    if (!editorObserver) {
+      editorObserver = new IntersectionObserver((entries, observer) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) {
+            const input = entry.target;
+            autoGrow(input);
+            observer.unobserve(input);
+          }
+        });
+      }, { root: els.editorList, rootMargin: '150px 0px' });
+    }
+    return editorObserver;
+  }
+
   function updateStatus() {
     els.editorStatus.textContent = dirty
       ? (els.saveEditsToggle.checked ? 'Your edits will appear in the download' : 'Edits appear here only — not in the download')
@@ -244,9 +260,11 @@
       });
     });
     list.appendChild(frag);
-    // Size the textareas after they are in the layout (scrollHeight is 0
-    // while detached), then track the rows for fast cue highlighting.
-    inputs.forEach((input) => autoGrow(input));
+    // Size the textareas lazily on intersection to prevent layout thrashing
+    // and correctly handle when the preview tab is initially hidden.
+    const obs = getEditorObserver();
+    obs.disconnect();
+    inputs.forEach((input) => obs.observe(input));
     rowEls = rows;
     lastActiveRow = null;
   }
@@ -386,7 +404,18 @@
     tabButtons.forEach((b) => b.classList.toggle('active', b.dataset.tab === name));
     els.tabTranslate.classList.toggle('hidden', name !== 'translate');
     els.tabPreview.classList.toggle('hidden', name !== 'preview');
-    if (name !== 'preview') SubtitlePlayer.pause(); // stop playback off-screen
+    if (name === 'preview') {
+      // Re-trigger layout for textareas that are currently visible to ensure perfect auto-growing
+      const visibleInputs = els.editorList.querySelectorAll('.ed-input');
+      visibleInputs.forEach((input) => {
+        const rect = input.getBoundingClientRect();
+        if (rect.height > 0 || (rect.top >= 0 && rect.bottom <= window.innerHeight)) {
+          autoGrow(input);
+        }
+      });
+    } else {
+      SubtitlePlayer.pause(); // stop playback off-screen
+    }
   }
   tabButtons.forEach((b) => b.addEventListener('click', () => switchTab(b.dataset.tab)));
 

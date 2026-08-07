@@ -379,9 +379,10 @@ select:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px
   height: 10px; background: var(--accent); border-radius: var(--radius-full);
 }
 .tl-thumb {
-  position: absolute; top: 50%; transform: translateY(-50%);
+  position: absolute; top: 50%; transform: translate(-50%, -50%);
   width: 15px; height: 15px; border-radius: 50%; background: #fff;
   box-shadow: 0 0 0 3px var(--accent), 0 2px 6px rgba(0, 0, 0, 0.4);
+  pointer-events: none;
 }
 
 .controls {
@@ -495,6 +496,13 @@ select:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px
   background: transparent; border: 1px solid transparent; border-radius: var(--radius-sm);
   color: var(--text); font: inherit; font-size: 13px; line-height: 1.5;
   padding: 5px 9px; transition: background 0.15s, border-color 0.15s, box-shadow 0.15s;
+}
+
+/* On mobile devices, ensure font size is at least 16px to prevent iOS auto-zoom on focus */
+@media (max-width: 480px) {
+  .ed-input {
+    font-size: 16px;
+  }
 }
 .ed-input:hover { background: var(--surface-2); }
 .ed-input:focus {

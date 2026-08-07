@@ -40,11 +40,36 @@ const SubtitlePlayer = (() => {
     el.restart.addEventListener('click', () => seek(0));
     el.speed.addEventListener('change', (e) => { speed = Number(e.target.value); });
 
-    el.tl.addEventListener('click', (e) => {
+    // High performance dragging timeline with setPointerCapture
+    let isDragging = false;
+    const handleTimelinePointer = (e) => {
       const rect = el.tl.getBoundingClientRect();
-      seek(clamp((e.clientX - rect.left) / rect.width, 0, 1) * total);
+      const pct = clamp((e.clientX - rect.left) / rect.width, 0, 1);
+      seek(pct * total);
+    };
+
+    el.tl.addEventListener('pointerdown', (e) => {
+      isDragging = true;
+      el.tl.setPointerCapture(e.pointerId);
+      if (playing) pause();
+      handleTimelinePointer(e);
     });
-    el.tl.addEventListener('pointerdown', () => { if (playing) pause(); });
+
+    el.tl.addEventListener('pointermove', (e) => {
+      if (isDragging) {
+        handleTimelinePointer(e);
+      }
+    });
+
+    const stopDragging = (e) => {
+      if (isDragging) {
+        isDragging = false;
+        try { el.tl.releasePointerCapture(e.pointerId); } catch (err) {}
+      }
+    };
+
+    el.tl.addEventListener('pointerup', stopDragging);
+    el.tl.addEventListener('pointercancel', stopDragging);
 
     document.addEventListener('keydown', (e) => {
       const t = e.target;
@@ -144,8 +169,23 @@ const SubtitlePlayer = (() => {
    *  plus binary search keeps this O(log n) worst-case and O(1) during playback. */
   let cursor = -1;
   function cueAt(pos) {
+    // 1. O(1) Check if we're still within the active cue
     const cur = cursor >= 0 ? cues[cursor] : null;
-    if (cur && pos >= cur.start && pos < cur.end) return cursor; // still in the same cue
+    if (cur && pos >= cur.start && pos < cur.end) return cursor;
+
+    // 2. O(1) Check if we are in the gap between the current and the next cue (very common sequential transition)
+    if (cur && pos >= cur.end && cursor + 1 < cues.length) {
+      const next = cues[cursor + 1];
+      if (pos < next.start) {
+        cursor = -1;
+        return -1; // We are in a gap, no cue is active
+      } else if (pos >= next.start && pos < next.end) {
+        cursor = cursor + 1;
+        return cursor; // Sequentially transitioned into the next cue perfectly
+      }
+    }
+
+    // 3. Fallback to O(log n) binary search when there's a seek or large jump
     let lo = 0, hi = cues.length - 1, best = -1;
     while (lo <= hi) {
       const mid = (lo + hi) >> 1;
@@ -184,7 +224,7 @@ const SubtitlePlayer = (() => {
     }
     const pct = total ? (pos / total) * 100 : 0;
     el.tlFill.style.width = `${pct}%`;
-    el.tlThumb.style.left = `calc(${pct}% - 6px)`;
+    el.tlThumb.style.left = `${pct}%`;
 
     if (changed && onCue) onCue(cue, idx);
   }
