@@ -89,6 +89,13 @@ Deployed to GitHub Pages from the `main` branch
   verbatim, so a translation that gains or loses plain newlines still maps back
   to its own line. `splitBatch` matches the marker with regex (safe — `\u0001`
   never occurs in subtitle text).
+- **Markup protection** (`protect`/`restore`): before sending, every SRT/VTT
+  HTML tag and ASS/MicroDVD `{...}` code is swapped for a `\u0002<id>\u0003`
+  placeholder (Google leaves control chars verbatim, so the markup survives
+  translation instead of being stripped/reordered) and put back after. A line
+  whose batch and line-by-line re-translations all fail is kept as the original
+  text; if *nothing* translates because the network/API is unreachable,
+  `translateLines` throws so the app reports failure instead of fake success.
 - **Merged-batch fallback**: if a batch response doesn't come back with exactly
   the number of delimited lines sent, that batch is re-translated one line at a
   time instead of silently dropping text.

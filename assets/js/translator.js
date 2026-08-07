@@ -25,8 +25,29 @@ const Translator = (() => {
   const BATCH_SEP = '\u0001';
   const BATCH_SEP_RE = /^[ \t]*\u0001[ \t]*$/;
 
+  // Control chars wrapping markup placeholders. Google leaves control chars
+  // verbatim, so subtitle formatting (SRT/VTT HTML tags, ASS/MicroDVD {..}
+  // codes) survives translation instead of being stripped or reordered.
+  const P_OPEN = '\u0002';
+  const P_CLOSE = '\u0003';
+  const P_RE = new RegExp(P_OPEN + '(\\d+)' + P_CLOSE, 'g');
+  const MARKUP_RE = /\{[^}]*\}|<[^>]*>/g;
+
   const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
   const restoreNewlines = (s) => s.split(NL_SENTINEL).join('\n');
+
+  /** Replace subtitle markup with control-char placeholders so Google keeps it. */
+  function protect(text) {
+    const toks = [];
+    const out = text.replace(MARKUP_RE, (m) => {
+      const id = toks.length;
+      toks.push(m);
+      return P_OPEN + id + P_CLOSE;
+    });
+    return { text: out, toks };
+  }
+  /** Put the original markup back in place of the placeholders. */
+  const restore = (s, toks) => s.replace(P_RE, (_, id) => (toks[id] !== undefined ? toks[id] : ''));
 
   // Arabic-script targets (Sorani/Kurdish) should use the Arabic punctuation.
   const ARABIC_SCRIPT = new Set(['ckb', 'ku', 'kmr', 'fa', 'ar', 'ur', 'ps']);
@@ -66,6 +87,8 @@ const Translator = (() => {
     // Normalized originals, used to detect lines Google returned verbatim.
     const origNorm = lines.map((l) => normalizeText(restoreNewlines((l || '').replace(/\r/g, '')), isArabic));
     let doneLines = 0;
+    let anyTranslated = false;
+    let sawHardFail = false;
 
     for (let b = 0; b < batches.length; b++) {
       const batch = batches[b];
@@ -79,15 +102,23 @@ const Translator = (() => {
         const parts = splitBatch(translated);
         if (parts.length !== batch.length) throw new Error('merged batch');
         parts.forEach((part, k) => {
-          results[batch[k].index] = normalizeText(restoreNewlines(part.trim()), isArabic);
+          const norm = normalizeText(restoreNewlines(restore(part, batch[k].toks).trim()), isArabic);
+          results[batch[k].index] = norm;
+          if (norm && norm !== origNorm[batch[k].index]) anyTranslated = true;
         });
       } catch (err) {
         if (signal && signal.aborted) throw err;
         // Batch failed — fall back to one request per line.
         for (const o of batch) {
           throwIfAborted(signal);
-          try { results[o.index] = normalizeText(restoreNewlines(await translateChunk(o.text, srcLang, tgtLang, signal)), isArabic); }
-          catch { results[o.index] = normalizeText(restoreNewlines(o.text), isArabic); }
+          try {
+            const norm = normalizeText(restoreNewlines(restore(await translateChunk(o.text, srcLang, tgtLang, signal), o.toks).trim()), isArabic);
+            results[o.index] = norm;
+            if (norm && norm !== origNorm[o.index]) anyTranslated = true;
+          } catch (e) {
+            if (e && e.hard) sawHardFail = true;
+            results[o.index] = normalizeText(restoreNewlines(restore(o.text, o.toks)), isArabic);
+          }
         }
       }
 
@@ -95,6 +126,10 @@ const Translator = (() => {
       if (onProgress) onProgress((b + 1) / total, doneLines, totalLines);
       if (b < batches.length - 1) await sleep(DELAY_MS);
     }
+
+    // If the network/API was unreachable for every line, don't hand back the
+    // original text as if it were a successful translation.
+    if (!anyTranslated && sawHardFail) throw new Error('Translation unavailable (network error)');
 
     // Optional accuracy pass: Google sometimes echoes a line back verbatim
     // instead of translating it. Retry those individually once.
@@ -112,16 +147,17 @@ const Translator = (() => {
       for (let k = 0; k < retryTotal; k++) {
         const i = retries[k];
         throwIfAborted(signal);
+        const p = protect(lines[i]);
         try {
-          const t = await translateChunk(lines[i], srcLang, tgtLang, signal);
-          const norm = normalizeText(restoreNewlines(t.trim()), isArabic);
+          const t = await translateChunk(p.text, srcLang, tgtLang, signal);
+          const norm = normalizeText(restoreNewlines(restore(t, p.toks).trim()), isArabic);
           if (norm && norm !== origNorm[i]) results[i] = norm;
         } catch { /* keep the previous result */ }
         if (onProgress) onProgress((doneLines + k + 1) / (totalLines + retryTotal), doneLines + k + 1, totalLines + retryTotal);
       }
     }
 
-    if (onProgress) onProgress(1, doneLines, totalLines);
+    if (onProgress) onProgress(1, totalLines + (opts.accuracy ? retryTotal : 0), totalLines + (opts.accuracy ? retryTotal : 0));
     return results;
   }
 
@@ -141,7 +177,8 @@ const Translator = (() => {
         current = [];
         chars = 0;
       }
-      current.push({ index, text: text.replace(/\r?\n/g, NL_SENTINEL) });
+      const c = protect(text.replace(/\r?\n/g, NL_SENTINEL));
+      current.push({ index, text: c.text, toks: c.toks });
       chars += text.length;
     });
 
@@ -158,7 +195,7 @@ const Translator = (() => {
     for (let attempt = 0; attempt < MAX_ATTEMPTS; attempt++) {
       try {
         const res = await fetch(url, { method: 'GET', headers: { 'Accept': 'application/json' }, signal });
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        if (!res.ok) { const e = new Error(`HTTP ${res.status}`); e.hard = true; throw e; }
         const data = await res.json();
         // Google returns data[0] as an array of [translation, original, ...].
         // Guard the shape so an unexpected payload falls back cleanly.
@@ -168,6 +205,9 @@ const Translator = (() => {
         throw new Error('Empty response');
       } catch (err) {
         if (signal && signal.aborted) throw err;
+        // A rejected fetch (offline) is a network hard failure, distinct from
+        // a Google "unexpected/empty response" which we simply retry.
+        if (err instanceof TypeError) err.hard = true;
         lastErr = err;
         if (attempt < MAX_ATTEMPTS - 1) await sleep(600 * 2 ** attempt + Math.random() * 400);
       }

@@ -11,6 +11,16 @@
   const ALLOWED_EXT = ['srt', 'vtt', 'ass', 'ssa', 'sub', 'smi'];
   const LABEL = { srt: 'SRT', vtt: 'VTT', ass: 'ASS', ssa: 'SSA', sub: 'MicroDVD', smi: 'SAMI' };
   const EXT_BY_FORMAT = { srt: 'srt', vtt: 'vtt', ass: 'ass', ssa: 'ssa', sub: 'sub', smi: 'smi' };
+  // Per-format MIME so browsers that ignore the `download` attribute fall
+  // back to the right extension instead of .txt (text/plain).
+  const MIME_BY_FORMAT = {
+    srt: 'application/x-subrip;charset=utf-8',
+    vtt: 'text/vtt;charset=utf-8',
+    ass: 'application/x-ass;charset=utf-8',
+    ssa: 'text/x-ssa;charset=utf-8',
+    sub: 'application/x-microdvd;charset=utf-8',
+    smi: 'application/x-sami;charset=utf-8',
+  };
 
   const SOURCE_LANGS = {
     en: 'English', ar: 'Arabic', tr: 'Turkish', fa: 'Persian (Farsi)',
@@ -68,6 +78,10 @@
   let fsCueIndex = -1;  // cue being edited in fullscreen
   let editWasPlaying = false; // true if the player was running when editing started
   const hasArabic = (s) => /[\u0600-\u06FF\u0750-\u077F]/.test(s);
+  // Safari iOS ignores the `download` attribute on blob: URLs; iPadOS
+  // identifies itself as a Mac, so detect touch too.
+  const isIOS = /iP(hone|ad|od)/.test(navigator.userAgent) ||
+    (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
 
   // ---------- Helpers ----------
   const store = {
@@ -506,7 +520,8 @@
     const cues = els.saveEditsToggle.checked ? workCues : baseCues;
     resultText = SubParser.serialize(parsed, cues);
     if (resultUrl) URL.revokeObjectURL(resultUrl);
-    resultUrl = URL.createObjectURL(new Blob([resultText], { type: 'text/plain;charset=utf-8' }));
+    const mime = MIME_BY_FORMAT[parsed.format] || 'text/plain;charset=utf-8';
+    resultUrl = URL.createObjectURL(new Blob([resultText], { type: mime }));
 
     const ext = EXT_BY_FORMAT[parsed.format] || 'srt';
     const base = file.name.replace(/\.[^.]+$/, '');
@@ -519,6 +534,15 @@
   // ---------- Wire up ----------
   function bindActions() {
     els.translateBtn.addEventListener('click', startTranslation);
+
+    // Safari iOS ignores the `download` attribute for blob: URLs and saves
+    // the file as .txt. Subtitle text is small, so swap to a data: URL on
+    // iOS (within the click gesture) where the filename is honored.
+    els.downloadBtn.addEventListener('click', () => {
+      if (!isIOS || !resultText || !parsed) return;
+      const mime = MIME_BY_FORMAT[parsed.format] || 'text/plain;charset=utf-8';
+      els.downloadBtn.href = `data:${mime},${encodeURIComponent(resultText)}`;
+    });
 
     els.cancelBtn.addEventListener('click', () => {
       cancelFlag = true;
