@@ -18,6 +18,7 @@ const SubtitlePlayer = (() => {
   let basePos = 0;      // position when play started
   let activeCue = null; // cached cue to avoid redundant DOM writes
   let onCue = null;     // optional callback when the active cue changes
+  let lastSec = -1;     // last whole second written to the time readout
 
   const el = {};
 
@@ -55,6 +56,12 @@ const SubtitlePlayer = (() => {
         case 'ArrowUp': e.preventDefault(); seek(skipCue(-1)); break;
         case 'ArrowDown': e.preventDefault(); seek(skipCue(1)); break;
       }
+    });
+
+    // rAF stops in a hidden tab but performance.now() keeps running, so wall
+    // clock playback would fast-forward through the whole file. Pause instead.
+    document.addEventListener('visibilitychange', () => {
+      if (document.hidden && playing) pause();
     });
   }
 
@@ -145,6 +152,8 @@ const SubtitlePlayer = (() => {
       if (cues[mid].start <= pos) { best = mid; lo = mid + 1; }
       else hi = mid - 1;
     }
+    // With several cues sharing one start time, show the earliest of them.
+    while (best > 0 && cues[best - 1].start === cues[best].start) best--;
     cursor = best >= 0 && pos < cues[best].end ? best : -1;
     return cursor;
   }
@@ -167,8 +176,12 @@ const SubtitlePlayer = (() => {
       }
     }
 
-    // Time + timeline update cheaply every frame.
-    el.time.textContent = `${fmt(pos)} / ${fmt(total)}`;
+    // Time text only changes once a second; the timeline needs each frame.
+    const sec = Math.floor(pos / 1000);
+    if (sec !== lastSec) {
+      lastSec = sec;
+      el.time.textContent = `${fmt(pos)} / ${fmt(total)}`;
+    }
     const pct = total ? (pos / total) * 100 : 0;
     el.tlFill.style.width = `${pct}%`;
     el.tlThumb.style.left = `calc(${pct}% - 6px)`;
@@ -197,5 +210,5 @@ const SubtitlePlayer = (() => {
     return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
   }
 
-  return { init, load, toggle, play, pause, seek, stepCue, updateText, setCueCallback, refresh, get playing() { return playing; }, get position() { return pos; } };
+  return { init, load, toggle, play, pause, seek, stepCue, updateText, setCueCallback, get playing() { return playing; }, get position() { return pos; } };
 })();

@@ -56,10 +56,14 @@ const SubParser = (() => {
   function detect(content) {
     const t = content.trim();
     if (/^WEBVTT/i.test(t)) return 'vtt';
-    if (/\[Events\]/i.test(t) && /^\s*Dialogue\s*:/m.test(t)) {
+    // ASS/SSA files always carry a [Script Info] section; requiring it avoids
+    // misdetecting dialogue inside other formats that mentions [Events].
+    if (/\[Script Info\]/i.test(t) && /\[Events\]/i.test(t) && /^\s*Dialogue\s*:/m.test(t)) {
       return /ScriptType[^\n]*v4\.00\+/i.test(t) ? 'ass' : 'ssa';
     }
-    if (/^\{\d+\}\{\d+\}/m.test(t)) return 'sub';
+    // MicroDVD files start with a frame pair on their very first line (either
+    // the fps header "{1}{1}23.976" or the first cue).
+    if (/^\{\d+\}\{\d+\}/.test(t.split('\n')[0])) return 'sub';
     if (/<SYNC\b[^>]*\bStart\s*=/i.test(t)) return 'smi';
     if (TIMECODE.test(t)) return 'srt';
     return 'unknown';
@@ -68,6 +72,10 @@ const SubParser = (() => {
   // ---------- SRT / VTT ----------
   // Line-based parser: works whether or not cues are separated by blank lines,
   // and ignores the WEBVTT header, cue identifiers/indexes and NOTE comments.
+  // A timing line must START with a timecode so subtitle text that merely
+  // mentions a time range isn't mistaken for a new cue; a VTT trailer
+  // ("align:start position:0%") is allowed after the arrow.
+  const TIMECODE_LINE = /^(\d{1,2}:\d{2}(?::\d{2})?[,.]\d{1,3})\s*-->\s*(\d{1,2}:\d{2}(?::\d{2})?[,.]\d{1,3})(?:\s+.*)?$/;
   function parseSRTVTT(content) {
     const lines = content.replace(/\r/g, '').split('\n');
     const cues = [];
@@ -76,20 +84,20 @@ const SubParser = (() => {
 
     for (let i = 0; i < lines.length; i++) {
       const line = lines[i].trim();
-      const m = line.match(TIMECODE);
+      // NOTE blocks end at the first blank line and are never subtitle text,
+      // even when a comment contains a timecode.
+      if (inNote) { if (!line) inNote = false; continue; }
+      const m = line.match(TIMECODE_LINE);
       if (m) {
         if (current) cues.push(current);
         current = { start: toMs(m[1]), end: toMs(m[2]), text: [] };
-        inNote = false;
         continue;
       }
-      // NOTE blocks end at the first blank line and are never subtitle text.
-      if (inNote) { if (!line) inNote = false; continue; }
-      if (!current || !line) continue;
       if (/^NOTE\b/i.test(line)) { inNote = true; continue; }
+      if (!current || !line) continue;
       // A line immediately followed by a timing line is a cue identifier/index.
-      const next = lines[i + 1] && lines[i + 1].trim();
-      if (TIMECODE.test(next)) continue;
+      const next = lines[i + 1];
+      if (next && TIMECODE_LINE.test(next.trim())) continue;
       current.text.push(line);
     }
     if (current) cues.push(current);
@@ -198,10 +206,12 @@ const SubParser = (() => {
   const SMI_BLOCK = /<SYNC\b[^>]*?\bStart\s*=\s*"?(\d+)"?[^>]*>([\s\S]*?)(?=<SYNC\b|<\/BODY>|$)/gi;
 
   // Extract the text of each <P> paragraph in a SYNC block, decoding HTML.
+  // Only the first non-empty paragraph is needed (single-language files have
+  // one <P>; bilingual ones repeat the same text), so stop as soon as we have it.
   function samiParagraphs(content) {
-    const paras = [];
-    content.split(/<P\b[^>]*>/i).forEach((block) => {
-      const text = block
+    const blocks = content.split(/<P\b[^>]*>/i);
+    for (let i = 0; i < blocks.length; i++) {
+      const text = blocks[i]
         .replace(/<\/P\s*>/gi, '')
         .replace(/<br\s*\/?>/gi, '\n')
         .replace(/<[^>]+>/g, ' ')
@@ -213,9 +223,9 @@ const SubParser = (() => {
         .replace(/&#39;/gi, "'")
         .replace(/\s+/g, ' ')
         .trim();
-      if (text) paras.push(text);
-    });
-    return paras;
+      if (text) return [text];
+    }
+    return [];
   }
 
   function parseSMI(content) {
@@ -321,7 +331,7 @@ const SubParser = (() => {
     return text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
   }
 
-  return { parse, serialize };
+  return { parse, serialize, fmtSRT, fmtVTT };
 })();
 
 if (typeof module !== 'undefined' && module.exports) module.exports = SubParser;

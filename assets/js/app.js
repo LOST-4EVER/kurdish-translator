@@ -55,7 +55,7 @@
     editorList: '#editorList', editorStatus: '#editorStatus',
     edCount: '#edCount',
     showTimeToggle: '#showTimeToggle', saveEditsToggle: '#saveEditsToggle',
-    fsEdit: '#fsEdit', fsScreen: '#fsScreen', fsText: '#fsText', fsCueCount: '#fsCueCount',
+    fsEdit: '#fsEdit', fsText: '#fsText', fsCueCount: '#fsCueCount',
     fsToggleBtn: '#fsToggleBtn', fsEditBtn: '#fsEditBtn', fsClose: '#fsClose',
     fsPrevBtn: '#fsPrevBtn', fsNextBtn: '#fsNextBtn',
     fsEditor: '#fsEditor', fsInput: '#fsInput', fsDoneBtn: '#fsDoneBtn',
@@ -77,6 +77,8 @@
   let fsActive = false; // fullscreen edit mode on
   let fsCueIndex = -1;  // cue being edited in fullscreen
   let editWasPlaying = false; // true if the player was running when editing started
+  let rowEls = [];      // editor row nodes indexed by cue index (for O(1) highlight)
+  let lastActiveRow = null;  // currently highlighted editor row
   const hasArabic = (s) => /[\u0600-\u06FF\u0750-\u077F]/.test(s);
   // Safari iOS ignores the `download` attribute on blob: URLs; iPadOS
   // identifies itself as a Mac, so detect touch too.
@@ -132,14 +134,6 @@
   }
 
   // ---------- Subtitle editor ----------
-  function fmtTime(ms) {
-    const h = Math.floor(ms / 3600000);
-    const m = Math.floor((ms % 3600000) / 60000);
-    const s = Math.floor((ms % 60000) / 1000);
-    const cs = ms % 1000;
-    return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')},${String(cs).padStart(3, '0')}`;
-  }
-
   function autoGrow(el) {
     el.style.height = 'auto';
     el.style.height = `${el.scrollHeight}px`;
@@ -147,7 +141,7 @@
 
   function updateStatus() {
     els.editorStatus.textContent = dirty
-      ? (els.saveEditsToggle.checked ? 'Unsaved edits — they go into your download' : 'Edits shown here only — not saved to download')
+      ? (els.saveEditsToggle.checked ? 'Your edits will appear in the download' : 'Edits appear here only — not in the download')
       : 'Synced with the preview — edits apply live';
   }
 
@@ -167,10 +161,13 @@
     if (els.edCount) els.edCount.textContent = `· ${workCues.length}`;
 
     const frag = document.createDocumentFragment();
+    const rows = new Array(workCues.length);
+    const inputs = new Array(workCues.length);
     workCues.forEach((c, i) => {
       const row = document.createElement('div');
       row.className = 'ed-row';
       row.dataset.index = i;
+      rows[i] = row;
 
       const meta = document.createElement('div');
       meta.className = 'ed-meta';
@@ -181,7 +178,7 @@
 
       const time = document.createElement('span');
       time.className = 'ed-time';
-      time.textContent = `${fmtTime(c.start)} → ${fmtTime(c.end)}`;
+      time.textContent = `${SubParser.fmtSRT(c.start)} → ${SubParser.fmtSRT(c.end)}`;
       time.classList.toggle('hidden', !showTime);
 
       meta.appendChild(idx);
@@ -193,9 +190,9 @@
       input.value = displayText(c.text);
       input.setAttribute('dir', dirFor(input.value));
       input.setAttribute('aria-label', `Cue ${i + 1} text`);
+      inputs[i] = input;
       row.appendChild(input);
       frag.appendChild(row);
-      autoGrow(input);
 
       input.addEventListener('input', () => {
         autoGrow(input);
@@ -209,6 +206,7 @@
       input.addEventListener('blur', () => {
         row.classList.remove('editing');
         if (editWasPlaying) SubtitlePlayer.play();
+        editWasPlaying = false;
       });
 
       row.addEventListener('click', (e) => {
@@ -218,15 +216,20 @@
       });
     });
     list.appendChild(frag);
+    // Size the textareas after they are in the layout (scrollHeight is 0
+    // while detached), then track the rows for fast cue highlighting.
+    inputs.forEach((input) => autoGrow(input));
+    rowEls = rows;
+    lastActiveRow = null;
   }
 
   function scrollRowIntoView(row) {
     const list = els.editorList;
     const r = row.getBoundingClientRect();
     const b = list.getBoundingClientRect();
-    if (r.top < b.top || r.bottom > b.bottom) {
-      row.scrollIntoView({ block: 'center', behavior: 'smooth' });
-    }
+    // Instant scroll: this runs every frame while playing, and per-frame
+    // smooth scrolls queue endlessly over a long timeline.
+    if (r.top < b.top || r.bottom > b.bottom) row.scrollIntoView({ block: 'center' });
   }
 
   // Follow playback: highlight + scroll the editor to the cue now on screen.
@@ -243,9 +246,13 @@
     }
     if (!cue || idx < 0) return;
     if (document.activeElement && document.activeElement.classList.contains('ed-input')) return;
-    els.editorList.querySelectorAll('.ed-row.active').forEach((r) => r.classList.remove('active'));
-    const row = els.editorList.querySelector(`[data-index="${idx}"]`);
-    if (row) { row.classList.add('active'); scrollRowIntoView(row); }
+    if (lastActiveRow) lastActiveRow.classList.remove('active');
+    const row = rowEls[idx];
+    if (row) {
+      row.classList.add('active');
+      lastActiveRow = row;
+      scrollRowIntoView(row);
+    }
   });
 
   /** Swap in a fresh cue set (original or translated) and rebuild everything. */
@@ -289,6 +296,7 @@
   function closeFsEditor() {
     els.fsEditor.classList.add('hidden');
     if (editWasPlaying) SubtitlePlayer.play();
+    editWasPlaying = false;
   }
 
   function enterFs() {
@@ -355,7 +363,7 @@
   tabButtons.forEach((b) => b.addEventListener('click', () => switchTab(b.dataset.tab)));
 
   // ---------- File handling ----------
-  const encodeBites = (n) => n < 1024 ? `${n} B`
+  const formatSize = (n) => n < 1024 ? `${n} B`
     : n < 1048576 ? `${(n / 1024).toFixed(1)} KB`
     : `${(n / 1048576).toFixed(1)} MB`;
 
@@ -377,6 +385,16 @@
     if (bytes.length >= 3 && bytes[0] === 0xef && bytes[1] === 0xbb && bytes[2] === 0xbf) encoding = 'utf-8';
     else if (bytes.length >= 2 && bytes[0] === 0xff && bytes[1] === 0xfe) encoding = 'utf-16le';
     else if (bytes.length >= 2 && bytes[0] === 0xfe && bytes[1] === 0xff) encoding = 'utf-16be';
+    else {
+      // BOM-less UTF-16: ASCII text stored in UTF-16 has a NUL byte in every
+      // other position. If that pattern dominates the buffer, it's UTF-16.
+      const sample = Math.min(bytes.length, 2048);
+      let nulls = 0;
+      for (let i = 0; i < sample; i++) if (bytes[i] === 0) nulls++;
+      if (sample > 8 && nulls > sample * 0.3) {
+        encoding = bytes[0] === 0 ? 'utf-16be' : 'utf-16le';
+      }
+    }
     try {
       return new TextDecoder(encoding).decode(bytes).replace(/^\uFEFF/, '');
     } catch {
@@ -406,7 +424,7 @@
     resultText = null;
     if (resultUrl) { URL.revokeObjectURL(resultUrl); resultUrl = null; }
     els.fileName.textContent = f.name;
-    els.fileMeta.textContent = `${parsed.cues.length} lines • ${encodeBites(f.size)} • ${LABEL[parsed.format] || parsed.format.toUpperCase()}`;
+    els.fileMeta.textContent = `${parsed.cues.length} lines • ${formatSize(f.size)} • ${LABEL[parsed.format] || parsed.format.toUpperCase()}`;
     updateCues(parsed.cues);
     // Show the options first so the user picks settings before translating.
     showStep('settings');

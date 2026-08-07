@@ -54,8 +54,8 @@
             <input type="file" id="fileInput" accept=".srt,.vtt,.ass,.ssa,.sub,.smi,text/plain" hidden />
             <div class="dz-icon">📂</div>
             <h2>Drop subtitle file here</h2>
-            <p class="dz-sub">or <span class="link">browse from device</span> — it translates in your browser</p>
-            <div class="dz-hint">Supports <b>.SRT</b> <b>.VTT</b> <b>.ASS</b> <b>.SSA</b> <b>.SUB</b> <b>.SMI</b> — Android & iOS ready</div>
+            <p class="dz-sub">or <span class="link">browse from device</span> — it translates privately in your browser</p>
+            <div class="dz-hint">Supports <b>.SRT</b> <b>.VTT</b> <b>.ASS</b> <b>.SSA</b> <b>.SUB</b> <b>.SMI</b> — Android &amp; iOS ready</div>
             <div class="pill-row">
               <span class="pill">Free</span>
               <span class="pill">No signup</span>
@@ -161,7 +161,7 @@
             <a class="btn-primary" id="downloadBtn" download>⬇ Download</a>
             <button class="btn-secondary" id="previewBtn">▶ Preview subtitles</button>
             <button class="btn-secondary" id="copyBtn">📋 Copy to clipboard</button>
-            <button class="btn-tertiary" id="translateAgainBtn">↺ Translate another</button>
+            <button class="btn-tertiary" id="translateAgainBtn">↺ Translate another file</button>
           </div>
           <p class="note">Processed 100% in your browser. Nothing is uploaded. Your settings are remembered.</p>
         </section>
@@ -224,21 +224,21 @@
               <label class="switch-row mini">
                 <span>Times</span>
                 <span class="switch">
-                  <input type="checkbox" id="showTimeToggle" checked />
+                  <input type="checkbox" id="showTimeToggle" checked role="switch" />
                   <span class="slider"></span>
                 </span>
               </label>
               <label class="switch-row mini">
                 <span>Save</span>
                 <span class="switch">
-                  <input type="checkbox" id="saveEditsToggle" checked />
+                  <input type="checkbox" id="saveEditsToggle" checked role="switch" />
                   <span class="slider"></span>
                 </span>
               </label>
             </div>
           </div>
           <div class="editor-list" id="editorList" aria-label="Editable subtitle cues"></div>
-          <p class="editor-hint">Click a row to jump the player there · type to edit the text and watch it on the screen live</p>
+          <p class="editor-hint">Click a row to jump the player · type to edit and see it change live on the screen</p>
         </section>
       </div>
     </main>
