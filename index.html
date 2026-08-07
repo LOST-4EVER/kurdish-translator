@@ -174,7 +174,11 @@
           <div class="player">
             <div class="screen" id="playerScreen">
               <span class="screen-text" id="playerText"></span>
-              <div class="screen-empty" id="playerEmpty">🎬 Load a subtitle to preview it here</div>
+              <div class="screen-empty" id="playerEmpty">
+                <span class="se-ic">🎬</span>
+                <span class="se-t">Load a subtitle to preview it here</span>
+                <span class="se-s">Drop a file, then hit Preview</span>
+              </div>
               <span class="cue-count" id="cueCount"></span>
             </div>
             <div class="timeline" id="timeline">
@@ -183,19 +187,23 @@
               <div class="tl-thumb" id="tlThumb"></div>
             </div>
             <div class="controls">
-              <button class="ctrl-btn" id="restartBtn" title="Restart">⏮</button>
-              <button class="ctrl-btn play" id="playBtn" title="Play / Pause">▶</button>
+              <div class="ctl-group">
+                <button class="ctrl-btn" id="restartBtn" title="Restart">⏮</button>
+                <button class="ctrl-btn play" id="playBtn" title="Play / Pause">▶</button>
+              </div>
               <div class="time" id="timeDisplay">0:00 / 0:00</div>
               <div class="spacer"></div>
-              <button class="ctrl-btn" id="fsToggleBtn" title="Fullscreen edit mode">⛶</button>
-              <span class="speed-label">Speed</span>
-              <div class="select-wrap speed">
-                <select id="speedSel">
-                  <option value="0.5">0.5×</option>
-                  <option value="1" selected>1×</option>
-                  <option value="1.5">1.5×</option>
-                  <option value="2">2×</option>
-                </select>
+              <div class="ctl-group right">
+                <span class="speed-label">Speed</span>
+                <div class="select-wrap speed">
+                  <select id="speedSel">
+                    <option value="0.5">0.5×</option>
+                    <option value="1" selected>1×</option>
+                    <option value="1.5">1.5×</option>
+                    <option value="2">2×</option>
+                  </select>
+                </div>
+                <button class="ctrl-btn" id="fsToggleBtn" title="Fullscreen edit mode">⛶</button>
               </div>
             </div>
           </div>
@@ -208,20 +216,20 @@
             <div class="editor-title">
               <span class="ed-ic">✏️</span>
               <div>
-                <h3>Edit subtitles</h3>
+                <h3>Edit subtitles <span class="ed-count" id="edCount"></span></h3>
                 <p id="editorStatus">Synced with the preview — edits apply live</p>
               </div>
             </div>
             <div class="editor-toggles">
               <label class="switch-row mini">
-                <span>Show times</span>
+                <span>Times</span>
                 <span class="switch">
                   <input type="checkbox" id="showTimeToggle" checked />
                   <span class="slider"></span>
                 </span>
               </label>
               <label class="switch-row mini">
-                <span>Save edits</span>
+                <span>Save</span>
                 <span class="switch">
                   <input type="checkbox" id="saveEditsToggle" checked />
                   <span class="slider"></span>

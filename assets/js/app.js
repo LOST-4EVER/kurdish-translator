@@ -43,6 +43,7 @@
     installBtn: '#installBtn',
     toast: '#toast',
     editorList: '#editorList', editorStatus: '#editorStatus',
+    edCount: '#edCount',
     showTimeToggle: '#showTimeToggle', saveEditsToggle: '#saveEditsToggle',
     fsEdit: '#fsEdit', fsScreen: '#fsScreen', fsText: '#fsText', fsCueCount: '#fsCueCount',
     fsToggleBtn: '#fsToggleBtn', fsEditBtn: '#fsEditBtn', fsClose: '#fsClose',
@@ -146,8 +147,10 @@
       empty.className = 'ed-empty';
       empty.textContent = 'Load a subtitle file to edit it here.';
       list.appendChild(empty);
+      if (els.edCount) els.edCount.textContent = '';
       return;
     }
+    if (els.edCount) els.edCount.textContent = `· ${workCues.length}`;
 
     const frag = document.createDocumentFragment();
     workCues.forEach((c, i) => {
