@@ -135,7 +135,11 @@ const SubParser = (() => {
         const t1 = (map.end || '').match(ASS_TIMECODE);
         const text = (map.text || '').trim();
         if (!t0 || !t1 || !text) continue;
-        cues.push({ index: cues.length + 1, start: assToMs(t0[1]), end: assToMs(t1[1]), text });
+        // Keep the original per-cue field values (Style, Layer, margins…) so
+        // serialization can round-trip them instead of resetting to defaults.
+        const extra = {};
+        fields.forEach((f, i) => { if (f.toLowerCase() !== 'text') extra[f] = parts[i] ?? ''; });
+        cues.push({ index: cues.length + 1, start: assToMs(t0[1]), end: assToMs(t1[1]), text, extra });
         continue;
       }
 
@@ -261,7 +265,7 @@ const SubParser = (() => {
       case 'vtt':
         return 'WEBVTT\n\n' + cues.map((c) => `${fmtVTT(c.start)} --> ${fmtVTT(c.end)}\n${c.text}`).join('\n\n') + '\n';
       case 'srt':
-        return cues.map((c) => `${c.index}\n${fmtSRT(c.start)} --> ${fmtSRT(c.end)}\n${c.text}`).join('\n\n') + '\n';
+        return cues.map((c, i) => `${i + 1}\n${fmtSRT(c.start)} --> ${fmtSRT(c.end)}\n${c.text}`).join('\n\n') + '\n';
       case 'ass':
       case 'ssa':
         return serializeASS(parsed, cues);
@@ -304,7 +308,7 @@ const SubParser = (() => {
     const lines = [header];
     for (const c of cues) {
       const val = {};
-      order.forEach((f) => { val[f] = ASS_FALLBACKS[f.toLowerCase()] ?? ''; });
+      order.forEach((f) => { val[f] = (c.extra && c.extra[f]) ?? ASS_FALLBACKS[f.toLowerCase()] ?? ''; });
       val[keyOf('start')] = fmtASS(c.start);
       val[keyOf('end')] = fmtASS(c.end);
       val[keyOf('text')] = c.text.replace(/\n/g, '\\N');

@@ -6,7 +6,7 @@
  * (Google's endpoint), so offline mode lets you load files and use the
  * preview player, but translating requires a connection.
  */
-const CACHE = 'kurdish-translator-v8';
+const CACHE = 'kurdish-translator-v9';
 const ASSETS = [
   './',
   './index.html',
