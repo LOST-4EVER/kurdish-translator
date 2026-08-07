@@ -279,7 +279,18 @@ const Translator = (() => {
     }
   }
 
-  return { translateLines };
+  /** Prime the connection so the user's first real translation isn't also the
+   *  first request to the endpoint. Google sometimes throttles a fresh cold
+   *  hit and answers on a warm one; firing a tiny request at page load moves
+   *  that cold start off the critical path. Failures here are ignored. */
+  async function warmup() {
+    const params = new URLSearchParams({ client: 'gtx', sl: 'en', tl: 'ckb', dt: 't', q: 'hi' });
+    try {
+      await fetch(`${ENDPOINTS[0]}?${params.toString()}`, { method: 'GET', headers: { 'Accept': 'application/json' } });
+    } catch {}
+  }
+
+  return { translateLines, warmup };
 })();
 
 if (typeof module !== 'undefined' && module.exports) module.exports = Translator;

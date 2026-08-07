@@ -627,6 +627,10 @@
       navigator.serviceWorker.register('./sw.js').catch(() => {});
     }
 
+    // Warm the translation endpoint so the first real request isn't a cold one
+    // (Google sometimes throttles the first hit and answers on a warm retry).
+    Translator.warmup();
+
     // Show an Install button when the browser allows it (Android/desktop).
     let deferredInstall = null;
     window.addEventListener('beforeinstallprompt', (e) => {

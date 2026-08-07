@@ -524,7 +524,7 @@ select:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px
 
 /* ---------- Footer ---------- */
 .footer { padding: 10px 0 calc(22px + env(safe-area-inset-bottom, 0px)); text-align: center; }
-.footer p { font-size: 12px; color: var(--text-3); }
+.footer p { font-size: 12px; color: #8e95a3; }
 
 /* ---------- Install button ---------- */
 #installBtn { display: inline-flex; align-items: center; gap: 6px; }
