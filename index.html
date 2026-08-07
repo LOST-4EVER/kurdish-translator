@@ -72,7 +72,7 @@
               <strong id="fileName">movie.srt</strong>
               <span id="fileMeta"></span>
             </div>
-            <button class="icon-btn" id="changeFile" title="Choose another file">✕</button>
+          <button class="icon-btn" id="changeFile" title="Choose another file" aria-label="Choose another file">✕</button>
           </div>
 
           <div class="settings-grid">
@@ -195,8 +195,8 @@
             </div>
             <div class="controls">
               <div class="ctl-group">
-                <button class="ctrl-btn" id="restartBtn" title="Restart">⏮</button>
-                <button class="ctrl-btn play" id="playBtn" title="Play / Pause">▶</button>
+                <button class="ctrl-btn" id="restartBtn" title="Restart" aria-label="Restart">⏮</button>
+                <button class="ctrl-btn play" id="playBtn" title="Play / Pause" aria-label="Play">▶</button>
               </div>
               <div class="time" id="timeDisplay">0:00 / 0:00</div>
               <div class="spacer"></div>
@@ -210,7 +210,7 @@
                     <option value="2">2×</option>
                   </select>
                 </div>
-                <button class="ctrl-btn" id="fsToggleBtn" title="Fullscreen edit mode">⛶</button>
+                <button class="ctrl-btn" id="fsToggleBtn" title="Fullscreen edit mode" aria-label="Fullscreen edit mode">⛶</button>
               </div>
             </div>
           </div>
@@ -265,11 +265,11 @@
     </div>
     <div class="fs-bar">
       <div class="fs-nav">
-        <button class="fs-btn" id="fsPrevBtn" title="Previous cue">⏮</button>
-        <button class="fs-btn" id="fsNextBtn" title="Next cue">⏭</button>
+        <button class="fs-btn" id="fsPrevBtn" title="Previous cue" aria-label="Previous cue">⏮</button>
+        <button class="fs-btn" id="fsNextBtn" title="Next cue" aria-label="Next cue">⏭</button>
       </div>
       <button class="fs-btn fs-edit-btn" id="fsEditBtn">✏️ Edit text</button>
-      <button class="fs-btn fs-close" id="fsClose" title="Exit fullscreen edit">✕</button>
+      <button class="fs-btn fs-close" id="fsClose" title="Exit fullscreen edit" aria-label="Exit fullscreen edit">✕</button>
     </div>
     <div class="fs-editor hidden" id="fsEditor">
       <textarea id="fsInput" aria-label="Edit active subtitle text"></textarea>

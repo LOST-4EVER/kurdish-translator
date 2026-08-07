@@ -125,6 +125,7 @@ const SubtitlePlayer = (() => {
     startPerf = performance.now();
     basePos = pos;
     el.play.textContent = '⏸';
+    el.play.setAttribute('aria-label', 'Pause');
     el.screen.classList.add('live');
     raf = requestAnimationFrame(tick);
   }
@@ -132,6 +133,7 @@ const SubtitlePlayer = (() => {
   function pause() {
     playing = false;
     el.play.textContent = '▶';
+    el.play.setAttribute('aria-label', 'Play');
     el.screen.classList.remove('live');
     if (raf) cancelAnimationFrame(raf);
     raf = null;
