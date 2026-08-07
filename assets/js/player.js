@@ -46,7 +46,8 @@ const SubtitlePlayer = (() => {
     el.tl.addEventListener('pointerdown', () => { if (playing) pause(); });
 
     document.addEventListener('keydown', (e) => {
-      if (e.target.closest('select, input, button, textarea, a')) return;
+      const t = e.target;
+      if (t && t.closest && t.closest('select, input, button, textarea, a')) return;
       switch (e.code) {
         case 'Space': e.preventDefault(); toggle(); break;
         case 'ArrowRight': e.preventDefault(); seek(pos + 5000); break;
@@ -196,5 +197,5 @@ const SubtitlePlayer = (() => {
     return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
   }
 
-  return { init, load, toggle, play, pause, seek, stepCue, updateText, setCueCallback, refresh, get playing() { return playing; } };
+  return { init, load, toggle, play, pause, seek, stepCue, updateText, setCueCallback, refresh, get playing() { return playing; }, get position() { return pos; } };
 })();

@@ -281,13 +281,22 @@
     if (!parsed || !workCues || !workCues.length) { toast('Load a subtitle file first.', true); return; }
     fsActive = true;
     els.fsEdit.classList.remove('hidden');
+    // Show the cue now on screen (falling back to the first cue) so the
+    // fullscreen view is never a blank screen, and park the player on it.
+    const pos = SubtitlePlayer.position;
+    let i = workCues.findIndex((c) => pos >= c.start && pos < c.end);
+    if (i < 0) i = activeIdx >= 0 ? activeIdx : 0;
+    if (i < 0) i = 0;
+    SubtitlePlayer.seek(workCues[i].start);
     updateFsScreen();
+    if (els.fsEdit.requestFullscreen) els.fsEdit.requestFullscreen().catch(() => {});
   }
 
   function exitFs() {
     fsActive = false;
     els.fsEdit.classList.add('hidden');
     closeFsEditor();
+    if (document.fullscreenElement) document.exitFullscreen().catch(() => {});
   }
 
   function bindFs() {
@@ -310,6 +319,11 @@
       if (e.key === 'Escape') {
         document.activeElement === els.fsInput ? closeFsEditor() : exitFs();
       }
+    });
+
+    // Keep state in sync when the browser exits fullscreen natively (Esc).
+    document.addEventListener('fullscreenchange', () => {
+      if (!document.fullscreenElement && fsActive) exitFs();
     });
   }
 
@@ -385,6 +399,7 @@
   }
 
   function bindDropzone() {
+    let dragCounter = 0;
     els.dropzone.addEventListener('click', () => els.fileInput.click());
     els.fileInput.addEventListener('change', (e) => { handleFile(e.target.files[0]); e.target.value = ''; });
 
@@ -409,7 +424,6 @@
     els.changeFile.addEventListener('click', () => { els.fileInput.value = ''; els.fileInput.click(); });
 
     // Whole-page drop target: accept a file dropped anywhere on the page.
-    let dragCounter = 0;
     document.addEventListener('dragenter', (e) => {
       if (hasFiles(e)) { e.preventDefault(); dragCounter++; document.body.classList.add('page-dropping'); }
     });
@@ -467,9 +481,11 @@
         return { ...c, text: tr || c.text };
       });
 
-      const finalCues = els.keepOnly.checked
+      let finalCues = els.keepOnly.checked
         ? translatedCues.filter((c) => c.text.trim() !== '')
         : translatedCues;
+      // Renumber after filtering so player + editor indexes stay in sync.
+      finalCues.forEach((c, i) => { c.index = i + 1; });
 
       updateCues(finalCues);
       showStep('done');
@@ -552,6 +568,7 @@
 
   // ---------- Init ----------
   function init() {
+    els.previewTab.classList.add('disabled'); // enabled once a file is loaded
     for (const [code, name] of Object.entries(SOURCE_LANGS)) {
       const o = document.createElement('option');
       o.value = code;
