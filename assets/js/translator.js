@@ -6,13 +6,21 @@
  * split the returned string back into lines. Much faster than one call per cue.
  */
 const Translator = (() => {
-  const ENDPOINT = 'https://translate.googleapis.com/translate_a/single';
+  // Google's free endpoint lives on a few interchangeable hosts. Trying them in
+  // order matters: GitHub Pages is served from datacenter IPs that Google
+  // throttles more aggressively than home networks, so a second host often
+  // still answers when the first keeps returning 429.
+  const ENDPOINTS = [
+    'https://translate.googleapis.com/translate_a/single',
+    'https://translate.google.com/translate_a/single',
+  ];
 
   // Keep requests modest to avoid timeouts on mobile networks.
   const BATCH_LINES = 40;
   const MAX_CHARS_PER_REQUEST = 3500;
   const DELAY_MS = 250;         // polite spacing between batches
-  const MAX_ATTEMPTS = 4;       // retries per chunk
+  const MAX_ATTEMPTS = 5;       // retries per chunk
+  const REQUEST_TIMEOUT_MS = 25000; // hang-up guard so a stalled socket retries
 
   // Sentinel protecting internal line breaks inside a cue so cue boundaries
   // stay unambiguous after translation. Contains no regex metacharacters and
@@ -186,16 +194,40 @@ const Translator = (() => {
     return batches;
   }
 
-  /** Translate one chunk, retrying with exponential backoff. */
+  /** Chain the caller's AbortSignal with a per-attempt timeout so a stalled
+   *  request becomes a retryable failure (via abort) instead of hanging. */
+  function scopedSignal(signal) {
+    const ctrl = new AbortController();
+    const onAbort = () => ctrl.abort();
+    if (signal) {
+      if (signal.aborted) ctrl.abort();
+      else signal.addEventListener('abort', onAbort, { once: true });
+    }
+    const timer = setTimeout(() => ctrl.abort(), REQUEST_TIMEOUT_MS);
+    return { signal: ctrl.signal, cleanup() { clearTimeout(timer); signal && signal.removeEventListener('abort', onAbort); } };
+  }
+
+  /** Translate one chunk, retrying with exponential backoff across hosts. */
   async function translateChunk(text, srcLang, tgtLang, signal) {
     const params = new URLSearchParams({ client: 'gtx', sl: srcLang, tl: tgtLang, dt: 't', q: text });
-    const url = `${ENDPOINT}?${params.toString()}`;
     let lastErr;
 
     for (let attempt = 0; attempt < MAX_ATTEMPTS; attempt++) {
+      const host = ENDPOINTS[attempt % ENDPOINTS.length];
+      const url = `${host}?${params.toString()}`;
+      const scoped = scopedSignal(signal);
       try {
-        const res = await fetch(url, { method: 'GET', headers: { 'Accept': 'application/json' }, signal });
-        if (!res.ok) { const e = new Error(`HTTP ${res.status}`); e.hard = true; throw e; }
+        const res = await fetch(url, { method: 'GET', headers: { 'Accept': 'application/json' }, signal: scoped.signal });
+        if (res.status === 429) {
+          // Throttled. Wait for the server's Retry-After (or a backoff) and
+          // keep trying — this is the common failure on datacenter IPs.
+          const retryAfter = Number(res.headers.get('retry-after'));
+          const wait = Number.isFinite(retryAfter) && retryAfter > 0 ? retryAfter * 1000 : backoffMs(attempt);
+          lastErr = new Error(`HTTP 429 (throttled), retrying in ${Math.round(wait / 1000)}s`);
+          await sleep(wait);
+          continue;
+        }
+        if (!res.ok) { const e = new Error(`HTTP ${res.status}`); e.hard = res.status >= 500; throw e; }
         const data = await res.json();
         // Google returns data[0] as an array of [translation, original, ...].
         // Guard the shape so an unexpected payload falls back cleanly.
@@ -208,11 +240,19 @@ const Translator = (() => {
         // A rejected fetch (offline) is a network hard failure, distinct from
         // a Google "unexpected/empty response" which we simply retry.
         if (err instanceof TypeError) err.hard = true;
+        if (!(err instanceof Error)) { err = new Error(String(err && err.message)); }
         lastErr = err;
-        if (attempt < MAX_ATTEMPTS - 1) await sleep(600 * 2 ** attempt + Math.random() * 400);
+        if (attempt < MAX_ATTEMPTS - 1) await sleep(backoffMs(attempt));
+      } finally {
+        scoped.cleanup();
       }
     }
     throw lastErr;
+  }
+
+  // Jittered exponential backoff that keeps growing so we survive sustained 429s.
+  function backoffMs(attempt) {
+    return Math.min(900 * 2 ** attempt + Math.random() * 500, 9000);
   }
 
   /**
