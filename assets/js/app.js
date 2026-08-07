@@ -81,6 +81,7 @@
   let rowEls = [];      // editor row nodes indexed by cue index (for O(1) highlight)
   let lastActiveRow = null;  // currently highlighted editor row
   let liveSource = [];  // original source lines for the live translation reel
+  let editorObserver = null;
   const hasArabic = (s) => /[\u0600-\u06FF\u0750-\u077F]/.test(s);
   // Safari iOS ignores the `download` attribute on blob: URLs; iPadOS
   // identifies itself as a Mac, so detect touch too.
@@ -152,6 +153,19 @@
     SubtitlePlayer.updateText(i, stripTags(text));
     dirty = true;
     updateStatus();
+
+    // Keep the main editor list textarea in sync
+    const row = rowEls[i];
+    if (row) {
+      const input = row.querySelector('.ed-input');
+      const val = displayText(text);
+      if (input && input.value !== val) {
+        input.value = val;
+        input.setAttribute('dir', dirFor(val));
+        autoGrow(input);
+      }
+    }
+
     clearTimeout(prepareTimer);
     prepareTimer = setTimeout(prepareDownload, 250);
   }
@@ -163,6 +177,7 @@
 
   // ---------- Subtitle editor ----------
   function autoGrow(el) {
+    if (el.scrollHeight === 0) return;
     el.style.height = 'auto';
     el.style.height = `${el.scrollHeight}px`;
   }
@@ -244,9 +259,27 @@
       });
     });
     list.appendChild(frag);
-    // Size the textareas after they are in the layout (scrollHeight is 0
-    // while detached), then track the rows for fast cue highlighting.
-    inputs.forEach((input) => autoGrow(input));
+
+    if (editorObserver) {
+      editorObserver.disconnect();
+    }
+    editorObserver = new IntersectionObserver((entries) => {
+      entries.forEach((entry) => {
+        if (entry.isIntersecting) {
+          const input = entry.target;
+          autoGrow(input);
+          editorObserver.unobserve(input);
+        }
+      });
+    }, {
+      root: els.editorList,
+      rootMargin: '100px',
+    });
+
+    inputs.forEach((input) => {
+      editorObserver.observe(input);
+    });
+
     rowEls = rows;
     lastActiveRow = null;
   }

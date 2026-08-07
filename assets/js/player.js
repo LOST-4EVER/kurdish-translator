@@ -40,11 +40,29 @@ const SubtitlePlayer = (() => {
     el.restart.addEventListener('click', () => seek(0));
     el.speed.addEventListener('change', (e) => { speed = Number(e.target.value); });
 
-    el.tl.addEventListener('click', (e) => {
+    const handleScrub = (e) => {
       const rect = el.tl.getBoundingClientRect();
       seek(clamp((e.clientX - rect.left) / rect.width, 0, 1) * total);
+    };
+
+    el.tl.addEventListener('pointerdown', (e) => {
+      el.tl.setPointerCapture(e.pointerId);
+      if (playing) pause();
+      handleScrub(e);
+
+      const onPointerMove = (moveEvent) => {
+        handleScrub(moveEvent);
+      };
+
+      const onPointerUp = (upEvent) => {
+        el.tl.releasePointerCapture(upEvent.pointerId);
+        el.tl.removeEventListener('pointermove', onPointerMove);
+        el.tl.removeEventListener('pointerup', onPointerUp);
+      };
+
+      el.tl.addEventListener('pointermove', onPointerMove);
+      el.tl.addEventListener('pointerup', onPointerUp);
     });
-    el.tl.addEventListener('pointerdown', () => { if (playing) pause(); });
 
     document.addEventListener('keydown', (e) => {
       const t = e.target;
@@ -184,7 +202,7 @@ const SubtitlePlayer = (() => {
     }
     const pct = total ? (pos / total) * 100 : 0;
     el.tlFill.style.width = `${pct}%`;
-    el.tlThumb.style.left = `calc(${pct}% - 6px)`;
+    el.tlThumb.style.left = `${pct}%`;
 
     if (changed && onCue) onCue(cue, idx);
   }
