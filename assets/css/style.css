@@ -367,21 +367,26 @@ select:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px
   position: relative; height: 26px; margin: 8px 12px 2px; cursor: pointer;
   display: flex; align-items: center;
   background: #0a0b0f; border: 1px solid #1c2029;
-  border-radius: var(--radius-full); overflow: hidden;
+  border-radius: var(--radius-full);
+  touch-action: none;
 }
-.tl-cues { position: absolute; inset: 4px 6px; }
+.tl-cues { position: absolute; inset: 4px 6px; pointer-events: none; }
 .tl-seg {
   position: absolute; top: 50%; transform: translateY(-50%); height: 6px;
   background: #262b35; border-radius: 3px;
+  pointer-events: none;
 }
 .tl-fill {
   position: absolute; left: 4px; top: 50%; transform: translateY(-50%);
   height: 10px; background: var(--accent); border-radius: var(--radius-full);
+  pointer-events: none;
 }
 .tl-thumb {
-  position: absolute; top: 50%; transform: translateY(-50%);
-  width: 15px; height: 15px; border-radius: 50%; background: #fff;
+  position: absolute; top: 50%; transform: translate(-50%, -50%);
+  width: 16px; height: 16px; border-radius: 50%; background: #fff;
   box-shadow: 0 0 0 3px var(--accent), 0 2px 6px rgba(0, 0, 0, 0.4);
+  pointer-events: none;
+  z-index: 5;
 }
 
 .controls {
