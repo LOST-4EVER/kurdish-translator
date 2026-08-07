@@ -16,11 +16,12 @@ const SubParser = (() => {
   const pad = (n, len = 2) => String(n).padStart(len, '0');
 
   function splitMs(ms) {
+    const val = Math.max(0, ms);
     return {
-      h: Math.floor(ms / 3600000),
-      m: Math.floor((ms % 3600000) / 60000),
-      s: Math.floor((ms % 60000) / 1000),
-      ms: ms % 1000,
+      h: Math.floor(val / 3600000),
+      m: Math.floor((val % 3600000) / 60000),
+      s: Math.floor((val % 60000) / 1000),
+      ms: val % 1000,
     };
   }
 
@@ -249,21 +250,31 @@ const SubParser = (() => {
   // ---------- Main parse ----------
   function parse(content) {
     const format = detect(content);
+    let result;
     switch (format) {
-      case 'vtt': return { format, cues: parseSRTVTT(content) };
-      case 'srt': return { format, cues: parseSRTVTT(content) };
+      case 'vtt': result = { format, cues: parseSRTVTT(content) }; break;
+      case 'srt': result = { format, cues: parseSRTVTT(content) }; break;
       case 'ass':
       case 'ssa': {
         const { cues, meta } = parseASS(content);
-        return { format, cues, meta };
+        result = { format, cues, meta };
+        break;
       }
       case 'sub': {
         const { cues, meta } = parseSUB(content);
-        return { format, cues, meta };
+        result = { format, cues, meta };
+        break;
       }
-      case 'smi': return { format, cues: parseSMI(content) };
+      case 'smi': result = { format, cues: parseSMI(content) }; break;
       default: throw new Error('Unsupported subtitle format');
     }
+    if (result && Array.isArray(result.cues)) {
+      result.cues.sort((a, b) => a.start - b.start);
+      result.cues.forEach((cue, index) => {
+        cue.index = index + 1;
+      });
+    }
+    return result;
   }
 
   // ---------- Serialize ----------

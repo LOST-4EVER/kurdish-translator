@@ -70,9 +70,18 @@ const Translator = (() => {
    */
   function normalizeText(text, isArabic) {
     let t = text
+      .split('\n')
+      .map((line) => line.trim())
+      .join('\n')
       .replace(/\s+([.,!?;:،؛؟]+)/g, '$1')
       .replace(/\n([.,!?;:،؛؟]+)/g, '$1');
-    if (isArabic) t = t.replace(/,/g, '،').replace(/;/g, '؛').replace(/\?/g, '؟');
+    if (isArabic) {
+      t = t.replace(/,/g, '،')
+           .replace(/;/g, '؛')
+           .replace(/\?/g, '؟')
+           .replace(/\u0643/g, '\u06A9') // Arabic Kaf 'ك' -> Kurdish/Persian Kaf 'ک'
+           .replace(/\u064A/g, '\u06CC'); // Arabic Yaa 'ي' -> Kurdish/Persian Yeh 'ی'
+    }
     return t;
   }
 
@@ -295,7 +304,7 @@ const Translator = (() => {
     } catch {}
   }
 
-  return { translateLines, warmup };
+  return { translateLines, warmup, normalizeText };
 })();
 
 if (typeof module !== 'undefined' && module.exports) module.exports = Translator;
