@@ -46,6 +46,7 @@
     translateBtn: '#translateBtn',
     progressFill: '#progressFill', progressPct: '#progressPct',
     progressDetail: '#progressDetail', lineCount: '#lineCount', cancelBtn: '#cancelBtn',
+    liveCaption: '#liveCaption', livePlaceholder: '#livePlaceholder', liveFeed: '#liveFeed',
     downloadBtn: '#downloadBtn', copyBtn: '#copyBtn',
     translateAgainBtn: '#translateAgainBtn', doneFormat: '#doneFormat', doneSize: '#doneSize',
     previewBtn: '#previewBtn',
@@ -79,6 +80,7 @@
   let editWasPlaying = false; // true if the player was running when editing started
   let rowEls = [];      // editor row nodes indexed by cue index (for O(1) highlight)
   let lastActiveRow = null;  // currently highlighted editor row
+  let liveSource = [];  // original source lines for the live translation reel
   const hasArabic = (s) => /[\u0600-\u06FF\u0750-\u077F]/.test(s);
   // Safari iOS ignores the `download` attribute on blob: URLs; iPadOS
   // identifies itself as a Mac, so detect touch too.
@@ -116,6 +118,32 @@
   // ASS/SSA line breaks are stored as \N; render them as real newlines.
   const displayText = (text) => stripTags(text).replace(/\\N/g, '\n');
   const dirFor = (text) => (hasArabic(text) ? 'rtl' : 'ltr');
+
+  /** Render the live translation reel: show the latest line on the mini screen
+   *  (like a subtitle) and the last handful of completed lines below it. */
+  function renderLive(results) {
+    const completed = [];
+    for (let i = 0; i < results.length; i++) {
+      const tr = results[i];
+      if (tr && tr.trim() && tr.trim() !== (liveSource[i] || '')) completed.push(tr);
+    }
+    const latest = completed[completed.length - 1];
+    if (latest) {
+      els.liveCaption.textContent = displayText(latest);
+      els.liveCaption.setAttribute('dir', dirFor(latest));
+      els.livePlaceholder.classList.add('hidden');
+      els.liveCaption.classList.remove('hidden');
+    }
+    const feed = completed.slice(-5);
+    els.liveFeed.innerHTML = '';
+    feed.forEach((t) => {
+      const row = document.createElement('span');
+      row.className = 'live-item';
+      row.setAttribute('dir', dirFor(t));
+      row.textContent = displayText(t);
+      els.liveFeed.appendChild(row);
+    });
+  }
 
   /** Write a user edit into a cue: player screen, dirty flag, debounced download. */
   function applyCueEdit(i, text) {
@@ -500,10 +528,14 @@
 
     try {
       const lines = parsed.cues.map(normalize);
+      liveSource = lines;
+      els.liveCaption.classList.add('hidden');
+      els.livePlaceholder.classList.remove('hidden');
+      els.liveFeed.innerHTML = '';
       const translated = await Translator.translateLines(lines, srcLang, tgtLang, (p, done, total) => {
         if (cancelFlag) return;
-        setProgress(p, `Translated ${done} / ${total} lines`);
-      }, controller.signal, { accuracy });
+      setProgress(p, `Translated ${done} / ${total} lines`);
+    }, controller.signal, { accuracy, onBatch: (results) => { if (!cancelFlag) renderLive(results); } });
       if (cancelFlag) return; // cancelled mid-run: discard results, stay on settings
 
       const translatedCues = parsed.cues.map((c, i) => {

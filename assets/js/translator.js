@@ -131,6 +131,7 @@ const Translator = (() => {
       }
 
       doneLines += batch.length;
+      if (opts.onBatch) opts.onBatch(results, doneLines, totalLines); // feed the live preview
       if (onProgress) onProgress((b + 1) / total, doneLines, totalLines);
       if (b < batches.length - 1) await sleep(DELAY_MS);
     }
@@ -159,7 +160,7 @@ const Translator = (() => {
         try {
           const t = await translateChunk(p.text, srcLang, tgtLang, signal);
           const norm = normalizeText(restoreNewlines(restore(t, p.toks).trim()), isArabic);
-          if (norm && norm !== origNorm[i]) results[i] = norm;
+          if (norm && norm !== origNorm[i]) { results[i] = norm; if (opts.onBatch) opts.onBatch(results, doneLines + k + 1, totalLines + retryTotal); }
         } catch { /* keep the previous result */ }
         if (onProgress) onProgress((doneLines + k + 1) / (totalLines + retryTotal), doneLines + k + 1, totalLines + retryTotal);
       }
@@ -240,6 +241,10 @@ const Translator = (() => {
         // A rejected fetch (offline) is a network hard failure, distinct from
         // a Google "unexpected/empty response" which we simply retry.
         if (err instanceof TypeError) err.hard = true;
+        // A request aborted by our per-attempt timeout (any AbortError here is
+        // ours — a user cancel was rethrown above) means the socket stalled, so
+        // count it as a hard failure rather than reporting fake success.
+        if (err && err.name === 'AbortError') err.hard = true;
         if (!(err instanceof Error)) { err = new Error(String(err && err.message)); }
         lastErr = err;
         if (attempt < MAX_ATTEMPTS - 1) await sleep(backoffMs(attempt));

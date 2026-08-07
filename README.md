@@ -29,8 +29,9 @@ Works on desktop, Android, and iOS.
 - ⚡ Batch translation — many lines per request, with newline protection
 - 🛡️ Detects merged/truncated batch responses and re-translates those lines one-by-one
 - 🏷️ Preserves formatting tags (`<i>`, `{\an8}`, `\N`, etc.)
-- 🔁 Automatic retry with backoff on transient errors
-- 🎞️ Built-in preview player: play cues on a 16:9 screen, seek, speed 0.5×–2×
+- 🔁 Auto-retry with **exponential backoff** + host fallback to survive Google throttling (429), plus a cold-start warmup so the first run rarely fails
+- 🎞️ **Live translation reel** — a mini subtitle screen shows the latest line as it's translated, with a scrollable feed below and an animated progress bar
+- 🎬 Built-in preview player: play cues on a 16:9 screen, seek, speed 0.5×–2×
 - ✍️ Sorani typography: `,`→`،` `;`→`؛` `?`→`؟`, proper RTL rendering with `Noto Naskh Arabic`
 - 📱 Fully responsive mobile UI with progress bar and cancel
 - 📲 **Installable PWA** — add to home screen on Android/iOS (works standalone)
