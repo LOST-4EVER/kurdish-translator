@@ -85,6 +85,7 @@
   let liveItems = [];   // absolute indices whose translation changed (in completion order)
   let liveDone = 0;     // how many non-empty lines have been finalized
   let editorObserver = null;
+  let copyTimer = null;
   const hasArabic = (s) => /[\u0600-\u06FF\u0750-\u077F]/.test(s);
   // Safari iOS ignores the `download` attribute on blob: URLs; iPadOS
   // identifies itself as a Mac, so detect touch too.
@@ -662,6 +663,13 @@
       try {
         await navigator.clipboard.writeText(resultText);
         toast('Copied to clipboard!');
+        els.copyBtn.textContent = '✓ Copied!';
+        els.copyBtn.classList.add('copied');
+        clearTimeout(copyTimer);
+        copyTimer = setTimeout(() => {
+          els.copyBtn.textContent = '📋 Copy to clipboard';
+          els.copyBtn.classList.remove('copied');
+        }, 2000);
       } catch {
         toast('Copy failed on this device.', true);
       }

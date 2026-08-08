@@ -310,6 +310,15 @@ select:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px
 }
 .btn-secondary:hover { border-color: var(--accent); color: var(--accent); }
 .btn-secondary:active { transform: scale(0.98); }
+.btn-secondary.copied {
+  border-color: var(--green);
+  color: var(--green);
+  background: rgba(52, 211, 153, 0.1);
+}
+.btn-secondary.copied:hover {
+  border-color: var(--green);
+  color: var(--green);
+}
 .btn-tertiary {
   width: 100%; background: transparent; border: 1px solid var(--border);
   color: var(--text); padding: 12px; border-radius: var(--radius-full);
