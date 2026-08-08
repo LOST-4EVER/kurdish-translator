@@ -453,8 +453,8 @@ select:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px
 .editor-toggles .switch { transform: scale(0.82); }
 
 .editor-list {
-  max-height: min(58vh, 520px); overflow-y: auto;
-  display: flex; flex-direction: column; gap: 8px; padding: 6px;
+  display: flex; flex-direction: column; overflow-y: auto;
+  max-height: min(58vh, 520px); gap: 8px; padding: 6px;
   background: var(--surface-2); scroll-behavior: smooth;
   border: 1px solid var(--border); border-radius: var(--radius-md);
 }
@@ -464,9 +464,12 @@ select:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px
 
 .ed-row {
   position: relative; display: flex; gap: 12px; align-items: flex-start;
-  padding: 11px 12px; background: var(--surface);
+  padding: 8px 12px; background: var(--surface);
   border: 1px solid var(--border); border-radius: var(--radius-md);
   cursor: pointer; transition: var(--motion) var(--ease); overflow: hidden;
+  min-height: 48px;
+  height: auto;
+  flex-shrink: 0;
 }
 .ed-row:hover { border-color: var(--accent); transform: translateY(-1px); box-shadow: var(--shadow-1); }
 .ed-row.active {
@@ -500,6 +503,7 @@ select:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px
   background: transparent; border: 1px solid transparent; border-radius: var(--radius-sm);
   color: var(--text); font: inherit; font-size: 13px; line-height: 1.5;
   padding: 5px 9px; transition: background 0.15s, border-color 0.15s, box-shadow 0.15s;
+  min-height: 32px;
 }
 .ed-input:hover { background: var(--surface-2); }
 .ed-input:focus {
