@@ -102,9 +102,12 @@
     toastTimer = setTimeout(() => els.toast.classList.remove('show'), 3200);
   }
 
+  // Step cards keyed by step name (avoid string-building element lookups).
+  const stepEls = Object.fromEntries(STEPS.map((s) => [s, els['step' + s[0].toUpperCase() + s.slice(1)]]));
+
   function showStep(name) {
-    STEPS.forEach((s) => els['step' + s[0].toUpperCase() + s.slice(1)].classList.add('hidden'));
-    els['step' + name[0].toUpperCase() + name.slice(1)].classList.remove('hidden');
+    STEPS.forEach((s) => stepEls[s].classList.add('hidden'));
+    stepEls[name].classList.remove('hidden');
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }
 
@@ -568,8 +571,8 @@
       els.liveFeed.innerHTML = '';
       const translated = await Translator.translateLines(lines, srcLang, tgtLang, (p, done, total) => {
         if (cancelFlag) return;
-      setProgress(p, `Translated ${done} / ${total} lines`);
-    }, controller.signal, { accuracy, onBatch: (results) => { if (!cancelFlag) renderLive(results); } });
+        setProgress(p, `Translated ${done} / ${total} lines`);
+      }, controller.signal, { accuracy, onBatch: (results) => { if (!cancelFlag) renderLive(results); } });
       if (cancelFlag) return; // cancelled mid-run: discard results, stay on settings
 
       const translatedCues = parsed.cues.map((c, i) => {

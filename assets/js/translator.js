@@ -106,6 +106,7 @@ const Translator = (() => {
     let doneLines = 0;
     let anyTranslated = false;
     let sawHardFail = false;
+    let retryTotal = 0; // accuracy-pass retries, reported in the final progress
 
     for (let b = 0; b < batches.length; b++) {
       const batch = batches[b];
@@ -161,7 +162,7 @@ const Translator = (() => {
         if (!/\p{L}/u.test(orig)) continue;                     // pure numbers / punctuation
         retries.push(i);
       }
-      const retryTotal = retries.length;
+      retryTotal = retries.length;
       for (let k = 0; k < retryTotal; k++) {
         const i = retries[k];
         throwIfAborted(signal);
@@ -175,7 +176,7 @@ const Translator = (() => {
       }
     }
 
-    if (onProgress) onProgress(1, totalLines + (opts.accuracy ? retryTotal : 0), totalLines + (opts.accuracy ? retryTotal : 0));
+    if (onProgress) onProgress(1, totalLines + retryTotal, totalLines + retryTotal);
     return results;
   }
 

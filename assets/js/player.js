@@ -19,6 +19,7 @@ const SubtitlePlayer = (() => {
   let activeCue = null; // cached cue to avoid redundant DOM writes
   let onCue = null;     // optional callback when the active cue changes
   let lastSec = -1;     // last whole second written to the time readout
+  let cursor = -1;      // cached cue index from the last cueAt() lookup
 
   const el = {};
 
@@ -97,6 +98,7 @@ const SubtitlePlayer = (() => {
     stop();
     cues = newCues || [];
     cursor = -1;
+    lastSec = -1; // a new file must rewrite the time readout even at 0:00
     total = cues.reduce((max, c) => Math.max(max, c.end), 0);
     buildTimeline();
     pos = 0;
@@ -162,7 +164,6 @@ const SubtitlePlayer = (() => {
 
   /** Find the cue active at pos. Cues are sorted by start, so a cached cursor
    *  plus binary search keeps this O(log n) worst-case and O(1) during playback. */
-  let cursor = -1;
   function cueAt(pos) {
     const cur = cursor >= 0 ? cues[cursor] : null;
     if (cur && pos >= cur.start && pos < cur.end) return cursor; // still in the same cue

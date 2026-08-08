@@ -120,6 +120,9 @@ const SubParser = (() => {
     let inEvents = false;
 
     for (const line of content.replace(/\r/g, '').split('\n')) {
+      // Blank lines separate sections (and the file's trailing newline leaves
+      // one); keep them out of the header so serialization round-trips cleanly.
+      if (!line.trim()) continue;
       if (/^\s*\[Events\]\s*$/i.test(line)) { inEvents = true; header.push(line); continue; }
       if (/^\s*\[[^\]]+\]\s*$/.test(line)) { inEvents = false; header.push(line); continue; }
 
