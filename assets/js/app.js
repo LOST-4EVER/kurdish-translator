@@ -81,6 +81,9 @@
   let rowEls = [];      // editor row nodes indexed by cue index (for O(1) highlight)
   let lastActiveRow = null;  // currently highlighted editor row
   let liveSource = [];  // original source lines for the live translation reel
+  let liveOrder = [];   // absolute indices of non-empty source lines (translated in this order)
+  let liveItems = [];   // absolute indices whose translation changed (in completion order)
+  let liveDone = 0;     // how many non-empty lines have been finalized
   let editorObserver = null;
   const hasArabic = (s) => /[\u0600-\u06FF\u0750-\u077F]/.test(s);
   // Safari iOS ignores the `download` attribute on blob: URLs; iPadOS
@@ -124,27 +127,36 @@
   const dirFor = (text) => (hasArabic(text) ? 'rtl' : 'ltr');
 
   /** Render the live translation reel: show the latest line on the mini screen
-   *  (like a subtitle) and the last handful of completed lines below it. */
-  function renderLive(results) {
-    const completed = [];
-    for (let i = 0; i < results.length; i++) {
-      const tr = results[i];
-      if (tr && tr.trim() && tr.trim() !== (liveSource[i] || '')) completed.push(tr);
+   *  (like a subtitle) and the last handful of completed lines below it.
+   *  Only the non-empty lines finalized since the last call are scanned, so
+   *  building a very large file stays O(n) instead of rescanning everything,
+   *  and sparse source files (with empty/blank cues) still map correctly. */
+  let cachedLiveTexts = null;
+  function renderLive(results, doneCount) {
+    const upto = Math.min(doneCount || 0, liveOrder.length);
+    if (cachedLiveTexts === null) cachedLiveTexts = new Array(results.length).fill(null);
+    for (let k = liveDone; k < upto; k++) {
+      const i = liveOrder[k];
+      const tr = results[i] && results[i].trim();
+      const prev = cachedLiveTexts[i];
+      cachedLiveTexts[i] = tr || null;
+      if (tr && tr !== prev && tr !== (liveSource[i] || '').trim()) liveItems.push(i);
     }
-    const latest = completed[completed.length - 1];
-    if (latest) {
+    liveDone = upto;
+    const latestIdx = liveItems[liveItems.length - 1];
+    const latest = latestIdx !== undefined ? results[latestIdx] : '';
+    if (latest && latest.trim()) {
       els.liveCaption.textContent = displayText(latest);
       els.liveCaption.setAttribute('dir', dirFor(latest));
       els.livePlaceholder.classList.add('hidden');
       els.liveCaption.classList.remove('hidden');
     }
-    const feed = completed.slice(-5);
     els.liveFeed.innerHTML = '';
-    feed.forEach((t) => {
+    liveItems.slice(-5).forEach((i) => {
       const row = document.createElement('span');
       row.className = 'live-item';
-      row.setAttribute('dir', dirFor(t));
-      row.textContent = displayText(t);
+      row.setAttribute('dir', dirFor(results[i]));
+      row.textContent = displayText(results[i]);
       els.liveFeed.appendChild(row);
     });
   }
@@ -566,13 +578,17 @@
     try {
       const lines = parsed.cues.map(normalize);
       liveSource = lines;
+      liveOrder = lines.map((l, i) => (l && l.trim() ? i : -1)).filter((i) => i >= 0);
+      liveDone = 0;
+      liveItems = [];
+      cachedLiveTexts = null;
       els.liveCaption.classList.add('hidden');
       els.livePlaceholder.classList.remove('hidden');
       els.liveFeed.innerHTML = '';
       const translated = await Translator.translateLines(lines, srcLang, tgtLang, (p, done, total) => {
         if (cancelFlag) return;
         setProgress(p, `Translated ${done} / ${total} lines`);
-      }, controller.signal, { accuracy, onBatch: (results) => { if (!cancelFlag) renderLive(results); } });
+      }, controller.signal, { accuracy, onBatch: (results, done) => { if (!cancelFlag) renderLive(results, done); } });
       if (cancelFlag) return; // cancelled mid-run: discard results, stay on settings
 
       const translatedCues = parsed.cues.map((c, i) => {
@@ -608,14 +624,17 @@
     resultText = SubParser.serialize(parsed, cues);
     if (resultUrl) URL.revokeObjectURL(resultUrl);
     const mime = MIME_BY_FORMAT[parsed.format] || 'text/plain;charset=utf-8';
-    resultUrl = URL.createObjectURL(new Blob([resultText], { type: mime }));
+    const blob = new Blob([resultText], { type: mime });
+    resultUrl = URL.createObjectURL(blob);
 
     const ext = EXT_BY_FORMAT[parsed.format] || 'srt';
     const base = file.name.replace(/\.[^.]+$/, '');
     els.downloadBtn.href = resultUrl;
     els.downloadBtn.download = `${base}.ckb.${ext}`;
     els.doneFormat.textContent = LABEL[parsed.format] || parsed.format.toUpperCase();
-    els.doneSize.textContent = `${(resultText.length / 1024).toFixed(1)} KB`;
+    // Report the real file size (UTF-8 bytes), not the string's char count,
+    // so it matches what actually downloads.
+    els.doneSize.textContent = formatSize(blob.size);
   }
 
   // ---------- Wire up ----------
