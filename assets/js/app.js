@@ -243,6 +243,7 @@
       });
       input.addEventListener('focus', () => {
         row.classList.add('editing');
+        SubtitlePlayer.seek(c.start);
         editWasPlaying = SubtitlePlayer.playing;
         SubtitlePlayer.pause();
       });
