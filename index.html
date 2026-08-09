@@ -101,7 +101,7 @@
                 <em>show the source line above its translation</em>
               </span>
               <span class="switch">
-                <input type="checkbox" id="includeOriginal" />
+                <input type="checkbox" id="includeOriginal" role="switch" />
                 <span class="slider"></span>
               </span>
             </label>
@@ -112,7 +112,7 @@
                 <em>re-translate lines Google left unchanged (slower)</em>
               </span>
               <span class="switch">
-                <input type="checkbox" id="accuracyToggle" />
+                <input type="checkbox" id="accuracyToggle" role="switch" />
                 <span class="slider"></span>
               </span>
             </label>
@@ -123,7 +123,7 @@
                 <em>skip blank cues from the result</em>
               </span>
               <span class="switch">
-                <input type="checkbox" id="keepOnly" />
+                <input type="checkbox" id="keepOnly" role="switch" />
                 <span class="slider"></span>
               </span>
             </label>
@@ -245,7 +245,7 @@
             </div>
           </div>
           <div class="editor-list" id="editorList" aria-label="Editable subtitle cues"></div>
-          <p class="editor-hint">Click a row to jump the player · type to edit and see it change live on the screen</p>
+          <p class="editor-hint">Click a row to jump player · Type to edit live · <b>Esc</b> or <b>Ctrl+Enter</b> to finish</p>
         </section>
       </div>
     </main>
@@ -272,7 +272,7 @@
       <button class="fs-btn fs-close" id="fsClose" title="Exit fullscreen edit" aria-label="Exit fullscreen edit">✕</button>
     </div>
     <div class="fs-editor hidden" id="fsEditor">
-      <textarea id="fsInput" aria-label="Edit active subtitle text"></textarea>
+      <textarea id="fsInput" aria-label="Edit active subtitle text" placeholder="Type subtitle text... Press Ctrl+Enter to save"></textarea>
       <div class="fs-actions">
         <button class="fs-btn fs-done" id="fsDoneBtn">Done</button>
       </div>

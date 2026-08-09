@@ -392,6 +392,13 @@
       updateFsScreen();
     });
 
+    els.fsInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
+        e.preventDefault();
+        closeFsEditor();
+      }
+    });
+
     document.addEventListener('keydown', (e) => {
       if (!fsActive) return;
       if (e.key === 'Escape') {
@@ -665,6 +672,15 @@
       if (!c) return;
       SubtitlePlayer.seek(c.start);
       if (!SubtitlePlayer.playing) SubtitlePlayer.play();
+    });
+
+    els.editorList.addEventListener('keydown', (e) => {
+      const input = e.target;
+      if (!input || !input.classList.contains('ed-input')) return;
+      if (e.key === 'Escape' || (e.key === 'Enter' && (e.ctrlKey || e.metaKey))) {
+        e.preventDefault();
+        input.blur();
+      }
     });
 
     // Safari iOS ignores the `download` attribute for blob: URLs and saves

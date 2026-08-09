@@ -9,3 +9,7 @@
 ## 2026-08-08 - Contextual Visual Feedback on Action Buttons
 **Learning:** Actions with delayed or detached feedback (like "Copy to Clipboard" which only triggers a brief notification or occurs invisibly) cause mild friction as the user's focus remains on the clicked element. Providing direct, inline visual transition (e.g. green check, temporary color/border shift) directly on the clicked button satisfies expectations instantly without requiring scanning of the screen.
 **Action:** Transition action buttons (like Copy) to inline success states (e.g., "✓ Copied!") and revert them gracefully after a short timeout.
+
+## 2026-08-09 - Accessible Focus Outlines on Custom Switches & Keyboard Dismiss Controls
+**Learning:** Custom UI components (like slider toggle switches built using absolute positioning on opacity-0 inputs) often break native focus rings, rendering them invisible to keyboard-only and screen-reader users. Additionally, in timeline/media synced editors, missing quick-dismiss key shortcuts (like `Escape` or `Ctrl+Enter`) inside text fields locks the keyboard focus and prevents smooth resume of timeline media keys like `Space`.
+**Action:** Always map focus states of invisible controls to their visible labels or sibling elements (e.g., `.switch input:focus-visible + .slider`) and provide keyboard shortcuts (`Escape`/`Ctrl+Enter`) to quickly commit and dismiss active input fields.
