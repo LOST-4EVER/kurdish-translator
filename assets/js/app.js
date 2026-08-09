@@ -251,28 +251,6 @@
       inputs[i] = input;
       row.appendChild(input);
       frag.appendChild(row);
-
-      input.addEventListener('input', () => {
-        autoGrow(input);
-        applyCueEdit(i, input.value);
-      });
-      input.addEventListener('focus', () => {
-        row.classList.add('editing');
-        SubtitlePlayer.seek(c.start);
-        editWasPlaying = SubtitlePlayer.playing;
-        SubtitlePlayer.pause();
-      });
-      input.addEventListener('blur', () => {
-        row.classList.remove('editing');
-        if (editWasPlaying) SubtitlePlayer.play();
-        editWasPlaying = false;
-      });
-
-      row.addEventListener('click', (e) => {
-        if (e.target.closest('.ed-input')) return;
-        SubtitlePlayer.seek(c.start);
-        if (!SubtitlePlayer.playing) SubtitlePlayer.play();
-      });
     });
     list.appendChild(frag);
 
@@ -640,6 +618,53 @@
   // ---------- Wire up ----------
   function bindActions() {
     els.translateBtn.addEventListener('click', startTranslation);
+
+    // ⚡ Bolt: Event delegation for subtitle editor list to avoid O(N) event listeners.
+    // We attach unified handlers on the container instead of separate handlers on each row.
+    els.editorList.addEventListener('input', (e) => {
+      const input = e.target;
+      if (!input || !input.classList.contains('ed-input')) return;
+      const row = input.closest('.ed-row');
+      if (!row) return;
+      const i = parseInt(row.dataset.index, 10);
+      autoGrow(input);
+      applyCueEdit(i, input.value);
+    });
+
+    els.editorList.addEventListener('focusin', (e) => {
+      const input = e.target;
+      if (!input || !input.classList.contains('ed-input')) return;
+      const row = input.closest('.ed-row');
+      if (!row) return;
+      const i = parseInt(row.dataset.index, 10);
+      const c = workCues[i];
+      if (!c) return;
+      row.classList.add('editing');
+      SubtitlePlayer.seek(c.start);
+      editWasPlaying = SubtitlePlayer.playing;
+      SubtitlePlayer.pause();
+    });
+
+    els.editorList.addEventListener('focusout', (e) => {
+      const input = e.target;
+      if (!input || !input.classList.contains('ed-input')) return;
+      const row = input.closest('.ed-row');
+      if (!row) return;
+      row.classList.remove('editing');
+      if (editWasPlaying) SubtitlePlayer.play();
+      editWasPlaying = false;
+    });
+
+    els.editorList.addEventListener('click', (e) => {
+      if (e.target.closest('.ed-input')) return;
+      const row = e.target.closest('.ed-row');
+      if (!row) return;
+      const i = parseInt(row.dataset.index, 10);
+      const c = workCues[i];
+      if (!c) return;
+      SubtitlePlayer.seek(c.start);
+      if (!SubtitlePlayer.playing) SubtitlePlayer.play();
+    });
 
     // Safari iOS ignores the `download` attribute for blob: URLs and saves
     // the file as .txt. Subtitle text is small, so swap to a data: URL on
