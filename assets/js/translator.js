@@ -41,7 +41,16 @@ const Translator = (() => {
   const P_RE = new RegExp(P_OPEN + '(\\d+)' + P_CLOSE, 'g');
   const MARKUP_RE = /\{[^}]*\}|<[^>]*>/g;
 
-  const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+  // Abort-aware delay: Cancel (or a timed-out scoped signal) wakes the wait
+  // immediately, so a long Retry-After/backoff can't outlive the user's choice.
+  const sleep = (ms, signal) => new Promise((resolve) => {
+    if (!signal) { setTimeout(resolve, ms); return; }
+    if (signal.aborted) { resolve(); return; }
+    let timer;
+    const onAbort = () => { clearTimeout(timer); resolve(); };
+    timer = setTimeout(() => { signal.removeEventListener('abort', onAbort); resolve(); }, ms);
+    signal.addEventListener('abort', onAbort, { once: true });
+  });
   const restoreNewlines = (s) => s.split(NL_SENTINEL).join('\n');
 
   /** Replace subtitle markup with control-char placeholders so Google keeps it. */
@@ -143,7 +152,7 @@ const Translator = (() => {
       doneLines += batch.length;
       if (opts.onBatch) opts.onBatch(results, doneLines, totalLines); // feed the live preview
       if (onProgress) onProgress((b + 1) / total, doneLines, totalLines);
-      if (b < batches.length - 1) await sleep(DELAY_MS);
+      if (b < batches.length - 1) await sleep(DELAY_MS, signal);
     }
 
     // If the network/API was unreachable for every line, don't hand back the
@@ -235,7 +244,7 @@ const Translator = (() => {
           const retryAfter = Number(res.headers.get('retry-after'));
           const wait = Number.isFinite(retryAfter) && retryAfter > 0 ? retryAfter * 1000 : backoffMs(attempt);
           lastErr = new Error(`HTTP 429 (throttled), retrying in ${Math.round(wait / 1000)}s`);
-          await sleep(wait);
+          await sleep(wait, signal);
           continue;
         }
         if (!res.ok) { const e = new Error(`HTTP ${res.status}`); e.hard = res.status >= 500; throw e; }
@@ -257,7 +266,7 @@ const Translator = (() => {
         if (err && err.name === 'AbortError') err.hard = true;
         if (!(err instanceof Error)) { err = new Error(String(err && err.message)); }
         lastErr = err;
-        if (attempt < MAX_ATTEMPTS - 1) await sleep(backoffMs(attempt));
+        if (attempt < MAX_ATTEMPTS - 1) await sleep(backoffMs(attempt), signal);
       } finally {
         scoped.cleanup();
       }

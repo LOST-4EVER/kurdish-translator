@@ -99,6 +99,10 @@ const SubParser = (() => {
       // A line immediately followed by a timing line is a cue identifier/index.
       const next = lines[i + 1];
       if (next && TIMECODE_LINE.test(next.trim())) continue;
+      // In blank-line-separated SRT the index ("1") is alone on its line, with
+      // the blank cue separator between it and the timing line. Skip those too.
+      const after = lines[i + 2];
+      if (!next && /^\d+$/.test(line) && after && TIMECODE_LINE.test(after.trim())) continue;
       current.text.push(line);
     }
     if (current) cues.push(current);
@@ -225,7 +229,9 @@ const SubParser = (() => {
         .replace(/&gt;/gi, '>')
         .replace(/&quot;/gi, '"')
         .replace(/&#39;/gi, "'")
-        .replace(/\s+/g, ' ')
+        .replace(/[ \t]+/g, ' ')
+        .replace(/ +\n/g, '\n')
+        .replace(/\n[ \t]*\n+/g, '\n')
         .trim();
       if (text) return [text];
     }
