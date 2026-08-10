@@ -25,14 +25,41 @@ const SubParser = (() => {
     };
   }
 
+  // ⚡ Bolt: Highly-optimized toMs to avoid array allocation, string splitting, and regex.
   function toMs(str) {
-    const [time, fracRaw = '0'] = str.replace(',', '.').split('.');
-    const frac = Number(fracRaw.padEnd(3, '0').slice(0, 3));
-    const [a, b, c] = time.split(':').map(Number);
-    // 2 parts = mm:ss.mmm ; 3 parts = hh:mm:ss.mmm
-    return c === undefined
-      ? a * 60000 + b * 1000 + frac
-      : a * 3600000 + b * 60000 + c * 1000 + frac;
+    let dotIdx = str.indexOf('.');
+    if (dotIdx === -1) dotIdx = str.indexOf(',');
+
+    let timePart = str;
+    let frac = 0;
+    if (dotIdx !== -1) {
+      timePart = str.substring(0, dotIdx);
+      const fracPart = str.substring(dotIdx + 1);
+      const len = fracPart.length;
+      if (len === 3) {
+        frac = parseInt(fracPart, 10);
+      } else if (len === 2) {
+        frac = parseInt(fracPart, 10) * 10;
+      } else if (len === 1) {
+        frac = parseInt(fracPart, 10) * 100;
+      } else if (len > 3) {
+        frac = parseInt(fracPart.substring(0, 3), 10);
+      }
+    }
+
+    const firstColon = timePart.indexOf(':');
+    const secondColon = timePart.indexOf(':', firstColon + 1);
+
+    if (secondColon === -1) {
+      const m = parseInt(timePart.substring(0, firstColon), 10);
+      const s = parseInt(timePart.substring(firstColon + 1), 10);
+      return m * 60000 + s * 1000 + frac;
+    } else {
+      const h = parseInt(timePart.substring(0, firstColon), 10);
+      const m = parseInt(timePart.substring(firstColon + 1, secondColon), 10);
+      const s = parseInt(timePart.substring(secondColon + 1), 10);
+      return h * 3600000 + m * 60000 + s * 1000 + frac;
+    }
   }
 
   function fmtSRT(ms) {
