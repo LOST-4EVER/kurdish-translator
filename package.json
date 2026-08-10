@@ -1,0 +1,11 @@
+{
+  "name": "kurdish-translator",
+  "version": "1.0.0",
+  "description": "Kurdî Subtitle Translator PWA",
+  "scripts": {
+    "dev": "node server.js",
+    "start": "node server.js",
+    "build": "echo 'No build step required'",
+    "lint": "node --check assets/js/parser.js && node --check assets/js/translator.js && node --check assets/js/player.js && node --check assets/js/app.js"
+  }
+}

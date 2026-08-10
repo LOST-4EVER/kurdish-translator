@@ -1,0 +1,417 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <meta name="theme-color" content="#0b0d12" />
+  <meta name="description" content="Free subtitle translator into Kurdish Sorani — SRT, VTT, ASS, SSA, SUB, SMI. Drag & drop, works on mobile, installable & offline." />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+  <meta name="apple-mobile-web-app-title" content="Kurdî Subtitles" />
+  <link rel="manifest" href="manifest.json" />
+  <link rel="apple-touch-icon" href="assets/icons/apple-touch-icon.png" />
+  <title>Kurdî Subtitle Translator | وەرگێڕی ژێرنووس</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🎬</text></svg>" />
+  <link rel="stylesheet" href="assets/css/style.css" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Noto+Naskh+Arabic:wght@500;600;700&display=swap" rel="stylesheet" />
+</head>
+<body>
+  <div class="app">
+    <header class="topbar">
+      <div class="brand">
+        <span class="logo">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M19 4H5c-1.11 0-2 .9-2 2v12c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 14H5V8h14v10zM7 10h4v2H7zm0 4h8v2H7zm6-4h5v2h-5z"/></svg>
+        </span>
+        <div class="brand-text">
+          <h1>Kurdî <span class="accent">Subtitle Translator</span></h1>
+          <p>وەرگێڕی ژێرنووسی فیلم، ئەنیمی و زنجیرە</p>
+        </div>
+      </div>
+      <div class="topbar-actions">
+        <button class="gh-btn" id="installBtn" hidden>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"/></svg> Install
+        </button>
+        <a class="gh-btn" href="https://github.com/LOST-4EVER/kurdish-translator" target="_blank" rel="noopener">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2A10 10 0 0 0 2 12c0 4.42 2.87 8.17 6.84 9.5.5.08.66-.23.66-.5v-1.69c-2.77.6-3.36-1.34-3.36-1.34-.46-1.16-1.11-1.47-1.11-1.47-.91-.62.07-.6.07-.6 1 .07 1.53 1.03 1.53 1.03.87 1.52 2.34 1.07 2.91.83.1-.65.35-1.09.63-1.34-2.22-.25-4.55-1.11-4.55-4.92 0-1.11.38-2 1.03-2.71-.1-.25-.45-1.29.1-2.64 0 0 .84-.27 2.75 1.02.79-.22 1.65-.33 2.5-.33.85 0 1.71.11 2.5.33 1.91-1.29 2.75-1.02 2.75-1.02.55 1.35.2 2.39.1 2.64.65.71 1.03 1.6 1.03 2.71 0 3.82-2.34 4.66-4.57 4.91.36.31.69.92.69 1.85V21c0 .27.16.59.67.5C19.14 20.16 22 16.42 22 12A10 10 0 0 0 12 2z"/></svg> GitHub
+        </a>
+      </div>
+    </header>
+
+    <!-- Tab navigation -->
+    <nav class="tabs" id="tabs">
+      <button class="tab active" data-tab="translate">
+        <span class="tab-ic"><svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="m12.87 15.07-2.54-2.51.03-.03A17.52 17.52 0 0 0 14.07 6H17V4h-7V2H8v2H1v2h11.17C11.5 7.92 10.44 9.75 9 11.35 8.07 10.32 7.3 9.19 6.69 8h-2c.73 1.63 1.73 3.17 2.98 4.56l-5.09 5.02L4 19l5-5 3.11 3.11.76-2.04zM18.5 10h-2L12 22h2l1.12-3h4.75L21 22h2l-4.5-12zm-2.62 7 1.62-4.33L19.12 17h-3.24z"/></svg></span> Translate
+      </button>
+      <button class="tab" data-tab="preview" id="previewTab">
+        <span class="tab-ic"><svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg></span> Preview
+      </button>
+    </nav>
+
+    <main class="stage">
+      <!-- ============ TRANSLATE TAB ============ -->
+      <div id="tabTranslate">
+
+        <!-- STEP 1 : upload -->
+        <section class="card upload-card" id="stepUpload">
+          <div class="dropzone" id="dropzone" tabindex="0" role="button">
+            <input type="file" id="fileInput" accept=".srt,.vtt,.ass,.ssa,.sub,.smi,text/plain" hidden />
+            <div class="dz-icon">
+              <svg width="48" height="48" viewBox="0 0 24 24" fill="currentColor"><path d="M20 6h-8l-2-2H4c-1.11 0-1.99.89-1.99 2L2 18c0 1.11.89 2 2 2h16c1.11 0 2-.89 2-2V8c0-1.11-.89-2-2-2zm0 12H4V8h16v10zM8 13.01l1.41 1.41L11 12.84V17h2v-4.16l1.59 1.59L16 13.01 12 9l-4 4.01z"/></svg>
+            </div>
+            <h2>Drop subtitle file here</h2>
+            <p class="dz-sub">or <span class="link">browse from device</span> — it translates privately in your browser</p>
+            <div class="dz-hint">Supports <b>.SRT</b> <b>.VTT</b> <b>.ASS</b> <b>.SSA</b> <b>.SUB</b> <b>.SMI</b> — Android &amp; iOS ready</div>
+            <div class="pill-row">
+              <span class="pill">Free</span>
+              <span class="pill">No signup</span>
+              <span class="pill">Private</span>
+            </div>
+          </div>
+        </section>
+
+        <!-- STEP 2 : settings -->
+        <section class="card settings-card hidden" id="stepSettings">
+          <div class="file-info">
+            <span class="fi-icon">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M14 2H6c-1.1 0-1.99.9-1.99 2L4 20c0 1.1.89 2 1.99 2H18c1.1 0 2-.9 2-2V8l-6-6zm2 16H8v-2h8v2zm0-4H8v-2h8v2zm-3-5V3.5L18.5 9H13z"/></svg>
+            </span>
+            <div>
+              <strong id="fileName">movie.srt</strong>
+              <span id="fileMeta"></span>
+            </div>
+          <button class="icon-btn" id="changeFile" title="Choose another file" aria-label="Choose another file">✕</button>
+          </div>
+
+          <div class="settings-grid">
+            <div class="field">
+              <label for="srcLang">Source language</label>
+              <div class="select-wrap">
+                <select id="srcLang">
+                  <option value="auto" selected>Auto detect</option>
+                </select>
+              </div>
+            </div>
+            <div class="field">
+              <label for="tgtLang">Target language</label>
+              <div class="select-wrap">
+                <select id="tgtLang">
+                  <option value="ckb" selected>Kurdish (Sorani / کوردیی ناوەندی)</option>
+                </select>
+              </div>
+            </div>
+          </div>
+
+          <div class="settings-options">
+            <label class="switch-row">
+              <span>
+                <strong>Include original text</strong>
+                <em>show the source line above its translation</em>
+              </span>
+              <span class="switch">
+                <input type="checkbox" id="includeOriginal" role="switch" />
+                <span class="slider"></span>
+              </span>
+            </label>
+
+            <label class="switch-row">
+              <span>
+                <strong>Double-check accuracy</strong>
+                <em>re-translate lines Google left unchanged (slower)</em>
+              </span>
+              <span class="switch">
+                <input type="checkbox" id="accuracyToggle" role="switch" />
+                <span class="slider"></span>
+              </span>
+            </label>
+
+            <label class="switch-row">
+              <span>
+                <strong>Drop untranslated / empty lines</strong>
+                <em>skip blank cues from the result</em>
+              </span>
+              <span class="switch">
+                <input type="checkbox" id="keepOnly" role="switch" />
+                <span class="slider"></span>
+              </span>
+            </label>
+
+            <label class="switch-row">
+              <span>
+                <strong>Use Kurdish numbers (٠١٢٣)</strong>
+                <em>convert numbers to Kurdish digits in translated subtitles</em>
+              </span>
+              <span class="switch">
+                <input type="checkbox" id="kurdishDigitsToggle" role="switch" />
+                <span class="slider"></span>
+              </span>
+            </label>
+          </div>
+
+          <button class="btn-primary" id="translateBtn">
+            <span class="btn-icon">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="m12.87 15.07-2.54-2.51.03-.03A17.52 17.52 0 0 0 14.07 6H17V4h-7V2H8v2H1v2h11.17C11.5 7.92 10.44 9.75 9 11.35 8.07 10.32 7.3 9.19 6.69 8h-2c.73 1.63 1.73 3.17 2.98 4.56l-5.09 5.02L4 19l5-5 3.11 3.11.76-2.04zM18.5 10h-2L12 22h2l1.12-3h4.75L21 22h2l-4.5-12zm-2.62 7 1.62-4.33L19.12 17h-3.24z"/></svg>
+            </span> Translate to Kurdish
+          </button>
+        </section>
+
+        <!-- STEP 3 : progress -->
+        <section class="card progress-card hidden" id="stepProgress">
+          <div class="progress-head">
+            <div class="progress-title-wrap">
+              <span class="progress-spinner"></span>
+              <h2>Translating…</h2>
+            </div>
+            <span id="progressPct">0%</span>
+          </div>
+          <div class="progress-track"><div class="progress-fill" id="progressFill"></div></div>
+          <div class="progress-meta">
+            <span id="progressDetail">Preparing…</span>
+            <span id="lineCount"></span>
+          </div>
+          <div class="live-reel">
+            <div class="live-screen">
+              <span class="live-caption" id="liveCaption"></span>
+              <div class="live-placeholder" id="livePlaceholder">
+                <span class="live-pulse-dot"></span>
+                <span>Translating to Kurdish…</span>
+              </div>
+            </div>
+            <div class="live-feed" id="liveFeed"></div>
+          </div>
+          <button class="btn-ghost" id="cancelBtn">Cancel</button>
+        </section>
+
+        <!-- STEP 4 : done -->
+        <section class="card done-card hidden" id="stepDone">
+          <div class="done-icon">
+            <svg width="40" height="40" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
+            </svg>
+          </div>
+          <h2>Translation complete!</h2>
+          <p class="done-sub">Your subtitle is ready in Kurdish.</p>
+          <div class="done-meta">
+            <span id="doneFormat"></span>
+            <span id="doneSize"></span>
+          </div>
+          <div class="done-actions">
+            <a class="btn-primary" id="downloadBtn" download>
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"/></svg>
+              Download
+            </a>
+            <button class="btn-secondary" id="previewBtn">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
+              Preview subtitles
+            </button>
+            <button class="btn-secondary" id="copyBtn">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z"/></svg>
+              Copy to clipboard
+            </button>
+            <button class="btn-tertiary" id="translateAgainBtn">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M12 5V1L7 6l5 5V7c3.31 0 6 2.69 6 6s-2.69 6-6 6-6-2.69-6-6H4c0 4.42 3.58 8 8 8s8-3.58 8-8-3.58-8-8-8z"/></svg>
+              Translate another file
+            </button>
+          </div>
+          <p class="note">Processed 100% in your browser. Nothing is uploaded. Your settings are remembered.</p>
+        </section>
+
+      </div>
+
+      <!-- ============ PREVIEW TAB ============ -->
+      <div id="tabPreview" class="hidden">
+        <section class="card player-card">
+          <div class="player">
+            <div class="screen" id="playerScreen">
+              <span class="screen-text" id="playerText"></span>
+              <div class="screen-empty" id="playerEmpty">
+                <span class="se-ic">
+                  <svg width="44" height="44" viewBox="0 0 24 24" fill="currentColor"><path d="M18 4l2 4h-3l-2-4h-2l2 4h-3l-2-4H9l2 4H8L6 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V4h-4zm-6 10l-4-4h8l-4 4z"/></svg>
+                </span>
+                <span class="se-t">Load a subtitle to preview it here</span>
+                <span class="se-s">Drop a file, then hit Preview</span>
+              </div>
+              <span class="cue-count" id="cueCount"></span>
+            </div>
+            <div class="timeline" id="timeline">
+              <div class="tl-cues" id="tlCues"></div>
+              <div class="tl-fill" id="tlFill"></div>
+              <div class="tl-thumb" id="tlThumb"></div>
+            </div>
+            <div class="controls">
+              <div class="ctl-group">
+                <button class="ctrl-btn" id="restartBtn" title="Restart" aria-label="Restart">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M6 6h2v12H6zm3.5 6l8.5 6V6z"/></svg>
+                </button>
+                <button class="ctrl-btn" id="skipBackBtn" title="Jump back 5 seconds (-5s)" aria-label="Jump back 5 seconds">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M11 18V6l-8.5 6 8.5 6zm.5-6l8.5 6V6l-8.5 6z"/></svg>
+                </button>
+                <button class="ctrl-btn play" id="playBtn" title="Play / Pause" aria-label="Play">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
+                </button>
+                <button class="ctrl-btn" id="skipForwardBtn" title="Jump forward 5 seconds (+5s)" aria-label="Jump forward 5 seconds">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M4 18l8.5-6L4 6v12zm9-12v12l8.5-6L13 6z"/></svg>
+                </button>
+              </div>
+              <div class="time" id="timeDisplay">0:00 / 0:00</div>
+              <div class="spacer"></div>
+              <div class="ctl-group right">
+                <div class="select-wrap speed" title="Subtitle Font Size">
+                  <select id="fontSizeSel" aria-label="Subtitle Font Size">
+                    <option value="0.85">A- Small</option>
+                    <option value="1" selected>A Normal</option>
+                    <option value="1.2">A+ Large</option>
+                    <option value="1.45">A++ XL</option>
+                  </select>
+                </div>
+                <div class="select-wrap speed" title="Playback Speed">
+                  <select id="speedSel" aria-label="Playback Speed">
+                    <option value="0.5">0.5×</option>
+                    <option value="1" selected>1×</option>
+                    <option value="1.5">1.5×</option>
+                    <option value="2">2×</option>
+                  </select>
+                </div>
+                <button class="ctrl-btn" id="fsToggleBtn" title="Fullscreen edit mode" aria-label="Fullscreen edit mode">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M7 14H5v5h5v-2H7v-3zm-2-4h2V7h3V5H5v5zm12 7h-3v2h5v-5h-2v3zM14 5v2h3v3h2V5h-5z"/></svg>
+                </button>
+              </div>
+            </div>
+          </div>
+          <p class="player-note">Previews your subtitle synced to timing. Keyboard: <b>Space</b> play/pause · <b>← →</b> seek · <b>↑ ↓</b> prev/next cue</p>
+        </section>
+
+        <!-- subtitle editor -->
+        <section class="card editor-card">
+          <div class="editor-toolbar">
+            <div class="editor-title">
+              <span class="ed-ic">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg>
+              </span>
+              <div>
+                <h3>Edit subtitles <span class="ed-count" id="edCount"></span></h3>
+                <p id="editorStatus">Synced with the preview — edits apply live</p>
+              </div>
+            </div>
+            <div class="editor-toggles">
+              <button class="icon-btn-action" id="undoBtn" title="Undo change (Ctrl+Z)" aria-label="Undo edit" disabled>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M12.5 8c-2.65 0-5.05.99-6.9 2.6L2 7v9h9l-3.62-3.62c1.39-1.16 3.16-1.88 5.12-1.88 3.54 0 6.55 2.31 7.6 5.5l2.37-.78C21.08 11.03 17.15 8 12.5 8z"/></svg>
+              </button>
+              <button class="icon-btn-action" id="redoBtn" title="Redo change (Ctrl+Y)" aria-label="Redo edit" disabled>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M18.4 10.6C16.55 8.99 14.15 8 11.5 8c-4.65 0-8.58 3.03-9.96 7.22l2.37.78C4.95 12.81 7.96 10.5 11.5 10.5c1.96 0 3.73.72 5.12 1.88L13 16h9V7l-3.6 3.6z"/></svg>
+              </button>
+              <label class="switch-row mini" title="Sync video player with editor row when clicked or focused">
+                <span>Sync video</span>
+                <span class="switch">
+                  <input type="checkbox" id="syncVideoToggle" role="switch" />
+                  <span class="slider"></span>
+                </span>
+              </label>
+              <label class="switch-row mini">
+                <span>Times</span>
+                <span class="switch">
+                  <input type="checkbox" id="showTimeToggle" checked role="switch" />
+                  <span class="slider"></span>
+                </span>
+              </label>
+              <label class="switch-row mini">
+                <span>Save</span>
+                <span class="switch">
+                  <input type="checkbox" id="saveEditsToggle" checked role="switch" />
+                  <span class="slider"></span>
+                </span>
+              </label>
+            </div>
+          </div>
+          <div class="editor-list" id="editorList" aria-label="Editable subtitle cues"></div>
+          <p class="editor-hint">Click a row to jump player · Type to edit live · <b>Esc</b> or <b>Ctrl+Enter</b> to finish</p>
+        </section>
+      </div>
+    </main>
+
+    <footer class="footer">
+      <p>Made for Kurdish subtitles • Hosted on GitHub Pages</p>
+    </footer>
+  </div>
+
+  <div class="toast" id="toast" role="status"></div>
+
+  <!-- Fullscreen subtitle editor overlay -->
+  <div class="fs-edit hidden" id="fsEdit">
+    <div class="fs-topbar">
+      <span class="fs-cuecount" id="fsCueCount">Cue 0 / 0</span>
+      <div class="fs-top-actions">
+        <div class="select-wrap speed" title="Subtitle Font Size">
+          <select id="fsFontSizeSel" aria-label="Subtitle Font Size">
+            <option value="0.85">A- Small</option>
+            <option value="1" selected>A Normal</option>
+            <option value="1.2">A+ Large</option>
+            <option value="1.45">A++ XL</option>
+          </select>
+        </div>
+        <button class="fs-btn fs-close" id="fsClose" title="Exit full preview" aria-label="Exit full preview">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </div>
+    </div>
+
+    <div class="fs-screen" id="fsScreen">
+      <span class="fs-text" id="fsText"></span>
+      <span class="fs-tap-hint">Tap text or click Edit to modify</span>
+    </div>
+
+    <div class="fs-bar">
+      <div class="fs-group">
+        <button class="fs-btn fs-icon-btn" id="fsPrevBtn" title="Previous cue" aria-label="Previous cue">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M6 6h2v12H6zm3.5 6l8.5 6V6z"/></svg>
+        </button>
+        <button class="fs-btn fs-icon-btn" id="fsSkipBackBtn" title="Jump back 5s" aria-label="Jump back 5s">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M11 18V6l-8.5 6 8.5 6zm.5-6l8.5 6V6l-8.5 6z"/></svg>
+        </button>
+        <button class="fs-btn fs-icon-btn fs-play-btn" id="fsPlayBtn" title="Play / Pause" aria-label="Play">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
+        </button>
+        <button class="fs-btn fs-icon-btn" id="fsSkipForwardBtn" title="Jump forward 5s" aria-label="Jump forward 5s">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M4 18l8.5-6L4 6v12zm9-12v12l8.5-6L13 6z"/></svg>
+        </button>
+        <button class="fs-btn fs-icon-btn" id="fsNextBtn" title="Next cue" aria-label="Next cue">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M6 18l8.5-6L6 6v12zM16 6v12h2V6h-2z"/></svg>
+        </button>
+      </div>
+
+      <div class="fs-group right">
+        <button class="fs-btn fs-icon-btn" id="fsUndoBtn" title="Undo change" aria-label="Undo change" disabled>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M12.5 8c-2.65 0-5.05.99-6.9 2.6L2 7v9h9l-3.62-3.62c1.39-1.16 3.16-1.88 5.12-1.88 3.54 0 6.55 2.31 7.6 5.5l2.37-.78C21.08 11.03 17.15 8 12.5 8z"/></svg>
+        </button>
+        <button class="fs-btn fs-icon-btn" id="fsRedoBtn" title="Redo change" aria-label="Redo change" disabled>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M18.4 10.6C16.55 8.99 14.15 8 11.5 8c-4.65 0-8.58 3.03-9.96 7.22l2.37.78C4.95 12.81 7.96 10.5 11.5 10.5c1.96 0 3.73.72 5.12 1.88L13 16h9V7l-3.6 3.6z"/></svg>
+        </button>
+        <button class="fs-btn fs-edit-btn" id="fsEditBtn" aria-label="Edit text">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg>
+          <span>Edit text</span>
+        </button>
+      </div>
+    </div>
+
+    <div class="fs-editor hidden" id="fsEditor">
+      <textarea id="fsInput" aria-label="Edit active subtitle text" placeholder="Type subtitle text... Press Ctrl+Enter to save"></textarea>
+      <div class="fs-actions">
+        <button class="fs-btn fs-icon-btn" id="fsEdUndoBtn" title="Undo change" aria-label="Undo change" disabled>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M12.5 8c-2.65 0-5.05.99-6.9 2.6L2 7v9h9l-3.62-3.62c1.39-1.16 3.16-1.88 5.12-1.88 3.54 0 6.55 2.31 7.6 5.5l2.37-.78C21.08 11.03 17.15 8 12.5 8z"/></svg>
+        </button>
+        <button class="fs-btn fs-icon-btn" id="fsEdRedoBtn" title="Redo change" aria-label="Redo change" disabled>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M18.4 10.6C16.55 8.99 14.15 8 11.5 8c-4.65 0-8.58 3.03-9.96 7.22l2.37.78C4.95 12.81 7.96 10.5 11.5 10.5c1.96 0 3.73.72 5.12 1.88L13 16h9V7l-3.6 3.6z"/></svg>
+        </button>
+        <button class="fs-btn fs-done" id="fsDoneBtn">Done</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="assets/js/parser.js"></script>
+  <script src="assets/js/translator.js"></script>
+  <script src="assets/js/player.js"></script>
+  <script src="assets/js/app.js"></script>
+</body>
+</html>

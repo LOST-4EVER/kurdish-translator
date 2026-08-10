@@ -1,0 +1,8 @@
+{
+  "name": "Kurdî Subtitle Translator",
+  "description": "Free subtitle translator into Kurdish Sorani for SRT, VTT, ASS, SSA, SUB, and SMI subtitle files.",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}
