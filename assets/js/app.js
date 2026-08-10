@@ -48,7 +48,7 @@
     progressFill: '#progressFill', progressPct: '#progressPct',
     progressDetail: '#progressDetail', lineCount: '#lineCount', cancelBtn: '#cancelBtn',
     liveCaption: '#liveCaption', livePlaceholder: '#livePlaceholder', liveFeed: '#liveFeed',
-    downloadBtn: '#downloadBtn', copyBtn: '#copyBtn',
+    downloadBtn: '#downloadBtn', edDownloadBtn: '#edDownloadBtn', copyBtn: '#copyBtn',
     translateAgainBtn: '#translateAgainBtn', doneFormat: '#doneFormat', doneSize: '#doneSize',
     previewBtn: '#previewBtn',
     previewTab: '#previewTab', tabTranslate: '#tabTranslate', tabPreview: '#tabPreview',
@@ -747,6 +747,12 @@
     // Report the real file size (UTF-8 bytes), not the string's char count,
     // so it matches what actually downloads.
     els.doneSize.textContent = formatSize(blob.size);
+
+    if (els.edDownloadBtn) {
+      els.edDownloadBtn.href = resultUrl;
+      els.edDownloadBtn.download = `${base}.${tgt}.${ext}`;
+      els.edDownloadBtn.style.display = 'inline-flex';
+    }
   }
 
   // ---------- Wire up ----------
@@ -872,6 +878,14 @@
       const mime = MIME_BY_FORMAT[parsed.format] || 'text/plain;charset=utf-8';
       els.downloadBtn.href = `data:${mime},${encodeURIComponent(resultText)}`;
     });
+
+    if (els.edDownloadBtn) {
+      els.edDownloadBtn.addEventListener('click', () => {
+        if (!isIOS || !resultText || !parsed) return;
+        const mime = MIME_BY_FORMAT[parsed.format] || 'text/plain;charset=utf-8';
+        els.edDownloadBtn.href = `data:${mime},${encodeURIComponent(resultText)}`;
+      });
+    }
 
     els.cancelBtn.addEventListener('click', () => {
       cancelFlag = true;
