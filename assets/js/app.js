@@ -43,7 +43,12 @@
     fileName: '#fileName', fileMeta: '#fileMeta', changeFile: '#changeFile',
     srcLang: '#srcLang', tgtLang: '#tgtLang', keepOnly: '#keepOnly',
     includeOriginal: '#includeOriginal', accuracyToggle: '#accuracyToggle',
-    kurdishDigitsToggle: '#kurdishDigitsToggle',
+    kurdishDigitsToggle: '#kurdishDigitsToggle', addBomToggle: '#addBomToggle',
+    crlfToggle: '#crlfToggle',
+    openAdvModalBtn: '#openAdvModalBtn', closeAdvModalBtn: '#closeAdvModalBtn',
+    doneAdvModalBtn: '#doneAdvModalBtn', advModalBackdrop: '#advModalBackdrop',
+    advActiveBadge: '#advActiveBadge',
+    exportFormatSel: '#exportFormatSel', langToggleBtn: '#langToggleBtn',
     translateBtn: '#translateBtn',
     progressFill: '#progressFill', progressPct: '#progressPct',
     progressDetail: '#progressDetail', lineCount: '#lineCount', cancelBtn: '#cancelBtn',
@@ -69,6 +74,38 @@
     fsEditor: '#fsEditor', fsInput: '#fsInput', fsDoneBtn: '#fsDoneBtn',
   });
   const tabButtons = $$('.tab');
+
+  // ---------- Translations Dictionary Fallback ----------
+  const dicts = typeof UI_I18N !== 'undefined' ? UI_I18N : {
+    en: { brandSub: 'Translate movie, anime & series subtitles' },
+    ckb: { brandSub: 'وەرگێڕی ژێرنووسی فیلم، ئەنیمی و زنجیرەکان' }
+  };
+
+  let currentUiLang = 'en';
+
+  function applyLanguage(lang) {
+    currentUiLang = lang === 'ckb' ? 'ckb' : 'en';
+    store.set('app_ui_lang', currentUiLang);
+    document.documentElement.lang = currentUiLang;
+    document.documentElement.dir = currentUiLang === 'ckb' ? 'rtl' : 'ltr';
+
+    if (els.langToggleBtn) {
+      const enSpan = els.langToggleBtn.querySelector('.lang-opt.en');
+      const ckbSpan = els.langToggleBtn.querySelector('.lang-opt.ckb');
+      if (enSpan) enSpan.classList.toggle('active', currentUiLang === 'en');
+      if (ckbSpan) ckbSpan.classList.toggle('active', currentUiLang === 'ckb');
+    }
+
+    const dict = dicts[currentUiLang];
+    if (!dict) return;
+
+    $$('[data-i18n]').forEach((el) => {
+      const key = el.dataset.i18n;
+      if (dict[key]) {
+        el.textContent = dict[key];
+      }
+    });
+  }
 
   // ---------- State ----------
   let file = null;
@@ -105,12 +142,20 @@
     set(key, val) { try { localStorage.setItem(key, val); } catch {} },
   };
   let toastTimer;
-  function toast(msg, isError = false) {
-    els.toast.textContent = msg;
-    els.toast.classList.toggle('error', isError);
-    els.toast.classList.add('show');
-    clearTimeout(toastTimer);
-    toastTimer = setTimeout(() => els.toast.classList.remove('show'), 3200);
+  function toast(msg, isError = false, subtext = '', options = {}) {
+    if (typeof Toast !== 'undefined') {
+      if (isError) {
+        Toast.error(msg, subtext, options.actionLabel, options.onAction);
+      } else {
+        Toast.show(msg, options.type || 'info', { subtext, actionLabel: options.actionLabel, onAction: options.onAction });
+      }
+    } else if (els.toast) {
+      els.toast.textContent = msg;
+      els.toast.classList.toggle('error', isError);
+      els.toast.classList.add('show');
+      clearTimeout(toastTimer);
+      toastTimer = setTimeout(() => els.toast.classList.remove('show'), 3200);
+    }
   }
 
   // Step cards keyed by step name (avoid string-building element lookups).
@@ -118,7 +163,13 @@
 
   function showStep(name) {
     STEPS.forEach((s) => stepEls[s].classList.add('hidden'));
-    stepEls[name].classList.remove('hidden');
+    const target = stepEls[name];
+    if (target) {
+      target.classList.remove('hidden');
+      target.style.animation = 'none';
+      void target.offsetWidth; // trigger reflow for smooth re-entry animation
+      target.style.animation = '';
+    }
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }
 
@@ -203,7 +254,9 @@
     dirty = true;
     updateUndoRedoUI();
     restoreCuesState();
-    toast('Undo successful');
+    if (typeof Toast !== 'undefined') {
+      Toast.show(currentUiLang === 'ckb' ? 'گەڕاندنەوە ئەنجامدرا' : 'Undo successful', 'info');
+    }
   }
 
   function performRedo() {
@@ -215,7 +268,9 @@
     dirty = true;
     updateUndoRedoUI();
     restoreCuesState();
-    toast('Redo successful');
+    if (typeof Toast !== 'undefined') {
+      Toast.show(currentUiLang === 'ckb' ? 'دووبارەکردنەوە ئەنجامدرا' : 'Redo successful', 'info');
+    }
   }
 
   function restoreCuesState() {
@@ -225,6 +280,8 @@
     updateStatus();
     if (fsActive) updateFsScreen();
   }
+
+  let editToastTimer = null;
 
   /** Write a user edit into a cue: player screen, dirty flag, debounced download. */
   function applyCueEdit(i, text, isCommitted = false) {
@@ -236,6 +293,17 @@
     SubtitlePlayer.updateText(i, stripTags(text));
     dirty = true;
     updateStatus();
+
+    // Encouraging debounced toast when editing subtitle cues
+    clearTimeout(editToastTimer);
+    editToastTimer = setTimeout(() => {
+      if (typeof Toast !== 'undefined') {
+        Toast.editing(
+          currentUiLang === 'ckb' ? `دێڕی #${i + 1} دەستکاری کرا` : `Cue #${i + 1} updated live!`,
+          currentUiLang === 'ckb' ? 'گۆڕانکارییەکان ڕاستەوخۆ لەسەر شاشەکە پیشان دەدرێن.' : 'Edits preview instantly on screen.'
+        );
+      }
+    }, 1500);
 
     // Keep the main editor list textarea in sync
     const row = rowEls[i];
@@ -576,18 +644,22 @@
     if (!f) return;
     const ext = f.name.split('.').pop().toLowerCase();
     if (!ALLOWED_EXT.includes(ext)) {
-      toast('Unsupported file. Use .SRT, .VTT, .ASS, .SSA, .SUB or .SMI', true);
+      toast(
+        currentUiLang === 'ckb' ? 'فایلەکە پشتیوانی نەکراوە.' : 'Unsupported file format',
+        true,
+        currentUiLang === 'ckb' ? 'تکایە فایلی .SRT, .VTT, .ASS, .SSA, .SUB یان .SMI هەڵبژێرە.' : 'Use .SRT, .VTT, .ASS, .SSA, .SUB or .SMI'
+      );
       return;
     }
 
     let text;
     try { text = await readFileAsText(f); }
-    catch { toast('Failed to read file.', true); return; }
+    catch { toast(currentUiLang === 'ckb' ? 'خوێندنەوەی فایلەکە سەرکەوتوو نەبوو.' : 'Failed to read file.', true); return; }
 
     let parsedFile;
     try { parsedFile = SubParser.parse(text); }
-    catch { toast('Could not detect subtitle content in this file.', true); return; }
-    if (!parsedFile.cues.length) { toast('No subtitles found in this file.', true); return; }
+    catch { toast(currentUiLang === 'ckb' ? 'هیچ ژێرنووسێک نەدۆزرایەوە.' : 'Could not detect subtitle content.', true); return; }
+    if (!parsedFile.cues.length) { toast(currentUiLang === 'ckb' ? 'هیچ دێڕێکی ژێرنووس نییە.' : 'No subtitles found in file.', true); return; }
 
     file = f;
     parsed = parsedFile;
@@ -596,6 +668,16 @@
     els.fileName.textContent = f.name;
     els.fileMeta.textContent = `${parsed.cues.length} lines • ${formatSize(f.size)} • ${LABEL[parsed.format] || parsed.format.toUpperCase()}`;
     updateCues(parsed.cues);
+
+    if (typeof Toast !== 'undefined') {
+      Toast.success(
+        currentUiLang === 'ckb' ? 'فایلەکە بە سەرکەوتوویی بارکرا!' : 'File loaded successfully!',
+        `${f.name} (${parsed.cues.length} lines) · ${LABEL[parsed.format] || parsed.format.toUpperCase()}`,
+        currentUiLang === 'ckb' ? 'وەرگێڕان' : 'Translate Now',
+        () => startTranslation()
+      );
+    }
+
     // Show the options first so the user picks settings before translating.
     showStep('settings');
   }
@@ -659,6 +741,14 @@
     setProgress(0, 'Preparing…');
     els.lineCount.textContent = `${parsed.cues.length} lines`;
 
+    if (typeof Toast !== 'undefined') {
+      Toast.show(
+        currentUiLang === 'ckb' ? '⚡ وەرگێڕان دەستی پێکرد!' : '⚡ Translation started!',
+        'translating',
+        { subtext: currentUiLang === 'ckb' ? 'تکایە چاوەڕێ بکە... وەرگێڕانی کوردی لە ئارادایە' : 'Google AI is translating your subtitles to Kurdish Sorani...' }
+      );
+    }
+
     const srcLang = els.srcLang.value;
     const tgtLang = els.tgtLang.value;
     const includeOriginal = els.includeOriginal.checked;
@@ -668,6 +758,8 @@
     const normalize = (c) => (isAss ? c.text.replace(/\\N/g, '\n') : c.text);
     const controller = new AbortController();
     activeController = controller;
+
+    let lastToastPct = 0;
 
     try {
       const lines = parsed.cues.map(normalize);
@@ -682,6 +774,11 @@
       const translated = await Translator.translateLines(lines, srcLang, tgtLang, (p, done, total) => {
         if (cancelFlag) return;
         setProgress(p, `Translated ${done} / ${total} lines`);
+        const pct = Math.round(p * 100);
+        if (typeof Toast !== 'undefined' && pct >= lastToastPct + 35 && pct < 100) {
+          lastToastPct = pct;
+          Toast.encouragingProgress(pct);
+        }
       }, controller.signal, { accuracy, kurdishDigits, onBatch: (results, done) => { if (!cancelFlag) renderLive(results, done); } });
       if (cancelFlag) return; // cancelled mid-run: discard results, stay on settings
 
@@ -700,6 +797,15 @@
 
       updateCues(finalCues);
       showStep('done');
+
+      if (typeof Toast !== 'undefined') {
+        Toast.success(
+          currentUiLang === 'ckb' ? '🎉 وەرگێڕانەکە بە سەرکەوتوویی تەواو بوو!' : '🎉 Translation Complete!',
+          currentUiLang === 'ckb' ? 'ژێرنووسەکەت بە زمانی کوردی ئامادەیە. دەتوانیت دابەزێنیت یان لە پیشاندانی ڕاستەوخۆ تەماشای بکەیت.' : 'Your Kurdish Sorani subtitle is ready. Download it or preview live.',
+          currentUiLang === 'ckb' ? 'تەماشاکردن' : 'Preview Subtitles',
+          () => switchTab('preview')
+        );
+      }
     } catch (err) {
       if (cancelFlag) return; // aborted by the user, already handled
       console.error(err);
@@ -717,10 +823,22 @@
         finalCues.forEach((c, i) => { c.index = i + 1; });
         updateCues(finalCues);
         showStep('done');
-        toast(`${err.failedCount} line(s) couldn't be translated and were kept as original.`, true);
+        toast(
+          currentUiLang === 'ckb' ? 'بەشێک لە دێڕەکان وەرنەگێڕدران' : 'Partial translation complete',
+          true,
+          `${err.failedCount} line(s) couldn't be translated and were kept as original.`
+        );
         return;
       }
-      toast('Translation failed. Check your internet connection and try again.', true);
+      toast(
+        currentUiLang === 'ckb' ? 'وەرگێڕانەکە سەرکەوتوو نەبوو' : 'Translation failed',
+        true,
+        currentUiLang === 'ckb' ? 'تكایە پەیوەندی هێڵەکەت بپشکنە و دووبارە هەوڵبدەرەوە.' : 'Check your internet connection and click Try Again.',
+        {
+          actionLabel: currentUiLang === 'ckb' ? 'دووبارە هەوڵبدەرەوە' : 'Try Again',
+          onAction: () => startTranslation()
+        }
+      );
       showStep('settings');
     } finally {
       activeController = null;
@@ -732,18 +850,38 @@
     if (!parsed || !file) return;
     // Edits are included in the output only when "Save edits" is on.
     const cues = els.saveEditsToggle.checked ? workCues : baseCues;
-    resultText = SubParser.serialize(parsed, cues);
+
+    // Determine chosen export format
+    const formatChoice = els.exportFormatSel ? els.exportFormatSel.value : 'original';
+    const chosenFormat = formatChoice === 'original' ? parsed.format : formatChoice;
+    const parseObj = chosenFormat === parsed.format ? parsed : { ...parsed, format: chosenFormat };
+
+    let text = SubParser.serialize(parseObj, cues);
+
+    // Apply CRLF line endings if checked
+    const useCrlf = els.crlfToggle ? els.crlfToggle.checked : false;
+    if (useCrlf) {
+      text = text.replace(/\r?\n/g, '\r\n');
+    }
+
+    // Apply UTF-8 BOM if toggle is checked
+    const useBom = els.addBomToggle ? els.addBomToggle.checked : false;
+    if (useBom && !text.startsWith('\uFEFF')) {
+      text = '\uFEFF' + text;
+    }
+    resultText = text;
+
     if (resultUrl) URL.revokeObjectURL(resultUrl);
-    const mime = MIME_BY_FORMAT[parsed.format] || 'text/plain;charset=utf-8';
+    const mime = MIME_BY_FORMAT[chosenFormat] || 'text/plain;charset=utf-8';
     const blob = new Blob([resultText], { type: mime });
     resultUrl = URL.createObjectURL(blob);
 
-    const ext = EXT_BY_FORMAT[parsed.format] || 'srt';
+    const ext = EXT_BY_FORMAT[chosenFormat] || 'srt';
     const base = file.name.replace(/\.[^.]+$/, '');
     els.downloadBtn.href = resultUrl;
     const tgt = (els.tgtLang && els.tgtLang.value) || 'ckb';
     els.downloadBtn.download = `${base}.${tgt}.${ext}`;
-    els.doneFormat.textContent = LABEL[parsed.format] || parsed.format.toUpperCase();
+    els.doneFormat.textContent = LABEL[chosenFormat] || chosenFormat.toUpperCase();
     // Report the real file size (UTF-8 bytes), not the string's char count,
     // so it matches what actually downloads.
     els.doneSize.textContent = formatSize(blob.size);
@@ -755,9 +893,107 @@
     }
   }
 
+  function updateAdvBadge() {
+    if (!els.advActiveBadge) return;
+    let count = 0;
+    if (els.addBomToggle && els.addBomToggle.checked) count++;
+    if (els.crlfToggle && els.crlfToggle.checked) count++;
+    els.advActiveBadge.textContent = String(count);
+    if (count > 0) {
+      els.advActiveBadge.classList.add('active');
+    } else {
+      els.advActiveBadge.classList.remove('active');
+    }
+  }
+
   // ---------- Wire up ----------
   function bindActions() {
     els.translateBtn.addEventListener('click', startTranslation);
+
+    if (els.langToggleBtn) {
+      els.langToggleBtn.addEventListener('click', () => {
+        applyLanguage(currentUiLang === 'en' ? 'ckb' : 'en');
+      });
+    }
+
+    if (els.includeOriginal) {
+      els.includeOriginal.addEventListener('change', () => {
+        store.set('includeOriginal', els.includeOriginal.checked ? '1' : '0');
+        updateAdvBadge();
+        prepareDownload();
+      });
+    }
+
+    if (els.accuracyToggle) {
+      els.accuracyToggle.addEventListener('change', () => {
+        store.set('accuracy', els.accuracyToggle.checked ? '1' : '0');
+        updateAdvBadge();
+        prepareDownload();
+      });
+    }
+
+    if (els.keepOnly) {
+      els.keepOnly.addEventListener('change', () => {
+        store.set('keepOnly', els.keepOnly.checked ? '1' : '0');
+        updateAdvBadge();
+        prepareDownload();
+      });
+    }
+
+    if (els.kurdishDigitsToggle) {
+      els.kurdishDigitsToggle.addEventListener('change', () => {
+        store.set('kurdishDigits', els.kurdishDigitsToggle.checked ? '1' : '0');
+        updateAdvBadge();
+        prepareDownload();
+      });
+    }
+
+    if (els.addBomToggle) {
+      els.addBomToggle.addEventListener('change', () => {
+        store.set('addBom', els.addBomToggle.checked ? '1' : '0');
+        updateAdvBadge();
+        prepareDownload();
+      });
+    }
+
+    if (els.crlfToggle) {
+      els.crlfToggle.addEventListener('change', () => {
+        store.set('useCrlf', els.crlfToggle.checked ? '1' : '0');
+        updateAdvBadge();
+        prepareDownload();
+      });
+    }
+
+    if (els.openAdvModalBtn && els.advModalBackdrop) {
+      els.openAdvModalBtn.addEventListener('click', () => {
+        els.advModalBackdrop.classList.remove('hidden');
+      });
+    }
+
+    const closeAdvModal = () => {
+      if (els.advModalBackdrop) els.advModalBackdrop.classList.add('hidden');
+    };
+
+    if (els.closeAdvModalBtn) els.closeAdvModalBtn.addEventListener('click', closeAdvModal);
+    if (els.doneAdvModalBtn) els.doneAdvModalBtn.addEventListener('click', closeAdvModal);
+
+    if (els.advModalBackdrop) {
+      els.advModalBackdrop.addEventListener('click', (e) => {
+        if (e.target === els.advModalBackdrop) closeAdvModal();
+      });
+    }
+
+    window.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && els.advModalBackdrop && !els.advModalBackdrop.classList.contains('hidden')) {
+        closeAdvModal();
+      }
+    });
+
+    if (els.exportFormatSel) {
+      els.exportFormatSel.addEventListener('change', () => {
+        prepareDownload();
+      });
+    }
 
     if (els.undoBtn) els.undoBtn.addEventListener('click', performUndo);
     if (els.redoBtn) els.redoBtn.addEventListener('click', performRedo);
@@ -874,40 +1110,89 @@
     // the file as .txt. Subtitle text is small, so swap to a data: URL on
     // iOS (within the click gesture) where the filename is honored.
     els.downloadBtn.addEventListener('click', () => {
-      if (!isIOS || !resultText || !parsed) return;
-      const mime = MIME_BY_FORMAT[parsed.format] || 'text/plain;charset=utf-8';
-      els.downloadBtn.href = `data:${mime},${encodeURIComponent(resultText)}`;
+      if (!resultText || !parsed) return;
+      if (isIOS) {
+        const formatChoice = els.exportFormatSel ? els.exportFormatSel.value : 'original';
+        const chosenFormat = formatChoice === 'original' ? parsed.format : formatChoice;
+        const mime = MIME_BY_FORMAT[chosenFormat] || 'text/plain;charset=utf-8';
+        els.downloadBtn.href = `data:${mime},${encodeURIComponent(resultText)}`;
+      }
+      els.downloadBtn.classList.add('downloading');
+      const textSpan = els.downloadBtn.querySelector('[data-i18n="btnDownload"]');
+      const dict = dicts[currentUiLang] || dicts.en;
+      if (textSpan) textSpan.textContent = dict.btnDownloaded || '✓ Saved!';
+      if (typeof Toast !== 'undefined') {
+        Toast.success(
+          currentUiLang === 'ckb' ? 'فایلەکە دابەزێنرا!' : 'File downloaded!',
+          currentUiLang === 'ckb' ? 'ژێرنووسە کوردییەکەت بە سەرکەوتوویی پاشەکەوت کرا.' : 'Kurdish subtitle file saved successfully.'
+        );
+      } else {
+        toast(currentUiLang === 'ckb' ? 'فایلەکە بە سەرکەوتوویی دابەزێنرا!' : 'File saved successfully!');
+      }
+      setTimeout(() => {
+        els.downloadBtn.classList.remove('downloading');
+        if (textSpan) textSpan.textContent = dict.btnDownload || 'Download';
+      }, 2500);
     });
 
     if (els.edDownloadBtn) {
       els.edDownloadBtn.addEventListener('click', () => {
-        if (!isIOS || !resultText || !parsed) return;
-        const mime = MIME_BY_FORMAT[parsed.format] || 'text/plain;charset=utf-8';
-        els.edDownloadBtn.href = `data:${mime},${encodeURIComponent(resultText)}`;
+        if (!resultText || !parsed) return;
+        if (isIOS) {
+          const formatChoice = els.exportFormatSel ? els.exportFormatSel.value : 'original';
+          const chosenFormat = formatChoice === 'original' ? parsed.format : formatChoice;
+          const mime = MIME_BY_FORMAT[chosenFormat] || 'text/plain;charset=utf-8';
+          els.edDownloadBtn.href = `data:${mime},${encodeURIComponent(resultText)}`;
+        }
+        if (typeof Toast !== 'undefined') {
+          Toast.success(
+            currentUiLang === 'ckb' ? 'فایلەکە دابەزێنرا!' : 'File downloaded!',
+            currentUiLang === 'ckb' ? 'ژێرنووسە کوردییەکەت بە سەرکەوتوویی پاشەکەوت کرا.' : 'Kurdish subtitle file saved successfully.'
+          );
+        } else {
+          toast(currentUiLang === 'ckb' ? 'فایلەکە بە سەرکەوتوویی دابەزێنرا!' : 'File saved successfully!');
+        }
       });
     }
 
     els.cancelBtn.addEventListener('click', () => {
       cancelFlag = true;
       if (activeController) activeController.abort();
-      toast('Cancelled.');
+      if (typeof Toast !== 'undefined') {
+        Toast.show(
+          currentUiLang === 'ckb' ? 'وەرگێڕانەکە هەڵوەشێنرایەوە' : 'Translation cancelled',
+          'info',
+          { subtext: currentUiLang === 'ckb' ? 'دەتوانیت ڕێکخستنەکان بگوڕیت و هەركات ئارەزووت کرد دەستپێبکەیتەوە.' : 'You can adjust settings and try again whenever you are ready.' }
+        );
+      } else {
+        toast(currentUiLang === 'ckb' ? 'پەشیمان بوویتەوە.' : 'Cancelled.');
+      }
       showStep('settings');
     });
 
     els.copyBtn.addEventListener('click', async () => {
-      if (!resultText) { toast('Nothing to copy yet.', true); return; }
+      if (!resultText) { toast(currentUiLang === 'ckb' ? 'هیچ دەقێک نییە بۆ کۆپیکردن.' : 'Nothing to copy yet.', true); return; }
       try {
         await navigator.clipboard.writeText(resultText);
-        toast('Copied to clipboard!');
-        els.copyBtn.textContent = '✓ Copied!';
+        if (typeof Toast !== 'undefined') {
+          Toast.success(
+            currentUiLang === 'ckb' ? 'کۆپی کرا بۆ کلیپبۆرد!' : 'Copied to clipboard!',
+            currentUiLang === 'ckb' ? 'دەقی ژێرنووسەکە ئامادەیە بۆ بەکارهێنان.' : 'Subtitle text is ready to paste anywhere.'
+          );
+        } else {
+          toast(currentUiLang === 'ckb' ? 'کۆپی کرا بۆ کلیپبۆرد!' : 'Copied to clipboard!');
+        }
+        const textSpan = els.copyBtn.querySelector('[data-i18n="btnCopy"]');
+        const dict = dicts[currentUiLang] || dicts.en;
+        if (textSpan) textSpan.textContent = dict.btnCopied || '✓ Copied!';
         els.copyBtn.classList.add('copied');
         clearTimeout(copyTimer);
         copyTimer = setTimeout(() => {
-          els.copyBtn.textContent = '📋 Copy to clipboard';
+          if (textSpan) textSpan.textContent = dict.btnCopy || 'Copy to clipboard';
           els.copyBtn.classList.remove('copied');
-        }, 2000);
+        }, 2200);
       } catch {
-        toast('Copy failed on this device.', true);
+        toast(currentUiLang === 'ckb' ? 'کۆپیکردن سەرکەوتوو نەبوو.' : 'Copy failed on this device.', true);
       }
     });
 
@@ -939,14 +1224,7 @@
       });
     }
 
-    // Persist settings between visits.
     els.srcLang.addEventListener('change', () => store.set('srcLang', els.srcLang.value));
-    els.keepOnly.addEventListener('change', () => store.set('keepOnly', els.keepOnly.checked ? '1' : '0'));
-    els.includeOriginal.addEventListener('change', () => store.set('includeOriginal', els.includeOriginal.checked ? '1' : '0'));
-    els.accuracyToggle.addEventListener('change', () => store.set('accuracy', els.accuracyToggle.checked ? '1' : '0'));
-    if (els.kurdishDigitsToggle) {
-      els.kurdishDigitsToggle.addEventListener('change', () => store.set('kurdishDigits', els.kurdishDigitsToggle.checked ? '1' : '0'));
-    }
   }
 
   // ---------- Init ----------
@@ -992,9 +1270,18 @@
     els.includeOriginal.checked = store.get('includeOriginal', '0') === '1';
     els.accuracyToggle.checked = store.get('accuracy', '0') === '1';
     if (els.kurdishDigitsToggle) els.kurdishDigitsToggle.checked = store.get('kurdishDigits', '0') === '1';
+    if (els.addBomToggle) els.addBomToggle.checked = store.get('addBom', '0') === '1';
+    if (els.crlfToggle) els.crlfToggle.checked = store.get('useCrlf', '0') === '1';
     els.showTimeToggle.checked = store.get('showTime', '1') === '1';
     els.saveEditsToggle.checked = store.get('saveEdits', '1') === '1';
     if (els.syncVideoToggle) els.syncVideoToggle.checked = store.get('syncVideo', '0') === '1';
+
+    updateAdvBadge();
+
+    // Apply initial UI language
+    const savedLang = store.get('app_ui_lang', 'en');
+    applyLanguage(savedLang);
+
     buildEditor();
   }
 

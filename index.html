@@ -27,12 +27,17 @@
         </span>
         <div class="brand-text">
           <h1>Kurdî <span class="accent">Subtitle Translator</span></h1>
-          <p>وەرگێڕی ژێرنووسی فیلم، ئەنیمی و زنجیرە</p>
+          <p data-i18n="brandSub">وەرگێڕی ژێرنووسی فیلم، ئەنیمی و زنجیرە</p>
         </div>
       </div>
       <div class="topbar-actions">
+        <button class="lang-switch-btn" id="langToggleBtn" title="Switch Language / گۆڕینی زمان" aria-label="Language switch">
+          <span class="lang-opt en active">English</span>
+          <span class="lang-sep">/</span>
+          <span class="lang-opt ckb">کوردی</span>
+        </button>
         <button class="gh-btn" id="installBtn" hidden>
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"/></svg> Install
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"/></svg> <span data-i18n="install">Install</span>
         </button>
         <a class="gh-btn" href="https://github.com/LOST-4EVER/kurdish-translator" target="_blank" rel="noopener">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2A10 10 0 0 0 2 12c0 4.42 2.87 8.17 6.84 9.5.5.08.66-.23.66-.5v-1.69c-2.77.6-3.36-1.34-3.36-1.34-.46-1.16-1.11-1.47-1.11-1.47-.91-.62.07-.6.07-.6 1 .07 1.53 1.03 1.53 1.03.87 1.52 2.34 1.07 2.91.83.1-.65.35-1.09.63-1.34-2.22-.25-4.55-1.11-4.55-4.92 0-1.11.38-2 1.03-2.71-.1-.25-.45-1.29.1-2.64 0 0 .84-.27 2.75 1.02.79-.22 1.65-.33 2.5-.33.85 0 1.71.11 2.5.33 1.91-1.29 2.75-1.02 2.75-1.02.55 1.35.2 2.39.1 2.64.65.71 1.03 1.6 1.03 2.71 0 3.82-2.34 4.66-4.57 4.91.36.31.69.92.69 1.85V21c0 .27.16.59.67.5C19.14 20.16 22 16.42 22 12A10 10 0 0 0 12 2z"/></svg> GitHub
@@ -43,10 +48,10 @@
     <!-- Tab navigation -->
     <nav class="tabs" id="tabs">
       <button class="tab active" data-tab="translate">
-        <span class="tab-ic"><svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="m12.87 15.07-2.54-2.51.03-.03A17.52 17.52 0 0 0 14.07 6H17V4h-7V2H8v2H1v2h11.17C11.5 7.92 10.44 9.75 9 11.35 8.07 10.32 7.3 9.19 6.69 8h-2c.73 1.63 1.73 3.17 2.98 4.56l-5.09 5.02L4 19l5-5 3.11 3.11.76-2.04zM18.5 10h-2L12 22h2l1.12-3h4.75L21 22h2l-4.5-12zm-2.62 7 1.62-4.33L19.12 17h-3.24z"/></svg></span> Translate
+        <span class="tab-ic"><svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="m12.87 15.07-2.54-2.51.03-.03A17.52 17.52 0 0 0 14.07 6H17V4h-7V2H8v2H1v2h11.17C11.5 7.92 10.44 9.75 9 11.35 8.07 10.32 7.3 9.19 6.69 8h-2c.73 1.63 1.73 3.17 2.98 4.56l-5.09 5.02L4 19l5-5 3.11 3.11.76-2.04zM18.5 10h-2L12 22h2l1.12-3h4.75L21 22h2l-4.5-12zm-2.62 7 1.62-4.33L19.12 17h-3.24z"/></svg></span> <span data-i18n="tabTranslate">Translate</span>
       </button>
       <button class="tab" data-tab="preview" id="previewTab">
-        <span class="tab-ic"><svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg></span> Preview
+        <span class="tab-ic"><svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg></span> <span data-i18n="tabPreview">Preview</span>
       </button>
     </nav>
 
@@ -61,13 +66,13 @@
             <div class="dz-icon">
               <svg width="48" height="48" viewBox="0 0 24 24" fill="currentColor"><path d="M20 6h-8l-2-2H4c-1.11 0-1.99.89-1.99 2L2 18c0 1.11.89 2 2 2h16c1.11 0 2-.89 2-2V8c0-1.11-.89-2-2-2zm0 12H4V8h16v10zM8 13.01l1.41 1.41L11 12.84V17h2v-4.16l1.59 1.59L16 13.01 12 9l-4 4.01z"/></svg>
             </div>
-            <h2>Drop subtitle file here</h2>
-            <p class="dz-sub">or <span class="link">browse from device</span> — it translates privately in your browser</p>
+            <h2 data-i18n="dropTitle">Drop subtitle file here</h2>
+            <p class="dz-sub"><span data-i18n="dropSubPrefix">or </span><span class="link" data-i18n="dropBrowse">browse from device</span><span data-i18n="dropSubSuffix"> — it translates privately in your browser</span></p>
             <div class="dz-hint">Supports <b>.SRT</b> <b>.VTT</b> <b>.ASS</b> <b>.SSA</b> <b>.SUB</b> <b>.SMI</b> — Android &amp; iOS ready</div>
             <div class="pill-row">
-              <span class="pill">Free</span>
-              <span class="pill">No signup</span>
-              <span class="pill">Private</span>
+              <span class="pill" data-i18n="pillFree">Free</span>
+              <span class="pill" data-i18n="pillNoSignup">No signup</span>
+              <span class="pill" data-i18n="pillPrivate">Private</span>
             </div>
           </div>
         </section>
@@ -87,7 +92,7 @@
 
           <div class="settings-grid">
             <div class="field">
-              <label for="srcLang">Source language</label>
+              <label for="srcLang" data-i18n="lblSrcLang">Source language</label>
               <div class="select-wrap">
                 <select id="srcLang">
                   <option value="auto" selected>Auto detect</option>
@@ -95,7 +100,7 @@
               </div>
             </div>
             <div class="field">
-              <label for="tgtLang">Target language</label>
+              <label for="tgtLang" data-i18n="lblTgtLang">Target language</label>
               <div class="select-wrap">
                 <select id="tgtLang">
                   <option value="ckb" selected>Kurdish (Sorani / کوردیی ناوەندی)</option>
@@ -107,8 +112,8 @@
           <div class="settings-options">
             <label class="switch-row">
               <span>
-                <strong>Include original text</strong>
-                <em>show the source line above its translation</em>
+                <strong data-i18n="optIncOrigTitle">Include original text</strong>
+                <em data-i18n="optIncOrigSub">show the source line above its translation</em>
               </span>
               <span class="switch">
                 <input type="checkbox" id="includeOriginal" role="switch" />
@@ -118,8 +123,8 @@
 
             <label class="switch-row">
               <span>
-                <strong>Double-check accuracy</strong>
-                <em>re-translate lines Google left unchanged (slower)</em>
+                <strong data-i18n="optAccuracyTitle">Double-check accuracy</strong>
+                <em data-i18n="optAccuracySub">re-translate lines Google left unchanged (slower)</em>
               </span>
               <span class="switch">
                 <input type="checkbox" id="accuracyToggle" role="switch" />
@@ -129,8 +134,8 @@
 
             <label class="switch-row">
               <span>
-                <strong>Drop untranslated / empty lines</strong>
-                <em>skip blank cues from the result</em>
+                <strong data-i18n="optDropEmptyTitle">Drop untranslated / empty lines</strong>
+                <em data-i18n="optDropEmptySub">skip blank cues from the result</em>
               </span>
               <span class="switch">
                 <input type="checkbox" id="keepOnly" role="switch" />
@@ -140,20 +145,93 @@
 
             <label class="switch-row">
               <span>
-                <strong>Use Kurdish numbers (٠١٢٣)</strong>
-                <em>convert numbers to Kurdish digits in translated subtitles</em>
+                <strong data-i18n="optKurdishDigitsTitle">Use Kurdish numbers (٠١٢٣)</strong>
+                <em data-i18n="optKurdishDigitsSub">convert numbers to Kurdish digits in translated subtitles</em>
               </span>
               <span class="switch">
                 <input type="checkbox" id="kurdishDigitsToggle" role="switch" />
                 <span class="slider"></span>
               </span>
             </label>
+
+            <button type="button" class="adv-trigger-btn" id="openAdvModalBtn">
+              <span class="adv-trigger-icon">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <line x1="4" y1="21" x2="4" y2="14"></line>
+                  <line x1="4" y1="10" x2="4" y2="3"></line>
+                  <line x1="12" y1="21" x2="12" y2="12"></line>
+                  <line x1="12" y1="8" x2="12" y2="3"></line>
+                  <line x1="20" y1="21" x2="20" y2="16"></line>
+                  <line x1="20" y1="12" x2="20" y2="3"></line>
+                  <line x1="1" y1="14" x2="7" y2="14"></line>
+                  <line x1="9" y1="8" x2="15" y2="8"></line>
+                  <line x1="17" y1="16" x2="23" y2="16"></line>
+                </svg>
+              </span>
+              <span class="adv-trigger-info">
+                <strong data-i18n="advSettingsTitle">Advanced Settings</strong>
+                <span data-i18n="advSettingsSub">UTF-8 BOM & Line Endings</span>
+              </span>
+              <span class="adv-trigger-badge" id="advActiveBadge">0</span>
+              <svg class="adv-trigger-chevron" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>
+            </button>
+          </div>
+
+          <!-- Advanced Settings Popup Modal List (closed until opened) -->
+          <div class="modal-backdrop hidden" id="advModalBackdrop">
+            <div class="modal-card" id="advModalCard" role="dialog" aria-modal="true" aria-labelledby="advModalTitle">
+              <div class="modal-header">
+                <div class="modal-title-group">
+                  <span class="modal-title-icon">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                      <circle cx="12" cy="12" r="3"></circle>
+                      <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+                    </svg>
+                  </span>
+                  <div>
+                    <h3 class="modal-title" id="advModalTitle" data-i18n="advSettingsTitle">Advanced Settings</h3>
+                    <p class="modal-sub" data-i18n="advSettingsSub">UTF-8 BOM & Line Endings</p>
+                  </div>
+                </div>
+                <button type="button" class="modal-close-btn" id="closeAdvModalBtn" aria-label="Close">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                </button>
+              </div>
+
+              <div class="modal-body advanced-options-list">
+                <label class="switch-row">
+                  <span>
+                    <strong data-i18n="optBomTitle">Include UTF-8 BOM</strong>
+                    <em data-i18n="optBomSub">add \uFEFF prefix for Windows & Smart TV compatibility</em>
+                  </span>
+                  <span class="switch">
+                    <input type="checkbox" id="addBomToggle" role="switch" />
+                    <span class="slider"></span>
+                  </span>
+                </label>
+
+                <label class="switch-row">
+                  <span>
+                    <strong data-i18n="optCrlfTitle">Windows Line Endings (CRLF \r\n)</strong>
+                    <em data-i18n="optCrlfSub">use Windows carriage-return for TV media players</em>
+                  </span>
+                  <span class="switch">
+                    <input type="checkbox" id="crlfToggle" role="switch" />
+                    <span class="slider"></span>
+                  </span>
+                </label>
+              </div>
+
+              <div class="modal-footer">
+                <button type="button" class="btn-primary modal-done-btn" id="doneAdvModalBtn" data-i18n="btnDone">Done</button>
+              </div>
+            </div>
           </div>
 
           <button class="btn-primary" id="translateBtn">
             <span class="btn-icon">
               <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="m12.87 15.07-2.54-2.51.03-.03A17.52 17.52 0 0 0 14.07 6H17V4h-7V2H8v2H1v2h11.17C11.5 7.92 10.44 9.75 9 11.35 8.07 10.32 7.3 9.19 6.69 8h-2c.73 1.63 1.73 3.17 2.98 4.56l-5.09 5.02L4 19l5-5 3.11 3.11.76-2.04zM18.5 10h-2L12 22h2l1.12-3h4.75L21 22h2l-4.5-12zm-2.62 7 1.62-4.33L19.12 17h-3.24z"/></svg>
-            </span> Translate to Kurdish
+            </span> <span data-i18n="btnTranslate">Translate to Kurdish</span>
           </button>
         </section>
 
@@ -162,13 +240,13 @@
           <div class="progress-head">
             <div class="progress-title-wrap">
               <span class="progress-spinner"></span>
-              <h2>Translating…</h2>
+              <h2 data-i18n="progressTitle">Translating…</h2>
             </div>
             <span id="progressPct">0%</span>
           </div>
           <div class="progress-track"><div class="progress-fill" id="progressFill"></div></div>
           <div class="progress-meta">
-            <span id="progressDetail">Preparing…</span>
+            <span id="progressDetail" data-i18n="progressPrep">Preparing…</span>
             <span id="lineCount"></span>
           </div>
           <div class="live-reel">
@@ -181,7 +259,7 @@
             </div>
             <div class="live-feed" id="liveFeed"></div>
           </div>
-          <button class="btn-ghost" id="cancelBtn">Cancel</button>
+          <button class="btn-ghost" id="cancelBtn" data-i18n="cancel">Cancel</button>
         </section>
 
         <!-- STEP 4 : done -->
@@ -191,31 +269,44 @@
               <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
             </svg>
           </div>
-          <h2>Translation complete!</h2>
-          <p class="done-sub">Your subtitle is ready in Kurdish.</p>
+          <h2 data-i18n="doneTitle">Translation complete!</h2>
+          <p class="done-sub" data-i18n="doneSub">Your subtitle is ready in Kurdish.</p>
           <div class="done-meta">
             <span id="doneFormat"></span>
             <span id="doneSize"></span>
           </div>
+
+          <div class="export-format-box">
+            <label for="exportFormatSel" data-i18n="exportFormatLbl">Export format:</label>
+            <div class="select-wrap speed">
+              <select id="exportFormatSel">
+                <option value="original" selected>Original Format</option>
+                <option value="srt">SRT (SubRip)</option>
+                <option value="vtt">WebVTT</option>
+                <option value="ass">ASS / SSA</option>
+              </select>
+            </div>
+          </div>
+
           <div class="done-actions">
             <a class="btn-primary" id="downloadBtn" download>
               <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"/></svg>
-              Download
+              <span data-i18n="btnDownload">Download</span>
             </a>
             <button class="btn-secondary" id="previewBtn">
               <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
-              Preview subtitles
+              <span data-i18n="btnPreview">Preview subtitles</span>
             </button>
             <button class="btn-secondary" id="copyBtn">
               <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z"/></svg>
-              Copy to clipboard
+              <span data-i18n="btnCopy">Copy to clipboard</span>
             </button>
             <button class="btn-tertiary" id="translateAgainBtn">
               <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M12 5V1L7 6l5 5V7c3.31 0 6 2.69 6 6s-2.69 6-6 6-6-2.69-6-6H4c0 4.42 3.58 8 8 8s8-3.58 8-8-3.58-8-8-8z"/></svg>
-              Translate another file
+              <span data-i18n="btnAgain">Translate another file</span>
             </button>
           </div>
-          <p class="note">Processed 100% in your browser. Nothing is uploaded. Your settings are remembered.</p>
+          <p class="note" data-i18n="notePrivacy">Processed 100% in your browser. Nothing is uploaded. Your settings are remembered.</p>
         </section>
 
       </div>
@@ -291,8 +382,8 @@
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg>
               </span>
               <div>
-                <h3>Edit subtitles <span class="ed-count" id="edCount"></span></h3>
-                <p id="editorStatus">Synced with the preview — edits apply live</p>
+                <h3><span data-i18n="edTitle">Edit subtitles</span> <span class="ed-count" id="edCount"></span></h3>
+                <p id="editorStatus" data-i18n="edStatusSynced">Synced with the preview — edits apply live</p>
               </div>
             </div>
             <div class="editor-toggles">
@@ -304,24 +395,24 @@
               </button>
               <a class="ed-download-btn" id="edDownloadBtn" title="Save &amp; Download Edited Subtitles" aria-label="Save &amp; Download" download style="display: none;">
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"/></svg>
-                <span class="btn-text">Save &amp; Download</span>
+                <span class="btn-text" data-i18n="edSaveDownload">Save &amp; Download</span>
               </a>
               <label class="switch-row mini" title="Sync video player with editor row when clicked or focused">
-                <span>Sync video</span>
+                <span data-i18n="edSyncVideo">Sync video</span>
                 <span class="switch">
                   <input type="checkbox" id="syncVideoToggle" role="switch" />
                   <span class="slider"></span>
                 </span>
               </label>
               <label class="switch-row mini">
-                <span>Times</span>
+                <span data-i18n="edTimes">Times</span>
                 <span class="switch">
                   <input type="checkbox" id="showTimeToggle" checked role="switch" />
                   <span class="slider"></span>
                 </span>
               </label>
               <label class="switch-row mini">
-                <span>Save</span>
+                <span data-i18n="edSave">Save</span>
                 <span class="switch">
                   <input type="checkbox" id="saveEditsToggle" checked role="switch" />
                   <span class="slider"></span>
@@ -330,16 +421,17 @@
             </div>
           </div>
           <div class="editor-list" id="editorList" aria-label="Editable subtitle cues"></div>
-          <p class="editor-hint">Click a row to jump player · Type to edit live · <b>Esc</b> or <b>Ctrl+Enter</b> to finish</p>
+          <p class="editor-hint" data-i18n="edHint">Click a row to jump player · Type to edit live · <b>Esc</b> or <b>Ctrl+Enter</b> to finish</p>
         </section>
       </div>
     </main>
 
     <footer class="footer">
-      <p>Made for Kurdish subtitles • Hosted on GitHub Pages</p>
+      <p data-i18n="footerText">Made for Kurdish subtitles • Hosted on GitHub Pages</p>
     </footer>
   </div>
 
+  <div class="toast-container" id="toastContainer"></div>
   <div class="toast" id="toast" role="status"></div>
 
   <!-- Fullscreen subtitle editor overlay -->
@@ -415,6 +507,8 @@
 
   <script src="assets/js/parser.js"></script>
   <script src="assets/js/translator.js"></script>
+  <script src="assets/js/i18n.js"></script>
+  <script src="assets/js/toast.js"></script>
   <script src="assets/js/player.js"></script>
   <script src="assets/js/app.js"></script>
 </body>
