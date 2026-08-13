@@ -15,9 +15,9 @@ const Translator = (() => {
     'https://translate.google.com/translate_a/single',
   ];
 
-  // Keep requests modest to avoid timeouts on mobile networks.
-  const BATCH_LINES = 35;
-  const MAX_CHARS_PER_REQUEST = 2500;
+  // Keep requests modest to avoid timeouts on mobile networks and URL length issues.
+  const BATCH_LINES = 30;
+  const MAX_CHARS_PER_REQUEST = 1800;
   const DELAY_MS = 250;         // polite spacing between batches
   const MAX_ATTEMPTS = 5;       // retries per chunk
   const REQUEST_TIMEOUT_MS = 25000; // hang-up guard so a stalled socket retries
@@ -67,11 +67,12 @@ const Translator = (() => {
   /** Put the original markup back in place of the bracketed tokens. */
   function restore(s, toks) {
     if (!toks || !toks.length) return s;
-    return s.replace(/[\[\(]\s*T\s*[-_]?\s*([\d\u0660-\u0669\u06f0-\u06f9]+)\s*[\]\)]/gi, (_, numStr) => {
+    // Match [T0], (T0), [ت0], (ت 0), etc. using various bracket types
+    return s.replace(/[\[\(\{\u00ab“]\s*[Ttتط]\s*[-_]?\s*([\d\u0660-\u0669\u06f0-\u06f9]+)\s*[\]\)\}\u00bb”]/gi, (match, numStr) => {
       const ascii = numStr.replace(/[\u0660-\u0669]/g, (d) => String(d.charCodeAt(0) - 0x0660))
                           .replace(/[\u06f0-\u06f9]/g, (d) => String(d.charCodeAt(0) - 0x06f0));
       const id = parseInt(ascii, 10);
-      return toks[id] !== undefined ? toks[id] : '';
+      return toks[id] !== undefined ? toks[id] : match;
     });
   }
 
@@ -129,6 +130,14 @@ const Translator = (() => {
          .replace(/\bfor real\b/gi, 'really')
          .replace(/\bmake sure\b/gi, 'ensure')
          .replace(/\bcalm down\b/gi, 'be calm');
+
+    // Additional preposition / question word expansions to improve Sorani Translation quality
+    s = s.replace(/\bwhere are we going\b/gi, 'to where are we going')
+         .replace(/\bwhere are you from\b/gi, 'from where are you')
+         .replace(/\bwhat is this\b/gi, 'what is this thing')
+         .replace(/\bwho is that\b/gi, 'who is that person')
+         .replace(/\bwhat are you doing\b/gi, 'what are you doing now');
+
     return s;
   }
 
@@ -184,7 +193,21 @@ const Translator = (() => {
             .replace(/(^|\s)کەلەکەم(?=\s|$|[.,!?;:،؛؟])/g, '$1کەڵەکەم')
             .replace(/خۆشحال/g, 'خۆشحاڵ')
             .replace(/گۆرانکاری/g, 'گۆڕانکاری')
-            .replace(/سپاس/g, 'سوپاس');
+            .replace(/سپاس/g, 'سوپاس')
+            .replace(/(^|\s)پیاویکی(?=\s|$|[.,!?;:،؛؟])/g, '$1پیاوێکی')
+            .replace(/(^|\s)پیاویک(?=\s|$|[.,!?;:،؛؟])/g, '$1پیاوێک')
+            .replace(/(^|\s)ژنیك(?=\s|$|[.,!?;:،؛؟])/g, '$1ژنێک')
+            .replace(/(^|\s)ژنیكی(?=\s|$|[.,!?;:،؛؟])/g, '$1ژنێکی')
+            .replace(/(^|\s)شتیک(?=\s|$|[.,!?;:،؛؟])/g, '$1شتێک')
+            .replace(/(^|\s)شتیکی(?=\s|$|[.,!?;:،؛؟])/g, '$1شتێکی')
+            .replace(/(^|\s)کاریک(?=\s|$|[.,!?;:،؛؟])/g, '$1کارێک')
+            .replace(/(^|\s)کاریکی(?=\s|$|[.,!?;:،؛؟])/g, '$1کارێکی')
+            .replace(/(^|\s)کەسیک(?=\s|$|[.,!?;:،؛؟])/g, '$1کەسێک')
+            .replace(/(^|\s)کەسیکی(?=\s|$|[.,!?;:،؛؟])/g, '$1کەسێکی')
+            .replace(/(^|\s)جیگە(?=\s|$|[.,!?;:،؛؟])/g, '$1جێگە')
+            .replace(/(^|\s)جیگا(?=\s|$|[.,!?;:،؛؟])/g, '$1جێگا')
+            .replace(/(^|\s)ئیستا(?=\s|$|[.,!?;:،؛؟])/g, '$1ئێستا')
+            .replace(/(^|\s)سیرکە(?=\s|$|[.,!?;:،؛؟])/g, '$1سەیرکە');
   }
 
   /** Rejoin split Sorani Kurdish verbal affixes & compound preverbs. */
