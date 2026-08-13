@@ -720,12 +720,14 @@ div:nth-of-type(1) > main:nth-of-type(1) > div#tabTranslate:nth-of-type(1) > sec
   display: flex; align-items: center; justify-content: center; padding: 4% 8%;
   overflow: hidden; contain: content;
   box-shadow: inset 0 0 24px rgba(103, 80, 164, 0.18);
+  min-height: 0; min-width: 0;
 }
 .live-caption {
   font-size: clamp(16px, 4.5vw, 26px); font-weight: 600; color: #fff;
   text-align: center; line-height: 1.4; max-width: 100%; word-wrap: break-word;
   text-shadow: 0 2px 10px rgba(0, 0, 0, 0.9);
   animation: rise 0.2s var(--ease);
+  max-height: 100%; overflow: hidden; text-overflow: ellipsis;
 }
 .live-caption[dir="rtl"] {
   direction: rtl; unicode-bidi: isolate; line-height: 1.5;
@@ -841,6 +843,7 @@ div:nth-of-type(1) > main:nth-of-type(1) > div#tabTranslate:nth-of-type(1) > sec
   background: #000;
   display: flex; align-items: center; justify-content: center;
   padding: 4% 8%; overflow: hidden;
+  min-height: 0; min-width: 0;
 }
 .screen-text {
   font-size: clamp(20px, 5.5vw, 38px); font-weight: 600;
@@ -848,6 +851,7 @@ div:nth-of-type(1) > main:nth-of-type(1) > div#tabTranslate:nth-of-type(1) > sec
   text-shadow: 0 2px 10px rgba(0, 0, 0, 0.9);
   max-width: 90%; word-wrap: break-word; position: relative; z-index: 1;
   transition: opacity 0.18s ease, transform 0.18s ease;
+  max-height: 100%; overflow: hidden; text-overflow: ellipsis;
 }
 .caption-updated {
   animation: captionPop 0.24s cubic-bezier(0.16, 1, 0.3, 1) both;
@@ -1111,6 +1115,7 @@ div:nth-of-type(1) > main:nth-of-type(1) > div#tabTranslate:nth-of-type(1) > sec
 .fs-screen {
   flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center;
   padding: 6% 8%; position: relative; cursor: pointer; user-select: none;
+  min-height: 0; min-width: 0; overflow: hidden;
 }
 .fs-screen:hover .fs-tap-hint { opacity: 1; }
 .fs-text {
@@ -1118,6 +1123,7 @@ div:nth-of-type(1) > main:nth-of-type(1) > div#tabTranslate:nth-of-type(1) > sec
   text-align: center; line-height: 1.5; max-width: 90%; word-wrap: break-word;
   text-shadow: 0 4px 20px rgba(0, 0, 0, 0.95), 0 1px 3px rgba(0, 0, 0, 0.8);
   transition: font-size 0.2s var(--ease); z-index: 1;
+  max-height: 100%; overflow: hidden; text-overflow: ellipsis;
 }
 .fs-text[dir="rtl"] {
   direction: rtl; unicode-bidi: isolate;
@@ -1248,21 +1254,12 @@ div:nth-of-type(1) > main:nth-of-type(1) > div#tabTranslate:nth-of-type(1) > sec
 }
 
 /* ---------- RTL Support ---------- */
-[dir="rtl"] .topbar { flex-direction: row-reverse; }
-[dir="rtl"] .brand { flex-direction: row-reverse; text-align: right; }
-[dir="rtl"] .topbar-actions { flex-direction: row-reverse; }
+[dir="rtl"] .brand { text-align: right; }
 [dir="rtl"] .settings-grid { text-align: right; }
-[dir="rtl"] .settings-options .switch-row { flex-direction: row-reverse; text-align: right; }
-[dir="rtl"] .export-format-box { flex-direction: row-reverse; }
-[dir="rtl"] .file-info { flex-direction: row-reverse; text-align: right; }
-[dir="rtl"] .progress-head { flex-direction: row-reverse; }
-[dir="rtl"] .progress-title-wrap { flex-direction: row-reverse; }
-[dir="rtl"] .progress-meta { flex-direction: row-reverse; }
+[dir="rtl"] .settings-options .switch-row { text-align: right; }
+[dir="rtl"] .file-info { text-align: right; }
 [dir="rtl"] .done-card { text-align: right; }
-[dir="rtl"] .done-actions { flex-direction: row-reverse; }
-[dir="rtl"] .editor-toolbar { flex-direction: row-reverse; }
-[dir="rtl"] .editor-title { flex-direction: row-reverse; text-align: right; }
-[dir="rtl"] .editor-toggles { flex-direction: row-reverse; }
+[dir="rtl"] .editor-title { text-align: right; }
 [dir="rtl"] .select-wrap::after { right: auto; left: 14px; }
 [dir="rtl"] select { padding: 12px 14px 12px 34px; }
 
