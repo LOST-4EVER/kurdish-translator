@@ -86,6 +86,7 @@ const UI_I18N = {
     tourDone: 'Got it!',
     tourSkip: 'Skip tour',
     tourGuide: 'Guide',
+    tourDisabledTitle: 'Guide is disabled while your file is loaded',
   },
   ckb: {
     brandSub: 'وەرگێڕی ژێرنووسی فیلم، ئەنیمی و زنجیرەکان',
@@ -171,6 +172,7 @@ const UI_I18N = {
     tourDone: 'تێگەیشتم!',
     tourSkip: 'تێپەڕاندن',
     tourGuide: 'ڕێبەری بەکارهێنان',
+    tourDisabledTitle: 'ڕێبەر بەردەست نییە کاتێک فایلەکەت بارکراوە',
   }
 };
 
