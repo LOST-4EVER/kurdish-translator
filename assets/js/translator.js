@@ -142,6 +142,8 @@ const Translator = (() => {
          .replace(/\bhurry up\b/gi, 'hurry up')
          .replace(/\blook out\b/gi, 'be careful')
          .replace(/\bwatch out\b/gi, 'be careful')
+         .replace(/\bwatch your back\b/gi, 'be careful')
+         .replace(/\bkeep an eye on\b/gi, 'watch carefully')
          .replace(/\bstep aside\b/gi, 'move aside')
          .replace(/\bhands up\b/gi, 'raise your hands')
          .replace(/\bget down\b/gi, 'duck down')
@@ -150,7 +152,36 @@ const Translator = (() => {
          .replace(/\byou bet\b/gi, 'of course')
          .replace(/\bfair enough\b/gi, 'acceptable')
          .replace(/\bfor God'?s sake\b/gi, 'please')
-         .replace(/\bGod damn it\b/gi, 'damn it');
+         .replace(/\bGod damn it\b/gi, 'damn it')
+         .replace(/\bI got this\b/gi, 'I can do this')
+         .replace(/\byou got this\b/gi, 'you can do this')
+         .replace(/\bhang in there\b/gi, 'stay strong')
+         .replace(/\blook after\b/gi, 'take care of')
+         .replace(/\bfreak out\b/gi, 'panic')
+         .replace(/\bgive up\b/gi, 'surrender')
+         .replace(/\bmake sense\b/gi, 'is logical')
+         .replace(/\bright now\b/gi, 'immediately')
+         .replace(/\bas soon as possible\b/gi, 'quickly')
+         .replace(/\basap\b/gi, 'quickly')
+         .replace(/\bno problem\b/gi, 'no problem')
+         .replace(/\bno sweat\b/gi, 'no problem')
+         .replace(/\bdon'?t mention it\b/gi, 'you are welcome')
+         .replace(/\bI don'?t care\b/gi, 'it is not important to me')
+         .replace(/\bwho cares\b/gi, 'who cares')
+         .replace(/\bso what\b/gi, 'what does it matter')
+         .replace(/\bare you out of your mind\b/gi, 'are you crazy')
+         .replace(/\bare you nuts\b/gi, 'are you crazy')
+         .replace(/\bare you insane\b/gi, 'are you crazy')
+         .replace(/\bcut to the chase\b/gi, 'get to the point')
+         .replace(/\bbreak a leg\b/gi, 'good luck')
+         .replace(/\bout of nowhere\b/gi, 'suddenly')
+         .replace(/\ball of a sudden\b/gi, 'suddenly')
+         .replace(/\blet me know\b/gi, 'inform me')
+         .replace(/\bI have no idea\b/gi, 'I do not know')
+         .replace(/\bno clue\b/gi, 'I do not know')
+         .replace(/\bit'?s up to you\b/gi, 'it is your decision')
+         .replace(/\btrust me\b/gi, 'trust me')
+         .replace(/\bcount on me\b/gi, 'trust me');
     return s;
   }
 
@@ -184,6 +215,7 @@ const Translator = (() => {
     s = s.replace(/(^|\s)رویشت(ن|م|ی|ین|ن|ووە)?(?=\s|$|[.,!?;:،؛؟])/g, '$1ڕۆیشت$2')
          .replace(/(^|\s)رۆیشت(ن|م|ی|ین|ن|ووە)?(?=\s|$|[.,!?;:،؛؟])/g, '$1ڕۆیشت$2')
          .replace(/(^|\s)رۆشت(ن|م|ی|ین|ن|ووە)?(?=\s|$|[.,!?;:،؛؟])/g, '$1ڕۆیشت$2')
+         .replace(/(^|\s)رۆ(م|یت|ات|ین|ن)(?=\s|$|[.,!?;:،؛؟])/g, '$1ڕۆ$2')
          .replace(/(^|\s)راست(ە|ی|ەقینە|ەوخۆ|ەکان|کردنەوە)?(?=\s|$|[.,!?;:،؛؟])/g, '$1ڕاست$2')
          .replace(/(^|\s)رێگ(ە|ا|ای|اکە|ایەک|ەی)?(?=\s|$|[.,!?;:،؛؟])/g, '$1ڕێگ$2')
          .replace(/(^|\s)رۆژ(انە|گار|باش|نامە|ی)?(?=\s|$|[.,!?;:،؛؟])/g, '$1ڕۆژ$2')
@@ -205,7 +237,10 @@ const Translator = (() => {
          .replace(/(^|\s)رەوشت(?=\s|$|[.,!?;:،؛؟])/g, '$1ڕەوشت')
          .replace(/(^|\s)رەخنە(?=\s|$|[.,!?;:،؛؟])/g, '$1ڕەخنە')
          .replace(/(^|\s)روانین(?=\s|$|[.,!?;:،؛؟])/g, '$1ڕوانین')
-         .replace(/(^|\s)راهێنان(?=\s|$|[.,!?;:،؛؟])/g, '$1ڕاهێنان');
+         .replace(/(^|\s)راهێنان(?=\s|$|[.,!?;:،؛؟])/g, '$1ڕاهێنان')
+         .replace(/(^|\s)راکردن(?=\s|$|[.,!?;:،؛؟])/g, '$1ڕاکردن')
+         .replace(/(^|\s)راگرتن(?=\s|$|[.,!?;:،؛؟])/g, '$1ڕاگرتن')
+         .replace(/(^|\s)رێکخستن(?=\s|$|[.,!?;:،؛؟])/g, '$1ڕێکخستن');
 
     // Sorani Kurdish Velarized L (ڵ) corrections
     s = s.replace(/(^|\s)مال(ی|ەوە|مان|تان|یان|ەکەم|ەکان)?(?=\s|$|[.,!?;:،؛؟])/g, '$1ماڵ$2')
@@ -224,10 +259,17 @@ const Translator = (() => {
          .replace(/(^|\s)خال(ی|م)?(?=\s|$|[.,!?;:،؛؟])/g, '$1خاڵ$2')
          .replace(/(^|\s)تال(ە|ی)?(?=\s|$|[.,!?;:،؛؟])/g, '$1تاڵ$2')
          .replace(/(^|\s)پیالە(ی)?(?=\s|$|[.,!?;:،؛؟])/g, '$1پیاڵە$2')
-         .replace(/(^|\s)دل(م|ت|ی|خۆش|تەنگ|نیام|نیابە)?(?=\s|$|[.,!?;:،؛؟])/g, '$1دڵ$2')
+         .replace(/(^|\s)دل(م|ت|ی|خۆش|تەنگ|نیام|نیابە|نیا)?(?=\s|$|[.,!?;:،؛؟])/g, '$1دڵ$2')
          .replace(/(^|\s)پۆلا(?=\s|$|[.,!?;:،؛؟])/g, '$1پۆڵا')
          .replace(/(^|\s)قولپ(?=\s|$|[.,!?;:،؛؟])/g, '$1قوڵپ')
          .replace(/(^|\s)کەلەشێر(?=\s|$|[.,!?;:،؛؟])/g, '$1کەڵەشێر')
+         .replace(/(^|\s)کەلک(?=\s|$|[.,!?;:،؛؟])/g, '$1کەڵک')
+         .replace(/(^|\s)بالا(?=\s|$|[.,!?;:،؛؟])/g, '$1باڵا')
+         .replace(/(^|\s)قەلا(?=\s|$|[.,!?;:،؛؟])/g, '$1قەڵا')
+         .replace(/(^|\s)چەپلە(?=\s|$|[.,!?;:،؛؟])/g, '$1چەپڵە')
+         .replace(/(^|\s)کۆمەل(?=\s|$|[.,!?;:،؛؟])/g, '$1کۆمەڵ')
+         .replace(/(^|\s)ئالۆز(?=\s|$|[.,!?;:،؛؟])/g, '$1ئاڵۆز')
+         .replace(/(^|\s)هەلە(?=\s|$|[.,!?;:،؛؟])/g, '$1هەڵە')
          .replace(/گۆرانکاری/g, 'گۆڕانکاری')
          .replace(/سپاس/g, 'سوپاس');
 
@@ -237,10 +279,10 @@ const Translator = (() => {
   /** Rejoin split Sorani Kurdish verbal affixes & compound preverbs. */
   function rejoinVerbalAffixes(str) {
     return str
-      .replace(/(^|\s)دە\s+(بێت|زانم|زانی|زانێت|زانین|زانن|کات|کەم|کەیت|کەین|کەن|توانی|توانم|توانێت|توانین|توانن|چێت|ڕۆم|ڕۆیت|ڕوات|ڕۆین|ڕۆن|ڵێت|ڵێم|ڵێیت|ڵێین|ڵێن|هێنێت|هێنم|یەوێت|خوات|خۆم|کراو|بینم|بینێت|بینین|بینن|وەستێت|گەڕێتەوە|نووسێت|دات|دەین|دەکان|بەن|بەین|دێت|دەبێتەوە|فرۆشێت|کڕێت|ژیم|ژیت|ژی|ژیین|ژین|مرێت|بیستێت|گرێت|بەستێت|گەین|کەویت)(?=\s|$|[.,!?;:،؛؟])/g, '$1دە$2')
-      .replace(/(^|\s)نا\s+(زانم|زانی|زانێت|زانین|زانن|کات|کەم|کەیت|کەن|بێت|کرێت|کرێن|توانی|توانم|توانێت|توانین|توانن|چێت|ڵێم|ڵێت|گەڕێتەوە|بینم|بینێت|وێت|خۆم|خوات|دات|دەین|کەوم|ڕوات)(?=\s|$|[.,!?;:،؛؟])/g, '$1نا$2')
-      .replace(/(^|\s)نە\s+(بێت|کات|کرێت|بوو|ڕۆیشت|هات|زانی|توانی|دیت|کرد|چوو|گەیی|دەبوو|بینرا|خورا)(?=\s|$|[.,!?;:،؛؟])/g, '$1نە$2')
-      .replace(/(^|\s)مە\s+(کە|ڕۆ|کەیت|بۆوە|چۆ|بڕۆ|گەڕێ|بە|کەن|ترسە|گری|شکێنە|کوژە)(?=\s|$|[.,!?;:،؛؟])/g, '$1مە$2')
+      .replace(/(^|\s)دە\s+(بێت|زانم|زانی|زانێت|زانین|زانن|کات|کەم|کەیت|کەین|کەن|توانی|توانم|توانێت|توانین|توانن|چێت|ڕۆم|رۆم|ڕۆیت|رۆیت|ڕوات|روات|ڕۆین|رۆین|ڕۆن|رۆن|ڵێت|ڵێم|ڵێیت|ڵێین|ڵێن|هێنێت|هێنم|یەوێت|خوات|خۆم|کراو|بینم|بینێت|بینین|بینن|وەستێت|گەڕێتەوە|نووسێت|دات|دەین|دەکان|بەن|بەین|دێت|دەبێتەوە|فرۆشێت|کڕێت|ژیم|ژیت|ژی|ژیین|ژین|مرێت|بیستێت|گرێت|بەستێت|گەین|کەویت)(?=\s|$|[.,!?;:،؛؟])/g, '$1دە$2')
+      .replace(/(^|\s)نا\s+(زانم|زانی|زانێت|زانین|زانن|کات|کەم|کەیت|کەن|بێت|کرێت|کرێن|توانی|توانم|توانێت|توانین|توانن|چێت|ڵێم|ڵێت|گەڕێتەوە|بینم|بینێت|وێت|خۆم|خوات|دات|دەین|کەوم|ڕوات|روات)(?=\s|$|[.,!?;:،؛؟])/g, '$1نا$2')
+      .replace(/(^|\s)نە\s+(بێت|کات|کرێت|بوو|ڕۆیشت|رویشت|هات|زانی|توانی|دیت|کرد|چوو|گەیی|دەبوو|بینرا|خورا)(?=\s|$|[.,!?;:،؛؟])/g, '$1نە$2')
+      .replace(/(^|\s)مە\s+(کە|ڕۆ|رۆ|کەیت|بۆوە|چۆ|بڕۆ|برۆ|گەڕێ|بە|کەن|ترسە|گری|شکێنە|کوژە)(?=\s|$|[.,!?;:،؛؟])/g, '$1مە$2')
       .replace(/(^|\s)بی\s+(کە|بە|بینە|گەیەنە|خۆ|نووسە|هێنە|بەخشە|پارێزە|کوژە)(?=\s|$|[.,!?;:،؛؟])/g, '$1بی$2')
       .replace(/(^|\s)تێ\s+(دەگەم|بگە|دەگەیت|دەگەن|دەگەین|پەڕی|پەڕین|ناگەم)(?=\s|$|[.,!?;:،؛؟])/g, '$1تێ$2')
       .replace(/(^|\s)ڕێ\s+(گرتن|دەگرێت|بگرە|ناگرێت|بگرن)(?=\s|$|[.,!?;:،؛؟])/g, '$1ڕێ$2')
@@ -282,7 +324,7 @@ const Translator = (() => {
       .replace(/تۆ لە کوێیت/g, 'لەکوێیت')
       .replace(/کێشەیەک نییە/g, 'ئاساییە')
       .replace(/سوپاس بۆ تۆ/g, 'سوپاس')
-      .replace(/خۆشحاڵ بووم بتبینم/g, 'خۆشحاڵ بووم');
+      .replace(/خۆشحاڵ بووم بتبینم/g, 'خۆشحاڵ بووم بە بینینت');
   }
 
   /**
@@ -514,7 +556,7 @@ const Translator = (() => {
             res = null;
           }
         }
-        if (!res || !res.ok) {
+        if (!res || (!res.ok && res.status !== 429 && res.status !== 400 && res.status !== 403)) {
           res = await fetch(url, { method: 'GET', headers: { 'Accept': 'application/json' }, signal: scoped.signal });
         }
 
@@ -572,8 +614,19 @@ const Translator = (() => {
     const parts = [];
     let cur = [];
     for (const line of translated.split('\n')) {
-      if (BATCH_SEP_RE.test(line)) { parts.push(cur.join('\n')); cur = []; }
-      else cur.push(line);
+      if (BATCH_SEP_RE.test(line)) {
+        parts.push(cur.join('\n'));
+        cur = [];
+      } else if (line.includes(BATCH_SEP)) {
+        const sub = line.split(BATCH_SEP);
+        for (let s = 0; s < sub.length; s++) {
+          if (s > 0) { parts.push(cur.join('\n')); cur = []; }
+          const item = sub[s].replace(/^[ \t\u200e\u200f.,!?;:،؛؟]+|[ \t\u200e\u200f.,!?;:،؛؟]+$/g, '').trim();
+          if (item) cur.push(item);
+        }
+      } else {
+        cur.push(line);
+      }
     }
     parts.push(cur.join('\n'));
     return parts;

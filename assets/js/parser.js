@@ -373,30 +373,38 @@ Style: Default,Arial,20,16777215,65535,0,0,0,0,1,2,2,2,10,10,10,0,1
   }
 
   function serialize(parsedOrFormat, cues) {
-    const parsed = typeof parsedOrFormat === 'string' ? { format: parsedOrFormat } : (parsedOrFormat || { format: 'srt' });
+    let parsed = parsedOrFormat;
+    let cueList = cues;
+    if (Array.isArray(parsedOrFormat)) {
+      cueList = parsedOrFormat;
+      parsed = typeof cues === 'string' ? { format: cues } : (cues || { format: 'srt' });
+    } else {
+      parsed = typeof parsedOrFormat === 'string' ? { format: parsedOrFormat } : (parsedOrFormat || { format: 'srt' });
+    }
+    cueList = cueList || [];
     const fmt = (parsed.format || 'srt').toLowerCase();
     switch (fmt) {
       case 'vtt':
-        return 'WEBVTT\n\n' + cues.map((c) => `${fmtVTT(c.start)} --> ${fmtVTT(c.end)}\n${normalizeTextForStandard(c.text)}`).join('\n\n') + '\n';
+        return 'WEBVTT\n\n' + cueList.map((c) => `${fmtVTT(c.start)} --> ${fmtVTT(c.end)}\n${normalizeTextForStandard(c.text)}`).join('\n\n') + '\n';
       case 'srt':
-        return cues.map((c, i) => `${i + 1}\n${fmtSRT(c.start)} --> ${fmtSRT(c.end)}\n${normalizeTextForStandard(c.text)}`).join('\n\n') + '\n';
+        return cueList.map((c, i) => `${i + 1}\n${fmtSRT(c.start)} --> ${fmtSRT(c.end)}\n${normalizeTextForStandard(c.text)}`).join('\n\n') + '\n';
       case 'ass':
       case 'ssa':
-        return serializeASS(parsed, cues);
+        return serializeASS(parsed, cueList);
       case 'sub': {
         const fps = (parsed.meta && parsed.meta.fps) || 23.976;
         const frame = (ms) => Math.round((ms / 1000) * fps);
-        const body = cues.map((c) => `{${frame(c.start)}}{${frame(c.end)}}${normalizeTextForStandard(c.text).replace(/\n/g, '|')}`).join('\n');
+        const body = cueList.map((c) => `{${frame(c.start)}}{${frame(c.end)}}${normalizeTextForStandard(c.text).replace(/\n/g, '|')}`).join('\n');
         return `{1}{1}${fps.toFixed(3)}\n${body}\n`;
       }
       case 'smi':
         return '<SAMI>\n<HEAD><TITLE>Kurdish subtitles</TITLE></HEAD>\n<BODY>\n' +
-          cues.map((c) => `<SYNC Start=${c.start}><P class=KURD>${escapeXml(normalizeTextForStandard(c.text)).replace(/\n/g, '<br>')}</P></SYNC>`).join('\n') +
+          cueList.map((c) => `<SYNC Start=${c.start}><P class=KURD>${escapeXml(normalizeTextForStandard(c.text)).replace(/\n/g, '<br>')}</P></SYNC>`).join('\n') +
           '\n</BODY>\n</SAMI>\n';
       case 'txt':
-        return cues.map((c) => normalizeTextForStandard(c.text)).join('\n\n') + '\n';
+        return cueList.map((c) => normalizeTextForStandard(c.text)).join('\n\n') + '\n';
       default:
-        return cues.map((c, i) => `${i + 1}\n${fmtSRT(c.start)} --> ${fmtSRT(c.end)}\n${normalizeTextForStandard(c.text)}`).join('\n\n') + '\n';
+        return cueList.map((c, i) => `${i + 1}\n${fmtSRT(c.start)} --> ${fmtSRT(c.end)}\n${normalizeTextForStandard(c.text)}`).join('\n\n') + '\n';
     }
   }
 
