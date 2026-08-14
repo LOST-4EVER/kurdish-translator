@@ -509,15 +509,15 @@
     <div class="fs-topbar">
       <span class="fs-cuecount" id="fsCueCount">Cue 0 / 0</span>
       <div class="fs-top-actions">
-        <div class="select-wrap speed" title="Subtitle Font Size">
+        <div class="select-wrap speed" data-i18n-title="fontSize" title="Subtitle Font Size">
           <select id="fsFontSizeSel" aria-label="Subtitle Font Size">
-            <option value="0.85">A- Small</option>
-            <option value="1" selected>A Normal</option>
-            <option value="1.2">A+ Large</option>
-            <option value="1.45">A++ XL</option>
+            <option value="0.85" data-i18n="fsFontSmall">A- Small</option>
+            <option value="1" selected data-i18n="fsFontNormal">A Normal</option>
+            <option value="1.2" data-i18n="fsFontLarge">A+ Large</option>
+            <option value="1.45" data-i18n="fsFontXL">A++ XL</option>
           </select>
         </div>
-        <button class="fs-btn fs-close" id="fsClose" title="Exit full preview" aria-label="Exit full preview">
+        <button class="fs-btn fs-close" id="fsClose" data-i18n-title="fsExit" title="Exit full preview" aria-label="Exit full preview">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
         </button>
       </div>
@@ -525,38 +525,38 @@
 
     <div class="fs-screen" id="fsScreen">
       <span class="fs-text" id="fsText"></span>
-      <span class="fs-tap-hint">Tap text or click Edit to modify</span>
+      <span class="fs-tap-hint" data-i18n="fsTapHint">Tap text or click Edit to modify</span>
     </div>
 
     <div class="fs-bar">
       <div class="fs-group">
-        <button class="fs-btn fs-icon-btn" id="fsPrevBtn" title="Previous cue" aria-label="Previous cue">
+        <button class="fs-btn fs-icon-btn" id="fsPrevBtn" data-i18n-title="stepPrevCue" title="Previous cue" aria-label="Previous cue">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M6 6h2v12H6zm3.5 6l8.5 6V6z"/></svg>
         </button>
-        <button class="fs-btn fs-icon-btn" id="fsSkipBackBtn" title="Jump back 5s" aria-label="Jump back 5s">
+        <button class="fs-btn fs-icon-btn" id="fsSkipBackBtn" data-i18n-title="rewind5s" title="Jump back 5s" aria-label="Jump back 5s">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M11 18V6l-8.5 6 8.5 6zm.5-6l8.5 6V6l-8.5 6z"/></svg>
         </button>
         <button class="fs-btn fs-icon-btn fs-play-btn" id="fsPlayBtn" title="Play / Pause" aria-label="Play">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
         </button>
-        <button class="fs-btn fs-icon-btn" id="fsSkipForwardBtn" title="Jump forward 5s" aria-label="Jump forward 5s">
+        <button class="fs-btn fs-icon-btn" id="fsSkipForwardBtn" data-i18n-title="forward5s" title="Jump forward 5s" aria-label="Jump forward 5s">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M4 18l8.5-6L4 6v12zm9-12v12l8.5-6L13 6z"/></svg>
         </button>
-        <button class="fs-btn fs-icon-btn" id="fsNextBtn" title="Next cue" aria-label="Next cue">
+        <button class="fs-btn fs-icon-btn" id="fsNextBtn" data-i18n-title="stepNextCue" title="Next cue" aria-label="Next cue">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M6 18l8.5-6L6 6v12zM16 6v12h2V6h-2z"/></svg>
         </button>
       </div>
 
       <div class="fs-group right">
-        <button class="fs-btn fs-icon-btn" id="fsUndoBtn" title="Undo change" aria-label="Undo change" disabled>
+        <button class="fs-btn fs-icon-btn" id="fsUndoBtn" data-i18n-title="undo" title="Undo change" aria-label="Undo change" disabled>
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 14 4 9 9 4"></polyline><path d="M20 20v-7a4 4 0 0 0-4-4H4"></path></svg>
         </button>
-        <button class="fs-btn fs-icon-btn" id="fsRedoBtn" title="Redo change" aria-label="Redo change" disabled>
+        <button class="fs-btn fs-icon-btn" id="fsRedoBtn" data-i18n-title="redo" title="Redo change" aria-label="Redo change" disabled>
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 14 20 9 15 4"></polyline><path d="M4 20v-7a4 4 0 0 1 4-4h12"></path></svg>
         </button>
         <button class="fs-btn fs-edit-btn" id="fsEditBtn" aria-label="Edit text">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"></path></svg>
-          <span>Edit text</span>
+          <span data-i18n="fsEditText">Edit text</span>
         </button>
       </div>
     </div>
@@ -564,13 +564,13 @@
     <div class="fs-editor hidden" id="fsEditor">
       <textarea id="fsInput" aria-label="Edit active subtitle text" placeholder="Type subtitle text... Press Ctrl+Enter to save"></textarea>
       <div class="fs-actions">
-        <button class="fs-btn fs-icon-btn" id="fsEdUndoBtn" title="Undo change" aria-label="Undo change" disabled>
+        <button class="fs-btn fs-icon-btn" id="fsEdUndoBtn" data-i18n-title="undo" title="Undo change" aria-label="Undo change" disabled>
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 14 4 9 9 4"></polyline><path d="M20 20v-7a4 4 0 0 0-4-4H4"></path></svg>
         </button>
-        <button class="fs-btn fs-icon-btn" id="fsEdRedoBtn" title="Redo change" aria-label="Redo change" disabled>
+        <button class="fs-btn fs-icon-btn" id="fsEdRedoBtn" data-i18n-title="redo" title="Redo change" aria-label="Redo change" disabled>
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 14 20 9 15 4"></polyline><path d="M4 20v-7a4 4 0 0 1 4-4h12"></path></svg>
         </button>
-        <button class="fs-btn fs-done" id="fsDoneBtn">Done</button>
+        <button class="fs-btn fs-done" id="fsDoneBtn" data-i18n="fsDone">Done</button>
       </div>
     </div>
   </div>

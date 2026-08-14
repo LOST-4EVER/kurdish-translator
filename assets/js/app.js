@@ -618,6 +618,27 @@
   }
 
   // ---------- Fullscreen edit mode ----------
+
+  /** Shrink the fullscreen subtitle text until it fits the visible screen area. */
+  function fitFsText() {
+    const el = els.fsText;
+    const screen = els.fsScreen;
+    if (!el || !screen) return;
+    const scale = els.fsFontSizeSel ? parseFloat(els.fsFontSizeSel.value) || 1 : 1;
+    const base = Math.round(Math.min(Math.max(20, screen.clientWidth * 0.055), 42));
+    const availW = screen.clientWidth * 0.94;
+    const availH = screen.clientHeight - 90; // leave room for the tap hint
+    const prevTrans = el.style.transition;
+    el.style.transition = 'none';
+    let size = base * scale;
+    el.style.fontSize = `${size}px`;
+    while (size > 12 && (el.scrollWidth > availW || el.scrollHeight > availH)) {
+      size -= 1;
+      el.style.fontSize = `${size}px`;
+    }
+    el.style.transition = prevTrans;
+  }
+
   function updateFsScreen() {
     const cue = activeIdx >= 0 && workCues[activeIdx] ? workCues[activeIdx] : null;
     els.fsText.textContent = cue ? displayText(cue.text) : '';
@@ -629,6 +650,7 @@
         : '<svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>';
       els.fsPlayBtn.setAttribute('aria-label', SubtitlePlayer.playing ? 'Pause' : 'Play');
     }
+    fitFsText();
   }
 
   function syncFsEditor(i) {
@@ -649,6 +671,7 @@
     editWasPlaying = SubtitlePlayer.playing;
     SubtitlePlayer.pause(); // freeze the cue so you can type without it skipping away
     els.fsInput.focus(); // pops the keyboard so you can tap-edit immediately
+    fitFsText();
   }
 
   function closeFsEditor() {
@@ -658,6 +681,7 @@
     els.fsEditor.classList.add('hidden');
     if (editWasPlaying) SubtitlePlayer.play();
     editWasPlaying = false;
+    fitFsText();
   }
 
   function enterFs() {
@@ -702,9 +726,9 @@
     if (els.fsFontSizeSel) {
       els.fsFontSizeSel.addEventListener('change', (e) => {
         const val = e.target.value;
-        els.fsText.style.fontSize = `calc(clamp(22px, 6vw, 44px) * ${val})`;
         if (els.fontSizeSel) els.fontSizeSel.value = val;
         SubtitlePlayer.setFontScale(val);
+        fitFsText();
       });
     }
 
@@ -1148,7 +1172,7 @@
         const val = e.target.value;
         SubtitlePlayer.setFontScale(val);
         if (els.fsFontSizeSel) els.fsFontSizeSel.value = val;
-        els.fsText.style.fontSize = `calc(clamp(22px, 6vw, 44px) * ${val})`;
+        fitFsText();
       });
     }
 
@@ -1740,6 +1764,7 @@
       resizeTimer = setTimeout(() => {
         const inputs = els.editorList.querySelectorAll('.ed-input');
         inputs.forEach((input) => autoGrow(input));
+        if (fsActive) fitFsText();
       }, 100);
     });
   }

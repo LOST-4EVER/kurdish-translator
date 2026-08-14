@@ -1982,6 +1982,7 @@ div#tabPreview > section:nth-of-type(2) > div#editorList:nth-of-type(2) > div:nt
 }
 .fs-screen:hover .fs-tap-hint { opacity: 1; }
 .fs-text {
+  display: block;
   font-size: clamp(20px, 5.5vw, 42px);
   font-weight: 600;
   color: #ffffff;
@@ -1995,7 +1996,6 @@ div#tabPreview > section:nth-of-type(2) > div#editorList:nth-of-type(2) > div:nt
   z-index: 1;
   max-height: 100%;
   overflow: hidden;
-  text-overflow: ellipsis;
 }
 .fs-text[dir="rtl"] {
   direction: rtl;
