@@ -2697,8 +2697,6 @@ div#tabPreview > section:nth-of-type(2) > div#editorList:nth-of-type(2) > div:nt
   position: fixed;
   inset: 0;
   background: rgba(8, 10, 15, 0.72);
-  backdrop-filter: blur(3px);
-  -webkit-backdrop-filter: blur(3px);
   z-index: 10001;
   transition: opacity 0.25s ease;
 }
