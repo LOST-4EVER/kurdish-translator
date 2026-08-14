@@ -90,6 +90,20 @@
 
   let currentUiLang = 'en';
 
+  function updateTourTriggerBtnState() {
+    if (!els.tourTriggerBtn) return;
+    const dict = dicts[currentUiLang] || dicts.en;
+    if (file && !isDemoLoaded) {
+      els.tourTriggerBtn.disabled = true;
+      els.tourTriggerBtn.classList.add('disabled');
+      els.tourTriggerBtn.title = dict.tourDisabledTitle || (currentUiLang === 'ckb' ? 'ڕێبەر بەردەست نییە کاتێک فایلەکەت بارکراوە' : 'Guide is disabled while your file is loaded');
+    } else {
+      els.tourTriggerBtn.disabled = false;
+      els.tourTriggerBtn.classList.remove('disabled');
+      els.tourTriggerBtn.title = dict.tourGuide || (currentUiLang === 'ckb' ? 'ڕێبەری بەکارهێنان' : 'Welcome Tour');
+    }
+  }
+
   function applyLanguage(lang) {
     currentUiLang = lang === 'ckb' ? 'ckb' : 'en';
     store.set('app_ui_lang', currentUiLang);
@@ -126,6 +140,8 @@
         el.title = dict[key];
       }
     });
+
+    updateTourTriggerBtnState();
 
     if (typeof isTourOpen !== 'undefined' && isTourOpen) {
       renderTourStep(currentTourStep);
@@ -832,6 +848,10 @@
     catch { toast(currentUiLang === 'ckb' ? 'هیچ ژێرنووسێک نەدۆزرایەوە.' : 'Could not detect subtitle content.', true); return; }
     if (!parsedFile.cues.length) { toast(currentUiLang === 'ckb' ? 'هیچ دێڕێکی ژێرنووس نییە.' : 'No subtitles found in file.', true); return; }
 
+    if (isTourOpen) {
+      closeTour(false);
+    }
+
     file = f;
     parsed = parsedFile;
     isDemoLoaded = false;
@@ -840,6 +860,7 @@
     els.fileName.textContent = f.name;
     els.fileMeta.textContent = `${parsed.cues.length} lines • ${formatSize(f.size)} • ${LABEL[parsed.format] || parsed.format.toUpperCase()}`;
     updateCues(parsed.cues);
+    updateTourTriggerBtnState();
 
     if (typeof Toast !== 'undefined') {
       Toast.success(
@@ -1491,6 +1512,10 @@
   ];
 
   function openTour(stepIndex = 0) {
+    if (file && !isDemoLoaded) {
+      // If user's own file is loaded, don't allow openTour
+      return;
+    }
     if (!els.tourOverlay) return;
     currentTourStep = stepIndex;
     isTourOpen = true;
@@ -1514,36 +1539,40 @@
       store.set('kurdish_tour_seen', '1');
     }
     
-    // Always reset the app state when closing the tour
-    file = null;
-    parsed = null;
-    isDemoLoaded = false;
-    baseCues = null;
-    workCues = null;
-    undoStack = [];
-    redoStack = [];
-    lastCommittedState = '';
-    dirty = false;
-    activeIdx = -1;
-    
-    if (els.fileInput) els.fileInput.value = '';
-    if (els.fileName) els.fileName.textContent = '';
-    if (els.editorList) els.editorList.innerHTML = '';
-    buildEditor();
-    
-    SubtitlePlayer.pause();
-    SubtitlePlayer.seek(0);
-    SubtitlePlayer.load([]); // Call load directly to avoid loadPreview enabling the tab
-    if (els.previewTab) els.previewTab.classList.add('disabled');
-    
-    showStep('upload');
-    switchTab('translate');
-    
-    resultText = null;
-    if (resultUrl) { URL.revokeObjectURL(resultUrl); resultUrl = null; }
-    
-    updateUndoRedoUI();
-    checkEditsState();
+    // Only reset the app state when closing the tour if the demo was loaded.
+    // If the user had their own file uploaded, we must keep it intact!
+    if (isDemoLoaded) {
+      file = null;
+      parsed = null;
+      isDemoLoaded = false;
+      baseCues = null;
+      workCues = null;
+      undoStack = [];
+      redoStack = [];
+      lastCommittedState = '';
+      dirty = false;
+      activeIdx = -1;
+
+      if (els.fileInput) els.fileInput.value = '';
+      if (els.fileName) els.fileName.textContent = '';
+      if (els.editorList) els.editorList.innerHTML = '';
+      buildEditor();
+
+      SubtitlePlayer.pause();
+      SubtitlePlayer.seek(0);
+      SubtitlePlayer.load([]); // Call load directly to avoid loadPreview enabling the tab
+      if (els.previewTab) els.previewTab.classList.add('disabled');
+
+      showStep('upload');
+      switchTab('translate');
+
+      resultText = null;
+      if (resultUrl) { URL.revokeObjectURL(resultUrl); resultUrl = null; }
+
+      updateUndoRedoUI();
+      checkEditsState();
+    }
+    updateTourTriggerBtnState();
   }
 
   function renderTourStep(index) {
