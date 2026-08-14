@@ -23,7 +23,12 @@
     <header class="topbar">
       <div class="brand">
         <span class="logo">
-          <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M19 4H5c-1.11 0-2 .9-2 2v12c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 14H5V8h14v10zM7 10h4v2H7zm0 4h8v2H7zm6-4h5v2h-5z"/></svg>
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="2" y="4" width="20" height="16" rx="2"></rect>
+            <path d="M6 10h4"></path>
+            <path d="M14 10h4"></path>
+            <path d="M6 14h12"></path>
+          </svg>
         </span>
         <div class="brand-text">
           <h1>Kurdî <span class="accent">Subtitle Translator</span></h1>
@@ -32,15 +37,35 @@
       </div>
       <div class="topbar-actions">
         <button class="lang-switch-btn" id="langToggleBtn" title="Switch Language / گۆڕینی زمان" aria-label="Language switch">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="10"></circle>
+            <line x1="2" y1="12" x2="22" y2="12"></line>
+            <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path>
+          </svg>
           <span class="lang-opt en active">English</span>
           <span class="lang-sep">/</span>
           <span class="lang-opt ckb">کوردی</span>
         </button>
+        <button class="gh-btn" id="tourTriggerBtn" title="Welcome Tour / ڕێبەری بەکارهێنان" aria-label="Welcome Tour">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="10"></circle>
+            <polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76"></polygon>
+          </svg>
+          <span data-i18n="tourGuide">Guide</span>
+        </button>
         <button class="gh-btn" id="installBtn" hidden>
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"/></svg> <span data-i18n="install">Install</span>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+            <polyline points="7 10 12 15 17 10"></polyline>
+            <line x1="12" y1="15" x2="12" y2="3"></line>
+          </svg>
+          <span data-i18n="install">Install</span>
         </button>
         <a class="gh-btn" href="https://github.com/LOST-4EVER/kurdish-translator" target="_blank" rel="noopener">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2A10 10 0 0 0 2 12c0 4.42 2.87 8.17 6.84 9.5.5.08.66-.23.66-.5v-1.69c-2.77.6-3.36-1.34-3.36-1.34-.46-1.16-1.11-1.47-1.11-1.47-.91-.62.07-.6.07-.6 1 .07 1.53 1.03 1.53 1.03.87 1.52 2.34 1.07 2.91.83.1-.65.35-1.09.63-1.34-2.22-.25-4.55-1.11-4.55-4.92 0-1.11.38-2 1.03-2.71-.1-.25-.45-1.29.1-2.64 0 0 .84-.27 2.75 1.02.79-.22 1.65-.33 2.5-.33.85 0 1.71.11 2.5.33 1.91-1.29 2.75-1.02 2.75-1.02.55 1.35.2 2.39.1 2.64.65.71 1.03 1.6 1.03 2.71 0 3.82-2.34 4.66-4.57 4.91.36.31.69.92.69 1.85V21c0 .27.16.59.67.5C19.14 20.16 22 16.42 22 12A10 10 0 0 0 12 2z"/></svg> GitHub
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M12 2A10 10 0 0 0 2 12c0 4.42 2.87 8.17 6.84 9.5.5.08.66-.23.66-.5v-1.69c-2.77.6-3.36-1.34-3.36-1.34-.46-1.16-1.11-1.47-1.11-1.47-.91-.62.07-.6.07-.6 1 .07 1.53 1.03 1.53 1.03.87 1.52 2.34 1.07 2.91.83.1-.65.35-1.09.63-1.34-2.22-.25-4.55-1.11-4.55-4.92 0-1.11.38-2 1.03-2.71-.1-.25-.45-1.29.1-2.64 0 0 .84-.27 2.75 1.02.79-.22 1.65-.33 2.5-.33.85 0 1.71.11 2.5.33 1.91-1.29 2.75-1.02 2.75-1.02.55 1.35.2 2.39.1 2.64.65.71 1.03 1.6 1.03 2.71 0 3.82-2.34 4.66-4.57 4.91.36.31.69.92.69 1.85V21c0 .27.16.59.67.5C19.14 20.16 22 16.42 22 12A10 10 0 0 0 12 2z"/>
+          </svg>
+          GitHub
         </a>
       </div>
     </header>
@@ -48,10 +73,27 @@
     <!-- Tab navigation -->
     <nav class="tabs" id="tabs">
       <button class="tab active" data-tab="translate">
-        <span class="tab-ic"><svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="m12.87 15.07-2.54-2.51.03-.03A17.52 17.52 0 0 0 14.07 6H17V4h-7V2H8v2H1v2h11.17C11.5 7.92 10.44 9.75 9 11.35 8.07 10.32 7.3 9.19 6.69 8h-2c.73 1.63 1.73 3.17 2.98 4.56l-5.09 5.02L4 19l5-5 3.11 3.11.76-2.04zM18.5 10h-2L12 22h2l1.12-3h4.75L21 22h2l-4.5-12zm-2.62 7 1.62-4.33L19.12 17h-3.24z"/></svg></span> <span data-i18n="tabTranslate">Translate</span>
+        <span class="tab-ic">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+            <polyline points="14 2 14 8 20 8"></polyline>
+            <line x1="16" y1="13" x2="8" y2="13"></line>
+            <line x1="16" y1="17" x2="8" y2="17"></line>
+            <polyline points="10 9 9 9 8 9"></polyline>
+          </svg>
+        </span>
+        <span data-i18n="tabTranslate">Translate</span>
       </button>
       <button class="tab" data-tab="preview" id="previewTab">
-        <span class="tab-ic"><svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg></span> <span data-i18n="tabPreview">Preview</span>
+        <span class="tab-ic">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect>
+            <polygon points="10 8 16 10 10 12 10 8" fill="currentColor"></polygon>
+            <line x1="8" y1="21" x2="16" y2="21"></line>
+            <line x1="12" y1="17" x2="12" y2="21"></line>
+          </svg>
+        </span>
+        <span data-i18n="tabPreview">Preview</span>
       </button>
     </nav>
 
@@ -66,7 +108,7 @@
             <div class="dz-icon">
               <svg width="48" height="48" viewBox="0 0 24 24" fill="currentColor"><path d="M20 6h-8l-2-2H4c-1.11 0-1.99.89-1.99 2L2 18c0 1.11.89 2 2 2h16c1.11 0 2-.89 2-2V8c0-1.11-.89-2-2-2zm0 12H4V8h16v10zM8 13.01l1.41 1.41L11 12.84V17h2v-4.16l1.59 1.59L16 13.01 12 9l-4 4.01z"/></svg>
             </div>
-            <h2 data-i18n="dropTitle">Drop subtitle file here</h2>
+            <h2 data-i18n="dropTitle">Drop your translate file</h2>
             <p class="dz-sub"><span data-i18n="dropSubPrefix">or </span><span class="link" data-i18n="dropBrowse">browse from device</span><span data-i18n="dropSubSuffix"> — it translates privately in your browser</span></p>
             <div class="dz-hint">Supports <b>.SRT</b> <b>.VTT</b> <b>.ASS</b> <b>.SSA</b> <b>.SUB</b> <b>.SMI</b> — Android &amp; iOS ready</div>
             <div class="pill-row">
@@ -87,7 +129,9 @@
               <strong id="fileName">movie.srt</strong>
               <span id="fileMeta"></span>
             </div>
-          <button class="icon-btn" id="changeFile" title="Choose another file" aria-label="Choose another file">✕</button>
+            <button class="icon-btn" id="changeFile" title="Choose another file" aria-label="Choose another file">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+            </button>
           </div>
 
           <div class="settings-grid">
@@ -330,20 +374,27 @@
               <div class="tl-cues" id="tlCues"></div>
               <div class="tl-fill" id="tlFill"></div>
               <div class="tl-thumb" id="tlThumb"></div>
+              <div class="tl-tooltip hidden" id="tlTooltip">0:00</div>
             </div>
             <div class="controls">
               <div class="ctl-group">
-                <button class="ctrl-btn" id="restartBtn" title="Restart" aria-label="Restart">
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M6 6h2v12H6zm3.5 6l8.5 6V6z"/></svg>
-                </button>
-                <button class="ctrl-btn" id="skipBackBtn" title="Jump back 5 seconds (-5s)" aria-label="Jump back 5 seconds">
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M11 18V6l-8.5 6 8.5 6zm.5-6l8.5 6V6l-8.5 6z"/></svg>
-                </button>
-                <button class="ctrl-btn play" id="playBtn" title="Play / Pause" aria-label="Play">
+                <button class="ctrl-btn play" id="playBtn" title="Play / Pause (Space)" aria-label="Play">
                   <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
                 </button>
-                <button class="ctrl-btn" id="skipForwardBtn" title="Jump forward 5 seconds (+5s)" aria-label="Jump forward 5 seconds">
+                <button class="ctrl-btn" id="prevCueBtn" title="Previous cue (↑)" aria-label="Previous cue">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M6 6h2v12H6zm3.5 6l8.5 6V6z"/></svg>
+                </button>
+                <button class="ctrl-btn" id="skipBackBtn" title="Jump back 5s (←)" aria-label="Jump back 5 seconds">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M11 18V6l-8.5 6 8.5 6zm.5-6l8.5 6V6l-8.5 6z"/></svg>
+                </button>
+                <button class="ctrl-btn" id="skipForwardBtn" title="Jump forward 5s (→)" aria-label="Jump forward 5 seconds">
                   <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M4 18l8.5-6L4 6v12zm9-12v12l8.5-6L13 6z"/></svg>
+                </button>
+                <button class="ctrl-btn" id="nextCueBtn" title="Next cue (↓)" aria-label="Next cue">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M6 18l8.5-6L6 6v12zM16 6v12h2V6h-2z"/></svg>
+                </button>
+                <button class="ctrl-btn" id="restartBtn" title="Restart (0:00)" aria-label="Restart">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>
                 </button>
               </div>
               <div class="time" id="timeDisplay">0:00 / 0:00</div>
@@ -360,13 +411,17 @@
                 <div class="select-wrap speed" title="Playback Speed">
                   <select id="speedSel" aria-label="Playback Speed">
                     <option value="0.5">0.5×</option>
+                    <option value="0.75">0.75×</option>
                     <option value="1" selected>1×</option>
+                    <option value="1.25">1.25×</option>
                     <option value="1.5">1.5×</option>
                     <option value="2">2×</option>
                   </select>
                 </div>
                 <button class="ctrl-btn" id="fsToggleBtn" title="Fullscreen edit mode" aria-label="Fullscreen edit mode">
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M7 14H5v5h5v-2H7v-3zm-2-4h2V7h3V5H5v5zm12 7h-3v2h5v-5h-2v3zM14 5v2h3v3h2V5h-5z"/></svg>
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"></path>
+                  </svg>
                 </button>
               </div>
             </div>
@@ -379,22 +434,37 @@
           <div class="editor-toolbar">
             <div class="editor-title">
               <span class="ed-ic">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg>
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"></path>
+                </svg>
               </span>
               <div>
                 <h3><span data-i18n="edTitle">Edit subtitles</span> <span class="ed-count" id="edCount"></span></h3>
                 <p id="editorStatus" data-i18n="edStatusSynced">Synced with the preview — edits apply live</p>
               </div>
             </div>
+            <div class="editor-search-box">
+              <div class="ed-search-wrap">
+                <svg class="ed-search-ic" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <circle cx="11" cy="11" r="8"></circle>
+                  <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                </svg>
+                <input type="text" id="edSearchInput" class="ed-search-input" placeholder="Search subtitles..." aria-label="Search subtitles" data-i18n-placeholder="searchPlaceholder" />
+                <span class="ed-search-badge hidden" id="edSearchCount">0</span>
+                <button type="button" class="ed-search-clear hidden" id="edSearchClearBtn" aria-label="Clear search">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                </button>
+              </div>
+            </div>
             <div class="editor-toggles">
               <button class="icon-btn-action" id="undoBtn" title="Undo change (Ctrl+Z)" aria-label="Undo edit" disabled>
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M12.5 8c-2.65 0-5.05.99-6.9 2.6L2 7v9h9l-3.62-3.62c1.39-1.16 3.16-1.88 5.12-1.88 3.54 0 6.55 2.31 7.6 5.5l2.37-.78C21.08 11.03 17.15 8 12.5 8z"/></svg>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 14 4 9 9 4"></polyline><path d="M20 20v-7a4 4 0 0 0-4-4H4"></path></svg>
               </button>
               <button class="icon-btn-action" id="redoBtn" title="Redo change (Ctrl+Y)" aria-label="Redo edit" disabled>
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M18.4 10.6C16.55 8.99 14.15 8 11.5 8c-4.65 0-8.58 3.03-9.96 7.22l2.37.78C4.95 12.81 7.96 10.5 11.5 10.5c1.96 0 3.73.72 5.12 1.88L13 16h9V7l-3.6 3.6z"/></svg>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 14 20 9 15 4"></polyline><path d="M4 20v-7a4 4 0 0 1 4-4h12"></path></svg>
               </button>
               <a class="ed-download-btn" id="edDownloadBtn" title="Save &amp; Download Edited Subtitles" aria-label="Save &amp; Download" download style="display: none;">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"/></svg>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
                 <span class="btn-text" data-i18n="edSaveDownload">Save &amp; Download</span>
               </a>
               <label class="switch-row mini" title="Sync video player with editor row when clicked or focused">
@@ -448,7 +518,7 @@
           </select>
         </div>
         <button class="fs-btn fs-close" id="fsClose" title="Exit full preview" aria-label="Exit full preview">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
         </button>
       </div>
     </div>
@@ -479,13 +549,13 @@
 
       <div class="fs-group right">
         <button class="fs-btn fs-icon-btn" id="fsUndoBtn" title="Undo change" aria-label="Undo change" disabled>
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M12.5 8c-2.65 0-5.05.99-6.9 2.6L2 7v9h9l-3.62-3.62c1.39-1.16 3.16-1.88 5.12-1.88 3.54 0 6.55 2.31 7.6 5.5l2.37-.78C21.08 11.03 17.15 8 12.5 8z"/></svg>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 14 4 9 9 4"></polyline><path d="M20 20v-7a4 4 0 0 0-4-4H4"></path></svg>
         </button>
         <button class="fs-btn fs-icon-btn" id="fsRedoBtn" title="Redo change" aria-label="Redo change" disabled>
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M18.4 10.6C16.55 8.99 14.15 8 11.5 8c-4.65 0-8.58 3.03-9.96 7.22l2.37.78C4.95 12.81 7.96 10.5 11.5 10.5c1.96 0 3.73.72 5.12 1.88L13 16h9V7l-3.6 3.6z"/></svg>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 14 20 9 15 4"></polyline><path d="M4 20v-7a4 4 0 0 1 4-4h12"></path></svg>
         </button>
         <button class="fs-btn fs-edit-btn" id="fsEditBtn" aria-label="Edit text">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"></path></svg>
           <span>Edit text</span>
         </button>
       </div>
@@ -495,12 +565,37 @@
       <textarea id="fsInput" aria-label="Edit active subtitle text" placeholder="Type subtitle text... Press Ctrl+Enter to save"></textarea>
       <div class="fs-actions">
         <button class="fs-btn fs-icon-btn" id="fsEdUndoBtn" title="Undo change" aria-label="Undo change" disabled>
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M12.5 8c-2.65 0-5.05.99-6.9 2.6L2 7v9h9l-3.62-3.62c1.39-1.16 3.16-1.88 5.12-1.88 3.54 0 6.55 2.31 7.6 5.5l2.37-.78C21.08 11.03 17.15 8 12.5 8z"/></svg>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 14 4 9 9 4"></polyline><path d="M20 20v-7a4 4 0 0 0-4-4H4"></path></svg>
         </button>
         <button class="fs-btn fs-icon-btn" id="fsEdRedoBtn" title="Redo change" aria-label="Redo change" disabled>
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M18.4 10.6C16.55 8.99 14.15 8 11.5 8c-4.65 0-8.58 3.03-9.96 7.22l2.37.78C4.95 12.81 7.96 10.5 11.5 10.5c1.96 0 3.73.72 5.12 1.88L13 16h9V7l-3.6 3.6z"/></svg>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 14 20 9 15 4"></polyline><path d="M4 20v-7a4 4 0 0 1 4-4h12"></path></svg>
         </button>
         <button class="fs-btn fs-done" id="fsDoneBtn">Done</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Lightweight Welcome Tour Overlay -->
+  <div class="tour-overlay hidden" id="tourOverlay" aria-hidden="true">
+    <div class="tour-backdrop" id="tourBackdrop"></div>
+    <div class="tour-highlight" id="tourHighlight"></div>
+    <div class="tour-card" id="tourCard" role="dialog" aria-modal="true" aria-labelledby="tourTitle">
+      <div class="tour-card-header">
+        <div class="tour-step-badge" id="tourStepBadge">1 / 4</div>
+        <button class="tour-close-btn" id="tourCloseBtn" title="Close tour" aria-label="Close tour">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+        </button>
+      </div>
+      <div class="tour-card-body">
+        <h4 class="tour-card-title" id="tourTitle" data-i18n="tourStep1Title">Drop Translate File</h4>
+        <p class="tour-card-text" id="tourText" data-i18n="tourStep1Text">Drag and drop your subtitle file (.srt, .vtt, .ass, etc.) or click to browse. Processing is 100% private in your browser.</p>
+      </div>
+      <div class="tour-card-footer">
+        <button class="tour-btn tour-btn-skip" id="tourSkipBtn" data-i18n="tourSkip">Skip tour</button>
+        <div class="tour-card-actions">
+          <button class="tour-btn tour-btn-prev hidden" id="tourPrevBtn" data-i18n="tourPrev">Back</button>
+          <button class="tour-btn tour-btn-next" id="tourNextBtn" data-i18n="tourNext">Next</button>
+        </div>
       </div>
     </div>
   </div>

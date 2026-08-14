@@ -1,29 +1,100 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
   <defs>
-    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
-      <stop offset="0" stop-color="#8b9aff"/>
-      <stop offset="0.55" stop-color="#5b3fd6"/>
-      <stop offset="1" stop-color="#2c1a66"/>
+    <!-- Background Gradient -->
+    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#1e1b2e"/>
+      <stop offset="45%" stop-color="#2e1f5e"/>
+      <stop offset="100%" stop-color="#110e1f"/>
     </linearGradient>
-    <radialGradient id="glow" cx="0.3" cy="0.18" r="0.85">
-      <stop offset="0" stop-color="#ffffff" stop-opacity="0.30"/>
-      <stop offset="1" stop-color="#ffffff" stop-opacity="0"/>
+
+    <!-- Vibrant Ambient Glow -->
+    <radialGradient id="coreGlow" cx="50%" cy="45%" r="60%">
+      <stop offset="0%" stop-color="#7c5cfc" stop-opacity="0.45"/>
+      <stop offset="50%" stop-color="#d0bcff" stop-opacity="0.15"/>
+      <stop offset="100%" stop-color="#000000" stop-opacity="0"/>
     </radialGradient>
+
+    <!-- Kurdish Sun Radial Accent -->
+    <radialGradient id="sunGlow" cx="78%" cy="22%" r="40%">
+      <stop offset="0%" stop-color="#fbbf24" stop-opacity="0.35"/>
+      <stop offset="100%" stop-color="#fbbf24" stop-opacity="0"/>
+    </radialGradient>
+
+    <!-- Screen Bevel & Surface Gradient -->
+    <linearGradient id="screenGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#252336"/>
+      <stop offset="100%" stop-color="#171524"/>
+    </linearGradient>
+
+    <linearGradient id="screenBorder" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#d0bcff" stop-opacity="0.6"/>
+      <stop offset="50%" stop-color="#7c5cfc" stop-opacity="0.3"/>
+      <stop offset="100%" stop-color="#fbbf24" stop-opacity="0.5"/>
+    </linearGradient>
+
+    <!-- Subtitle Bar Gradients -->
+    <linearGradient id="subWhite" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#ffffff" stop-opacity="0.95"/>
+      <stop offset="100%" stop-color="#eaddff" stop-opacity="0.85"/>
+    </linearGradient>
+
+    <linearGradient id="subKurdish" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#fbbf24"/>
+      <stop offset="50%" stop-color="#f59e0b"/>
+      <stop offset="100%" stop-color="#f472b6"/>
+    </linearGradient>
+
+    <!-- Glass Drop Shadow -->
+    <filter id="dropShadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="16" stdDeviation="24" flood-color="#000000" flood-opacity="0.6"/>
+      <feDropShadow dx="0" dy="6" stdDeviation="10" flood-color="#7c5cfc" flood-opacity="0.3"/>
+    </filter>
+
+    <filter id="glowFilter" x="-30%" y="-30%" width="160%" height="160%">
+      <feGaussianBlur stdDeviation="5" result="blur"/>
+      <feComposite in="SourceGraphic" in2="blur" operator="over"/>
+    </filter>
   </defs>
 
-  <!-- app tile -->
-  <rect width="512" height="512" rx="116" fill="url(#bg)"/>
-  <rect width="512" height="512" rx="116" fill="url(#glow)"/>
+  <!-- App Tile Base (Rounded for standard app icon) -->
+  <rect width="512" height="512" rx="116" fill="url(#bgGrad)"/>
+  <rect width="512" height="512" rx="116" fill="url(#coreGlow)"/>
+  <rect width="512" height="512" rx="116" fill="url(#sunGlow)"/>
 
-  <!-- subtitle window glyph (matches the in-app brand mark), scaled to the tile -->
-  <g transform="translate(256 256) scale(20) translate(-12 -12)">
-    <rect x="3" y="4" width="18" height="16" rx="2.6" fill="#ffffff" fill-opacity="0.96"/>
-    <rect x="7" y="10" width="4" height="2" rx="1" fill="#2c1a66"/>
-    <rect x="13" y="10" width="5" height="2" rx="1" fill="#2c1a66"/>
-    <rect x="7" y="14" width="8" height="2" rx="1" fill="#efb8c8"/>
+  <!-- Outer Ambient Glow behind Screen -->
+  <ellipse cx="256" cy="265" rx="170" ry="120" fill="#7c5cfc" opacity="0.22" filter="url(#glowFilter)"/>
+
+  <!-- Subtitle Screen / Video Display Unit -->
+  <g filter="url(#dropShadow)">
+    <rect x="86" y="116" width="340" height="280" rx="36" fill="url(#screenGrad)" stroke="url(#screenBorder)" stroke-width="3.5"/>
+    
+    <!-- Screen Inner Display -->
+    <rect x="98" y="128" width="316" height="256" rx="26" fill="#0f0d18" fill-opacity="0.88"/>
+    
+    <!-- Screen Header Bar (dots / indicators) -->
+    <circle cx="126" cy="152" r="4.5" fill="#f472b6" opacity="0.75"/>
+    <circle cx="142" cy="152" r="4.5" fill="#fbbf24" opacity="0.75"/>
+    <circle cx="158" cy="152" r="4.5" fill="#a6f4c5" opacity="0.75"/>
+    
+    <!-- Mini translation tag badge -->
+    <rect x="334" y="143" width="62" height="18" rx="9" fill="#7c5cfc" fill-opacity="0.35" stroke="#d0bcff" stroke-width="1" stroke-opacity="0.4"/>
+    <text x="365" y="156" font-family="system-ui, -apple-system, sans-serif" font-size="10" font-weight="800" fill="#eaddff" text-anchor="middle" letter-spacing="0.5">CKB</text>
+
+    <!-- Center Play/Media Glyph Watermark -->
+    <path d="M242 202 L284 228 L242 254 Z" fill="#7c5cfc" fill-opacity="0.15"/>
+
+    <!-- Subtitle Track 1 : Source Line (Original English/Source) -->
+    <rect x="136" y="282" width="92" height="15" rx="7.5" fill="url(#subWhite)"/>
+    <rect x="238" y="282" width="138" height="15" rx="7.5" fill="url(#subWhite)"/>
+
+    <!-- Subtitle Track 2 : Kurdish Sorani Translated Line (Golden/Pink Kurdish Glow) -->
+    <g filter="url(#glowFilter)">
+      <rect x="136" y="312" width="160" height="17" rx="8.5" fill="url(#subKurdish)"/>
+      <rect x="306" y="312" width="70" height="17" rx="8.5" fill="url(#subKurdish)"/>
+    </g>
   </g>
 
-  <!-- sparkles -->
-  <path d="M430 32 Q446 46 462 60 Q446 74 430 88 Q414 74 398 60 Q414 46 430 32 Z" fill="#ffffff" fill-opacity="0.92"/>
-  <path d="M66 446 Q74 456 88 468 Q74 480 66 490 Q58 480 44 468 Q58 456 66 446 Z" fill="#efb8c8" fill-opacity="0.85"/>
+  <!-- Sparkle Accent in top right -->
+  <path d="M412 84 Q424 96 436 108 Q424 120 412 132 Q400 120 388 108 Q400 96 412 84 Z" fill="#fbbf24" opacity="0.95" filter="url(#glowFilter)"/>
+  <circle cx="412" cy="108" r="3.5" fill="#ffffff"/>
 </svg>

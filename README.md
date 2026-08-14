@@ -1,79 +1,133 @@
-# 🎬 Kurdî Subtitle Translator
+# 🎬 Kurdî Subtitle Translator | وەرگێڕی ژێرنووسی کوردی
 
-Translate subtitle files into **Kurdish (Sorani)** right in your browser.
-No upload, no signup, no backend — 100% client-side, hosted free on GitHub Pages.
-**Installable as a PWA** on Android/iOS; the app loads and previews subtitles
-**offline**, and only translation needs a connection.
+[![Progressive Web App](https://img.shields.io/badge/PWA-Installable%20%26%20Offline-7c5cfc?style=flat-square&logo=pwa&logoColor=white)](https://LOST-4EVER.github.io/kurdish-translator/)
+[![Kurdish Sorani](https://img.shields.io/badge/Language-Kurdish%20Sorani%20(ckb)-fbbf24?style=flat-square)](https://LOST-4EVER.github.io/kurdish-translator/)
+[![100% Client-Side](https://img.shields.io/badge/Privacy-100%25%20In--Browser-a6f4c5?style=flat-square&logoColor=black)](https://LOST-4EVER.github.io/kurdish-translator/)
+[![GitHub Pages](https://img.shields.io/badge/Hosted%20on-GitHub%20Pages-blue?style=flat-square&logo=github)](https://LOST-4EVER.github.io/kurdish-translator/)
 
-Target: **Kurdish Sorani / کوردیی ناوەندی** (`ckb`).
+Translate movie, anime, and TV series subtitles into **Kurdish Sorani (کوردیی ناوەندی - `ckb`)** right inside your browser. 100% client-side, completely private, installable on mobile and desktop, and works offline.
 
-## 🗂 Supported formats
+🔗 **Live App:** [https://LOST-4EVER.github.io/kurdish-translator/](https://LOST-4EVER.github.io/kurdish-translator/)
 
-| Format | Extension | Notes |
-|--------|-----------|-------|
-| SRT | `.srt` | Most common |
-| WebVTT | `.vtt` | |
-| SubStation Alpha | `.ass` | Preserves `{\...}` tags & `\N` line breaks |
-| SSA | `.ssa` | |
-| MicroDVD | `.sub` | Frame-based with FPS header |
-| SAMI | `.smi` | |
+---
 
-Works on desktop, Android, and iOS.
+## 🗂 Supported Subtitle Formats
 
-## ✨ Features
+| Format | Extension | Key Capabilities & Features |
+|---|:---:|---|
+| **SubRip** | `.srt` | Standard timecodes (`hh:mm:ss,mmm`), HTML style tags (`<i>`, `<b>`, `<u>`, `<font>`) |
+| **WebVTT** | `.vtt` | Header & cue settings (`align:start position:0%`), 2- and 3-part timecodes (`mm:ss.mmm` & `hh:mm:ss.mmm`) |
+| **Advanced SubStation Alpha** | `.ass` | Full script headers, style definitions, override codes (`{\an8}`, `{\pos()}`, `{\c&H...&}`), `\N` linebreaks |
+| **SubStation Alpha** | `.ssa` | V4 styles, dialogue layers, timing codes, and format field preservation |
+| **MicroDVD** | `.sub` | Frame-based timing with FPS headers (`{1}{1}23.976`), pipe `\|` linebreaks, control codes |
+| **SAMI** | `.smi` | `<SYNC Start=...>` blocks, multi-paragraph handling, HTML tag sanitization & entities |
+| **Plain Text** | `.txt` | Line-by-line transcript translation with automated cue pacing |
 
-- 📂 Drag-and-drop + tap-to-browse file picker — **auto-translates instantly**
-- 🎬 Supports 6 formats: SRT, VTT, ASS, SSA, SUB, SMI
-- ⚙️ Source language auto-detect or manual pick (target is always Sorani `ckb`); settings remembered
-- 🧠 Uses Google Translate's free endpoint (no API key)
-- ⚡ Batch translation — many lines per request, with newline protection
-- 🛡️ Detects merged/truncated batch responses and re-translates those lines one-by-one
-- 🏷️ Preserves formatting tags (`<i>`, `{\an8}`, `\N`, etc.)
-- 🔁 Auto-retry with **exponential backoff** + host fallback to survive Google throttling (429), plus a cold-start warmup so the first run rarely fails
-- 🎞️ **Live translation reel** — a mini subtitle screen shows the latest line as it's translated, with a scrollable feed below and an animated progress bar
-- 🎬 Built-in preview player: play cues on a 16:9 screen, seek, speed 0.5×–2×
-- ✍️ Sorani typography: `,`→`،` `;`→`؛` `?`→`؟`, proper RTL rendering with `Noto Naskh Arabic`
-- 📱 Fully responsive mobile UI with progress bar and cancel
-- 📲 **Installable PWA** — add to home screen on Android/iOS (works standalone)
-- 🛰️ **Offline app shell** — loads and previews subtitles with no connection
-- 🔒 Files never leave your device
+---
 
-## 🚀 Deploy to GitHub Pages
+## ✨ Features & Highlights
 
-1. Create a repo and push this folder:
-   ```bash
-   git init
-   git add .
-   git commit -m "Kurdish subtitle translator"
-   git branch -M main
-   git remote add origin https://github.com/<you>/<repo>.git
-   git push -u origin main
-   ```
-2. On GitHub: **Settings → Pages → Branch: `main` / `/ (root)` → Save**.
-3. Done. Your site is live at `https://<you>.github.io/<repo>/`.
+### 🚀 High-Speed Batch Translation
+- **Intelligent Batching:** Groups subtitle lines into delimited batches for fast translations.
+- **Markup Protection:** Replaces HTML tags, ASS tags (`{\...}`), and MicroDVD codes with bracketed tokens before translation, restoring them intact afterward.
+- **Newline Sentinel Preservation:** Multiline subtitle cues are protected with literal sentinels so line breaks match the original timing.
+- **Failover & Self-Healing:** Merged or truncated responses automatically fallback to individual line translation with exponential backoff and alternate endpoint routing.
 
-## 🗂 Project Structure
+### ✍️ Kurdish Sorani Orthography & Natural Dialogue Engine
+- **Accurate Kurdish Typography:** Converts punctuation to Arabic-script marks (`,` &rarr; `،`, `;` &rarr; `؛`, `?` &rarr; `؟`).
+- **Alphabet Normalization:** Normalizes Arabic Kaf (`ك` &rarr; `ک`), Yaa (`ي`/`ى` &rarr; `ی`), and Teh Marbuta (`ة` &rarr; `ە`).
+- **Heavy R (ڕ) & Velarized L (ڵ):** Context-aware Kurdish root and affix orthography corrections (e.g. `ڕۆژ`, `ڕاست`, `ماڵ`, `بەڵێ`, `خۆشحاڵ`).
+- **Verbal Prefix & Affix Rejoining:** Reconnects split preverbs and aspect markers (`دە-`, `نا-`, `نە-`, `مە-`, `هەڵ-`, `تێ-`, `پێ-`, `وەر-`).
+- **Colloquial Subtitle Slang Preprocessing:** Expands spoken idioms (*gonna, wanna, gotta, hold on a sec, what's up, never mind*) into clear, translatable expressions.
+- **Kurdish Numbers Option (٠١٢٣):** Optional toggle to convert Western digits to Kurdish Eastern Arabic digits while protecting technical tags.
+
+### 🎬 Real-Time Subtitle Player & Preview
+- **Video-Free Real-Time Preview:** Play subtitles synced to an accurate internal clock with 0.5× to 2× playback speed.
+- **Interactive Timeline:** Scannable cue markers, hover timecode tooltip, and smooth scrubbing.
+- **Font Scaling:** Dynamic subtitle sizing (`Small`, `Normal`, `Large`, `XL`) with responsive typography.
+- **Keyboard Navigation:**
+  - <kbd>Space</kbd> Play / Pause
+  - <kbd>&larr;</kbd> / <kbd>&rarr;</kbd> Seek &plusmn;5 seconds
+  - <kbd>&uarr;</kbd> / <kbd>&darr;</kbd> Jump to previous / next cue
+  - <kbd>Esc</kbd> Exit fullscreen preview
+
+### 📝 Live Subtitle Editor & Search
+- **Live Two-Way Sync:** Typing in any cue updates the preview screen and refreshes download packages in real time.
+- **Instant Search:** Filter cues in real time by dialogue text, cue number, or timestamp.
+- **Full Undo / Redo History:** Multi-level history stack with keyboard shortcuts (<kbd>Ctrl</kbd>+<kbd>Z</kbd> / <kbd>Ctrl</kbd>+<kbd>Y</kbd> / <kbd>Cmd</kbd>+<kbd>Shift</kbd>+<kbd>Z</kbd>).
+- **Fullscreen Focus Mode:** Distraction-free playback and one-tap cue editing.
+- **Editor Toggles:** Show/hide timecodes, sync video position on click, and toggle "Save edits".
+
+### ⚙️ Export & Hardware Compatibility
+- **Format Conversion on Export:** Convert between SRT, WebVTT, and ASS/SSA upon download.
+- **UTF-8 BOM:** Optional `\uFEFF` byte order mark for Smart TVs, legacy players, and Windows media software.
+- **Windows CRLF Line Endings:** Optional `\r\n` line endings for hardware players.
+
+### 📱 Progressive Web App (PWA) & Offline Mode
+- **Installable:** Add to home screen on Android, iOS, Windows, macOS, and Linux.
+- **Offline UI & Player:** Service worker caches app shell, fonts, icons, and player logic so you can edit and preview subtitles without an active internet connection.
+
+---
+
+## 🛠️ Architecture & Source Code
+
+Static, build-free modular architecture (vanilla ES6 JavaScript, HTML5, CSS3):
 
 ```
-├── index.html              # Single-page UI
-├── manifest.json           # PWA manifest (installable)
-├── sw.js                   # Service worker (offline app shell)
-├── AGENTS.md               # Agent instructions / conventions
+├── index.html              # Main application single-page layout
+├── manifest.json           # PWA metadata, standalone display & icons
+├── sw.js                   # Service worker cache strategy (offline app shell)
+├── metadata.json           # Application metadata
+├── AGENTS.md               # Architecture documentation & coding guidelines
 ├── assets/
-│   ├── css/style.css       # Styling / responsive layout
-│   ├── icons/              # PWA icons (192, 512, maskable, apple-touch)
+│   ├── css/
+│   │   └── style.css       # Material 3 adaptive dark theme design system
+│   ├── icons/              # PWA icons (192, 512, maskable 512, apple-touch, SVG)
 │   └── js/
-│       ├── parser.js       # 6 subtitle formats: parse + serialize
-│       ├── translator.js   # Google batch translation engine (retry + backoff, Sorani normalization)
-│       ├── player.js       # Preview subtitle player (16:9 screen, RTL-aware)
-│       └── app.js          # UI logic, file drop/encoding, download, SW registration
+│       ├── parser.js       # Subtitle parser & serializer (SRT, VTT, ASS, SSA, SUB, SMI, TXT)
+│       ├── translator.js   # Batch translation engine, rate-limit retry, Sorani normalizer
+│       ├── player.js       # Real-time subtitle preview player & timeline controller
+│       ├── i18n.js         # Kurdish Sorani (ckb) and English (en) localization dictionaries
+│       ├── toast.js        # Non-intrusive interactive notification system
+│       └── app.js          # Main UI controller, event delegation, history & PWA registration
 ```
 
-Scripts load in this order (do not reorder): `parser.js` → `translator.js` →
-`player.js` → `app.js`.
+### Script Execution Order
+Scripts load in classic lexical scope in this exact sequence:
+1. [`parser.js`](file:///home/lost/Desktop/app/assets/js/parser.js) &rarr; exposes `SubParser`
+2. [`translator.js`](file:///home/lost/Desktop/app/assets/js/translator.js) &rarr; exposes `Translator`
+3. [`i18n.js`](file:///home/lost/Desktop/app/assets/js/i18n.js) &rarr; exposes `UI_I18N`
+4. [`toast.js`](file:///home/lost/Desktop/app/assets/js/toast.js) &rarr; exposes `Toast`
+5. [`player.js`](file:///home/lost/Desktop/app/assets/js/player.js) &rarr; exposes `SubtitlePlayer`
+6. [`app.js`](file:///home/lost/Desktop/app/assets/js/app.js) &rarr; initializes the UI controller
 
-## ⚠️ Note
+---
 
-The free Google endpoint is unofficial and public — expect occasional rate limits
-or timeouts on very large files. For large subtitles the app splits requests into
-batches and retries each line individually on failure.
+## 💻 Local Development & Testing
+
+No external dependencies, build step, or compilation required.
+
+```bash
+# Run local development server
+npm run dev
+# or: node server.js
+
+# Syntax check all JavaScript files
+npm run lint
+```
+
+---
+
+## 🌐 Deployment to GitHub Pages
+
+1. Push this repository to GitHub on branch `main`.
+2. In your GitHub repository: navigate to **Settings &rarr; Pages**.
+3. Under **Build and deployment &rarr; Source**, choose **Deploy from a branch**.
+4. Set branch to `main` and folder to `/ (root)`, then click **Save**.
+5. Your application is live at `https://<username>.github.io/<repository-name>/`.
+
+---
+
+## 📄 License
+
+Open-source project built for the Kurdish community and subtitling enthusiasts. Feel free to contribute and share!

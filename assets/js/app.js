@@ -60,6 +60,7 @@
     installBtn: '#installBtn',
     toast: '#toast',
     editorList: '#editorList', editorStatus: '#editorStatus',
+    edSearchInput: '#edSearchInput', edSearchCount: '#edSearchCount', edSearchClearBtn: '#edSearchClearBtn',
     edCount: '#edCount', undoBtn: '#undoBtn', redoBtn: '#redoBtn',
     showTimeToggle: '#showTimeToggle', saveEditsToggle: '#saveEditsToggle',
     syncVideoToggle: '#syncVideoToggle',
@@ -72,6 +73,12 @@
     fsEdUndoBtn: '#fsEdUndoBtn', fsEdRedoBtn: '#fsEdRedoBtn',
     fsPlayBtn: '#fsPlayBtn', fsSkipBackBtn: '#fsSkipBackBtn', fsSkipForwardBtn: '#fsSkipForwardBtn',
     fsEditor: '#fsEditor', fsInput: '#fsInput', fsDoneBtn: '#fsDoneBtn',
+    tourTriggerBtn: '#tourTriggerBtn', tourOverlay: '#tourOverlay',
+    tourBackdrop: '#tourBackdrop', tourHighlight: '#tourHighlight',
+    tourCard: '#tourCard', tourStepBadge: '#tourStepBadge',
+    tourCloseBtn: '#tourCloseBtn', tourTitle: '#tourTitle',
+    tourText: '#tourText', tourSkipBtn: '#tourSkipBtn',
+    tourPrevBtn: '#tourPrevBtn', tourNextBtn: '#tourNextBtn',
   });
   const tabButtons = $$('.tab');
 
@@ -105,6 +112,24 @@
         el.textContent = dict[key];
       }
     });
+
+    $$('[data-i18n-placeholder]').forEach((el) => {
+      const key = el.dataset.i18nPlaceholder;
+      if (dict[key]) {
+        el.placeholder = dict[key];
+      }
+    });
+
+    $$('[data-i18n-title]').forEach((el) => {
+      const key = el.dataset.i18nTitle;
+      if (dict[key]) {
+        el.title = dict[key];
+      }
+    });
+
+    if (typeof isTourOpen !== 'undefined' && isTourOpen) {
+      renderTourStep(currentTourStep);
+    }
   }
 
   // ---------- State ----------
@@ -224,14 +249,38 @@
 
   let undoStack = [];
   let redoStack = [];
+  let lastCommittedState = '';
+  let editDebounceTimer = null;
+
+  function initHistory(cues) {
+    undoStack = [];
+    redoStack = [];
+    lastCommittedState = JSON.stringify(cues);
+    updateUndoRedoUI();
+    checkEditsState();
+  }
+
+  function recordPreEditSnapshot() {
+    if (!workCues) return;
+    const currentJson = JSON.stringify(workCues);
+    if (currentJson === lastCommittedState) {
+      undoStack.push(JSON.parse(currentJson));
+      if (undoStack.length > 60) undoStack.shift();
+      redoStack = [];
+      updateUndoRedoUI();
+    }
+  }
 
   function pushUndoState() {
+    clearTimeout(editDebounceTimer);
     if (!workCues) return;
-    const snapshot = workCues.map((c) => ({ ...c }));
-    undoStack.push(snapshot);
-    if (undoStack.length > 50) undoStack.shift();
-    redoStack = [];
-    updateUndoRedoUI();
+    const currentJson = JSON.stringify(workCues);
+    if (currentJson !== lastCommittedState) {
+      lastCommittedState = currentJson;
+      updateUndoRedoUI();
+      checkEditsState();
+      prepareDownload();
+    }
   }
 
   function updateUndoRedoUI() {
@@ -247,66 +296,99 @@
 
   function performUndo() {
     if (!undoStack.length) return;
+    clearTimeout(editDebounceTimer);
     const currentSnapshot = workCues.map((c) => ({ ...c }));
     redoStack.push(currentSnapshot);
     const prev = undoStack.pop();
     workCues = prev.map((c) => ({ ...c }));
-    dirty = true;
+    lastCommittedState = JSON.stringify(workCues);
+    dirty = hasEdits();
     updateUndoRedoUI();
     restoreCuesState();
-    if (typeof Toast !== 'undefined') {
-      Toast.show(currentUiLang === 'ckb' ? 'گەڕاندنەوە ئەنجامدرا' : 'Undo successful', 'info');
-    }
+    checkEditsState();
   }
 
   function performRedo() {
     if (!redoStack.length) return;
+    clearTimeout(editDebounceTimer);
     const currentSnapshot = workCues.map((c) => ({ ...c }));
     undoStack.push(currentSnapshot);
     const next = redoStack.pop();
     workCues = next.map((c) => ({ ...c }));
-    dirty = true;
+    lastCommittedState = JSON.stringify(workCues);
+    dirty = hasEdits();
     updateUndoRedoUI();
     restoreCuesState();
-    if (typeof Toast !== 'undefined') {
-      Toast.show(currentUiLang === 'ckb' ? 'دووبارەکردنەوە ئەنجامدرا' : 'Redo successful', 'info');
+    checkEditsState();
+  }
+
+  function hasEdits() {
+    if (!baseCues || !workCues) return false;
+    if (baseCues.length !== workCues.length) return true;
+    for (let i = 0; i < workCues.length; i++) {
+      if (workCues[i].text !== baseCues[i].text) return true;
     }
+    return false;
+  }
+
+  function checkEditsState() {
+    const edited = hasEdits();
+    dirty = edited;
+    if (els.edDownloadBtn) {
+      if (edited && parsed) {
+        els.edDownloadBtn.style.display = 'inline-flex';
+        els.edDownloadBtn.classList.add('has-edits');
+      } else {
+        els.edDownloadBtn.style.display = 'none';
+        els.edDownloadBtn.classList.remove('has-edits');
+      }
+    }
+    updateStatus();
   }
 
   function restoreCuesState() {
     loadPreview(workCues);
-    buildEditor();
+    if (rowEls && rowEls.length === workCues.length) {
+      workCues.forEach((c, i) => {
+        const row = rowEls[i];
+        if (row) {
+          const input = row.querySelector('.ed-input');
+          if (input) {
+            const val = displayText(c.text);
+            if (input.value !== val) {
+              input.value = val;
+              input.setAttribute('dir', dirFor(val));
+              autoGrow(input);
+            }
+          }
+        }
+      });
+    } else {
+      buildEditor();
+    }
+    if (fsActive) {
+      updateFsScreen();
+      if (fsCueIndex >= 0 && workCues[fsCueIndex] && els.fsInput) {
+        els.fsInput.value = displayText(workCues[fsCueIndex].text);
+        els.fsInput.setAttribute('dir', dirFor(els.fsInput.value));
+      }
+    }
     prepareDownload();
-    updateStatus();
-    if (fsActive) updateFsScreen();
   }
 
-  let editToastTimer = null;
-
   /** Write a user edit into a cue: player screen, dirty flag, debounced download. */
-  function applyCueEdit(i, text, isCommitted = false) {
-    if (i < 0 || !workCues[i]) return;
-    if (isCommitted && workCues[i].text !== text) {
-      pushUndoState();
-    }
+  function applyCueEdit(i, text) {
+    if (i < 0 || !workCues || !workCues[i]) return;
+    if (workCues[i].text === text) return;
+
+    recordPreEditSnapshot();
+
     workCues[i].text = text;
     SubtitlePlayer.updateText(i, stripTags(text));
     dirty = true;
-    updateStatus();
 
-    // Encouraging debounced toast when editing subtitle cues
-    clearTimeout(editToastTimer);
-    editToastTimer = setTimeout(() => {
-      if (typeof Toast !== 'undefined') {
-        Toast.editing(
-          currentUiLang === 'ckb' ? `دێڕی #${i + 1} دەستکاری کرا` : `Cue #${i + 1} updated live!`,
-          currentUiLang === 'ckb' ? 'گۆڕانکارییەکان ڕاستەوخۆ لەسەر شاشەکە پیشان دەدرێن.' : 'Edits preview instantly on screen.'
-        );
-      }
-    }, 1500);
-
-    // Keep the main editor list textarea in sync
-    const row = rowEls[i];
+    // Keep the main editor list textarea in sync if not the event target
+    const row = rowEls ? rowEls[i] : null;
     if (row) {
       const input = row.querySelector('.ed-input');
       const val = displayText(text);
@@ -317,8 +399,24 @@
       }
     }
 
-    clearTimeout(prepareTimer);
-    prepareTimer = setTimeout(prepareDownload, 250);
+    if (fsActive && fsCueIndex === i && els.fsInput) {
+      const val = displayText(text);
+      if (els.fsInput.value !== val) {
+        els.fsInput.value = val;
+        els.fsInput.setAttribute('dir', dirFor(val));
+      }
+      updateFsScreen();
+    }
+
+    clearTimeout(editDebounceTimer);
+    editDebounceTimer = setTimeout(() => {
+      lastCommittedState = JSON.stringify(workCues);
+      updateUndoRedoUI();
+      checkEditsState();
+      prepareDownload();
+    }, 400);
+
+    checkEditsState();
   }
 
   function loadPreview(cues = workCues) {
@@ -412,6 +510,55 @@
 
     rowEls = rows;
     lastActiveRow = null;
+    if (els.edSearchInput && els.edSearchInput.value.trim()) {
+      filterEditor();
+    }
+  }
+
+  function filterEditor() {
+    if (!els.edSearchInput) return;
+    const query = els.edSearchInput.value.trim().toLowerCase();
+    const clearBtn = els.edSearchClearBtn;
+    const countBadge = els.edSearchCount;
+
+    if (!query) {
+      if (clearBtn) clearBtn.classList.add('hidden');
+      if (countBadge) countBadge.classList.add('hidden');
+      if (rowEls) {
+        rowEls.forEach((row) => {
+          if (row) {
+            row.classList.remove('search-hidden', 'search-matched');
+          }
+        });
+      }
+      return;
+    }
+
+    if (clearBtn) clearBtn.classList.remove('hidden');
+
+    let matchCount = 0;
+    if (rowEls && workCues) {
+      workCues.forEach((cue, i) => {
+        const row = rowEls[i];
+        if (!row) return;
+        const text = (cue.text || '').toLowerCase();
+        const time = `${SubParser.fmtSRT(cue.start)} ${SubParser.fmtSRT(cue.end)}`.toLowerCase();
+        const matches = text.includes(query) || time.includes(query) || String(i + 1).includes(query);
+        if (matches) {
+          matchCount++;
+          row.classList.remove('search-hidden');
+          row.classList.add('search-matched');
+        } else {
+          row.classList.add('search-hidden');
+          row.classList.remove('search-matched');
+        }
+      });
+    }
+
+    if (countBadge) {
+      countBadge.textContent = String(matchCount);
+      countBadge.classList.remove('hidden');
+    }
   }
 
   let userScrollTimer = null;
@@ -663,6 +810,7 @@
 
     file = f;
     parsed = parsedFile;
+    isDemoLoaded = false;
     resultText = null;
     if (resultUrl) { URL.revokeObjectURL(resultUrl); resultUrl = null; }
     els.fileName.textContent = f.name;
@@ -774,11 +922,6 @@
       const translated = await Translator.translateLines(lines, srcLang, tgtLang, (p, done, total) => {
         if (cancelFlag) return;
         setProgress(p, `Translated ${done} / ${total} lines`);
-        const pct = Math.round(p * 100);
-        if (typeof Toast !== 'undefined' && pct >= lastToastPct + 35 && pct < 100) {
-          lastToastPct = pct;
-          Toast.encouragingProgress(pct);
-        }
       }, controller.signal, { accuracy, kurdishDigits, onBatch: (results, done) => { if (!cancelFlag) renderLive(results, done); } });
       if (cancelFlag) return; // cancelled mid-run: discard results, stay on settings
 
@@ -1106,6 +1249,19 @@
       }
     });
 
+    if (els.edSearchInput) {
+      els.edSearchInput.addEventListener('input', filterEditor);
+    }
+    if (els.edSearchClearBtn) {
+      els.edSearchClearBtn.addEventListener('click', () => {
+        if (els.edSearchInput) {
+          els.edSearchInput.value = '';
+          filterEditor();
+          els.edSearchInput.focus();
+        }
+      });
+    }
+
     // Safari iOS ignores the `download` attribute for blob: URLs and saves
     // the file as .txt. Subtitle text is small, so swap to a data: URL on
     // iOS (within the click gesture) where the filename is honored.
@@ -1227,6 +1383,289 @@
     els.srcLang.addEventListener('change', () => store.set('srcLang', els.srcLang.value));
   }
 
+  // ---------- Welcome Tour System with Live Preview Demo ----------
+  let currentTourStep = 0;
+  let isTourOpen = false;
+  let isDemoLoaded = false;
+
+  const DEMO_CUES = [
+    { index: 1, start: 800, end: 4200, text: 'Welcome to Kurdish Subtitle Translator!\nبەخێربێن بۆ وەرگێڕی ژێرنووسی کوردی!' },
+    { index: 2, start: 4700, end: 8800, text: 'Translate SRT, VTT, ASS, SSA, SUB & SAMI to Kurdish Sorani.\nوەرگێڕانی هەموو جۆرەکانی ژێرنووس بۆ زمانی کوردی سۆرانی.' },
+    { index: 3, start: 9300, end: 13800, text: 'Live subtitle player synced with real-time playback.\nپێشاندەری ژێرنووس بە کاتی ڕاستەقینە و هاوکات لەگەڵ مۆڵەتەکان.' },
+    { index: 4, start: 14300, end: 19000, text: 'Type to edit cues live, search lines instantly, and download anytime!\nدەستکاری دەقەکان بکە بە ڕاستەوخۆ و بە ئاسانی پاشەکەوتی بکە!' }
+  ];
+
+  function loadDemoForTour() {
+    isDemoLoaded = true;
+    parsed = { format: 'srt', cues: DEMO_CUES.map((c) => ({ ...c })) };
+    file = { name: 'demo_movie_subtitles.srt', size: 1420 };
+    updateCues(DEMO_CUES);
+    showStep('done');
+  }
+
+  const TOUR_STEPS = [
+    {
+      targetSel: '#dropzone',
+      titleKey: 'tourStep1Title',
+      textKey: 'tourStep1Text',
+      badge: '1 / 4',
+      showPrev: false,
+      nextKey: 'tourNext',
+      ensureTab: 'translate',
+      onEnter: () => {
+        showStep('upload');
+        switchTab('translate');
+      }
+    },
+    {
+      targetSel: '#stepSettings',
+      titleKey: 'tourStep2Title',
+      textKey: 'tourStep2Text',
+      badge: '2 / 4',
+      showPrev: true,
+      nextKey: 'tourNext',
+      ensureTab: 'translate',
+      onEnter: () => {
+        if (!parsed) {
+          parsed = { format: 'srt', cues: DEMO_CUES.map((c) => ({ ...c })) };
+          file = { name: 'demo_movie.srt', size: 1420 };
+          els.fileName.textContent = 'demo_movie.srt';
+          els.fileMeta.textContent = '4 lines • 1.4 KB • SRT';
+          updateCues(DEMO_CUES);
+        }
+        showStep('settings');
+        switchTab('translate');
+      }
+    },
+    {
+      targetSel: '.player-card',
+      titleKey: 'tourStep3Title',
+      textKey: 'tourStep3Text',
+      badge: '3 / 4',
+      showPrev: true,
+      nextKey: 'tourNext',
+      ensureTab: 'preview',
+      onEnter: () => {
+        loadDemoForTour();
+        SubtitlePlayer.seek(0);
+        SubtitlePlayer.play();
+      }
+    },
+    {
+      targetSel: '.editor-card',
+      titleKey: 'tourStep4Title',
+      textKey: 'tourStep4Text',
+      badge: '4 / 4',
+      showPrev: true,
+      nextKey: 'tourDone',
+      ensureTab: 'preview',
+      onEnter: () => {
+        if (!parsed) loadDemoForTour();
+        switchTab('preview');
+      }
+    }
+  ];
+
+  function openTour(stepIndex = 0) {
+    if (!els.tourOverlay) return;
+    currentTourStep = stepIndex;
+    isTourOpen = true;
+    els.tourOverlay.classList.remove('hidden');
+    els.tourOverlay.setAttribute('aria-hidden', 'false');
+    renderTourStep(currentTourStep);
+    window.addEventListener('resize', handleTourReposition);
+    window.addEventListener('scroll', handleTourReposition, { passive: true });
+    window.addEventListener('keydown', handleTourKeydown);
+  }
+
+  function closeTour(markSeen = true) {
+    if (!els.tourOverlay) return;
+    isTourOpen = false;
+    els.tourOverlay.classList.add('hidden');
+    els.tourOverlay.setAttribute('aria-hidden', 'true');
+    window.removeEventListener('resize', handleTourReposition);
+    window.removeEventListener('scroll', handleTourReposition);
+    window.removeEventListener('keydown', handleTourKeydown);
+    if (markSeen) {
+      store.set('kurdish_tour_seen', '1');
+    }
+    
+    // Always reset the app state when closing the tour
+    file = null;
+    parsed = null;
+    isDemoLoaded = false;
+    baseCues = null;
+    workCues = null;
+    undoStack = [];
+    redoStack = [];
+    lastCommittedState = '';
+    dirty = false;
+    activeIdx = -1;
+    
+    if (els.fileInput) els.fileInput.value = '';
+    if (els.fileName) els.fileName.textContent = '';
+    if (els.editorList) els.editorList.innerHTML = '';
+    buildEditor();
+    
+    SubtitlePlayer.pause();
+    SubtitlePlayer.seek(0);
+    SubtitlePlayer.load([]); // Call load directly to avoid loadPreview enabling the tab
+    if (els.previewTab) els.previewTab.classList.add('disabled');
+    
+    showStep('upload');
+    switchTab('translate');
+    
+    resultText = null;
+    if (resultUrl) { URL.revokeObjectURL(resultUrl); resultUrl = null; }
+    
+    updateUndoRedoUI();
+    checkEditsState();
+  }
+
+  function renderTourStep(index) {
+    if (index < 0 || index >= TOUR_STEPS.length) {
+      closeTour(true);
+      return;
+    }
+    currentTourStep = index;
+    const step = TOUR_STEPS[index];
+
+    if (step.ensureTab) {
+      if (step.ensureTab === 'preview' && !parsed) {
+        loadDemoForTour();
+      }
+      switchTab(step.ensureTab);
+    }
+
+    if (step.onEnter) {
+      step.onEnter();
+    }
+
+    const dict = dicts[currentUiLang] || dicts.en;
+    if (els.tourTitle) els.tourTitle.textContent = dict[step.titleKey] || '';
+    if (els.tourText) els.tourText.textContent = dict[step.textKey] || '';
+    if (els.tourStepBadge) els.tourStepBadge.textContent = step.badge;
+    if (els.tourPrevBtn) {
+      els.tourPrevBtn.classList.toggle('hidden', !step.showPrev);
+      els.tourPrevBtn.textContent = dict.tourPrev || 'Back';
+    }
+    if (els.tourNextBtn) {
+      els.tourNextBtn.textContent = dict[step.nextKey] || (index === TOUR_STEPS.length - 1 ? 'Got it!' : 'Next');
+    }
+    if (els.tourSkipBtn) {
+      els.tourSkipBtn.textContent = dict.tourSkip || 'Skip tour';
+    }
+
+    setTimeout(() => {
+      positionTourElements(step.targetSel);
+    }, 70);
+  }
+
+  function positionTourElements(targetSel) {
+    const target = $(targetSel);
+    if (!target || !els.tourHighlight || !els.tourCard) return;
+
+    const rect = target.getBoundingClientRect();
+    const isOutOfView = rect.top < 60 || rect.bottom > (window.innerHeight - 60);
+    if (isOutOfView) {
+      target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      setTimeout(() => updateTourGeometry(target), 200);
+    } else {
+      updateTourGeometry(target);
+    }
+  }
+
+  function updateTourGeometry(target) {
+    if (!target || !els.tourHighlight || !els.tourCard) return;
+    const rect = target.getBoundingClientRect();
+    const pad = 6;
+    const isMobile = window.innerWidth <= 640;
+
+    els.tourHighlight.style.top = `${Math.max(0, rect.top - pad)}px`;
+    els.tourHighlight.style.left = `${Math.max(0, rect.left - pad)}px`;
+    els.tourHighlight.style.width = `${rect.width + pad * 2}px`;
+    els.tourHighlight.style.height = `${rect.height + pad * 2}px`;
+
+    if (!isMobile) {
+      const cardWidth = 350;
+      const cardHeight = els.tourCard.offsetHeight || 190;
+
+      let top = rect.bottom + 14;
+      let left = rect.left + (rect.width / 2) - (cardWidth / 2);
+
+      if (top + cardHeight > window.innerHeight - 16) {
+        top = Math.max(16, rect.top - cardHeight - 14);
+      }
+
+      left = Math.max(16, Math.min(window.innerWidth - cardWidth - 16, left));
+
+      els.tourCard.style.top = `${top}px`;
+      els.tourCard.style.left = `${left}px`;
+      els.tourCard.style.bottom = 'auto';
+      els.tourCard.style.right = 'auto';
+    }
+  }
+
+  function handleTourReposition() {
+    if (!isTourOpen) return;
+    const step = TOUR_STEPS[currentTourStep];
+    if (step) {
+      const target = $(step.targetSel);
+      if (target) updateTourGeometry(target);
+    }
+  }
+
+  function handleTourKeydown(e) {
+    if (!isTourOpen) return;
+    if (e.key === 'Escape') {
+      e.preventDefault();
+      closeTour(true);
+    } else if (e.key === 'ArrowRight' || e.key === 'Enter') {
+      if (currentTourStep < TOUR_STEPS.length - 1) {
+        renderTourStep(currentTourStep + 1);
+      } else {
+        closeTour(true);
+      }
+    } else if (e.key === 'ArrowLeft') {
+      if (currentTourStep > 0) {
+        renderTourStep(currentTourStep - 1);
+      }
+    }
+  }
+
+  function bindTour() {
+    if (els.tourTriggerBtn) {
+      els.tourTriggerBtn.addEventListener('click', () => {
+        openTour(0);
+      });
+    }
+    if (els.tourCloseBtn) {
+      els.tourCloseBtn.addEventListener('click', () => closeTour(true));
+    }
+    if (els.tourSkipBtn) {
+      els.tourSkipBtn.addEventListener('click', () => closeTour(true));
+    }
+    if (els.tourBackdrop) {
+      els.tourBackdrop.addEventListener('click', () => closeTour(true));
+    }
+    if (els.tourPrevBtn) {
+      els.tourPrevBtn.addEventListener('click', () => {
+        if (currentTourStep > 0) {
+          renderTourStep(currentTourStep - 1);
+        }
+      });
+    }
+    if (els.tourNextBtn) {
+      els.tourNextBtn.addEventListener('click', () => {
+        if (currentTourStep < TOUR_STEPS.length - 1) {
+          renderTourStep(currentTourStep + 1);
+        } else {
+          closeTour(true);
+        }
+      });
+    }
+  }
+
   // ---------- Init ----------
   function init() {
     els.previewTab.classList.add('disabled'); // enabled once a file is loaded
@@ -1239,6 +1678,7 @@
     bindDropzone();
     bindActions();
     bindFs();
+    bindTour();
     SubtitlePlayer.init();
 
     // PWA: register service worker for installability + offline app shell.
@@ -1283,6 +1723,25 @@
     applyLanguage(savedLang);
 
     buildEditor();
+
+    // Check first-time user and trigger tour gracefully
+    if (!store.get('kurdish_tour_seen')) {
+      setTimeout(() => {
+        if (!file && !isTourOpen) {
+          openTour(0);
+        }
+      }, 550);
+    }
+
+    // Handle mobile orientation changes and window resizing for responsive editor rows
+    let resizeTimer = null;
+    window.addEventListener('resize', () => {
+      clearTimeout(resizeTimer);
+      resizeTimer = setTimeout(() => {
+        const inputs = els.editorList.querySelectorAll('.ed-input');
+        inputs.forEach((input) => autoGrow(input));
+      }, 100);
+    });
   }
 
   init();

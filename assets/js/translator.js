@@ -12,7 +12,9 @@ const Translator = (() => {
   // still answers when the first keeps returning 429.
   const ENDPOINTS = [
     'https://translate.googleapis.com/translate_a/single',
+    'https://clients5.google.com/translate_a/single',
     'https://translate.google.com/translate_a/single',
+    'https://clients1.google.com/translate_a/single',
   ];
 
   // Keep requests modest to avoid timeouts on mobile networks.
@@ -67,7 +69,8 @@ const Translator = (() => {
   /** Put the original markup back in place of the bracketed tokens. */
   function restore(s, toks) {
     if (!toks || !toks.length) return s;
-    return s.replace(/[\[\(]\s*T\s*[-_]?\s*([\d\u0660-\u0669\u06f0-\u06f9]+)\s*[\]\)]/gi, (_, numStr) => {
+    return s.replace(/(?:\[|\()\s*(?:T|t|ت|تی|تاک)\s*[-_]?\s*([\d\u0660-\u0669\u06f0-\u06f9]+)\s*(?:\]|\))|\b(?:T|t|ت|تی|تاک)\s*[-_]?\s*([\d\u0660-\u0669\u06f0-\u06f9]+)\b/gi, (_, n1, n2) => {
+      const numStr = n1 || n2;
       const ascii = numStr.replace(/[\u0660-\u0669]/g, (d) => String(d.charCodeAt(0) - 0x0660))
                           .replace(/[\u06f0-\u06f9]/g, (d) => String(d.charCodeAt(0) - 0x06f0));
       const id = parseInt(ascii, 10);
@@ -83,7 +86,7 @@ const Translator = (() => {
     if (tgtLang !== 'ckb' || (srcLang !== 'en' && srcLang !== 'auto')) return text;
     let s = text;
 
-    // Expand informal contractions and slang
+    // Expand informal contractions and colloquial slang
     s = s.replace(/\bgonna\b/gi, 'going to')
          .replace(/\bwanna\b/gi, 'want to')
          .replace(/\bgotta\b/gi, 'have to')
@@ -101,7 +104,7 @@ const Translator = (() => {
          .replace(/\b'cause\b/gi, 'because')
          .replace(/\bcuz\b/gi, 'because');
 
-    // Subtitle idioms (ordered to replace longer phrases first without adding trailing punctuation)
+    // Subtitle idioms and common film dialogue expressions
     s = s.replace(/\bhold on a sec(ond)?\b/gi, 'wait a moment')
          .replace(/\bhang on a sec(ond)?\b/gi, 'wait a moment')
          .replace(/\bgive me a sec(ond)?\b/gi, 'wait a moment')
@@ -113,9 +116,16 @@ const Translator = (() => {
          .replace(/\bwhat is wrong\b/gi, 'what is the problem')
          .replace(/\bwhat'?s going on\b/gi, 'what is happening')
          .replace(/\bnever mind\b/gi, 'it is not important')
+         .replace(/\bcut it out\b/gi, 'stop it')
+         .replace(/\bpiece of cake\b/gi, 'very easy')
+         .replace(/\bmy bad\b/gi, 'my mistake')
+         .replace(/\bno big deal\b/gi, 'not important')
+         .replace(/\bchill out\b/gi, 'calm down')
+         .replace(/\btake your time\b/gi, 'do not rush')
          .replace(/\bshut up\b/gi, 'be quiet')
          .replace(/\byou'?re welcome\b/gi, 'you are welcome')
          .replace(/\bcheck it out\b/gi, 'look at this')
+         .replace(/\bcheck this out\b/gi, 'look at this')
          .replace(/\bno way\b/gi, 'it is impossible')
          .replace(/\bcome on\b/gi, 'come on')
          .replace(/\bc'mon\b/gi, 'come on')
@@ -128,7 +138,19 @@ const Translator = (() => {
          .replace(/\bby the way\b/gi, 'incidentally')
          .replace(/\bfor real\b/gi, 'really')
          .replace(/\bmake sure\b/gi, 'ensure')
-         .replace(/\bcalm down\b/gi, 'be calm');
+         .replace(/\bcalm down\b/gi, 'be calm')
+         .replace(/\bhurry up\b/gi, 'hurry up')
+         .replace(/\blook out\b/gi, 'be careful')
+         .replace(/\bwatch out\b/gi, 'be careful')
+         .replace(/\bstep aside\b/gi, 'move aside')
+         .replace(/\bhands up\b/gi, 'raise your hands')
+         .replace(/\bget down\b/gi, 'duck down')
+         .replace(/\bgood job\b/gi, 'well done')
+         .replace(/\bway to go\b/gi, 'well done')
+         .replace(/\byou bet\b/gi, 'of course')
+         .replace(/\bfair enough\b/gi, 'acceptable')
+         .replace(/\bfor God'?s sake\b/gi, 'please')
+         .replace(/\bGod damn it\b/gi, 'damn it');
     return s;
   }
 
@@ -158,52 +180,78 @@ const Translator = (() => {
       (p !== 'ئ' && p !== 'ا' && p !== 'و' && p !== 'ۆ' ? p + 'ە' : m)
     );
 
-    // High-frequency heavy R (ڕ) and velarized L (ڵ) corrections for standard Sorani orthography
-    return s.replace(/(^|\s)رویشت(?=\s|$|[.,!?;:،؛؟])/g, '$1ڕۆیشت')
-            .replace(/(^|\s)رۆیشت(?=\s|$|[.,!?;:،؛؟])/g, '$1ڕۆیشت')
-            .replace(/(^|\s)رۆشت(?=\s|$|[.,!?;:،؛؟])/g, '$1ڕۆیشت')
-            .replace(/(^|\s)راست(?=\s|$|[.,!?;:،؛؟])/g, '$1ڕاست')
-            .replace(/(^|\s)راستە(?=\s|$|[.,!?;:،؛؟])/g, '$1ڕاستە')
-            .replace(/(^|\s)راستی(?=\s|$|[.,!?;:،؛؟])/g, '$1ڕاستی')
-            .replace(/(^|\s)رێگە(?=\s|$|[.,!?;:،؛؟])/g, '$1ڕێگە')
-            .replace(/(^|\s)رێگا(?=\s|$|[.,!?;:،؛؟])/g, '$1ڕێگا')
-            .replace(/(^|\s)رۆژ(?=\s|$|[.,!?;:،؛؟])/g, '$1ڕۆژ')
-            .replace(/(^|\s)رەنگە(?=\s|$|[.,!?;:،؛؟])/g, '$1ڕەنگە')
-            .replace(/(^|\s)رێز(?=\s|$|[.,!?;:،؛؟])/g, '$1ڕێز')
-            .replace(/(^|\s)مال(?=\s|$|[.,!?;:،؛؟])/g, '$1ماڵ')
-            .replace(/(^|\s)مالی(?=\s|$|[.,!?;:،؛؟])/g, '$1ماڵی')
-            .replace(/(^|\s)مالەوە(?=\s|$|[.,!?;:،؛؟])/g, '$1ماڵەوە')
-            .replace(/(^|\s)سلاو(?=\s|$|[.,!?;:،؛؟])/g, '$1سڵاو')
-            .replace(/(^|\s)گول(?=\s|$|[.,!?;:،؛؟])/g, '$1گوڵ')
-            .replace(/(^|\s)بەلێ(?=\s|$|[.,!?;:،؛؟])/g, '$1بەڵێ')
-            .replace(/(^|\s)دەلێت(?=\s|$|[.,!?;:،؛؟])/g, '$1دەڵێت')
-            .replace(/(^|\s)دەلێم(?=\s|$|[.,!?;:،؛؟])/g, '$1دەڵێم')
-            .replace(/(^|\s)دەلێن(?=\s|$|[.,!?;:،؛؟])/g, '$1دەڵێن')
-            .replace(/(^|\s)بلێ(?=\s|$|[.,!?;:،؛؟])/g, '$1بڵێ')
-            .replace(/(^|\s)بلێن(?=\s|$|[.,!?;:،؛؟])/g, '$1بڵێن')
-            .replace(/(^|\s)کەلەکەم(?=\s|$|[.,!?;:،؛؟])/g, '$1کەڵەکەم')
-            .replace(/خۆشحال/g, 'خۆشحاڵ')
-            .replace(/گۆرانکاری/g, 'گۆڕانکاری')
-            .replace(/سپاس/g, 'سوپاس');
+    // Sorani Kurdish Heavy R (ڕ) conversions for words starting with R or standard roots
+    s = s.replace(/(^|\s)رویشت(ن|م|ی|ین|ن|ووە)?(?=\s|$|[.,!?;:،؛؟])/g, '$1ڕۆیشت$2')
+         .replace(/(^|\s)رۆیشت(ن|م|ی|ین|ن|ووە)?(?=\s|$|[.,!?;:،؛؟])/g, '$1ڕۆیشت$2')
+         .replace(/(^|\s)رۆشت(ن|م|ی|ین|ن|ووە)?(?=\s|$|[.,!?;:،؛؟])/g, '$1ڕۆیشت$2')
+         .replace(/(^|\s)راست(ە|ی|ەقینە|ەوخۆ|ەکان|کردنەوە)?(?=\s|$|[.,!?;:،؛؟])/g, '$1ڕاست$2')
+         .replace(/(^|\s)رێگ(ە|ا|ای|اکە|ایەک|ەی)?(?=\s|$|[.,!?;:،؛؟])/g, '$1ڕێگ$2')
+         .replace(/(^|\s)رۆژ(انە|گار|باش|نامە|ی)?(?=\s|$|[.,!?;:،؛؟])/g, '$1ڕۆژ$2')
+         .replace(/(^|\s)رەنگ(ە|ی|اوڕەنگ)?(?=\s|$|[.,!?;:،؛؟])/g, '$1ڕەنگ$2')
+         .replace(/(^|\s)رێز(لێنان|م|ت|تان)?(?=\s|$|[.,!?;:،؛؟])/g, '$1ڕێز$2')
+         .replace(/(^|\s)روون(کردنەوە|اک|اکی|ی)?(?=\s|$|[.,!?;:،؛؟])/g, '$1ڕوون$2')
+         .replace(/(^|\s)رەش(ی|بین)?(?=\s|$|[.,!?;:،؛؟])/g, '$1ڕەش$2')
+         .replace(/(^|\s)روو(داو|دات|دەدات|ی|خسار|خاو|بەڕوو)?(?=\s|$|[.,!?;:،؛؟])/g, '$1ڕوو$2')
+         .replace(/(^|\s)راپۆرت(?=\s|$|[.,!?;:،؛؟])/g, '$1ڕاپۆرت')
+         .replace(/(^|\s)راگەیاندن(?=\s|$|[.,!?;:،؛؟])/g, '$1ڕاگەیاندن')
+         .replace(/(^|\s)رێنمایی(?=\s|$|[.,!?;:،؛؟])/g, '$1ڕێنمایی')
+         .replace(/(^|\s)رێژە(?=\s|$|[.,!?;:،؛؟])/g, '$1ڕێژە')
+         .replace(/(^|\s)رزگار(?=\s|$|[.,!?;:،؛؟])/g, '$1ڕزگار')
+         .replace(/(^|\s)رازی(?=\s|$|[.,!?;:،؛؟])/g, '$1ڕازی')
+         .replace(/(^|\s)رێبوار(?=\s|$|[.,!?;:،؛؟])/g, '$1ڕێبوار')
+         .replace(/(^|\s)رابردوو(?=\s|$|[.,!?;:،؛؟])/g, '$1ڕابردوو')
+         .replace(/(^|\s)رێپێدان(?=\s|$|[.,!?;:،؛؟])/g, '$1ڕێپێدان')
+         .replace(/(^|\s)رەوانە(?=\s|$|[.,!?;:،؛؟])/g, '$1ڕەوانە')
+         .replace(/(^|\s)رەوشت(?=\s|$|[.,!?;:،؛؟])/g, '$1ڕەوشت')
+         .replace(/(^|\s)رەخنە(?=\s|$|[.,!?;:،؛؟])/g, '$1ڕەخنە')
+         .replace(/(^|\s)روانین(?=\s|$|[.,!?;:،؛؟])/g, '$1ڕوانین')
+         .replace(/(^|\s)راهێنان(?=\s|$|[.,!?;:،؛؟])/g, '$1ڕاهێنان');
+
+    // Sorani Kurdish Velarized L (ڵ) corrections
+    s = s.replace(/(^|\s)مال(ی|ەوە|مان|تان|یان|ەکەم|ەکان)?(?=\s|$|[.,!?;:،؛؟])/g, '$1ماڵ$2')
+         .replace(/(^|\s)بەلێ(م)?(?=\s|$|[.,!?;:،؛؟])/g, '$1بەڵێ$2')
+         .replace(/(^|\s)دەلێ(ت|م|ن|یت|ین)(?=\s|$|[.,!?;:،؛؟])/g, '$1دەڵێ$2')
+         .replace(/(^|\s)بلێ(ن|م|یت)?(?=\s|$|[.,!?;:،؛؟])/g, '$1بڵێ$2')
+         .replace(/(^|\s)گول(م|ەکان|ی)?(?=\s|$|[.,!?;:،؛؟])/g, '$1گوڵ$2')
+         .replace(/(^|\s)سال(ان|ی|ە|انە)?(?=\s|$|[.,!?;:،؛؟])/g, '$1ساڵ$2')
+         .replace(/خۆشحال(ی|ییە| بووم)?/g, 'خۆشحاڵ$1')
+         .replace(/(^|\s)مندال(ان|ەکە|م|ی)?(?=\s|$|[.,!?;:،؛؟])/g, '$1منداڵ$2')
+         .replace(/(^|\s)سلاو(تان|ی)?(?=\s|$|[.,!?;:،؛؟])/g, '$1سڵاو$2')
+         .replace(/(^|\s)گەلا(کان)?(?=\s|$|[.,!?;:،؛؟])/g, '$1گەڵا$2')
+         .replace(/(^|\s)کەلەک(ەم)?(?=\s|$|[.,!?;:،؛؟])/g, '$1کەڵەک$2')
+         .replace(/(^|\s)چۆل(ە|ی)?(?=\s|$|[.,!?;:،؛؟])/g, '$1چۆڵ$2')
+         .replace(/(^|\s)تەلە(ی)?(?=\s|$|[.,!?;:،؛؟])/g, '$1تەڵە$2')
+         .replace(/(^|\s)خال(ی|م)?(?=\s|$|[.,!?;:،؛؟])/g, '$1خاڵ$2')
+         .replace(/(^|\s)تال(ە|ی)?(?=\s|$|[.,!?;:،؛؟])/g, '$1تاڵ$2')
+         .replace(/(^|\s)پیالە(ی)?(?=\s|$|[.,!?;:،؛؟])/g, '$1پیاڵە$2')
+         .replace(/(^|\s)دل(م|ت|ی|خۆش|تەنگ|نیام|نیابە)?(?=\s|$|[.,!?;:،؛؟])/g, '$1دڵ$2')
+         .replace(/(^|\s)پۆلا(?=\s|$|[.,!?;:،؛؟])/g, '$1پۆڵا')
+         .replace(/(^|\s)قولپ(?=\s|$|[.,!?;:،؛؟])/g, '$1قوڵپ')
+         .replace(/(^|\s)کەلەشێر(?=\s|$|[.,!?;:،؛؟])/g, '$1کەڵەشێر')
+         .replace(/گۆرانکاری/g, 'گۆڕانکاری')
+         .replace(/سپاس/g, 'سوپاس');
+
+    return s;
   }
 
   /** Rejoin split Sorani Kurdish verbal affixes & compound preverbs. */
   function rejoinVerbalAffixes(str) {
     return str
-      .replace(/(^|\s)دە\s+(بێت|زانم|زانی|کات|توانی|توانم|کەین|کەن|کەیت|کەم|چێت|ڕوات|ڵێت|ڵێم|هێنێت|ڕۆین|یەوێت|خوات|خۆم|کراو|بینم|بینێت|وەستێت|گەڕێتەوە|نووسێت|دات|دەین|دەکان|بەن|بەین|دێت|دەبێتەوە)(?=\s|$|[.,!?;:،؛؟])/g, '$1دە$2')
-      .replace(/(^|\s)نا\s+(زانم|زانی|زانێت|کات|بێت|کرێت|کرێن|توانی|توانم|چێت|ڵێم|گەڕێتەوە|بینم|وێت|خۆم|خوات|دات|دەین|کەم)(?=\s|$|[.,!?;:،؛؟])/g, '$1نا$2')
-      .replace(/(^|\s)نە\s+(بێت|کات|کرێت|بوو|ڕۆیشت|هات|زانی|توانی|دیت|کرد|چوو|گەیی|دەبوو)(?=\s|$|[.,!?;:،؛؟])/g, '$1نە$2')
-      .replace(/(^|\s)مە\s+(کە|ڕۆ|کەیت|بۆوە|چۆ|بڕۆ|گەڕێ|بە|کەن|ترسە)(?=\s|$|[.,!?;:،؛؟])/g, '$1مە$2')
-      .replace(/(^|\s)بی\s+(کە|بە|بینە|گەیەنە|خۆ|نووسە|هێنە|بەخشە)(?=\s|$|[.,!?;:،؛؟])/g, '$1بی$2')
-      .replace(/(^|\s)تێ\s+(دەگەم|بگە|دەگەیت|دەگەن|پەڕی|پەڕین|ناگەم)(?=\s|$|[.,!?;:،؛؟])/g, '$1تێ$2')
-      .replace(/(^|\s)ڕێ\s+(گرتن|دەگرێت|بگرە|ناگرێت)(?=\s|$|[.,!?;:،؛؟])/g, '$1ڕێ$2')
-      .replace(/(^|\s)پێ\s+(دان|دەدات|بڵێ|بڵێن|بدە|نا دات)(?=\s|$|[.,!?;:،؛؟])/g, '$1پێ$2')
-      .replace(/(^|\s)وەر\s+(بگرە|گرتن|دەگرێت|ناگرێت|مگرت)(?=\s|$|[.,!?;:،؛؟])/g, '$1وەر$2')
-      .replace(/(^|\s)دەر\s+(کەوت|کەوتن|چوون|چوونی|بێنە|هێنانی|دەچێت)(?=\s|$|[.,!?;:،؛؟])/g, '$1دەر$2')
-      .replace(/(^|\s)دا\s+(نیشە|دەنیشێت|پۆشە|خستن|داخە|دابخە)(?=\s|$|[.,!?;:،؛؟])/g, '$1دا$2')
-      .replace(/(^|\s)[هھ]ەڵ\s+(بگرە|ستە|دەستێت|گرتن|گرە)(?=\s|$|[.,!?;:،؛؟])/g, '$1هەڵ$2')
+      .replace(/(^|\s)دە\s+(بێت|زانم|زانی|زانێت|زانین|زانن|کات|کەم|کەیت|کەین|کەن|توانی|توانم|توانێت|توانین|توانن|چێت|ڕۆم|ڕۆیت|ڕوات|ڕۆین|ڕۆن|ڵێت|ڵێم|ڵێیت|ڵێین|ڵێن|هێنێت|هێنم|یەوێت|خوات|خۆم|کراو|بینم|بینێت|بینین|بینن|وەستێت|گەڕێتەوە|نووسێت|دات|دەین|دەکان|بەن|بەین|دێت|دەبێتەوە|فرۆشێت|کڕێت|ژیم|ژیت|ژی|ژیین|ژین|مرێت|بیستێت|گرێت|بەستێت|گەین|کەویت)(?=\s|$|[.,!?;:،؛؟])/g, '$1دە$2')
+      .replace(/(^|\s)نا\s+(زانم|زانی|زانێت|زانین|زانن|کات|کەم|کەیت|کەن|بێت|کرێت|کرێن|توانی|توانم|توانێت|توانین|توانن|چێت|ڵێم|ڵێت|گەڕێتەوە|بینم|بینێت|وێت|خۆم|خوات|دات|دەین|کەوم|ڕوات)(?=\s|$|[.,!?;:،؛؟])/g, '$1نا$2')
+      .replace(/(^|\s)نە\s+(بێت|کات|کرێت|بوو|ڕۆیشت|هات|زانی|توانی|دیت|کرد|چوو|گەیی|دەبوو|بینرا|خورا)(?=\s|$|[.,!?;:،؛؟])/g, '$1نە$2')
+      .replace(/(^|\s)مە\s+(کە|ڕۆ|کەیت|بۆوە|چۆ|بڕۆ|گەڕێ|بە|کەن|ترسە|گری|شکێنە|کوژە)(?=\s|$|[.,!?;:،؛؟])/g, '$1مە$2')
+      .replace(/(^|\s)بی\s+(کە|بە|بینە|گەیەنە|خۆ|نووسە|هێنە|بەخشە|پارێزە|کوژە)(?=\s|$|[.,!?;:،؛؟])/g, '$1بی$2')
+      .replace(/(^|\s)تێ\s+(دەگەم|بگە|دەگەیت|دەگەن|دەگەین|پەڕی|پەڕین|ناگەم)(?=\s|$|[.,!?;:،؛؟])/g, '$1تێ$2')
+      .replace(/(^|\s)ڕێ\s+(گرتن|دەگرێت|بگرە|ناگرێت|بگرن)(?=\s|$|[.,!?;:،؛؟])/g, '$1ڕێ$2')
+      .replace(/(^|\s)پێ\s+(دان|دەدات|بڵێ|بڵێن|بدە|نادەم|نادات)(?=\s|$|[.,!?;:،؛؟])/g, '$1پێ$2')
+      .replace(/(^|\s)وەر\s+(بگرە|گرتن|دەگرێت|ناگرێت|مەگرە)(?=\s|$|[.,!?;:،؛؟])/g, '$1وەر$2')
+      .replace(/(^|\s)دەر\s+(کەوت|کەوتن|چوون|چوونی|بێنە|هێنانی|دەچێت|دەخات)(?=\s|$|[.,!?;:،؛؟])/g, '$1دەر$2')
+      .replace(/(^|\s)دا\s+(نیشە|دەنیشێت|پۆشە|خستن|داخە|دابخە|گرتن|بەزین)(?=\s|$|[.,!?;:،؛؟])/g, '$1دا$2')
+      .replace(/(^|\s)[هھ]ەڵ\s+(بگرە|ستە|دەستێت|گرتن|گرە|بژێرە|بڕژێ|کشان)(?=\s|$|[.,!?;:،؛؟])/g, '$1هەڵ$2')
       .replace(/(^|\s)دەست\s+(پێکرد|پێبکە|پێدەکات|پێکردن|پێ بگە)(?=\s|$|[.,!?;:،؛؟])/g, '$1دەست$2')
-      .replace(/\s+ەوە(?=\s|$|[.,!?;:،؛؟])/g, 'ەوە');
+      .replace(/\s+ەوە(?=\s|$|[.,!?;:،؛؟])/g, 'ەوە')
+      .replace(/\s+یش(?=\s|$|[.,!?;:،؛؟])/g, 'یش');
   }
 
   /** Naturalize machine-translated subtitle dialogue for fluent Sorani Kurdish. */
@@ -430,7 +478,7 @@ const Translator = (() => {
     return { signal: ctrl.signal, cleanup() { clearTimeout(timer); signal && signal.removeEventListener('abort', onAbort); } };
   }
 
-  const CLIENTS = ['gtx', 'dict-chromeex'];
+  const CLIENTS = ['gtx', 'dict-chrome-ex', 'dict-chromeex', 'te'];
 
   /** Translate one chunk, retrying with exponential backoff across hosts. */
   async function translateChunk(text, srcLang, tgtLang, signal) {
@@ -481,12 +529,16 @@ const Translator = (() => {
         }
         if (!res.ok) { const e = new Error(`HTTP ${res.status}`); e.hard = res.status >= 500; throw e; }
         const data = await res.json();
-        // Google returns data[0] as an array of [translation, original, ...].
-        // Guard the shape so an unexpected payload falls back cleanly.
-        if (!Array.isArray(data) || !Array.isArray(data[0])) throw new Error('Unexpected response');
-        const out = data[0].map((seg) => (Array.isArray(seg) ? seg[0] : '')).join('');
-        if (out) return out;
-        throw new Error('Empty response');
+        // Google returns data[0] as an array of [translation, original, ...],
+        // or an object { sentences: [{ trans: '...' }] } depending on client mode.
+        if (Array.isArray(data) && Array.isArray(data[0])) {
+          const out = data[0].map((seg) => (Array.isArray(seg) ? seg[0] : '')).join('');
+          if (out) return out;
+        } else if (data && Array.isArray(data.sentences)) {
+          const out = data.sentences.map((s) => s.trans || '').join('');
+          if (out) return out;
+        }
+        throw new Error('Empty or unexpected response');
       } catch (err) {
         if (signal && signal.aborted) throw err;
         // A rejected fetch (offline) is a network hard failure, distinct from
@@ -546,7 +598,7 @@ const Translator = (() => {
     } catch {}
   }
 
-  return { translateLines, warmup, normalizeText };
+  return { translateLines, warmup, normalizeText, normalizeDigits, preprocessSource };
 })();
 
 if (typeof module !== 'undefined' && module.exports) module.exports = Translator;

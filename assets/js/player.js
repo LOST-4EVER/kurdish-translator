@@ -34,17 +34,42 @@ const SubtitlePlayer = (() => {
     el.tlThumb = _('#tlThumb');
     el.play = _('#playBtn');
     el.restart = _('#restartBtn');
+    el.prevCue = _('#prevCueBtn');
+    el.nextCue = _('#nextCueBtn');
+    el.skipBack = _('#skipBackBtn');
+    el.skipForward = _('#skipForwardBtn');
     el.time = _('#timeDisplay');
     el.speed = _('#speedSel');
+    el.tlTooltip = _('#tlTooltip');
 
     el.play.addEventListener('click', toggle);
     el.restart.addEventListener('click', () => seek(0));
+    if (el.prevCue) el.prevCue.addEventListener('click', () => stepCue(-1));
+    if (el.nextCue) el.nextCue.addEventListener('click', () => stepCue(1));
+    if (el.skipBack) el.skipBack.addEventListener('click', () => jump(-5000));
+    if (el.skipForward) el.skipForward.addEventListener('click', () => jump(5000));
     el.speed.addEventListener('change', (e) => { speed = Number(e.target.value); });
 
     const handleScrub = (e) => {
       const rect = el.tl.getBoundingClientRect();
       seek(clamp((e.clientX - rect.left) / rect.width, 0, 1) * total);
     };
+
+    // Timeline hover timecode tooltip
+    if (el.tlTooltip) {
+      el.tl.addEventListener('pointermove', (e) => {
+        if (!total) { el.tlTooltip.classList.add('hidden'); return; }
+        const rect = el.tl.getBoundingClientRect();
+        const ratio = clamp((e.clientX - rect.left) / rect.width, 0, 1);
+        const hoverMs = ratio * total;
+        el.tlTooltip.textContent = fmt(hoverMs);
+        el.tlTooltip.style.left = `${ratio * 100}%`;
+        el.tlTooltip.classList.remove('hidden');
+      });
+      el.tl.addEventListener('pointerleave', () => {
+        el.tlTooltip.classList.add('hidden');
+      });
+    }
 
     el.tl.addEventListener('pointerdown', (e) => {
       el.tl.setPointerCapture(e.pointerId);
@@ -59,10 +84,12 @@ const SubtitlePlayer = (() => {
         el.tl.releasePointerCapture(upEvent.pointerId);
         el.tl.removeEventListener('pointermove', onPointerMove);
         el.tl.removeEventListener('pointerup', onPointerUp);
+        el.tl.removeEventListener('pointercancel', onPointerUp);
       };
 
       el.tl.addEventListener('pointermove', onPointerMove);
       el.tl.addEventListener('pointerup', onPointerUp);
+      el.tl.addEventListener('pointercancel', onPointerUp);
     });
 
     document.addEventListener('keydown', (e) => {
@@ -225,6 +252,11 @@ const SubtitlePlayer = (() => {
     if (activeCue === cues[index]) refresh(true);
   }
 
+  /** Seek relative to current position (e.g. +5000ms or -5000ms). */
+  function jump(deltaMs) {
+    seek(pos + deltaMs);
+  }
+
   /** Seek to the previous (-1) or next (+1) cue from the current position. */
   function stepCue(dir) {
     if (!cues.length) return;
@@ -250,5 +282,20 @@ const SubtitlePlayer = (() => {
     el.text.style.fontSize = `calc(clamp(20px, 5.5vw, 38px) * ${factor})`;
   }
 
-  return { init, load, toggle, play, pause, seek, stepCue, updateText, setFontScale, setCueCallback, get playing() { return playing; }, get position() { return pos; } };
+  return {
+    init,
+    load,
+    toggle,
+    play,
+    pause,
+    seek,
+    jump,
+    stepCue,
+    updateText,
+    setFontScale,
+    setCueCallback,
+    get playing() { return playing; },
+    get position() { return pos; },
+    get duration() { return total; }
+  };
 })();

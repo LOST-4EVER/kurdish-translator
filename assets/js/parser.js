@@ -103,7 +103,7 @@ const SubParser = (() => {
   // A timing line must START with a timecode so subtitle text that merely
   // mentions a time range isn't mistaken for a new cue; a VTT trailer
   // ("align:start position:0%") is allowed after the arrow.
-  const TIMECODE_LINE = /^(\d{1,2}:\d{2}(?::\d{2})?[,.]\d{1,3})\s*-->\s*(\d{1,2}:\d{2}(?::\d{2})?[,.]\d{1,3})(?:\s+.*)?$/;
+  const TIMECODE_LINE = /^(\d+:\d{2}(?::\d{2})?[,.]\d{1,3})\s*-->\s*(\d+:\d{2}(?::\d{2})?[,.]\d{1,3})(?:\s+.*)?$/;
   function parseSRTVTT(content) {
     const lines = content.replace(/\r/g, '').split('\n');
     const cues = [];
@@ -269,12 +269,16 @@ const SubParser = (() => {
     const cues = [];
     let prev = -1;
     let m;
+    SMI_BLOCK.lastIndex = 0;
     while ((m = SMI_BLOCK.exec(content)) !== null) {
       const start = Number(m[1]);
+      if (prev >= 0) {
+        cues[prev].end = start;
+        prev = -1;
+      }
       // First non-empty paragraph; a single-language file has exactly one <P>.
       const para = samiParagraphs(m[2])[0];
       if (!para) continue;
-      if (prev >= 0) cues[prev].end = start;
       cues.push({ start, end: 0, text: para });
       prev = cues.length - 1;
     }
@@ -284,8 +288,30 @@ const SubParser = (() => {
   }
 
   // ---------- Main parse ----------
-  function parse(content) {
-    const format = detect(content);
+  function parseTXT(content) {
+    const lines = content.replace(/\r/g, '').split('\n').map((l) => l.trim()).filter(Boolean);
+    const cues = [];
+    let curTime = 0;
+    lines.forEach((line, i) => {
+      cues.push({
+        index: i + 1,
+        start: curTime,
+        end: curTime + 3000,
+        text: line
+      });
+      curTime += 3500;
+    });
+    return cues;
+  }
+
+  function parse(content, formatHint) {
+    let format = detect(content);
+    if (format === 'unknown' && formatHint) {
+      const h = formatHint.toLowerCase().replace(/^\./, '');
+      if (['srt', 'vtt', 'ass', 'ssa', 'sub', 'smi', 'txt'].includes(h)) {
+        format = h;
+      }
+    }
     let result;
     switch (format) {
       case 'vtt': result = { format, cues: parseSRTVTT(content) }; break;
@@ -302,6 +328,7 @@ const SubParser = (() => {
         break;
       }
       case 'smi': result = { format, cues: parseSMI(content) }; break;
+      case 'txt': result = { format, cues: parseTXT(content) }; break;
       default: throw new Error('Unsupported subtitle format');
     }
     if (result && Array.isArray(result.cues)) {
@@ -317,48 +344,85 @@ const SubParser = (() => {
   const ASS_DEFAULT_ORDER = ['Layer', 'Start', 'End', 'Style', 'Name', 'MarginL', 'MarginR', 'MarginV', 'Effect', 'Text'];
   const ASS_FALLBACKS = { layer: '0', style: 'Default', name: '', marginl: '0', marginr: '0', marginv: '0', effect: '' };
 
-  function serialize(parsed, cues) {
-    switch (parsed.format) {
+  const DEFAULT_ASS_HEADER = `[Script Info]
+Title: Kurdish Subtitles
+ScriptType: v4.00+
+WrapStyle: 0
+ScaledBorderAndShadow: yes
+
+[V4+ Styles]
+Format: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, Bold, Italic, Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding
+Style: Default,Arial,20,&H00FFFFFF,&H000000FF,&H00000000,&H00000000,0,0,0,0,100,100,0,0,1,2,2,2,10,10,10,1
+
+[Events]`;
+
+  const DEFAULT_SSA_HEADER = `[Script Info]
+Title: Kurdish Subtitles
+ScriptType: v4.00
+WrapStyle: 0
+
+[V4 Styles]
+Format: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, TertiaryColour, BackColour, Bold, Italic, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, AlphaLevel, Encoding
+Style: Default,Arial,20,16777215,65535,0,0,0,0,1,2,2,2,10,10,10,0,1
+
+[Events]`;
+
+  function normalizeTextForStandard(text) {
+    if (!text) return '';
+    return text.replace(/\\N/g, '\n').replace(/\r\n/g, '\n').replace(/\r/g, '\n');
+  }
+
+  function serialize(parsedOrFormat, cues) {
+    const parsed = typeof parsedOrFormat === 'string' ? { format: parsedOrFormat } : (parsedOrFormat || { format: 'srt' });
+    const fmt = (parsed.format || 'srt').toLowerCase();
+    switch (fmt) {
       case 'vtt':
-        return 'WEBVTT\n\n' + cues.map((c) => `${fmtVTT(c.start)} --> ${fmtVTT(c.end)}\n${c.text}`).join('\n\n') + '\n';
+        return 'WEBVTT\n\n' + cues.map((c) => `${fmtVTT(c.start)} --> ${fmtVTT(c.end)}\n${normalizeTextForStandard(c.text)}`).join('\n\n') + '\n';
       case 'srt':
-        return cues.map((c, i) => `${i + 1}\n${fmtSRT(c.start)} --> ${fmtSRT(c.end)}\n${c.text}`).join('\n\n') + '\n';
+        return cues.map((c, i) => `${i + 1}\n${fmtSRT(c.start)} --> ${fmtSRT(c.end)}\n${normalizeTextForStandard(c.text)}`).join('\n\n') + '\n';
       case 'ass':
       case 'ssa':
         return serializeASS(parsed, cues);
       case 'sub': {
         const fps = (parsed.meta && parsed.meta.fps) || 23.976;
         const frame = (ms) => Math.round((ms / 1000) * fps);
-        const body = cues.map((c) => `{${frame(c.start)}}{${frame(c.end)}}${c.text.replace(/\n/g, '|')}`).join('\n');
+        const body = cues.map((c) => `{${frame(c.start)}}{${frame(c.end)}}${normalizeTextForStandard(c.text).replace(/\n/g, '|')}`).join('\n');
         return `{1}{1}${fps.toFixed(3)}\n${body}\n`;
       }
       case 'smi':
         return '<SAMI>\n<HEAD><TITLE>Kurdish subtitles</TITLE></HEAD>\n<BODY>\n' +
-          cues.map((c) => `<SYNC Start=${c.start}><P class=KURD>${escapeXml(c.text).replace(/\n/g, '<br>')}</P></SYNC>`).join('\n') +
+          cues.map((c) => `<SYNC Start=${c.start}><P class=KURD>${escapeXml(normalizeTextForStandard(c.text)).replace(/\n/g, '<br>')}</P></SYNC>`).join('\n') +
           '\n</BODY>\n</SAMI>\n';
+      case 'txt':
+        return cues.map((c) => normalizeTextForStandard(c.text)).join('\n\n') + '\n';
       default:
-        throw new Error('Unsupported format for serialization');
+        return cues.map((c, i) => `${i + 1}\n${fmtSRT(c.start)} --> ${fmtSRT(c.end)}\n${normalizeTextForStandard(c.text)}`).join('\n\n') + '\n';
     }
   }
 
   function serializeASS(parsed, cues) {
     const meta = parsed.meta || {};
+    const isSsa = parsed.format === 'ssa';
     const order = (meta.fields && meta.fields.length) ? meta.fields : ASS_DEFAULT_ORDER;
     const lower = order.map((f) => f.toLowerCase());
     const keyOf = (k) => order[lower.indexOf(k)];
 
-    const cleanHeader = (meta.header || []).filter((l) => !/^\s*Dialogue\s*:/i.test(l));
+    let cleanHeader = (meta.header || []).filter((l) => !/^\s*Dialogue\s*:/i.test(l));
     const fmtLine = `Format: ${order.join(', ')}`;
-    // Place exactly one Format line, right after [Events] (replacing any old one).
-    const evIdx = cleanHeader.findIndex((l) => /^\s*\[Events\]\s*$/i.test(l));
+
     let header;
-    if (evIdx >= 0) {
+    const hasScriptInfo = cleanHeader.some((l) => /^\s*\[Script Info\]\s*$/i.test(l));
+    const evIdx = cleanHeader.findIndex((l) => /^\s*\[Events\]\s*$/i.test(l));
+
+    if (!hasScriptInfo || evIdx < 0) {
+      // Header is missing or incomplete (e.g. converted from SRT/VTT)
+      const baseHeader = isSsa ? DEFAULT_SSA_HEADER : DEFAULT_ASS_HEADER;
+      header = `${baseHeader}\n${fmtLine}`;
+    } else {
+      // Place exactly one Format line, right after [Events] (replacing any old one).
       const before = cleanHeader.slice(0, evIdx + 1);
       const after = cleanHeader.slice(evIdx + 1).filter((l) => !/^\s*Format\s*:/i.test(l));
       header = [...before, fmtLine, ...after].join('\n');
-    } else {
-      header = cleanHeader.filter((l) => !/^\s*Format\s*:/i.test(l)).join('\n');
-      header = header.trim() ? `${header}\n${fmtLine}` : fmtLine;
     }
     header = header.replace(/\n{3,}/g, '\n\n');
 
@@ -368,7 +432,8 @@ const SubParser = (() => {
       order.forEach((f) => { val[f] = (c.extra && c.extra[f]) ?? ASS_FALLBACKS[f.toLowerCase()] ?? ''; });
       val[keyOf('start')] = fmtASS(c.start);
       val[keyOf('end')] = fmtASS(c.end);
-      val[keyOf('text')] = c.text.replace(/\n/g, '\\N');
+      const cueNorm = (c.text || '').replace(/\r\n/g, '\n').replace(/\r/g, '\n').replace(/\\N/g, '\n');
+      val[keyOf('text')] = cueNorm.replace(/\n/g, '\\N');
       lines.push(`Dialogue: ${order.map((f) => val[f]).join(',')}`);
     }
     return lines.join('\n') + '\n';
@@ -378,7 +443,7 @@ const SubParser = (() => {
     return text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
   }
 
-  return { parse, serialize, fmtSRT, fmtVTT };
+  return { parse, serialize, fmtSRT, fmtVTT, fmtASS, detect, toMs, splitMs };
 })();
 
 if (typeof module !== 'undefined' && module.exports) module.exports = SubParser;
