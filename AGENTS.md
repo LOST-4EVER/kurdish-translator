@@ -33,10 +33,11 @@ Deployed to GitHub Pages from the `main` branch
 ## Architecture & wiring
 
 - Scripts load in this exact order in `index.html`: `parser.js` → `translator.js`
-  → `player.js` → `app.js`. They expose globals (`SubParser`, `Translator`,
-  `SubtitlePlayer`) via top-level `const` in the shared classic-script lexical
-  scope — they do **not** attach to `window`. Do not reorder the scripts; `app.js`
-  calls `SubtitlePlayer.init()` on load.
+  → `i18n.js` → `toast.js` → `player.js` → `app.js`. They expose globals
+  (`SubParser`, `Translator`, `UI_I18N`, `Toast`, `SubtitlePlayer`) via top-level
+  `const` in the shared classic-script lexical scope — they do **not** attach to
+  `window`. Do not reorder the scripts; `app.js` calls `SubtitlePlayer.init()` on
+  load.
 - `parser.js` / `translator.js` each end with a `module.exports` guard so they
   work both as classic scripts and via `require()` in Node.
 - Flow: drop file → `app.js` decodes + parses → **shows the settings step first**

@@ -971,6 +971,8 @@ select:focus { outline: none; border-color: var(--md-sys-color-primary); box-sha
   width: 100%;
 }
 .progress-fill {
+  position: relative;
+  overflow: hidden;
   height: 100%;
   width: 0%;
   border-radius: 4px;
@@ -979,6 +981,17 @@ select:focus { outline: none; border-color: var(--md-sys-color-primary); box-sha
   animation: shimmer 2s linear infinite;
   transition: width 0.3s var(--ease);
   box-shadow: 0 0 10px rgba(208, 188, 255, 0.4);
+}
+.progress-fill::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.35), transparent);
+  animation: fillShimmer 1.5s infinite;
+}
+@keyframes fillShimmer {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(100%); }
 }
 @keyframes shimmer {
   0% { background-position: 100% 0; }
@@ -1296,8 +1309,7 @@ select:focus { outline: none; border-color: var(--md-sys-color-primary); box-sha
 .se-ic svg { fill: currentColor; }
 .se-t { font-size: 14px; font-weight: 600; color: var(--md-sys-color-on-surface); }
 .se-s { font-size: 11.5px; color: var(--md-sys-color-on-surface-variant); }
-.cue-count,
-div#tabPreview > section:nth-of-type(1) > div:nth-of-type(1) > div#playerScreen:nth-of-type(1) > span#cueCount:nth-of-type(2) {
+.cue-count {
   position: absolute;
   top: 10px;
   left: 12px;
@@ -1317,13 +1329,11 @@ div#tabPreview > section:nth-of-type(1) > div:nth-of-type(1) > div#playerScreen:
   gap: 6px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35);
 }
-[dir="rtl"] .cue-count,
-[dir="rtl"] div#tabPreview > section:nth-of-type(1) > div:nth-of-type(1) > div#playerScreen:nth-of-type(1) > span#cueCount:nth-of-type(2) {
+[dir="rtl"] .cue-count {
   left: auto;
   right: 12px;
 }
-.cue-count::before,
-div#tabPreview > section:nth-of-type(1) > div:nth-of-type(1) > div#playerScreen:nth-of-type(1) > span#cueCount:nth-of-type(2)::before {
+.cue-count::before {
   content: "";
   width: 6px;
   height: 6px;
@@ -1364,8 +1374,7 @@ div#tabPreview > section:nth-of-type(1) > div:nth-of-type(1) > div#playerScreen:
   display: none !important;
 }
 
-.timeline,
-div#tabPreview > section:nth-of-type(1) > div:nth-of-type(1) > div#timeline:nth-of-type(2) {
+.timeline {
   position: relative;
   height: 20px;
   margin: 4px 12px 2px;
@@ -1377,8 +1386,7 @@ div#tabPreview > section:nth-of-type(1) > div:nth-of-type(1) > div#timeline:nth-
   touch-action: none;
   transition: background-color 0.15s ease;
 }
-.timeline:hover,
-div#tabPreview > section:nth-of-type(1) > div:nth-of-type(1) > div#timeline:nth-of-type(2):hover {
+.timeline:hover {
   background: rgba(255, 255, 255, 0.14);
 }
 .tl-cues { position: absolute; inset: 2px 4px; pointer-events: none; }
@@ -1415,8 +1423,7 @@ div#tabPreview > section:nth-of-type(1) > div:nth-of-type(1) > div#timeline:nth-
   z-index: 5;
 }
 
-.controls,
-div#tabPreview > section:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(3) {
+.controls {
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -1470,8 +1477,7 @@ div#tabPreview > section:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(3
   transform: translateY(-1px);
   box-shadow: 0 4px 12px rgba(208, 188, 255, 0.45);
 }
-.time,
-div#tabPreview > section:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(3) > div#timeDisplay:nth-of-type(2) {
+.time {
   font-size: 11.5px;
   color: rgba(255, 255, 255, 0.92);
   font-variant-numeric: tabular-nums;
@@ -1513,8 +1519,7 @@ div#tabPreview > section:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(3
   width: 100%;
   box-sizing: border-box;
 }
-.editor-toolbar,
-div#tabPreview > section:nth-of-type(2) > div:nth-of-type(1) {
+.editor-toolbar {
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -1565,8 +1570,7 @@ div#tabPreview > section:nth-of-type(2) > div:nth-of-type(1) {
   border-radius: var(--md-shape-corner-small);
   flex-shrink: 0;
 }
-.editor-title p,
-div#tabPreview > section:nth-of-type(2) > div:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type(1) > p#editorStatus:nth-of-type(1) {
+.editor-title p {
   font-size: 11px;
   font-weight: 500;
   color: var(--md-sys-color-on-surface-variant);
@@ -1724,10 +1728,7 @@ div#tabPreview > section:nth-of-type(2) > div:nth-of-type(1) > div:nth-of-type(1
   flex-shrink: 0;
 }
 .editor-toggles .switch-row,
-.switch-row.mini,
-div#tabPreview > section:nth-of-type(2) > div:nth-of-type(1) > div:nth-of-type(2) > label:nth-of-type(1),
-div#tabPreview > section:nth-of-type(2) > div:nth-of-type(1) > div:nth-of-type(2) > label:nth-of-type(2),
-div#tabPreview > section:nth-of-type(2) > div:nth-of-type(1) > div:nth-of-type(2) > label:nth-of-type(3) {
+.switch-row.mini {
   margin: 0;
   font-size: 11px;
   font-weight: 600;
@@ -1746,10 +1747,7 @@ div#tabPreview > section:nth-of-type(2) > div:nth-of-type(1) > div:nth-of-type(2
   transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease;
 }
 .editor-toggles .switch-row:hover,
-.switch-row.mini:hover,
-div#tabPreview > section:nth-of-type(2) > div:nth-of-type(1) > div:nth-of-type(2) > label:nth-of-type(1):hover,
-div#tabPreview > section:nth-of-type(2) > div:nth-of-type(1) > div:nth-of-type(2) > label:nth-of-type(2):hover,
-div#tabPreview > section:nth-of-type(2) > div:nth-of-type(1) > div:nth-of-type(2) > label:nth-of-type(3):hover {
+.switch-row.mini:hover {
   background: var(--md-sys-color-surface-container-highest);
   border-color: var(--md-sys-color-outline);
   color: var(--md-sys-color-on-surface);
@@ -1872,8 +1870,7 @@ div#tabPreview > section:nth-of-type(2) > div:nth-of-type(1) > div:nth-of-type(2
   align-items: flex-start;
   min-width: 0;
 }
-.ed-idx,
-div#tabPreview > section:nth-of-type(2) > div#editorList:nth-of-type(2) > div:nth-of-type(1) > div:nth-of-type(1) > span:nth-of-type(1) {
+.ed-idx {
   font-size: 10px;
   font-weight: 700;
   color: var(--md-sys-color-on-surface-variant);
@@ -1885,8 +1882,7 @@ div#tabPreview > section:nth-of-type(2) > div#editorList:nth-of-type(2) > div:nt
   font-variant-numeric: tabular-nums;
   line-height: 1.2;
 }
-.ed-row.active .ed-idx,
-.ed-row.active div#tabPreview > section:nth-of-type(2) > div#editorList:nth-of-type(2) > div:nth-of-type(1) > div:nth-of-type(1) > span:nth-of-type(1) {
+.ed-row.active .ed-idx {
   background: var(--md-sys-color-primary);
   color: var(--md-sys-color-on-primary);
   border-color: transparent;
@@ -2168,22 +2164,6 @@ div#tabPreview > section:nth-of-type(2) > div#editorList:nth-of-type(2) > div:nt
   0% { transform: scale(1); }
   50% { transform: scale(1.03); }
   100% { transform: scale(1); }
-}
-
-.progress-fill {
-  position: relative;
-  overflow: hidden;
-}
-.progress-fill::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.35), transparent);
-  animation: fillShimmer 1.5s infinite;
-}
-@keyframes fillShimmer {
-  0% { transform: translateX(-100%); }
-  100% { transform: translateX(100%); }
 }
 
 /* ---------- Toast System ---------- */

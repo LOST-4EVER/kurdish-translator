@@ -952,7 +952,21 @@
     const controller = new AbortController();
     activeController = controller;
 
-    let lastToastPct = 0;
+    // Combine the translated lines back into cues: stack the source line above
+    // the translation when requested, optionally drop empty cues, and renumber.
+    const applyTranslation = (translated) => {
+      const translatedCues = parsed.cues.map((c, i) => {
+        const tr = translated[i] && translated[i].trim() ? translated[i].trim() : null;
+        // Compare against the normalized source so ASS \N cues match correctly.
+        if (includeOriginal && tr && tr !== normalize(c)) return { ...c, text: `${c.text}\n${tr}` };
+        return { ...c, text: tr || c.text };
+      });
+      const finalCues = els.keepOnly.checked
+        ? translatedCues.filter((c) => c.text.trim() !== '')
+        : translatedCues;
+      finalCues.forEach((c, i) => { c.index = i + 1; });
+      return finalCues;
+    };
 
     try {
       const lines = parsed.cues.map(normalize);
@@ -970,18 +984,7 @@
       }, controller.signal, { accuracy, kurdishDigits, onBatch: (results, done) => { if (!cancelFlag) renderLive(results, done); } });
       if (cancelFlag) return; // cancelled mid-run: discard results, stay on settings
 
-      const translatedCues = parsed.cues.map((c, i) => {
-        const tr = translated[i] && translated[i].trim() ? translated[i].trim() : null;
-        // "Include original" stacks the source line above the translation.
-        if (includeOriginal && tr && tr !== c.text) return { ...c, text: `${c.text}\n${tr}` };
-        return { ...c, text: tr || c.text };
-      });
-
-      let finalCues = els.keepOnly.checked
-        ? translatedCues.filter((c) => c.text.trim() !== '')
-        : translatedCues;
-      // Renumber after filtering so player + editor indexes stay in sync.
-      finalCues.forEach((c, i) => { c.index = i + 1; });
+      const finalCues = applyTranslation(translated);
 
       updateCues(finalCues);
       showStep('done');
@@ -999,17 +1002,7 @@
       console.error(err);
       if (err && err.partial && err.results) {
         // Some lines failed but we have results — show them with a warning.
-        const translated = err.results;
-        const translatedCues = parsed.cues.map((c, i) => {
-          const tr = translated[i] && translated[i].trim() ? translated[i].trim() : null;
-          if (includeOriginal && tr && tr !== c.text) return { ...c, text: `${c.text}\n${tr}` };
-          return { ...c, text: tr || c.text };
-        });
-        let finalCues = els.keepOnly.checked
-          ? translatedCues.filter((c) => c.text.trim() !== '')
-          : translatedCues;
-        finalCues.forEach((c, i) => { c.index = i + 1; });
-        updateCues(finalCues);
+        updateCues(applyTranslation(err.results));
         showStep('done');
         toast(
           currentUiLang === 'ckb' ? 'بەشێک لە دێڕەکان وەرنەگێڕدران' : 'Partial translation complete',
