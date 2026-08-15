@@ -635,24 +635,45 @@
 
   // ---------- Fullscreen edit mode ----------
 
-  /** Shrink the fullscreen subtitle text until it fits the visible screen area. */
+  function updateFontSize(val) {
+    store.set('fontSize', val);
+    if (els.fontSizeSel) els.fontSizeSel.value = val;
+    if (els.fsFontSizeSel) els.fsFontSizeSel.value = val;
+    SubtitlePlayer.setFontScale(val);
+    if (fsActive) fitFsText();
+  }
+
+  /** Shrink the fullscreen subtitle text until it fits the visible screen area without clipping. */
   function fitFsText() {
     const el = els.fsText;
     const screen = els.fsScreen;
-    if (!el || !screen) return;
-    const scale = els.fsFontSizeSel ? parseFloat(els.fsFontSizeSel.value) || 1 : 1;
-    const base = Math.round(Math.min(Math.max(20, screen.clientWidth * 0.055), 42));
-    const availW = screen.clientWidth * 0.94;
-    const availH = screen.clientHeight - 90; // leave room for the tap hint
-    const prevTrans = el.style.transition;
-    el.style.transition = 'none';
-    let size = base * scale;
+    if (!el || !screen || !fsActive) return;
+    const text = el.textContent || '';
+    if (!text.trim()) {
+      el.style.fontSize = '';
+      return;
+    }
+    const screenW = screen.clientWidth;
+    const screenH = screen.clientHeight;
+    if (!screenW || !screenH) return;
+
+    const scale = els.fsFontSizeSel ? (parseFloat(els.fsFontSizeSel.value) || 1) : 1;
+    const base = Math.round(Math.min(
+      Math.max(18, screenW * 0.052),
+      Math.max(18, screenH * 0.14),
+      44
+    ));
+    let size = Math.round(base * scale);
+
+    const isEditorOpen = els.fsEditor && !els.fsEditor.classList.contains('hidden');
+    const maxW = screenW * 0.90;
+    const maxH = isEditorOpen ? Math.max(70, screenH - 110) : Math.max(90, screenH - 65);
+
     el.style.fontSize = `${size}px`;
-    while (size > 12 && (el.scrollWidth > availW || el.scrollHeight > availH)) {
+    while (size > 12 && (el.scrollWidth > maxW || el.scrollHeight > maxH)) {
       size -= 1;
       el.style.fontSize = `${size}px`;
     }
-    el.style.transition = prevTrans;
   }
 
   function updateFsScreen() {
@@ -712,14 +733,21 @@
     if (i < 0) i = 0;
     SubtitlePlayer.seek(workCues[i].start);
     updateFsScreen();
-    if (els.fsEdit.requestFullscreen) els.fsEdit.requestFullscreen().catch(() => {});
+    requestAnimationFrame(() => fitFsText());
+    if (els.fsEdit.requestFullscreen) {
+      els.fsEdit.requestFullscreen().then(() => {
+        fitFsText();
+      }).catch(() => {});
+    }
   }
 
   function exitFs() {
     fsActive = false;
     els.fsEdit.classList.add('hidden');
     closeFsEditor();
-    if (document.fullscreenElement) document.exitFullscreen().catch(() => {});
+    if (document.fullscreenElement || document.webkitFullscreenElement) {
+      document.exitFullscreen().catch(() => {});
+    }
   }
 
   function bindFs() {
@@ -741,10 +769,7 @@
 
     if (els.fsFontSizeSel) {
       els.fsFontSizeSel.addEventListener('change', (e) => {
-        const val = e.target.value;
-        if (els.fontSizeSel) els.fontSizeSel.value = val;
-        SubtitlePlayer.setFontScale(val);
-        fitFsText();
+        updateFontSize(e.target.value);
       });
     }
 
@@ -768,10 +793,27 @@
       }
     });
 
-    // Keep state in sync when the browser exits fullscreen natively (Esc).
-    document.addEventListener('fullscreenchange', () => {
-      if (!document.fullscreenElement && fsActive) exitFs();
-    });
+    // Auto-fit fullscreen text on screen container resize (orientation change, keyboard toggle)
+    if (typeof ResizeObserver !== 'undefined' && els.fsScreen) {
+      const fsRo = new ResizeObserver(() => {
+        if (fsActive) fitFsText();
+      });
+      fsRo.observe(els.fsScreen);
+    }
+
+    // Keep state in sync when the browser enters or exits fullscreen natively (Esc).
+    const onFullscreenChange = () => {
+      if (!document.fullscreenElement && !document.webkitFullscreenElement) {
+        if (fsActive) exitFs();
+      } else {
+        if (fsActive) {
+          requestAnimationFrame(() => fitFsText());
+          setTimeout(() => fitFsText(), 100);
+        }
+      }
+    };
+    document.addEventListener('fullscreenchange', onFullscreenChange);
+    document.addEventListener('webkitfullscreenchange', onFullscreenChange);
   }
 
   // ---------- Tabs ----------
@@ -783,7 +825,11 @@
     tabButtons.forEach((b) => b.classList.toggle('active', b.dataset.tab === name));
     els.tabTranslate.classList.toggle('hidden', name !== 'translate');
     els.tabPreview.classList.toggle('hidden', name !== 'preview');
-    if (name !== 'preview') SubtitlePlayer.pause(); // stop playback off-screen
+    if (name === 'preview') {
+      requestAnimationFrame(() => SubtitlePlayer.fitText());
+    } else {
+      SubtitlePlayer.pause(); // stop playback off-screen
+    }
   }
   tabButtons.forEach((b) => b.addEventListener('click', () => switchTab(b.dataset.tab)));
 
@@ -1183,10 +1229,7 @@
     if (els.skipForwardBtn) els.skipForwardBtn.addEventListener('click', () => SubtitlePlayer.seek(SubtitlePlayer.position + 5000));
     if (els.fontSizeSel) {
       els.fontSizeSel.addEventListener('change', (e) => {
-        const val = e.target.value;
-        SubtitlePlayer.setFontScale(val);
-        if (els.fsFontSizeSel) els.fsFontSizeSel.value = val;
-        fitFsText();
+        updateFontSize(e.target.value);
       });
     }
 

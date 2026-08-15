@@ -20,6 +20,7 @@ const SubtitlePlayer = (() => {
   let onCue = null;     // optional callback when the active cue changes
   let lastSec = -1;     // last whole second written to the time readout
   let cursor = -1;      // cached cue index from the last cueAt() lookup
+  let fontScale = 1;    // font scale multiplier
 
   const el = {};
 
@@ -109,6 +110,14 @@ const SubtitlePlayer = (() => {
     document.addEventListener('visibilitychange', () => {
       if (document.hidden && playing) pause();
     });
+
+    // Auto-fit preview text on container resize (orientation change, tab switch, window resize)
+    if (typeof ResizeObserver !== 'undefined' && el.screen) {
+      const ro = new ResizeObserver(() => {
+        fitText();
+      });
+      ro.observe(el.screen);
+    }
   }
 
   /** Start time of the previous/next cue relative to the current position. */
@@ -225,6 +234,9 @@ const SubtitlePlayer = (() => {
         void el.text.offsetWidth;
         el.text.classList.add('caption-updated');
       }
+      if (cue) {
+        fitText();
+      }
       el.empty.style.display = cues.length ? 'none' : 'block';
       if (el.cueCount) {
         el.cueCount.textContent = cues.length ? `${cue ? cue.index : 0} / ${cues.length}` : '';
@@ -249,7 +261,10 @@ const SubtitlePlayer = (() => {
   function updateText(index, text) {
     if (!cues[index]) return;
     cues[index].text = text;
-    if (activeCue === cues[index]) refresh(true);
+    if (activeCue === cues[index]) {
+      refresh(true);
+      fitText();
+    }
   }
 
   /** Seek relative to current position (e.g. +5000ms or -5000ms). */
@@ -275,11 +290,40 @@ const SubtitlePlayer = (() => {
     return `${m}:${String(s).padStart(2, '0')}`;
   }
 
+  /** Dynamically scale subtitle preview text so it fits the player screen without clipping. */
+  function fitText() {
+    if (!el.text || !el.screen) return;
+    const text = el.text.textContent;
+    if (!text || !text.trim()) {
+      el.text.style.fontSize = '';
+      return;
+    }
+    const screenW = el.screen.clientWidth;
+    const screenH = el.screen.clientHeight;
+    if (!screenW || !screenH) return;
+
+    // Base font size is proportional to player screen dimensions, bounded cleanly
+    const base = Math.round(Math.min(
+      Math.max(14, screenW * 0.052),
+      Math.max(14, screenH * 0.16),
+      36
+    ));
+    let size = Math.round(base * fontScale);
+    const maxW = screenW * 0.90;
+    const maxH = screenH * 0.88;
+
+    el.text.style.fontSize = `${size}px`;
+    // If long multiline text overflows container bounds, iteratively scale down
+    while (size > 11 && (el.text.scrollWidth > maxW || el.text.scrollHeight > maxH)) {
+      size -= 1;
+      el.text.style.fontSize = `${size}px`;
+    }
+  }
+
   /** Set font scale multiplier for subtitle preview text. */
   function setFontScale(scale) {
-    if (!el.text) return;
-    const factor = Number(scale) || 1;
-    el.text.style.fontSize = `calc(clamp(20px, 5.5vw, 38px) * ${factor})`;
+    fontScale = Number(scale) || 1;
+    fitText();
   }
 
   return {
@@ -292,6 +336,7 @@ const SubtitlePlayer = (() => {
     jump,
     stepCue,
     updateText,
+    fitText,
     setFontScale,
     setCueCallback,
     get playing() { return playing; },
