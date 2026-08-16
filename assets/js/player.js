@@ -18,6 +18,7 @@ const SubtitlePlayer = (() => {
   let basePos = 0;      // position when play started
   let activeCue = null; // cached cue to avoid redundant DOM writes
   let onCue = null;     // optional callback when the active cue changes
+  let onTime = null;    // optional callback on playback time update tick
   let lastSec = -1;     // last whole second written to the time readout
   let cursor = -1;      // cached cue index from the last cueAt() lookup
   let fontScale = 1;    // font scale multiplier
@@ -401,6 +402,7 @@ const SubtitlePlayer = (() => {
     if (sec !== lastSec) {
       lastSec = sec;
       if (el.time) el.time.textContent = `${fmt(pos)} / ${fmt(total)}`;
+      if (onTime) onTime(pos, total);
     }
     const pct = total ? (pos / total) * 100 : 0;
     if (el.tlFill) el.tlFill.style.width = `${pct}%`;
@@ -408,6 +410,15 @@ const SubtitlePlayer = (() => {
 
     if (changed && onCue) onCue(primaryCue, primaryIdx, activeList);
   }
+
+  /** Seek to the start timestamp of a specific cue index. */
+  function seekToCue(index) {
+    if (!cues || !cues[index]) return;
+    seek(cues[index].start);
+  }
+
+  /** Register a callback fired with (pos, total) on playback time tick. */
+  function setTimeCallback(fn) { onTime = fn; }
 
   /** Replace the text of cue at an array index (used by the live editor). */
   function updateText(index, text) {
@@ -477,12 +488,14 @@ const SubtitlePlayer = (() => {
     play,
     pause,
     seek,
+    seekToCue,
     jump,
     stepCue,
     updateText,
     fitText,
     setFontScale,
     setCueCallback,
+    setTimeCallback,
     get playing() { return playing; },
     get position() { return pos; },
     get duration() { return total; }

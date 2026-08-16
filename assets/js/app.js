@@ -837,6 +837,14 @@
     });
   }
 
+  if (typeof SubtitlePlayer !== 'undefined' && SubtitlePlayer.setTimeCallback) {
+    SubtitlePlayer.setTimeCallback(() => {
+      if (fsActive) {
+        updateFsScreen();
+      }
+    });
+  }
+
   /** Swap in a fresh cue set (original or translated) and rebuild everything. */
   function updateCues(cues) {
     baseCues = cues.map((c) => ({ ...c }));
@@ -1054,13 +1062,18 @@
     if (!parsed || !workCues || !workCues.length) { toast('Load a subtitle file first.', true); return; }
     fsActive = true;
     if (els.fsEdit) els.fsEdit.classList.remove('hidden');
-    // Show the cue now on screen (falling back to the first cue) so the
-    // fullscreen view is never a blank screen, and park the player on it.
+    // Show the cue now on screen (falling back to active/first cue) so the
+    // fullscreen view is never a blank screen.
     const pos = typeof SubtitlePlayer !== 'undefined' ? SubtitlePlayer.position : 0;
     let i = workCues.findIndex((c) => pos >= c.start && pos < c.end);
-    if (i < 0) i = activeIdx >= 0 ? activeIdx : 0;
-    if (i < 0) i = 0;
-    if (typeof SubtitlePlayer !== 'undefined' && SubtitlePlayer.seek && workCues[i]) SubtitlePlayer.seek(workCues[i].start);
+    if (i < 0) {
+      i = activeIdx >= 0 ? activeIdx : 0;
+      if (typeof SubtitlePlayer !== 'undefined' && SubtitlePlayer.seek && workCues[i]) {
+        SubtitlePlayer.seek(workCues[i].start);
+      }
+    } else {
+      activeIdx = i;
+    }
     updateFsScreen();
     requestAnimationFrame(() => fitFsText());
     if (els.fsEdit && els.fsEdit.requestFullscreen) {
