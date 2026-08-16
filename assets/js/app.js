@@ -61,6 +61,7 @@
     toast: '#toast',
     editorList: '#editorList', editorStatus: '#editorStatus',
     edSearchInput: '#edSearchInput', edSearchCount: '#edSearchCount', edSearchClearBtn: '#edSearchClearBtn',
+    edSearchNav: '#edSearchNav', edSearchPrevBtn: '#edSearchPrevBtn', edSearchNextBtn: '#edSearchNextBtn',
     edCount: '#edCount', undoBtn: '#undoBtn', redoBtn: '#redoBtn',
     showTimeToggle: '#showTimeToggle', saveEditsToggle: '#saveEditsToggle',
     syncVideoToggle: '#syncVideoToggle',
@@ -200,12 +201,15 @@
   }
 
   // Step cards keyed by step name (avoid string-building element lookups).
-  const stepEls = Object.fromEntries(STEPS.map((s) => [s, els['step' + s[0].toUpperCase() + s.slice(1)]]));
+  const getStepEl = (s) => els['step' + s[0].toUpperCase() + s.slice(1)] || $(`#step${s[0].toUpperCase() + s.slice(1)}`);
 
   function showStep(name) {
-    STEPS.forEach((s) => stepEls[s].classList.add('hidden'));
-    const target = stepEls[name];
-    if (target) {
+    STEPS.forEach((s) => {
+      const stepEl = getStepEl(s);
+      if (stepEl && stepEl.classList) stepEl.classList.add('hidden');
+    });
+    const target = getStepEl(name);
+    if (target && target.classList) {
       target.classList.remove('hidden');
       target.style.animation = 'none';
       void target.offsetWidth; // trigger reflow for smooth re-entry animation
@@ -216,15 +220,57 @@
 
   function setProgress(fraction, detail) {
     const pct = Math.round(fraction * 100);
-    els.progressFill.style.width = pct + '%';
-    els.progressPct.textContent = pct + '%';
-    if (detail) els.progressDetail.textContent = detail;
+    if (els.progressFill) els.progressFill.style.width = pct + '%';
+    if (els.progressPct) els.progressPct.textContent = pct + '%';
+    if (detail && els.progressDetail) els.progressDetail.textContent = detail;
   }
 
   const stripTags = (text) => text.replace(/<[^>]+>/g, '').replace(/\{[^}]*\}/g, '');
   // ASS/SSA line breaks are stored as \N; render them as real newlines.
   const displayText = (text) => stripTags(text).replace(/\\N/g, '\n');
   const dirFor = (text) => (hasArabic(text) ? 'rtl' : 'ltr');
+
+  /** Extract vertical and horizontal placement from subtitle tags or settings (ASS {\anX}, {\aX}, WebVTT line/align). */
+  function getCuePlacement(cue) {
+    if (!cue) return { vAlign: 'bottom', hAlign: 'center' };
+    const raw = (cue.rawText || cue.text || '');
+    const settings = (cue.settings || '');
+
+    let vAlign = 'bottom';
+    let hAlign = 'center';
+
+    const anMatch = raw.match(/\{\\an(\d)\}/i);
+    const aMatch = raw.match(/\{\\a(\d+)\}/i);
+    if (anMatch) {
+      const num = parseInt(anMatch[1], 10);
+      if (num >= 7 && num <= 9) vAlign = 'top';
+      else if (num >= 4 && num <= 6) vAlign = 'mid';
+      else vAlign = 'bottom';
+
+      if (num === 1 || num === 4 || num === 7) hAlign = 'left';
+      else if (num === 3 || num === 6 || num === 9) hAlign = 'right';
+      else hAlign = 'center';
+    } else if (aMatch) {
+      const num = parseInt(aMatch[1], 10);
+      if (num >= 5 && num <= 7) vAlign = 'top';
+      else if (num >= 9 && num <= 11) vAlign = 'mid';
+      else vAlign = 'bottom';
+
+      if (num === 1 || num === 5 || num === 9) hAlign = 'left';
+      else if (num === 3 || num === 7 || num === 11) hAlign = 'right';
+      else hAlign = 'center';
+    } else if (/<top>/i.test(raw) || /line:(?:0|1|2|3|4|5|10|15|20)%/i.test(settings) || /line:[0-3]\b/i.test(settings)) {
+      vAlign = 'top';
+    } else if (/<mid>/i.test(raw) || /line:(?:40|45|50|55|60)%/i.test(settings)) {
+      vAlign = 'mid';
+    }
+
+    if (/align:(?:left|start)/i.test(settings)) hAlign = 'left';
+    else if (/align:(?:right|end)/i.test(settings)) hAlign = 'right';
+    else if (/align:(?:center|middle)/i.test(settings)) hAlign = 'center';
+
+    return { vAlign, hAlign };
+  }
 
   /** Render the live translation reel: show the latest line on the mini screen
    *  (like a subtitle) and the last handful of completed lines below it.
@@ -248,19 +294,23 @@
     const latestIdx = liveItems[liveItems.length - 1];
     const latest = latestIdx !== undefined ? results[latestIdx] : '';
     if (latest && latest.trim()) {
-      els.liveCaption.textContent = displayText(latest);
-      els.liveCaption.setAttribute('dir', dirFor(latest));
-      els.livePlaceholder.classList.add('hidden');
-      els.liveCaption.classList.remove('hidden');
+      if (els.liveCaption) {
+        els.liveCaption.textContent = displayText(latest);
+        els.liveCaption.setAttribute('dir', dirFor(latest));
+        els.liveCaption.classList.remove('hidden');
+      }
+      if (els.livePlaceholder) els.livePlaceholder.classList.add('hidden');
     }
-    els.liveFeed.innerHTML = '';
-    liveItems.slice(-5).forEach((i) => {
-      const row = document.createElement('span');
-      row.className = 'live-item';
-      row.setAttribute('dir', dirFor(results[i]));
-      row.textContent = displayText(results[i]);
-      els.liveFeed.appendChild(row);
-    });
+    if (els.liveFeed) {
+      els.liveFeed.innerHTML = '';
+      liveItems.slice(-5).forEach((i) => {
+        const row = document.createElement('span');
+        row.className = 'live-item';
+        row.setAttribute('dir', dirFor(results[i]));
+        row.textContent = displayText(results[i]);
+        els.liveFeed.appendChild(row);
+      });
+    }
   }
 
   let undoStack = [];
@@ -436,27 +486,32 @@
   }
 
   function loadPreview(cues = workCues) {
-    SubtitlePlayer.load(cues.map((c) => ({ ...c, text: displayText(c.text) })));
-    els.previewTab.classList.remove('disabled');
+    if (typeof SubtitlePlayer !== 'undefined' && SubtitlePlayer.load) {
+      SubtitlePlayer.load(cues.map((c) => ({ ...c, text: displayText(c.text), rawText: c.text, settings: c.settings || '' })));
+    }
+    if (els.previewTab) els.previewTab.classList.remove('disabled');
   }
 
   // ---------- Subtitle editor ----------
   function autoGrow(el) {
-    if (el.scrollHeight === 0) return;
+    if (!el || el.scrollHeight === 0) return;
     el.style.height = 'auto';
     el.style.height = `${el.scrollHeight}px`;
   }
 
   function updateStatus() {
+    if (!els.editorStatus) return;
+    const saveEditsChecked = els.saveEditsToggle ? els.saveEditsToggle.checked : true;
     els.editorStatus.textContent = dirty
-      ? (els.saveEditsToggle.checked ? 'Your edits will appear in the download' : 'Edits appear here only — not in the download')
+      ? (saveEditsChecked ? 'Your edits will appear in the download' : 'Edits appear here only — not in the download')
       : 'Synced with the preview — edits apply live';
   }
 
   function buildEditor() {
     const list = els.editorList;
+    if (!list) return;
     list.innerHTML = '';
-    const showTime = els.showTimeToggle.checked;
+    const showTime = els.showTimeToggle ? els.showTimeToggle.checked : true;
 
     if (!workCues || !workCues.length) {
       const empty = document.createElement('p');
@@ -531,19 +586,86 @@
     }
   }
 
+  let searchMatchIndices = [];
+  let currentSearchMatchPos = -1;
+
+  function updateSearchBadge(matchCount, currentPos) {
+    const badge = els.edSearchCount;
+    const nav = els.edSearchNav;
+    if (!badge) return;
+
+    if (matchCount === 0) {
+      const zero = (currentUiLang === 'ckb' ? '٠' : '0');
+      badge.textContent = zero;
+      badge.classList.remove('hidden');
+      if (nav) nav.classList.add('hidden');
+      return;
+    }
+
+    const pos = currentPos >= 0 ? currentPos + 1 : 1;
+    let label = `${pos} / ${matchCount}`;
+    if (currentUiLang === 'ckb' || (els.kurdishDigitsToggle && els.kurdishDigitsToggle.checked)) {
+      label = Translator.normalizeDigits(label);
+    }
+    badge.textContent = label;
+    badge.classList.remove('hidden');
+    if (nav) nav.classList.remove('hidden');
+  }
+
+  function goToSearchMatch(index, scroll = true) {
+    if (!searchMatchIndices || searchMatchIndices.length === 0) return;
+    currentSearchMatchPos = (index + searchMatchIndices.length) % searchMatchIndices.length;
+    const cueIdx = searchMatchIndices[currentSearchMatchPos];
+
+    if (rowEls) {
+      rowEls.forEach((row, i) => {
+        if (!row) return;
+        if (i === cueIdx) {
+          row.classList.add('search-current-match');
+          if (scroll) {
+            row.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          }
+        } else {
+          row.classList.remove('search-current-match');
+        }
+      });
+    }
+
+    updateSearchBadge(searchMatchIndices.length, currentSearchMatchPos);
+
+    if (els.syncVideoToggle && els.syncVideoToggle.checked && SubtitlePlayer && typeof SubtitlePlayer.seekToCue === 'function') {
+      SubtitlePlayer.seekToCue(cueIdx);
+    }
+  }
+
+  function nextSearchMatch() {
+    if (searchMatchIndices.length === 0) return;
+    goToSearchMatch(currentSearchMatchPos + 1);
+  }
+
+  function prevSearchMatch() {
+    if (searchMatchIndices.length === 0) return;
+    goToSearchMatch(currentSearchMatchPos - 1);
+  }
+
   function filterEditor() {
     if (!els.edSearchInput) return;
-    const query = els.edSearchInput.value.trim().toLowerCase();
+    const rawQuery = els.edSearchInput.value.trim();
     const clearBtn = els.edSearchClearBtn;
     const countBadge = els.edSearchCount;
+    const nav = els.edSearchNav;
 
-    if (!query) {
+    searchMatchIndices = [];
+    currentSearchMatchPos = -1;
+
+    if (!rawQuery) {
       if (clearBtn) clearBtn.classList.add('hidden');
       if (countBadge) countBadge.classList.add('hidden');
+      if (nav) nav.classList.add('hidden');
       if (rowEls) {
         rowEls.forEach((row) => {
           if (row) {
-            row.classList.remove('search-hidden', 'search-matched');
+            row.classList.remove('search-hidden', 'search-matched', 'search-current-match');
           }
         });
       }
@@ -552,28 +674,46 @@
 
     if (clearBtn) clearBtn.classList.remove('hidden');
 
-    let matchCount = 0;
+    const normQuery = typeof Translator !== 'undefined' && Translator.normalizeForSearch
+      ? Translator.normalizeForSearch(rawQuery)
+      : rawQuery.toLowerCase();
+    const lowerQuery = rawQuery.toLowerCase();
+
     if (rowEls && workCues) {
       workCues.forEach((cue, i) => {
         const row = rowEls[i];
         if (!row) return;
-        const text = (cue.text || '').toLowerCase();
+        const text = cue.text || '';
+        const normText = typeof Translator !== 'undefined' && Translator.normalizeForSearch
+          ? Translator.normalizeForSearch(text)
+          : text.toLowerCase();
+        const lowerText = text.toLowerCase();
         const time = `${SubParser.fmtSRT(cue.start)} ${SubParser.fmtSRT(cue.end)}`.toLowerCase();
-        const matches = text.includes(query) || time.includes(query) || String(i + 1).includes(query);
+        const cueNum = String(i + 1);
+
+        const matches =
+          normText.includes(normQuery) ||
+          lowerText.includes(lowerQuery) ||
+          time.includes(normQuery) ||
+          time.includes(lowerQuery) ||
+          cueNum === rawQuery ||
+          `#${cueNum}` === rawQuery;
+
         if (matches) {
-          matchCount++;
+          searchMatchIndices.push(i);
           row.classList.remove('search-hidden');
           row.classList.add('search-matched');
         } else {
           row.classList.add('search-hidden');
-          row.classList.remove('search-matched');
+          row.classList.remove('search-matched', 'search-current-match');
         }
       });
     }
 
-    if (countBadge) {
-      countBadge.textContent = String(matchCount);
-      countBadge.classList.remove('hidden');
+    if (searchMatchIndices.length > 0) {
+      goToSearchMatch(0, false);
+    } else {
+      updateSearchBadge(0, -1);
     }
   }
 
@@ -593,28 +733,30 @@
   }
 
   // Follow playback: highlight + scroll the editor to the cue now on screen.
-  SubtitlePlayer.setCueCallback((cue, idx) => {
-    activeIdx = idx;
-    if (fsActive) {
-      updateFsScreen();
-      // Keep the fullscreen editor synced to the playing cue unless the user
-      // is actively typing in it.
-      if (!els.fsEditor.classList.contains('hidden') && document.activeElement !== els.fsInput && fsCueIndex !== idx) {
-        syncFsEditor(idx);
+  if (typeof SubtitlePlayer !== 'undefined' && SubtitlePlayer.setCueCallback) {
+    SubtitlePlayer.setCueCallback((cue, idx) => {
+      activeIdx = idx;
+      if (fsActive) {
+        updateFsScreen();
+        // Keep the fullscreen editor synced to the playing cue unless the user
+        // is actively typing in it.
+        if (els.fsEditor && !els.fsEditor.classList.contains('hidden') && document.activeElement !== els.fsInput && fsCueIndex !== idx) {
+          syncFsEditor(idx);
+        }
+        return; // normal editor-list highlight is hidden behind the overlay
       }
-      return; // normal editor-list highlight is hidden behind the overlay
-    }
-    if (!cue || idx < 0) return;
-    if (document.activeElement && document.activeElement.classList.contains('ed-input')) return;
-    if (lastActiveRow) lastActiveRow.classList.remove('active');
-    if (!rowEls || !rowEls[idx]) return;
-    const row = rowEls[idx];
-    if (row) {
-      row.classList.add('active');
-      lastActiveRow = row;
-      scrollRowIntoView(row);
-    }
-  });
+      if (!cue || idx < 0) return;
+      if (document.activeElement && document.activeElement.classList && document.activeElement.classList.contains('ed-input')) return;
+      if (lastActiveRow && lastActiveRow.classList) lastActiveRow.classList.remove('active');
+      if (!rowEls || !rowEls[idx]) return;
+      const row = rowEls[idx];
+      if (row && row.classList) {
+        row.classList.add('active');
+        lastActiveRow = row;
+        scrollRowIntoView(row);
+      }
+    });
+  }
 
   /** Swap in a fresh cue set (original or translated) and rebuild everything. */
   function updateCues(cues) {
@@ -677,46 +819,69 @@
   }
 
   function updateFsScreen() {
-    const cue = activeIdx >= 0 && workCues[activeIdx] ? workCues[activeIdx] : null;
-    els.fsText.textContent = cue ? displayText(cue.text) : '';
-    els.fsText.setAttribute('dir', cue ? dirFor(cue.text) : 'ltr');
-    els.fsCueCount.textContent = cue ? `Cue ${cue.index} / ${workCues.length}` : 'Cue 0 / 0';
+    const cue = activeIdx >= 0 && workCues && workCues[activeIdx] ? workCues[activeIdx] : null;
+    if (els.fsText) {
+      els.fsText.textContent = cue ? displayText(cue.text) : '';
+      els.fsText.setAttribute('dir', cue ? dirFor(cue.text) : 'ltr');
+    }
+    if (els.fsCueCount) {
+      els.fsCueCount.textContent = cue && workCues ? `Cue ${cue.index} / ${workCues.length}` : 'Cue 0 / 0';
+    }
+
+    if (cue) {
+      const placement = getCuePlacement(cue);
+      if (els.fsScreen) {
+        els.fsScreen.classList.remove('pos-top', 'pos-mid', 'pos-bottom');
+        els.fsScreen.classList.add(`pos-${placement.vAlign}`);
+      }
+      if (els.fsText) els.fsText.style.textAlign = placement.hAlign;
+    } else {
+      if (els.fsScreen) {
+        els.fsScreen.classList.remove('pos-top', 'pos-mid');
+        els.fsScreen.classList.add('pos-bottom');
+      }
+      if (els.fsText) els.fsText.style.textAlign = 'center';
+    }
+
     if (els.fsPlayBtn) {
-      els.fsPlayBtn.innerHTML = SubtitlePlayer.playing
+      const isPlaying = typeof SubtitlePlayer !== 'undefined' && SubtitlePlayer.playing;
+      els.fsPlayBtn.innerHTML = isPlaying
         ? '<svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>'
         : '<svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>';
-      els.fsPlayBtn.setAttribute('aria-label', SubtitlePlayer.playing ? 'Pause' : 'Play');
+      els.fsPlayBtn.setAttribute('aria-label', isPlaying ? 'Pause' : 'Play');
     }
     fitFsText();
   }
 
   function syncFsEditor(i) {
-    if (i < 0 || !workCues[i]) return;
+    if (i < 0 || !workCues || !workCues[i]) return;
     fsCueIndex = i;
-    els.fsInput.value = displayText(workCues[i].text);
-    els.fsInput.setAttribute('dir', dirFor(els.fsInput.value));
+    if (els.fsInput) {
+      els.fsInput.value = displayText(workCues[i].text);
+      els.fsInput.setAttribute('dir', dirFor(els.fsInput.value));
+    }
   }
 
   let fsInitialText = '';
 
   function openFsEditor() {
     const i = activeIdx;
-    if (i < 0 || !workCues[i]) return;
+    if (i < 0 || !workCues || !workCues[i]) return;
     syncFsEditor(i);
-    fsInitialText = els.fsInput.value;
-    els.fsEditor.classList.remove('hidden');
-    editWasPlaying = SubtitlePlayer.playing;
-    SubtitlePlayer.pause(); // freeze the cue so you can type without it skipping away
-    els.fsInput.focus(); // pops the keyboard so you can tap-edit immediately
+    fsInitialText = els.fsInput ? els.fsInput.value : '';
+    if (els.fsEditor) els.fsEditor.classList.remove('hidden');
+    editWasPlaying = typeof SubtitlePlayer !== 'undefined' && SubtitlePlayer.playing;
+    if (typeof SubtitlePlayer !== 'undefined' && SubtitlePlayer.pause) SubtitlePlayer.pause(); // freeze the cue so you can type without it skipping away
+    if (els.fsInput) els.fsInput.focus(); // pops the keyboard so you can tap-edit immediately
     fitFsText();
   }
 
   function closeFsEditor() {
-    if (fsCueIndex >= 0 && els.fsInput.value !== fsInitialText) {
+    if (fsCueIndex >= 0 && els.fsInput && els.fsInput.value !== fsInitialText) {
       pushUndoState();
     }
-    els.fsEditor.classList.add('hidden');
-    if (editWasPlaying) SubtitlePlayer.play();
+    if (els.fsEditor) els.fsEditor.classList.add('hidden');
+    if (editWasPlaying && typeof SubtitlePlayer !== 'undefined' && SubtitlePlayer.play) SubtitlePlayer.play();
     editWasPlaying = false;
     fitFsText();
   }
@@ -724,17 +889,17 @@
   function enterFs() {
     if (!parsed || !workCues || !workCues.length) { toast('Load a subtitle file first.', true); return; }
     fsActive = true;
-    els.fsEdit.classList.remove('hidden');
+    if (els.fsEdit) els.fsEdit.classList.remove('hidden');
     // Show the cue now on screen (falling back to the first cue) so the
     // fullscreen view is never a blank screen, and park the player on it.
-    const pos = SubtitlePlayer.position;
+    const pos = typeof SubtitlePlayer !== 'undefined' ? SubtitlePlayer.position : 0;
     let i = workCues.findIndex((c) => pos >= c.start && pos < c.end);
     if (i < 0) i = activeIdx >= 0 ? activeIdx : 0;
     if (i < 0) i = 0;
-    SubtitlePlayer.seek(workCues[i].start);
+    if (typeof SubtitlePlayer !== 'undefined' && SubtitlePlayer.seek && workCues[i]) SubtitlePlayer.seek(workCues[i].start);
     updateFsScreen();
     requestAnimationFrame(() => fitFsText());
-    if (els.fsEdit.requestFullscreen) {
+    if (els.fsEdit && els.fsEdit.requestFullscreen) {
       els.fsEdit.requestFullscreen().then(() => {
         fitFsText();
       }).catch(() => {});
@@ -743,7 +908,7 @@
 
   function exitFs() {
     fsActive = false;
-    els.fsEdit.classList.add('hidden');
+    if (els.fsEdit) els.fsEdit.classList.add('hidden');
     closeFsEditor();
     if (document.fullscreenElement || document.webkitFullscreenElement) {
       document.exitFullscreen().catch(() => {});
@@ -751,13 +916,13 @@
   }
 
   function bindFs() {
-    els.fsToggleBtn.addEventListener('click', () => (fsActive ? exitFs() : enterFs()));
-    els.fsClose.addEventListener('click', exitFs);
-    els.fsText.addEventListener('click', openFsEditor); // tap any word → editor at the bottom
-    els.fsEditBtn.addEventListener('click', openFsEditor);
-    els.fsDoneBtn.addEventListener('click', closeFsEditor);
-    els.fsPrevBtn.addEventListener('click', () => SubtitlePlayer.stepCue(-1));
-    els.fsNextBtn.addEventListener('click', () => SubtitlePlayer.stepCue(1));
+    if (els.fsToggleBtn) els.fsToggleBtn.addEventListener('click', () => (fsActive ? exitFs() : enterFs()));
+    if (els.fsClose) els.fsClose.addEventListener('click', exitFs);
+    if (els.fsText) els.fsText.addEventListener('click', openFsEditor); // tap any word → editor at the bottom
+    if (els.fsEditBtn) els.fsEditBtn.addEventListener('click', openFsEditor);
+    if (els.fsDoneBtn) els.fsDoneBtn.addEventListener('click', closeFsEditor);
+    if (els.fsPrevBtn) els.fsPrevBtn.addEventListener('click', () => SubtitlePlayer.stepCue(-1));
+    if (els.fsNextBtn) els.fsNextBtn.addEventListener('click', () => SubtitlePlayer.stepCue(1));
 
     if (els.fsPlayBtn) els.fsPlayBtn.addEventListener('click', () => { SubtitlePlayer.toggle(); updateFsScreen(); });
     if (els.fsSkipBackBtn) els.fsSkipBackBtn.addEventListener('click', () => SubtitlePlayer.seek(SubtitlePlayer.position - 5000));
@@ -822,13 +987,19 @@
       toast('Load a subtitle file first.', true);
       return; // don't switch to an empty preview tab
     }
-    tabButtons.forEach((b) => b.classList.toggle('active', b.dataset.tab === name));
-    els.tabTranslate.classList.toggle('hidden', name !== 'translate');
-    els.tabPreview.classList.toggle('hidden', name !== 'preview');
+    tabButtons.forEach((b) => {
+      if (b && b.classList) b.classList.toggle('active', b.dataset.tab === name);
+    });
+    if (els.tabTranslate && els.tabTranslate.classList) els.tabTranslate.classList.toggle('hidden', name !== 'translate');
+    if (els.tabPreview && els.tabPreview.classList) els.tabPreview.classList.toggle('hidden', name !== 'preview');
     if (name === 'preview') {
-      requestAnimationFrame(() => SubtitlePlayer.fitText());
+      if (typeof SubtitlePlayer !== 'undefined' && SubtitlePlayer.fitText) {
+        requestAnimationFrame(() => SubtitlePlayer.fitText());
+      }
     } else {
-      SubtitlePlayer.pause(); // stop playback off-screen
+      if (typeof SubtitlePlayer !== 'undefined' && SubtitlePlayer.pause) {
+        SubtitlePlayer.pause(); // stop playback off-screen
+      }
     }
   }
   tabButtons.forEach((b) => b.addEventListener('click', () => switchTab(b.dataset.tab)));
@@ -975,10 +1146,10 @@
     if (!parsed) return;
     cancelFlag = false;
     showStep('progress');
-    els.cancelBtn.classList.remove('hidden');
-    els.translateBtn.disabled = true;
+    if (els.cancelBtn && els.cancelBtn.classList) els.cancelBtn.classList.remove('hidden');
+    if (els.translateBtn) els.translateBtn.disabled = true;
     setProgress(0, 'Preparing…');
-    els.lineCount.textContent = `${parsed.cues.length} lines`;
+    if (els.lineCount) els.lineCount.textContent = `${parsed.cues.length} lines`;
 
     if (typeof Toast !== 'undefined') {
       Toast.show(
@@ -988,10 +1159,10 @@
       );
     }
 
-    const srcLang = els.srcLang.value;
-    const tgtLang = els.tgtLang.value;
-    const includeOriginal = els.includeOriginal.checked;
-    const accuracy = els.accuracyToggle.checked;
+    const srcLang = els.srcLang ? els.srcLang.value : 'auto';
+    const tgtLang = els.tgtLang ? els.tgtLang.value : 'ckb';
+    const includeOriginal = els.includeOriginal ? els.includeOriginal.checked : false;
+    const accuracy = els.accuracyToggle ? els.accuracyToggle.checked : false;
     const kurdishDigits = els.kurdishDigitsToggle ? els.kurdishDigitsToggle.checked : false;
     const isAss = parsed.format === 'ass' || parsed.format === 'ssa';
     const normalize = (c) => (isAss ? c.text.replace(/\\N/g, '\n') : c.text);
@@ -1007,7 +1178,8 @@
         if (includeOriginal && tr && tr !== normalize(c)) return { ...c, text: `${c.text}\n${tr}` };
         return { ...c, text: tr || c.text };
       });
-      const finalCues = els.keepOnly.checked
+      const keepOnlyChecked = els.keepOnly ? els.keepOnly.checked : false;
+      const finalCues = keepOnlyChecked
         ? translatedCues.filter((c) => c.text.trim() !== '')
         : translatedCues;
       finalCues.forEach((c, i) => { c.index = i + 1; });
@@ -1021,9 +1193,9 @@
       liveDone = 0;
       liveItems = [];
       cachedLiveTexts = null;
-      els.liveCaption.classList.add('hidden');
-      els.livePlaceholder.classList.remove('hidden');
-      els.liveFeed.innerHTML = '';
+      if (els.liveCaption && els.liveCaption.classList) els.liveCaption.classList.add('hidden');
+      if (els.livePlaceholder && els.livePlaceholder.classList) els.livePlaceholder.classList.remove('hidden');
+      if (els.liveFeed) els.liveFeed.innerHTML = '';
       const translated = await Translator.translateLines(lines, srcLang, tgtLang, (p, done, total) => {
         if (cancelFlag) return;
         setProgress(p, `Translated ${done} / ${total} lines`);
@@ -1073,6 +1245,14 @@
     }
   }
 
+  function cleanBaseName(filename) {
+    if (!filename) return 'subtitle';
+    let name = filename.replace(/\.[^.]+$/, '');
+    // Strip language tags and duplicate extension markers
+    name = name.replace(/\.(en|eng|english|ckb|ku|kur|kurdish|sor|sorani|ar|arabic|fa|farsi|persian|es|spanish|fr|french|de|german|ru|russian|tr|turkish|it|pt|ja|zh|ko|hi|ur|ps|sv|no|da|nl|pl|uk|el|he|id)$/i, '');
+    return name || 'subtitle';
+  }
+
   function prepareDownload() {
     if (!parsed || !file) return;
     // Edits are included in the output only when "Save edits" is on.
@@ -1104,7 +1284,7 @@
     resultUrl = URL.createObjectURL(blob);
 
     const ext = EXT_BY_FORMAT[chosenFormat] || 'srt';
-    const base = file.name.replace(/\.[^.]+$/, '');
+    const base = cleanBaseName(file.name);
     els.downloadBtn.href = resultUrl;
     const tgt = (els.tgtLang && els.tgtLang.value) || 'ckb';
     els.downloadBtn.download = `${base}.${tgt}.${ext}`;
@@ -1249,6 +1429,16 @@
           e.preventDefault();
           performRedo();
         }
+      } else if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'f') {
+        // Quick find shortcut: focus the editor search bar if on the preview tab or if cues are loaded
+        if (els.edSearchInput && ((els.tabPreview && !els.tabPreview.classList.contains('hidden')) || (parsed && parsed.cues && parsed.cues.length))) {
+          e.preventDefault();
+          if (els.tabPreview && els.tabPreview.classList.contains('hidden')) {
+            switchTab('preview');
+          }
+          els.edSearchInput.focus();
+          els.edSearchInput.select();
+        }
       }
     });
 
@@ -1256,82 +1446,111 @@
 
     // ⚡ Bolt: Event delegation for subtitle editor list to avoid O(N) event listeners.
     // We attach unified handlers on the container instead of separate handlers on each row.
-    els.editorList.addEventListener('input', (e) => {
-      const input = e.target;
-      if (!input || !input.classList.contains('ed-input')) return;
-      const row = input.closest('.ed-row');
-      if (!row) return;
-      const i = parseInt(row.dataset.index, 10);
-      autoGrow(input);
-      applyCueEdit(i, input.value);
-    });
-
-    els.editorList.addEventListener('focusin', (e) => {
-      const input = e.target;
-      if (!input || !input.classList.contains('ed-input')) return;
-      const row = input.closest('.ed-row');
-      if (!row) return;
-      rowInitialText = input.value;
-      row.classList.add('editing');
-      if (els.syncVideoToggle && els.syncVideoToggle.checked) {
+    if (els.editorList) {
+      els.editorList.addEventListener('input', (e) => {
+        const input = e.target;
+        if (!input || !input.classList || !input.classList.contains('ed-input')) return;
+        const row = input.closest('.ed-row');
+        if (!row) return;
         const i = parseInt(row.dataset.index, 10);
-        const c = workCues[i];
-        if (c) {
-          SubtitlePlayer.seek(c.start);
-          editWasPlaying = SubtitlePlayer.playing;
-          SubtitlePlayer.pause();
+        autoGrow(input);
+        applyCueEdit(i, input.value);
+      });
+
+      els.editorList.addEventListener('focusin', (e) => {
+        const input = e.target;
+        if (!input || !input.classList || !input.classList.contains('ed-input')) return;
+        const row = input.closest('.ed-row');
+        if (!row) return;
+        rowInitialText = input.value;
+        if (row.classList) row.classList.add('editing');
+        if (els.syncVideoToggle && els.syncVideoToggle.checked) {
+          const i = parseInt(row.dataset.index, 10);
+          const c = workCues && workCues[i];
+          if (c && typeof SubtitlePlayer !== 'undefined') {
+            SubtitlePlayer.seek(c.start);
+            editWasPlaying = SubtitlePlayer.playing;
+            SubtitlePlayer.pause();
+          }
         }
-      }
-    });
+      });
 
-    els.editorList.addEventListener('focusout', (e) => {
-      const input = e.target;
-      if (!input || !input.classList.contains('ed-input')) return;
-      const row = input.closest('.ed-row');
-      if (!row) return;
-      row.classList.remove('editing');
-      const i = parseInt(row.dataset.index, 10);
-      if (input.value !== rowInitialText) {
-        pushUndoState();
-      }
-      if (els.syncVideoToggle && els.syncVideoToggle.checked && editWasPlaying) {
-        SubtitlePlayer.play();
-      }
-      editWasPlaying = false;
-    });
+      els.editorList.addEventListener('focusout', (e) => {
+        const input = e.target;
+        if (!input || !input.classList || !input.classList.contains('ed-input')) return;
+        const row = input.closest('.ed-row');
+        if (!row) return;
+        if (row.classList) row.classList.remove('editing');
+        const i = parseInt(row.dataset.index, 10);
+        if (input.value !== rowInitialText) {
+          pushUndoState();
+        }
+        if (els.syncVideoToggle && els.syncVideoToggle.checked && editWasPlaying && typeof SubtitlePlayer !== 'undefined') {
+          SubtitlePlayer.play();
+        }
+        editWasPlaying = false;
+      });
 
-    els.editorList.addEventListener('scroll', () => {
-      userIsScrolling = true;
-      clearTimeout(userScrollTimer);
-      userScrollTimer = setTimeout(() => {
-        userIsScrolling = false;
-      }, 3000);
-    }, { passive: true });
+      els.editorList.addEventListener('scroll', () => {
+        userIsScrolling = true;
+        clearTimeout(userScrollTimer);
+        userScrollTimer = setTimeout(() => {
+          userIsScrolling = false;
+        }, 3000);
+      }, { passive: true });
 
-    els.editorList.addEventListener('click', (e) => {
-      if (e.target.closest('.ed-input')) return;
-      const row = e.target.closest('.ed-row');
-      if (!row) return;
-      const i = parseInt(row.dataset.index, 10);
-      const c = workCues[i];
-      if (!c) return;
-      if (els.syncVideoToggle && els.syncVideoToggle.checked) {
-        SubtitlePlayer.seek(c.start);
-        if (!SubtitlePlayer.playing) SubtitlePlayer.play();
-      }
-    });
+      els.editorList.addEventListener('click', (e) => {
+        if (e.target.closest('.ed-input')) return;
+        const row = e.target.closest('.ed-row');
+        if (!row) return;
+        const i = parseInt(row.dataset.index, 10);
+        const c = workCues && workCues[i];
+        if (!c) return;
+        if (els.syncVideoToggle && els.syncVideoToggle.checked && typeof SubtitlePlayer !== 'undefined') {
+          SubtitlePlayer.seek(c.start);
+          if (!SubtitlePlayer.playing) SubtitlePlayer.play();
+        }
+      });
 
-    els.editorList.addEventListener('keydown', (e) => {
-      const input = e.target;
-      if (!input || !input.classList.contains('ed-input')) return;
-      if (e.key === 'Escape' || (e.key === 'Enter' && (e.ctrlKey || e.metaKey))) {
-        e.preventDefault();
-        input.blur();
-      }
-    });
+      els.editorList.addEventListener('keydown', (e) => {
+        const input = e.target;
+        if (!input || !input.classList || !input.classList.contains('ed-input')) return;
+        if (e.key === 'Escape' || (e.key === 'Enter' && (e.ctrlKey || e.metaKey))) {
+          e.preventDefault();
+          input.blur();
+        }
+      });
+    }
 
     if (els.edSearchInput) {
       els.edSearchInput.addEventListener('input', filterEditor);
+      els.edSearchInput.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') {
+          e.preventDefault();
+          if (e.shiftKey) {
+            prevSearchMatch();
+          } else {
+            nextSearchMatch();
+          }
+        } else if (e.key === 'Escape') {
+          e.preventDefault();
+          els.edSearchInput.value = '';
+          filterEditor();
+          els.edSearchInput.blur();
+        }
+      });
+    }
+    if (els.edSearchPrevBtn) {
+      els.edSearchPrevBtn.addEventListener('click', (e) => {
+        e.preventDefault();
+        prevSearchMatch();
+      });
+    }
+    if (els.edSearchNextBtn) {
+      els.edSearchNextBtn.addEventListener('click', (e) => {
+        e.preventDefault();
+        nextSearchMatch();
+      });
     }
     if (els.edSearchClearBtn) {
       els.edSearchClearBtn.addEventListener('click', () => {
@@ -1757,18 +1976,22 @@
 
   // ---------- Init ----------
   function init() {
-    els.previewTab.classList.add('disabled'); // enabled once a file is loaded
-    for (const [code, name] of Object.entries(SOURCE_LANGS)) {
-      const o = document.createElement('option');
-      o.value = code;
-      o.textContent = name;
-      els.srcLang.appendChild(o);
+    if (els.previewTab && els.previewTab.classList) els.previewTab.classList.add('disabled'); // enabled once a file is loaded
+    if (els.srcLang) {
+      for (const [code, name] of Object.entries(SOURCE_LANGS)) {
+        const o = document.createElement('option');
+        o.value = code;
+        o.textContent = name;
+        els.srcLang.appendChild(o);
+      }
     }
     bindDropzone();
     bindActions();
     bindFs();
     bindTour();
-    SubtitlePlayer.init();
+    if (typeof SubtitlePlayer !== 'undefined' && SubtitlePlayer.init) {
+      SubtitlePlayer.init();
+    }
 
     // PWA: register service worker for installability + offline app shell.
     if ('serviceWorker' in navigator) {
@@ -1777,32 +2000,36 @@
 
     // Warm the translation endpoint so the first real request isn't a cold one
     // (Google sometimes throttles the first hit and answers on a warm retry).
-    Translator.warmup();
+    if (typeof Translator !== 'undefined' && Translator.warmup) {
+      Translator.warmup();
+    }
 
     // Show an Install button when the browser allows it (Android/desktop).
     let deferredInstall = null;
     window.addEventListener('beforeinstallprompt', (e) => {
       e.preventDefault();
       deferredInstall = e;
-      els.installBtn.hidden = false;
+      if (els.installBtn) els.installBtn.hidden = false;
     });
-    els.installBtn.addEventListener('click', async () => {
-      if (!deferredInstall) return;
-      deferredInstall.prompt();
-      await deferredInstall.userChoice;
-      deferredInstall = null;
-      els.installBtn.hidden = true;
-    });
+    if (els.installBtn) {
+      els.installBtn.addEventListener('click', async () => {
+        if (!deferredInstall) return;
+        deferredInstall.prompt();
+        await deferredInstall.userChoice;
+        deferredInstall = null;
+        els.installBtn.hidden = true;
+      });
+    }
 
-    els.srcLang.value = store.get('srcLang', 'auto');
-    els.keepOnly.checked = store.get('keepOnly', '0') === '1';
-    els.includeOriginal.checked = store.get('includeOriginal', '0') === '1';
-    els.accuracyToggle.checked = store.get('accuracy', '0') === '1';
+    if (els.srcLang) els.srcLang.value = store.get('srcLang', 'auto');
+    if (els.keepOnly) els.keepOnly.checked = store.get('keepOnly', '0') === '1';
+    if (els.includeOriginal) els.includeOriginal.checked = store.get('includeOriginal', '0') === '1';
+    if (els.accuracyToggle) els.accuracyToggle.checked = store.get('accuracy', '0') === '1';
     if (els.kurdishDigitsToggle) els.kurdishDigitsToggle.checked = store.get('kurdishDigits', '0') === '1';
     if (els.addBomToggle) els.addBomToggle.checked = store.get('addBom', '0') === '1';
     if (els.crlfToggle) els.crlfToggle.checked = store.get('useCrlf', '0') === '1';
-    els.showTimeToggle.checked = store.get('showTime', '1') === '1';
-    els.saveEditsToggle.checked = store.get('saveEdits', '1') === '1';
+    if (els.showTimeToggle) els.showTimeToggle.checked = store.get('showTime', '1') === '1';
+    if (els.saveEditsToggle) els.saveEditsToggle.checked = store.get('saveEdits', '1') === '1';
     if (els.syncVideoToggle) els.syncVideoToggle.checked = store.get('syncVideo', '0') === '1';
 
     updateAdvBadge();
@@ -1827,8 +2054,10 @@
     window.addEventListener('resize', () => {
       clearTimeout(resizeTimer);
       resizeTimer = setTimeout(() => {
-        const inputs = els.editorList.querySelectorAll('.ed-input');
-        inputs.forEach((input) => autoGrow(input));
+        if (els.editorList) {
+          const inputs = els.editorList.querySelectorAll('.ed-input');
+          inputs.forEach((input) => autoGrow(input));
+        }
         if (fsActive) fitFsText();
       }, 100);
     });

@@ -103,7 +103,7 @@ const SubParser = (() => {
   // A timing line must START with a timecode so subtitle text that merely
   // mentions a time range isn't mistaken for a new cue; a VTT trailer
   // ("align:start position:0%") is allowed after the arrow.
-  const TIMECODE_LINE = /^(\d+:\d{2}(?::\d{2})?[,.]\d{1,3})\s*-->\s*(\d+:\d{2}(?::\d{2})?[,.]\d{1,3})(?:\s+.*)?$/;
+  const TIMECODE_LINE = /^(\d+:\d{2}(?::\d{2})?[,.]\d{1,3})\s*-->\s*(\d+:\d{2}(?::\d{2})?[,.]\d{1,3})(?:\s+(.*))?$/;
   function parseSRTVTT(content) {
     const lines = content.replace(/\r/g, '').split('\n');
     const cues = [];
@@ -118,7 +118,8 @@ const SubParser = (() => {
       const m = line.match(TIMECODE_LINE);
       if (m) {
         if (current) cues.push(current);
-        current = { start: toMs(m[1]), end: toMs(m[2]), text: [] };
+        const settings = m[3] ? m[3].trim() : '';
+        current = { start: toMs(m[1]), end: toMs(m[2]), settings, text: [] };
         continue;
       }
       if (/^NOTE\b/i.test(line)) { inNote = true; continue; }
@@ -137,7 +138,7 @@ const SubParser = (() => {
     const out = [];
     for (const c of cues) {
       const text = c.text.join('\n').trim();
-      if (text) out.push({ index: out.length + 1, start: c.start, end: c.end, text });
+      if (text) out.push({ index: out.length + 1, start: c.start, end: c.end, settings: c.settings || '', text });
     }
     return out;
   }
@@ -385,7 +386,10 @@ Style: Default,Arial,20,16777215,65535,0,0,0,0,1,2,2,2,10,10,10,0,1
     const fmt = (parsed.format || 'srt').toLowerCase();
     switch (fmt) {
       case 'vtt':
-        return 'WEBVTT\n\n' + cueList.map((c) => `${fmtVTT(c.start)} --> ${fmtVTT(c.end)}\n${normalizeTextForStandard(c.text)}`).join('\n\n') + '\n';
+        return 'WEBVTT\n\n' + cueList.map((c) => {
+          const s = c.settings ? ' ' + c.settings : '';
+          return `${fmtVTT(c.start)} --> ${fmtVTT(c.end)}${s}\n${normalizeTextForStandard(c.text)}`;
+        }).join('\n\n') + '\n';
       case 'srt':
         return cueList.map((c, i) => `${i + 1}\n${fmtSRT(c.start)} --> ${fmtSRT(c.end)}\n${normalizeTextForStandard(c.text)}`).join('\n\n') + '\n';
       case 'ass':

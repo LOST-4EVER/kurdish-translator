@@ -43,21 +43,22 @@ const SubtitlePlayer = (() => {
     el.speed = _('#speedSel');
     el.tlTooltip = _('#tlTooltip');
 
-    el.play.addEventListener('click', toggle);
-    el.restart.addEventListener('click', () => seek(0));
+    if (el.play) el.play.addEventListener('click', toggle);
+    if (el.restart) el.restart.addEventListener('click', () => seek(0));
     if (el.prevCue) el.prevCue.addEventListener('click', () => stepCue(-1));
     if (el.nextCue) el.nextCue.addEventListener('click', () => stepCue(1));
     if (el.skipBack) el.skipBack.addEventListener('click', () => jump(-5000));
     if (el.skipForward) el.skipForward.addEventListener('click', () => jump(5000));
-    el.speed.addEventListener('change', (e) => { speed = Number(e.target.value); });
+    if (el.speed) el.speed.addEventListener('change', (e) => { speed = Number(e.target.value); });
 
     const handleScrub = (e) => {
+      if (!el.tl) return;
       const rect = el.tl.getBoundingClientRect();
       seek(clamp((e.clientX - rect.left) / rect.width, 0, 1) * total);
     };
 
     // Timeline hover timecode tooltip
-    if (el.tlTooltip) {
+    if (el.tlTooltip && el.tl) {
       el.tl.addEventListener('pointermove', (e) => {
         if (!total) { el.tlTooltip.classList.add('hidden'); return; }
         const rect = el.tl.getBoundingClientRect();
@@ -72,26 +73,28 @@ const SubtitlePlayer = (() => {
       });
     }
 
-    el.tl.addEventListener('pointerdown', (e) => {
-      el.tl.setPointerCapture(e.pointerId);
-      if (playing) pause();
-      handleScrub(e);
+    if (el.tl) {
+      el.tl.addEventListener('pointerdown', (e) => {
+        el.tl.setPointerCapture(e.pointerId);
+        if (playing) pause();
+        handleScrub(e);
 
-      const onPointerMove = (moveEvent) => {
-        handleScrub(moveEvent);
-      };
+        const onPointerMove = (moveEvent) => {
+          handleScrub(moveEvent);
+        };
 
-      const onPointerUp = (upEvent) => {
-        el.tl.releasePointerCapture(upEvent.pointerId);
-        el.tl.removeEventListener('pointermove', onPointerMove);
-        el.tl.removeEventListener('pointerup', onPointerUp);
-        el.tl.removeEventListener('pointercancel', onPointerUp);
-      };
+        const onPointerUp = (upEvent) => {
+          el.tl.releasePointerCapture(upEvent.pointerId);
+          el.tl.removeEventListener('pointermove', onPointerMove);
+          el.tl.removeEventListener('pointerup', onPointerUp);
+          el.tl.removeEventListener('pointercancel', onPointerUp);
+        };
 
-      el.tl.addEventListener('pointermove', onPointerMove);
-      el.tl.addEventListener('pointerup', onPointerUp);
-      el.tl.addEventListener('pointercancel', onPointerUp);
-    });
+        el.tl.addEventListener('pointermove', onPointerMove);
+        el.tl.addEventListener('pointerup', onPointerUp);
+        el.tl.addEventListener('pointercancel', onPointerUp);
+      });
+    }
 
     document.addEventListener('keydown', (e) => {
       const t = e.target;
@@ -165,17 +168,21 @@ const SubtitlePlayer = (() => {
     playing = true;
     startPerf = performance.now();
     basePos = pos;
-    el.play.innerHTML = PAUSE_SVG;
-    el.play.setAttribute('aria-label', 'Pause');
-    el.screen.classList.add('live');
+    if (el.play) {
+      el.play.innerHTML = PAUSE_SVG;
+      el.play.setAttribute('aria-label', 'Pause');
+    }
+    if (el.screen && el.screen.classList) el.screen.classList.add('live');
     raf = requestAnimationFrame(tick);
   }
 
   function pause() {
     playing = false;
-    el.play.innerHTML = PLAY_SVG;
-    el.play.setAttribute('aria-label', 'Play');
-    el.screen.classList.remove('live');
+    if (el.play) {
+      el.play.innerHTML = PLAY_SVG;
+      el.play.setAttribute('aria-label', 'Play');
+    }
+    if (el.screen && el.screen.classList) el.screen.classList.remove('live');
     if (raf) cancelAnimationFrame(raf);
     raf = null;
   }
@@ -218,6 +225,50 @@ const SubtitlePlayer = (() => {
     return cursor;
   }
 
+  /** Extract vertical and horizontal placement from subtitle tags or settings (ASS {\anX}, {\aX}, WebVTT line/align). */
+  function getCuePlacement(cue) {
+    if (!cue) return { vAlign: 'bottom', hAlign: 'center' };
+    const raw = (cue.rawText || cue.text || '');
+    const settings = (cue.settings || '');
+
+    let vAlign = 'bottom';
+    let hAlign = 'center';
+
+    // Check ASS / SSA / SRT alignment tags: {\an1}..{\an9}, {\a1}..{\a11}
+    const anMatch = raw.match(/\{\\an(\d)\}/i);
+    const aMatch = raw.match(/\{\\a(\d+)\}/i);
+    if (anMatch) {
+      const num = parseInt(anMatch[1], 10);
+      if (num >= 7 && num <= 9) vAlign = 'top';
+      else if (num >= 4 && num <= 6) vAlign = 'mid';
+      else vAlign = 'bottom';
+
+      if (num === 1 || num === 4 || num === 7) hAlign = 'left';
+      else if (num === 3 || num === 6 || num === 9) hAlign = 'right';
+      else hAlign = 'center';
+    } else if (aMatch) {
+      const num = parseInt(aMatch[1], 10);
+      if (num >= 5 && num <= 7) vAlign = 'top';
+      else if (num >= 9 && num <= 11) vAlign = 'mid';
+      else vAlign = 'bottom';
+
+      if (num === 1 || num === 5 || num === 9) hAlign = 'left';
+      else if (num === 3 || num === 7 || num === 11) hAlign = 'right';
+      else hAlign = 'center';
+    } else if (/<top>/i.test(raw) || /line:(?:0|1|2|3|4|5|10|15|20)%/i.test(settings) || /line:[0-3]\b/i.test(settings)) {
+      vAlign = 'top';
+    } else if (/<mid>/i.test(raw) || /line:(?:40|45|50|55|60)%/i.test(settings)) {
+      vAlign = 'mid';
+    }
+
+    // Check WebVTT horizontal alignment
+    if (/align:(?:left|start)/i.test(settings)) hAlign = 'left';
+    else if (/align:(?:right|end)/i.test(settings)) hAlign = 'right';
+    else if (/align:(?:center|middle)/i.test(settings)) hAlign = 'center';
+
+    return { vAlign, hAlign };
+  }
+
   function refresh(force = false) {
     const idx = cueAt(pos);
     const cue = idx >= 0 ? cues[idx] : null;
@@ -226,10 +277,23 @@ const SubtitlePlayer = (() => {
     // Only touch the text DOM when the active cue actually changes.
     if (force || changed) {
       activeCue = cue;
-      el.text.textContent = cue ? cue.text : '';
-      el.text.style.display = cue ? 'block' : 'none';
-      el.text.setAttribute('dir', cue && hasArabic(cue.text) ? 'rtl' : 'ltr');
-      if (changed && cue) {
+      const cleanText = cue ? String(cue.text || '').replace(/<[^>]+>/g, '').replace(/\{[^}]*\}/g, '').replace(/\\N/g, '\n') : '';
+      if (el.text) {
+        el.text.textContent = cleanText;
+        el.text.style.display = cue ? 'block' : 'none';
+        el.text.setAttribute('dir', cue && hasArabic(cue.text) ? 'rtl' : 'ltr');
+      }
+
+      const placement = getCuePlacement(cue);
+      if (el.screen && el.screen.classList) {
+        el.screen.classList.remove('pos-top', 'pos-mid', 'pos-bottom');
+        el.screen.classList.add(`pos-${placement.vAlign}`);
+      }
+      if (el.text) {
+        el.text.style.textAlign = placement.hAlign;
+      }
+
+      if (changed && cue && el.text && el.text.classList) {
         el.text.classList.remove('caption-updated');
         void el.text.offsetWidth;
         el.text.classList.add('caption-updated');
@@ -237,7 +301,7 @@ const SubtitlePlayer = (() => {
       if (cue) {
         fitText();
       }
-      el.empty.style.display = cues.length ? 'none' : 'block';
+      if (el.empty) el.empty.style.display = cues.length ? 'none' : 'block';
       if (el.cueCount) {
         el.cueCount.textContent = cues.length ? `${cue ? cue.index : 0} / ${cues.length}` : '';
         el.cueCount.style.display = cues.length ? 'block' : 'none';
@@ -248,11 +312,11 @@ const SubtitlePlayer = (() => {
     const sec = Math.floor(pos / 1000);
     if (sec !== lastSec) {
       lastSec = sec;
-      el.time.textContent = `${fmt(pos)} / ${fmt(total)}`;
+      if (el.time) el.time.textContent = `${fmt(pos)} / ${fmt(total)}`;
     }
     const pct = total ? (pos / total) * 100 : 0;
-    el.tlFill.style.width = `${pct}%`;
-    el.tlThumb.style.left = `${pct}%`;
+    if (el.tlFill) el.tlFill.style.width = `${pct}%`;
+    if (el.tlThumb) el.tlThumb.style.left = `${pct}%`;
 
     if (changed && onCue) onCue(cue, idx);
   }

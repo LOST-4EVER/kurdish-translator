@@ -67,15 +67,61 @@ const Translator = (() => {
   }
 
   /** Put the original markup back in place of the bracketed tokens. */
+  function cleanLeftoverTokens(text) {
+    if (!text) return '';
+    return text
+      .replace(/\[\s*(?:T|t|Z|z|X|x|P|p|ت|تاک|تی|تۆ|پی|پێ|ٹی|ز|زێد)\s*[-_:]?\s*[\d\u0660-\u0669\u06f0-\u06f9]+\s*\]/gi, '')
+      .replace(/\(\s*(?:T|t|Z|z|X|x|P|p|ت|تاک|تی|تۆ|پی|پێ|ٹی|ز|زێد)\s*[-_:]?\s*[\d\u0660-\u0669\u06f0-\u06f9]+\s*\)/gi, '')
+      .replace(/\b(?:T|t|Z|z|X|x|P|p|ت|تاک|تی|تۆ|پی|پێ|ٹی|ز|زێد)\s*[-_:]?\s*[\d\u0660-\u0669\u06f0-\u06f9]+\b/gi, '');
+  }
+
   function restore(s, toks) {
-    if (!toks || !toks.length) return s;
-    return s.replace(/(?:\[|\()\s*(?:T|t|ت|تی|تاک)\s*[-_]?\s*([\d\u0660-\u0669\u06f0-\u06f9]+)\s*(?:\]|\))|\b(?:T|t|ت|تی|تاک)\s*[-_]?\s*([\d\u0660-\u0669\u06f0-\u06f9]+)\b/gi, (_, n1, n2) => {
+    if (!s) return '';
+    if (!toks || !toks.length) return cleanLeftoverTokens(s);
+    let res = s.replace(/(?:\[|\()\s*(?:T|t|Z|z|X|x|P|p|ت|تاک|تی|تۆ|پی|پێ|ٹی|ز|زێد)\s*[-_:]?\s*([\d\u0660-\u0669\u06f0-\u06f9]+)\s*(?:\]|\))|\b(?:T|t|Z|z|X|x|P|p|ت|تاک|تی|تۆ|پی|پێ|ٹی|ز|زێد)\s*[-_:]?\s*([\d\u0660-\u0669\u06f0-\u06f9]+)\b/gi, (_, n1, n2) => {
       const numStr = n1 || n2;
       const ascii = numStr.replace(/[\u0660-\u0669]/g, (d) => String(d.charCodeAt(0) - 0x0660))
                           .replace(/[\u06f0-\u06f9]/g, (d) => String(d.charCodeAt(0) - 0x06f0));
       const id = parseInt(ascii, 10);
       return toks[id] !== undefined ? toks[id] : '';
     });
+    return cleanLeftoverTokens(res);
+  }
+
+  /**
+   * Ensure screen placement override tags (like {\an8}, {\pos(x,y)}) and formatting tags
+   * maintain their proper leading/trailing position in the translated line despite RTL reordering.
+   */
+  function fixPlacementAndTagOrder(text, originalText) {
+    if (!text || !originalText) return text || '';
+
+    // Check for leading ASS/override/position tags in original: e.g. {\an8}, {\pos(x,y)}, {\c&H...&}, {\a6}, <top>
+    const leadTagMatch = originalText.match(/^((?:\{[^}]+\}|<[^>]+>\s*)+)/);
+    if (leadTagMatch) {
+      const leadTags = leadTagMatch[1].trim();
+      if (/^\{[^{}]*\\(?:an?\d|pos|move|fad|org|c&|1c&|3c&|4c&|fn|fs|b\d|i\d|shad|bord)[^{}]*\}/i.test(leadTags) || /^<(?:top|font\b)/i.test(leadTags)) {
+        if (!text.startsWith(leadTags)) {
+          let stripped = text;
+          const escaped = leadTags.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+          stripped = stripped.replace(new RegExp(escaped, 'g'), '').trim();
+          text = leadTags + (stripped ? ' ' + stripped : '');
+        }
+      }
+    }
+
+    // Check for trailing closing tags in original: e.g. </i>, </b>, </u>, </font>
+    const trailTagMatch = originalText.match(/((?:<\/[a-z0-9]+>\s*)+)$/i);
+    if (trailTagMatch) {
+      const trailTags = trailTagMatch[1].trim();
+      if (!text.endsWith(trailTags)) {
+        let stripped = text;
+        const escaped = trailTags.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        stripped = stripped.replace(new RegExp(escaped, 'g'), '').trim();
+        text = (stripped ? stripped + ' ' : '') + trailTags;
+      }
+    }
+
+    return text.trim();
   }
 
   // Arabic-script targets (Sorani Kurdish, Farsi, Arabic, Urdu, Pashto)
@@ -86,102 +132,62 @@ const Translator = (() => {
     if (tgtLang !== 'ckb' || (srcLang !== 'en' && srcLang !== 'auto')) return text;
     let s = text;
 
-    // Expand informal contractions and colloquial slang
+    // Expand gerund colloquialisms in subtitle dialogues (e.g., lookin' -> looking, runnin' -> running, doin' -> doing)
+    s = s.replace(/\b([a-zA-Z]{2,})in['’](?=\s|[.,!?;:'"()[\]{}<>]|$)/gi, '$1ing');
+
+    // Expand informal contractions and spoken dialogue slang into natural English phrases for accurate translation
     s = s.replace(/\bgonna\b/gi, 'going to')
          .replace(/\bwanna\b/gi, 'want to')
          .replace(/\bgotta\b/gi, 'have to')
          .replace(/\bkinda\b/gi, 'kind of')
          .replace(/\bsorta\b/gi, 'sort of')
          .replace(/\bdunno\b/gi, 'do not know')
-         .replace(/\bimma\b/gi, 'I am going to')
-         .replace(/\bain'?t\b/gi, 'is not')
+         .replace(/\bi['’]?mma\b/gi, 'I am going to')
+         .replace(/\bain['’]?t\b/gi, 'is not')
          .replace(/\bwhatcha\b/gi, 'what are you')
          .replace(/\bgotcha\b/gi, 'I understand')
          .replace(/\bgimme\b/gi, 'give me')
          .replace(/\blemme\b/gi, 'let me')
          .replace(/\boutta\b/gi, 'out of')
-         .replace(/\by'?all\b/gi, 'you all')
-         .replace(/\b'cause\b/gi, 'because')
-         .replace(/\bcuz\b/gi, 'because');
+         .replace(/\by['’]?all\b/gi, 'you all')
+         .replace(/(^|\s)['’]cause(?=\s|[.,!?;:'"()[\]{}<>]|$)/gi, '$1because')
+         .replace(/\bcuz\b/gi, 'because')
+         .replace(/\bcoz\b/gi, 'because')
+         .replace(/\bc['’]mon\b/gi, 'come on')
+         .replace(/\bw\/\b/gi, 'with')
+         .replace(/\bw\/o\b/gi, 'without')
+         .replace(/\bu\b/g, 'you')
+         .replace(/\br\b/g, 'are')
+         .replace(/\bur\b/gi, 'your')
+         .replace(/\bpls\b|\bplz\b/gi, 'please')
+         .replace(/\bthx\b|\bty\b/gi, 'thank you')
+         .replace(/\bthru\b/gi, 'through')
+         .replace(/\btil\b|\btill\b/gi, 'until')
+         .replace(/(^|\s)['’]em(?=\s|[.,!?;:'"()[\]{}<>]|$)/gi, '$1them')
+         .replace(/(^|\s)['’]bout(?=\s|[.,!?;:'"()[\]{}<>]|$)/gi, '$1about')
+         .replace(/(^|\s)['’]round(?=\s|[.,!?;:'"()[\]{}<>]|$)/gi, '$1around')
+         .replace(/\byeah\b|\byep\b|\byup\b/gi, 'yes')
+         .replace(/\bnope\b|\bnah\b/gi, 'no')
+         .replace(/\bwhat['’]?s\s+up\b|\bwassup\b|\bsup\b/gi, 'hello, how are you')
+         .replace(/\bno\s+way\b/gi, 'that is impossible')
+         .replace(/\bnever\s+mind\b/gi, 'do not worry')
+         .replace(/\bhang\s+on\b|\bhold\s+on\b/gi, 'wait a moment')
+         .replace(/\bshut\s+up\b/gi, 'be quiet')
+         .replace(/\blook\s+out\b|\bwatch\s+out\b/gi, 'be careful')
+         .replace(/\btake\s+care\b/gi, 'stay safe')
+         .replace(/\bsee\s+ya\b|\bsee\s+you\b/gi, 'see you later')
+         .replace(/\bhurry\s+up\b/gi, 'hurry')
+         .replace(/\bcalm\s+down\b/gi, 'relax')
+         .replace(/\bof\s+course\b/gi, 'certainly')
+         .replace(/\bby\s+the\s+way\b/gi, 'incidentally')
+         .replace(/\bgood\s+luck\b/gi, 'best wishes')
+         .replace(/\boh\s+my\s+god\b|\bmy\s+god\b|\bomg\b/gi, 'oh God')
+         .replace(/\bwhat\s+the\s+hell\b|\bwhat\s+the\s+heck\b/gi, 'what is happening')
+         .replace(/\bare\s+you\s+kidding(\s+me)?\b/gi, 'are you joking')
+         .replace(/\bare\s+you\s+sure\b/gi, 'are you certain')
+         .replace(/\bthank\s+goodness\b|\bthank\s+god\b/gi, 'thank God')
+         .replace(/\bgosh\b/gi, 'oh');
 
-    // Subtitle idioms and common film dialogue expressions
-    s = s.replace(/\bhold on a sec(ond)?\b/gi, 'wait a moment')
-         .replace(/\bhang on a sec(ond)?\b/gi, 'wait a moment')
-         .replace(/\bgive me a sec(ond)?\b/gi, 'wait a moment')
-         .replace(/\bhold on\b/gi, 'wait')
-         .replace(/\bhang on\b/gi, 'wait')
-         .replace(/\bwhat'?s up\b/gi, 'how are you')
-         .replace(/\bwhat is up\b/gi, 'how are you')
-         .replace(/\bwhat'?s wrong\b/gi, 'what is the problem')
-         .replace(/\bwhat is wrong\b/gi, 'what is the problem')
-         .replace(/\bwhat'?s going on\b/gi, 'what is happening')
-         .replace(/\bnever mind\b/gi, 'it is not important')
-         .replace(/\bcut it out\b/gi, 'stop it')
-         .replace(/\bpiece of cake\b/gi, 'very easy')
-         .replace(/\bmy bad\b/gi, 'my mistake')
-         .replace(/\bno big deal\b/gi, 'not important')
-         .replace(/\bchill out\b/gi, 'calm down')
-         .replace(/\btake your time\b/gi, 'do not rush')
-         .replace(/\bshut up\b/gi, 'be quiet')
-         .replace(/\byou'?re welcome\b/gi, 'you are welcome')
-         .replace(/\bcheck it out\b/gi, 'look at this')
-         .replace(/\bcheck this out\b/gi, 'look at this')
-         .replace(/\bno way\b/gi, 'it is impossible')
-         .replace(/\bcome on\b/gi, 'come on')
-         .replace(/\bc'mon\b/gi, 'come on')
-         .replace(/\bdon'?t worry\b/gi, 'do not worry')
-         .replace(/\bare you kidding\b/gi, 'are you joking')
-         .replace(/\bare you serious\b/gi, 'are you serious')
-         .replace(/\boh my god\b/gi, 'oh god')
-         .replace(/\boh my goodness\b/gi, 'oh god')
-         .replace(/\bmy god\b/gi, 'oh god')
-         .replace(/\bby the way\b/gi, 'incidentally')
-         .replace(/\bfor real\b/gi, 'really')
-         .replace(/\bmake sure\b/gi, 'ensure')
-         .replace(/\bcalm down\b/gi, 'be calm')
-         .replace(/\bhurry up\b/gi, 'hurry up')
-         .replace(/\blook out\b/gi, 'be careful')
-         .replace(/\bwatch out\b/gi, 'be careful')
-         .replace(/\bwatch your back\b/gi, 'be careful')
-         .replace(/\bkeep an eye on\b/gi, 'watch carefully')
-         .replace(/\bstep aside\b/gi, 'move aside')
-         .replace(/\bhands up\b/gi, 'raise your hands')
-         .replace(/\bget down\b/gi, 'duck down')
-         .replace(/\bgood job\b/gi, 'well done')
-         .replace(/\bway to go\b/gi, 'well done')
-         .replace(/\byou bet\b/gi, 'of course')
-         .replace(/\bfair enough\b/gi, 'acceptable')
-         .replace(/\bfor God'?s sake\b/gi, 'please')
-         .replace(/\bGod damn it\b/gi, 'damn it')
-         .replace(/\bI got this\b/gi, 'I can do this')
-         .replace(/\byou got this\b/gi, 'you can do this')
-         .replace(/\bhang in there\b/gi, 'stay strong')
-         .replace(/\blook after\b/gi, 'take care of')
-         .replace(/\bfreak out\b/gi, 'panic')
-         .replace(/\bgive up\b/gi, 'surrender')
-         .replace(/\bmake sense\b/gi, 'is logical')
-         .replace(/\bright now\b/gi, 'immediately')
-         .replace(/\bas soon as possible\b/gi, 'quickly')
-         .replace(/\basap\b/gi, 'quickly')
-         .replace(/\bno problem\b/gi, 'no problem')
-         .replace(/\bno sweat\b/gi, 'no problem')
-         .replace(/\bdon'?t mention it\b/gi, 'you are welcome')
-         .replace(/\bI don'?t care\b/gi, 'it is not important to me')
-         .replace(/\bwho cares\b/gi, 'who cares')
-         .replace(/\bso what\b/gi, 'what does it matter')
-         .replace(/\bare you out of your mind\b/gi, 'are you crazy')
-         .replace(/\bare you nuts\b/gi, 'are you crazy')
-         .replace(/\bare you insane\b/gi, 'are you crazy')
-         .replace(/\bcut to the chase\b/gi, 'get to the point')
-         .replace(/\bbreak a leg\b/gi, 'good luck')
-         .replace(/\bout of nowhere\b/gi, 'suddenly')
-         .replace(/\ball of a sudden\b/gi, 'suddenly')
-         .replace(/\blet me know\b/gi, 'inform me')
-         .replace(/\bI have no idea\b/gi, 'I do not know')
-         .replace(/\bno clue\b/gi, 'I do not know')
-         .replace(/\bit'?s up to you\b/gi, 'it is your decision')
-         .replace(/\btrust me\b/gi, 'trust me')
-         .replace(/\bcount on me\b/gi, 'trust me');
     return s;
   }
 
@@ -206,9 +212,9 @@ const Translator = (() => {
                .replace(/\u0649/g, 'ی')   // Arabic Alef Maksura 'ى' -> 'ی'
                .replace(/\u0629/g, 'ە');  // Arabic Teh Marbuta 'ة' -> Kurdish Small E 'ە'
 
-    // Convert Arabic Heh 'ه' to Kurdish Small E 'ە' at word endings where appropriate
+    // Convert Arabic Heh 'ه' to Kurdish Small E 'ە' at word endings where appropriate (after consonants/non-vowels)
     s = s.replace(/([\u0600-\u06ff])ه(?=\s|$|[.,!?;:،؛؟])/g, (m, p) =>
-      (p !== 'ئ' && p !== 'ا' && p !== 'و' && p !== 'ۆ' ? p + 'ە' : m)
+      (p !== 'ئ' && p !== 'ا' && p !== 'و' && p !== 'ۆ' && p !== 'ە' ? p + 'ە' : m)
     );
 
     // Sorani Kurdish Heavy R (ڕ) conversions for words starting with R or standard roots
@@ -216,50 +222,68 @@ const Translator = (() => {
          .replace(/(^|\s)رۆیشت(ن|م|ی|ین|ن|ووە)?(?=\s|$|[.,!?;:،؛؟])/g, '$1ڕۆیشت$2')
          .replace(/(^|\s)رۆشت(ن|م|ی|ین|ن|ووە)?(?=\s|$|[.,!?;:،؛؟])/g, '$1ڕۆیشت$2')
          .replace(/(^|\s)رۆ(م|یت|ات|ین|ن)(?=\s|$|[.,!?;:،؛؟])/g, '$1ڕۆ$2')
-         .replace(/(^|\s)راست(ە|ی|ەقینە|ەوخۆ|ەکان|کردنەوە)?(?=\s|$|[.,!?;:،؛؟])/g, '$1ڕاست$2')
+         .replace(/(^|\s)راست(ە|ی|ەقینە|ەوخۆ|ەکان|کردنەوە|ییەکەی)?(?=\s|$|[.,!?;:،؛؟])/g, '$1ڕاست$2')
          .replace(/(^|\s)رێگ(ە|ا|ای|اکە|ایەک|ەی)?(?=\s|$|[.,!?;:،؛؟])/g, '$1ڕێگ$2')
-         .replace(/(^|\s)رۆژ(انە|گار|باش|نامە|ی)?(?=\s|$|[.,!?;:،؛؟])/g, '$1ڕۆژ$2')
-         .replace(/(^|\s)رەنگ(ە|ی|اوڕەنگ)?(?=\s|$|[.,!?;:،؛؟])/g, '$1ڕەنگ$2')
-         .replace(/(^|\s)رێز(لێنان|م|ت|تان)?(?=\s|$|[.,!?;:،؛؟])/g, '$1ڕێز$2')
-         .replace(/(^|\s)روون(کردنەوە|اک|اکی|ی)?(?=\s|$|[.,!?;:،؛؟])/g, '$1ڕوون$2')
-         .replace(/(^|\s)رەش(ی|بین)?(?=\s|$|[.,!?;:،؛؟])/g, '$1ڕەش$2')
-         .replace(/(^|\s)روو(داو|دات|دەدات|ی|خسار|خاو|بەڕوو)?(?=\s|$|[.,!?;:،؛؟])/g, '$1ڕوو$2')
-         .replace(/(^|\s)راپۆرت(?=\s|$|[.,!?;:،؛؟])/g, '$1ڕاپۆرت')
-         .replace(/(^|\s)راگەیاندن(?=\s|$|[.,!?;:،؛؟])/g, '$1ڕاگەیاندن')
-         .replace(/(^|\s)رێنمایی(?=\s|$|[.,!?;:،؛؟])/g, '$1ڕێنمایی')
-         .replace(/(^|\s)رێژە(?=\s|$|[.,!?;:،؛؟])/g, '$1ڕێژە')
-         .replace(/(^|\s)رزگار(?=\s|$|[.,!?;:،؛؟])/g, '$1ڕزگار')
-         .replace(/(^|\s)رازی(?=\s|$|[.,!?;:،؛؟])/g, '$1ڕازی')
-         .replace(/(^|\s)رێبوار(?=\s|$|[.,!?;:،؛؟])/g, '$1ڕێبوار')
-         .replace(/(^|\s)رابردوو(?=\s|$|[.,!?;:،؛؟])/g, '$1ڕابردوو')
+         .replace(/(^|\s)رۆژ(انە|گار|باش|نامە|ی|ەکان)?(?=\s|$|[.,!?;:،؛؟])/g, '$1ڕۆژ$2')
+         .replace(/(^|\s)رەنگ(ە|ی|اوڕەنگ|ەکان)?(?=\s|$|[.,!?;:،؛؟])/g, '$1ڕەنگ$2')
+         .replace(/(^|\s)رێز(لێنان|م|ت|تان|گرتن)?(?=\s|$|[.,!?;:،؛؟])/g, '$1ڕێز$2')
+         .replace(/(^|\s)روون(کردنەوە|اک|اکی|ی|کردنەوەی)?(?=\s|$|[.,!?;:،؛؟])/g, '$1ڕوون$2')
+         .replace(/(^|\s)رەش(ی|بین|ەبا|ماڵ)?(?=\s|$|[.,!?;:،؛؟])/g, '$1ڕەش$2')
+         .replace(/(^|\s)روو(داو|دات|دەدات|ی|خسار|خاو|بەڕوو|داوەکان)?(?=\s|$|[.,!?;:،؛؟])/g, '$1ڕوو$2')
+         .replace(/(^|\s)راپۆرت(ەکان|ی)?(?=\s|$|[.,!?;:،؛؟])/g, '$1ڕاپۆرت$2')
+         .replace(/(^|\s)راگەیاندن(ەکان|ی)?(?=\s|$|[.,!?;:،؛؟])/g, '$1ڕاگەیاندن$2')
+         .replace(/(^|\s)راگەیەندراو(?=\s|$|[.,!?;:،؛؟])/g, '$1ڕاگەیەندراو')
+         .replace(/(^|\s)رێنمایی(ەکان|ی)?(?=\s|$|[.,!?;:،؛؟])/g, '$1ڕێنمایی$2')
+         .replace(/(^|\s)رێژە(ی|یی)?(?=\s|$|[.,!?;:،؛؟])/g, '$1ڕێژە$2')
+         .replace(/(^|\s)رزگار(کردن|بوون|بووم)?(?=\s|$|[.,!?;:،؛؟])/g, '$1ڕزگار$2')
+         .replace(/(^|\s)رازی(بوون|م)?(?=\s|$|[.,!?;:،؛؟])/g, '$1ڕازی$2')
+         .replace(/(^|\s)رێبوار(ان|ی)?(?=\s|$|[.,!?;:،؛؟])/g, '$1ڕێبوار$2')
+         .replace(/(^|\s)رابردوو(ی|دا)?(?=\s|$|[.,!?;:،؛؟])/g, '$1ڕابردوو$2')
          .replace(/(^|\s)رێپێدان(?=\s|$|[.,!?;:،؛؟])/g, '$1ڕێپێدان')
-         .replace(/(^|\s)رەوانە(?=\s|$|[.,!?;:،؛؟])/g, '$1ڕەوانە')
-         .replace(/(^|\s)رەوشت(?=\s|$|[.,!?;:،؛؟])/g, '$1ڕەوشت')
-         .replace(/(^|\s)رەخنە(?=\s|$|[.,!?;:،؛؟])/g, '$1ڕەخنە')
-         .replace(/(^|\s)روانین(?=\s|$|[.,!?;:،؛؟])/g, '$1ڕوانین')
-         .replace(/(^|\s)راهێنان(?=\s|$|[.,!?;:،؛؟])/g, '$1ڕاهێنان')
+         .replace(/(^|\s)رەوانە(کردن|کرا)?(?=\s|$|[.,!?;:،؛؟])/g, '$1ڕەوانە$2')
+         .replace(/(^|\s)رەوشت(ی|ەکان)?(?=\s|$|[.,!?;:،؛؟])/g, '$1ڕەوشت$2')
+         .replace(/(^|\s)رەخنە(گرتن|یەکان|ی)?(?=\s|$|[.,!?;:،؛؟])/g, '$1ڕەخنە$2')
+         .replace(/(^|\s)روانین(ەکان|ی)?(?=\s|$|[.,!?;:،؛؟])/g, '$1ڕوانین$2')
+         .replace(/(^|\s)راهێنان(ەکان|ی)?(?=\s|$|[.,!?;:،؛؟])/g, '$1ڕاهێنان$2')
          .replace(/(^|\s)راکردن(?=\s|$|[.,!?;:،؛؟])/g, '$1ڕاکردن')
          .replace(/(^|\s)راگرتن(?=\s|$|[.,!?;:،؛؟])/g, '$1ڕاگرتن')
-         .replace(/(^|\s)رێکخستن(?=\s|$|[.,!?;:،؛؟])/g, '$1ڕێکخستن');
+         .replace(/(^|\s)رێکخستن(ەکان|ی)?(?=\s|$|[.,!?;:،؛؟])/g, '$1ڕێکخستن$2')
+         .replace(/(^|\s)رێکەوتن(نامە|ەکان|ی)?(?=\s|$|[.,!?;:،؛؟])/g, '$1ڕێکەوتن$2')
+         .replace(/(^|\s)رێسا(کان|ی)?(?=\s|$|[.,!?;:،؛؟])/g, '$1ڕێسا$2')
+         .replace(/(^|\s)رۆح(ی|مان|تان)?(?=\s|$|[.,!?;:،؛؟])/g, '$1ڕۆح$2')
+         .replace(/(^|\s)رەوش(ی|ەکان)?(?=\s|$|[.,!?;:،؛؟])/g, '$1ڕەوش$2')
+         .replace(/(^|\s)رێبەر(ی|یکردن|ان)?(?=\s|$|[.,!?;:،؛؟])/g, '$1ڕێبەر$2')
+         .replace(/(^|\s)رەگ(ی|ەکان|داکوتان)?(?=\s|$|[.,!?;:،؛؟])/g, '$1ڕەگ$2')
+         .replace(/(^|\s)رووت(ی|کراوە)?(?=\s|$|[.,!?;:،؛؟])/g, '$1ڕووت$2')
+         .replace(/(^|\s)رەق(ی|تر|ەکان)?(?=\s|$|[.,!?;:،؛؟])/g, '$1ڕەق$2')
+         .replace(/(^|\s)رق(م|ت|ی|لێبوونەوە)?(?=\s|$|[.,!?;:،؛؟])/g, '$1ڕق$2')
+         .replace(/(^|\s)رژێم(ی|ەکان)?(?=\s|$|[.,!?;:،؛؟])/g, '$1ڕژێم$2')
+         .replace(/(^|\s)راوەست(ە|ان|ین|ن)?(?=\s|$|[.,!?;:،؛؟])/g, '$1ڕاوەست$2')
+         .replace(/(^|\s)راکە(ن|یت)?(?=\s|$|[.,!?;:،؛؟])/g, '$1ڕاکە$2')
+         .replace(/(^|\s)رێنووس(?=\s|$|[.,!?;:،؛؟])/g, '$1ڕێنووس')
+         .replace(/(^|\s)ریش(ەکە|م|ی)?(?=\s|$|[.,!?;:،؛؟])/g, '$1ڕیش$2')
+         .replace(/(^|\s)ریشە(ی|کان)?(?=\s|$|[.,!?;:،؛؟])/g, '$1ڕیشە$2')
+         .replace(/(^|\s)برۆ(ن|یت)?(?=\s|$|[.,!?;:،؛؟])/g, '$1بڕۆ$2')
+         .replace(/(^|\s)مەرۆ(ن)?(?=\s|$|[.,!?;:،؛؟])/g, '$1مەڕۆ$2');
 
     // Sorani Kurdish Velarized L (ڵ) corrections
     s = s.replace(/(^|\s)مال(ی|ەوە|مان|تان|یان|ەکەم|ەکان)?(?=\s|$|[.,!?;:،؛؟])/g, '$1ماڵ$2')
          .replace(/(^|\s)بەلێ(م)?(?=\s|$|[.,!?;:،؛؟])/g, '$1بەڵێ$2')
          .replace(/(^|\s)دەلێ(ت|م|ن|یت|ین)(?=\s|$|[.,!?;:،؛؟])/g, '$1دەڵێ$2')
-         .replace(/(^|\s)بلێ(ن|م|یت)?(?=\s|$|[.,!?;:،؛؟])/g, '$1بڵێ$2')
-         .replace(/(^|\s)گول(م|ەکان|ی)?(?=\s|$|[.,!?;:،؛؟])/g, '$1گوڵ$2')
-         .replace(/(^|\s)سال(ان|ی|ە|انە)?(?=\s|$|[.,!?;:،؛؟])/g, '$1ساڵ$2')
-         .replace(/خۆشحال(ی|ییە| بووم)?/g, 'خۆشحاڵ$1')
-         .replace(/(^|\s)مندال(ان|ەکە|م|ی)?(?=\s|$|[.,!?;:،؛؟])/g, '$1منداڵ$2')
+         .replace(/(^|\s)بلێ(ن|م|یت|ین)?(?=\s|$|[.,!?;:،؛؟])/g, '$1بڵێ$2')
+         .replace(/(^|\s)گول(م|ەکان|ی|زار)?(?=\s|$|[.,!?;:،؛؟])/g, '$1گوڵ$2')
+         .replace(/(^|\s)سال(ان|ی|ە|انە|ێک)?(?=\s|$|[.,!?;:،؛؟])/g, '$1ساڵ$2')
+         .replace(/خۆشحال(ی|ییە| بووم|م)?/g, 'خۆشحاڵ$1')
+         .replace(/(^|\s)مندال(ان|ەکە|م|ی|بوون)?(?=\s|$|[.,!?;:،؛؟])/g, '$1منداڵ$2')
          .replace(/(^|\s)سلاو(تان|ی)?(?=\s|$|[.,!?;:،؛؟])/g, '$1سڵاو$2')
-         .replace(/(^|\s)گەلا(کان)?(?=\s|$|[.,!?;:،؛؟])/g, '$1گەڵا$2')
-         .replace(/(^|\s)کەلەک(ەم)?(?=\s|$|[.,!?;:،؛؟])/g, '$1کەڵەک$2')
-         .replace(/(^|\s)چۆل(ە|ی)?(?=\s|$|[.,!?;:،؛؟])/g, '$1چۆڵ$2')
-         .replace(/(^|\s)تەلە(ی)?(?=\s|$|[.,!?;:،؛؟])/g, '$1تەڵە$2')
-         .replace(/(^|\s)خال(ی|م)?(?=\s|$|[.,!?;:،؛؟])/g, '$1خاڵ$2')
-         .replace(/(^|\s)تال(ە|ی)?(?=\s|$|[.,!?;:،؛؟])/g, '$1تاڵ$2')
-         .replace(/(^|\s)پیالە(ی)?(?=\s|$|[.,!?;:،؛؟])/g, '$1پیاڵە$2')
-         .replace(/(^|\s)دل(م|ت|ی|خۆش|تەنگ|نیام|نیابە|نیا)?(?=\s|$|[.,!?;:،؛؟])/g, '$1دڵ$2')
+         .replace(/(^|\s)گەلا(کان|ی)?(?=\s|$|[.,!?;:،؛؟])/g, '$1گەڵا$2')
+         .replace(/(^|\s)کەلەک(ەم|ی)?(?=\s|$|[.,!?;:،؛؟])/g, '$1کەڵەک$2')
+         .replace(/(^|\s)چۆل(ە|ی|کردن)?(?=\s|$|[.,!?;:،؛؟])/g, '$1چۆڵ$2')
+         .replace(/(^|\s)تەلە(ی|کان)?(?=\s|$|[.,!?;:،؛؟])/g, '$1تەڵە$2')
+         .replace(/(^|\s)خال(ی|م|ەکان)?(?=\s|$|[.,!?;:،؛؟])/g, '$1خاڵ$2')
+         .replace(/(^|\s)تال(ە|ی|تر)?(?=\s|$|[.,!?;:،؛؟])/g, '$1تاڵ$2')
+         .replace(/(^|\s)پیالە(ی|یک|کان)?(?=\s|$|[.,!?;:،؛؟])/g, '$1پیاڵە$2')
+         .replace(/(^|\s)دل(م|ت|ی|خۆش|تەنگ|نیام|نیابە|نیا|سۆز|پاک)?(?=\s|$|[.,!?;:،؛؟])/g, '$1دڵ$2')
          .replace(/(^|\s)پۆلا(?=\s|$|[.,!?;:،؛؟])/g, '$1پۆڵا')
          .replace(/(^|\s)قولپ(?=\s|$|[.,!?;:،؛؟])/g, '$1قوڵپ')
          .replace(/(^|\s)کەلەشێر(?=\s|$|[.,!?;:،؛؟])/g, '$1کەڵەشێر')
@@ -267,9 +291,14 @@ const Translator = (() => {
          .replace(/(^|\s)بالا(?=\s|$|[.,!?;:،؛؟])/g, '$1باڵا')
          .replace(/(^|\s)قەلا(?=\s|$|[.,!?;:،؛؟])/g, '$1قەڵا')
          .replace(/(^|\s)چەپلە(?=\s|$|[.,!?;:،؛؟])/g, '$1چەپڵە')
-         .replace(/(^|\s)کۆمەل(?=\s|$|[.,!?;:،؛؟])/g, '$1کۆمەڵ')
-         .replace(/(^|\s)ئالۆز(?=\s|$|[.,!?;:،؛؟])/g, '$1ئاڵۆز')
-         .replace(/(^|\s)هەلە(?=\s|$|[.,!?;:،؛؟])/g, '$1هەڵە')
+         .replace(/(^|\s)کۆمەل(گا|ایەتی|ەکان|ی)?(?=\s|$|[.,!?;:،؛؟])/g, '$1کۆمەڵ$2')
+         .replace(/(^|\s)ئالۆز(ی|تر)?(?=\s|$|[.,!?;:،؛؟])/g, '$1ئاڵۆز$2')
+         .replace(/(^|\s)هەلە(کان|ی)?(?=\s|$|[.,!?;:،؛؟])/g, '$1هەڵە$2')
+         .replace(/(^|\s)تێکەل(?=\s|$|[.,!?;:،؛؟])/g, '$1تێکەڵ')
+         .replace(/(^|\s)گەلالە(?=\s|$|[.,!?;:،؛؟])/g, '$1گەڵاڵە')
+         .replace(/(^|\s)کۆلان(ەکان|ی)?(?=\s|$|[.,!?;:،؛؟])/g, '$1کۆڵان$2')
+         .replace(/(^|\s)قوول(ی|تر)?(?=\s|$|[.,!?;:،؛؟])/g, '$1قووڵ$2')
+         .replace(/(^|\s)قول(ی|تر)?(?=\s|$|[.,!?;:،؛؟])/g, '$1قووڵ$2')
          .replace(/گۆرانکاری/g, 'گۆڕانکاری')
          .replace(/سپاس/g, 'سوپاس');
 
@@ -279,51 +308,80 @@ const Translator = (() => {
   /** Rejoin split Sorani Kurdish verbal affixes & compound preverbs. */
   function rejoinVerbalAffixes(str) {
     return str
-      .replace(/(^|\s)دە\s+(بێت|زانم|زانی|زانێت|زانین|زانن|کات|کەم|کەیت|کەین|کەن|توانی|توانم|توانێت|توانین|توانن|چێت|ڕۆم|رۆم|ڕۆیت|رۆیت|ڕوات|روات|ڕۆین|رۆین|ڕۆن|رۆن|ڵێت|ڵێم|ڵێیت|ڵێین|ڵێن|هێنێت|هێنم|یەوێت|خوات|خۆم|کراو|بینم|بینێت|بینین|بینن|وەستێت|گەڕێتەوە|نووسێت|دات|دەین|دەکان|بەن|بەین|دێت|دەبێتەوە|فرۆشێت|کڕێت|ژیم|ژیت|ژی|ژیین|ژین|مرێت|بیستێت|گرێت|بەستێت|گەین|کەویت)(?=\s|$|[.,!?;:،؛؟])/g, '$1دە$2')
-      .replace(/(^|\s)نا\s+(زانم|زانی|زانێت|زانین|زانن|کات|کەم|کەیت|کەن|بێت|کرێت|کرێن|توانی|توانم|توانێت|توانین|توانن|چێت|ڵێم|ڵێت|گەڕێتەوە|بینم|بینێت|وێت|خۆم|خوات|دات|دەین|کەوم|ڕوات|روات)(?=\s|$|[.,!?;:،؛؟])/g, '$1نا$2')
-      .replace(/(^|\s)نە\s+(بێت|کات|کرێت|بوو|ڕۆیشت|رویشت|هات|زانی|توانی|دیت|کرد|چوو|گەیی|دەبوو|بینرا|خورا)(?=\s|$|[.,!?;:،؛؟])/g, '$1نە$2')
-      .replace(/(^|\s)مە\s+(کە|ڕۆ|رۆ|کەیت|بۆوە|چۆ|بڕۆ|برۆ|گەڕێ|بە|کەن|ترسە|گری|شکێنە|کوژە)(?=\s|$|[.,!?;:،؛؟])/g, '$1مە$2')
-      .replace(/(^|\s)بی\s+(کە|بە|بینە|گەیەنە|خۆ|نووسە|هێنە|بەخشە|پارێزە|کوژە)(?=\s|$|[.,!?;:،؛؟])/g, '$1بی$2')
-      .replace(/(^|\s)تێ\s+(دەگەم|بگە|دەگەیت|دەگەن|دەگەین|پەڕی|پەڕین|ناگەم)(?=\s|$|[.,!?;:،؛؟])/g, '$1تێ$2')
-      .replace(/(^|\s)ڕێ\s+(گرتن|دەگرێت|بگرە|ناگرێت|بگرن)(?=\s|$|[.,!?;:،؛؟])/g, '$1ڕێ$2')
-      .replace(/(^|\s)پێ\s+(دان|دەدات|بڵێ|بڵێن|بدە|نادەم|نادات)(?=\s|$|[.,!?;:،؛؟])/g, '$1پێ$2')
-      .replace(/(^|\s)وەر\s+(بگرە|گرتن|دەگرێت|ناگرێت|مەگرە)(?=\s|$|[.,!?;:،؛؟])/g, '$1وەر$2')
-      .replace(/(^|\s)دەر\s+(کەوت|کەوتن|چوون|چوونی|بێنە|هێنانی|دەچێت|دەخات)(?=\s|$|[.,!?;:،؛؟])/g, '$1دەر$2')
-      .replace(/(^|\s)دا\s+(نیشە|دەنیشێت|پۆشە|خستن|داخە|دابخە|گرتن|بەزین)(?=\s|$|[.,!?;:،؛؟])/g, '$1دا$2')
-      .replace(/(^|\s)[هھ]ەڵ\s+(بگرە|ستە|دەستێت|گرتن|گرە|بژێرە|بڕژێ|کشان)(?=\s|$|[.,!?;:،؛؟])/g, '$1هەڵ$2')
-      .replace(/(^|\s)دەست\s+(پێکرد|پێبکە|پێدەکات|پێکردن|پێ بگە)(?=\s|$|[.,!?;:،؛؟])/g, '$1دەست$2')
+      .replace(/(^|\s)دە\s+(بێت|بم|بیت|بین|بن|زانم|زانی|زانێت|زانین|زانن|کات|کەم|کەیت|کەین|کەن|توانی|توانم|توانێت|توانین|توانن|چێت|چم|چیت|چین|چن|ڕۆم|رۆم|ڕۆیت|رۆیت|ڕوات|روات|ڕۆین|رۆین|ڕۆن|رۆن|ڵێت|ڵێم|ڵێیت|ڵێین|ڵێن|هێنێت|هێنم|هێنیت|هێنین|هێنن|یەوێت|خوات|خۆم|خۆین|خۆن|کراو|بینم|بینێت|بینین|بینن|وەستێت|گەڕێتەوە|نووسێت|نووسم|نووسین|دات|دەین|دەکان|بەن|بەین|دێت|دەبێتەوە|فرۆشێت|کڕێت|ژیم|ژیت|ژی|ژیین|ژین|مرێت|بیستێت|گرێت|بەستێت|گەین|کەویت|بارێت|گۆڕێت)(?=\s|$|[.,!?;:،؛؟])/g, '$1دە$2')
+      .replace(/(^|\s)ئە\s+(بێت|بم|بیت|بین|بن|زانم|زانی|زانێت|کات|کەم|کەیت|کەین|چێت|چم|چیت|چین|ڕۆم|ڕۆیت|ڕوات|ڕۆین|ڵێت|ڵێم|هێنێت|هێنم|یەوێت|خوات|خۆم|بینم|بینێت|دات|دێت)(?=\s|$|[.,!?;:،؛؟])/g, '$1ئە$2')
+      .replace(/(^|\s)نا\s+(زانم|زانی|زانێت|زانین|زانن|کات|کەم|کەیت|کەن|ناکەین|بێت|بم|بیت|بین|بن|کرێت|کرێن|توانی|توانم|توانێت|توانین|توانن|چێت|چم|چیت|چین|چن|ڵێم|ڵێت|ڵێن|گەڕێتەوە|بینم|بینێت|وێت|نامەوێت|ناوێت|خۆم|خوات|دات|نادەم|دەین|کەوم|کەوێت|ڕوات|روات|مرێت|بیستم|بیستێت|ڕۆم|ڕۆیت|ڕۆین|ڕۆن)(?=\s|$|[.,!?;:،؛؟])/g, '$1نا$2')
+      .replace(/(^|\s)نە\s+(بێت|کات|کرێت|بوو|بووم|بوویت|بووین|بوون|ڕۆیشت|رویشت|هات|هاتم|هاتیت|هاتین|هاتن|زانی|زانیم|زانیت|توانی|دیت|کرد|کردم|کردت|کردمان|چوو|چووم|چوویت|چووین|چوون|گەیی|گەیشت|دەبوو|بینرا|خورا|کوژرا|شکێنرا|خوێندەوە|فرۆشت)(?=\s|$|[.,!?;:،؛؟])/g, '$1نە$2')
+      .replace(/(^|\s)مە\s+(کە|ڕۆ|رۆ|کەیت|بۆوە|چۆ|چن|بڕۆ|برۆ|گەڕێ|بە|بن|کەن|ترسە|ترسن|گری|گرین|شکێنە|کوژە|خۆ|خۆن|دە|دەن|هێنە|نووسە|گرە|بڕە|خوێنەوە|بەخشە)(?=\s|$|[.,!?;:،؛؟])/g, '$1مە$2')
+      .replace(/(^|\s)بی\s+(کە|بە|بینە|گەیەنە|خۆ|نووسە|هێنە|بەخشە|پارێزە|کوژە|دە|خوێنەوە|شکێنە)(?=\s|$|[.,!?;:،؛؟])/g, '$1بی$2')
+      .replace(/(^|\s)تێ\s+(دەگەم|بگە|دەگەیت|دەگەن|دەگەین|پەڕی|پەڕین|ناگەم|پەڕیوە)(?=\s|$|[.,!?;:،؛؟])/g, '$1تێ$2')
+      .replace(/(^|\s)ڕێ\s+(گرتن|دەگرێت|بگرە|ناگرێت|بگرن|کەوتن|کەوتین|کەوتنەوە|کەوتووە)(?=\s|$|[.,!?;:،؛؟])/g, '$1ڕێ$2')
+      .replace(/(^|\s)پێ\s+(دان|دەدات|دەڵێت|دەبەخشێت|بڵێ|بڵێن|بدە|نادەم|نادات|بەخشی)(?=\s|$|[.,!?;:،؛؟])/g, '$1پێ$2')
+      .replace(/(^|\s)وەر\s+(بگرە|گرتن|دەگرێت|ناگرێت|مەگرە|گیرا|گیراوە)(?=\s|$|[.,!?;:،؛؟])/g, '$1وەر$2')
+      .replace(/(^|\s)دەر\s+(کەوت|کەوتن|چوون|چوونی|بێنە|هێنانی|دەچێت|دەخات|دەکەوێت|کەوتووە)(?=\s|$|[.,!?;:،؛؟])/g, '$1دەر$2')
+      .replace(/(^|\s)دا\s+(نیشە|دەنیشێت|پۆشە|خستن|داخە|دابخە|گرتن|بەزین|بەزی|مەپۆشە)(?=\s|$|[.,!?;:،؛؟])/g, '$1دا$2')
+      .replace(/(^|\s)[هھ]ەڵ\s+(بگرە|ستە|دەستێت|گرتن|گرە|بژێرە|بڕژێ|کشان|واسە|مەگرە)(?=\s|$|[.,!?;:،؛؟])/g, '$1هەڵ$2')
+      .replace(/(^|\s)دەست\s+(پێکرد|پێبکە|پێدەکات|پێکردن|پێ بگە|بەردار|نیشان|پێکە)(?=\s|$|[.,!?;:،؛؟])/g, '$1دەست$2')
       .replace(/\s+ەوە(?=\s|$|[.,!?;:،؛؟])/g, 'ەوە')
       .replace(/\s+یش(?=\s|$|[.,!?;:،؛؟])/g, 'یش');
   }
 
   /** Naturalize machine-translated subtitle dialogue for fluent Sorani Kurdish. */
   function naturalizeDialogue(str) {
+    if (!str) return '';
     return str
-      .replace(/^بەخێر\s+بێیت\.?$/gm, 'شایەنی نییە')
-      .replace(/^بەخێر\s+بێن\.?$/gm, 'شایەنی نییە')
-      .replace(/(^|\s|،|؛)ئایا\s+/g, '$1')
-      .replace(/(^|\s)من\s+دەزانم(?=\s|$|[.,!?;:،؛؟])/g, '$1دەزانم')
-      .replace(/(^|\s)من\s+نازانم(?=\s|$|[.,!?;:،؛؟])/g, '$1نازانم')
-      .replace(/(^|\s)من\s+دەتوانم(?=\s|$|[.,!?;:،؛؟])/g, '$1دەتوانم')
-      .replace(/(^|\s)من\s+ناتوانم(?=\s|$|[.,!?;:،؛؟])/g, '$1ناتوانم')
-      .replace(/(^|\s)من\s+دەبینم(?=\s|$|[.,!?;:،؛؟])/g, '$1تێدەگەم')
-      .replace(/(^|\s)من\s+دەمەوێت(?=\s|$|[.,!?;:،؛؟])/g, '$1دەمەوێت')
-      .replace(/(^|\s)من\s+نامەوێت(?=\s|$|[.,!?;:،؛؟])/g, '$1نامەوێت')
-      .replace(/(^|\s)من\s+دێم(?=\s|$|[.,!?;:،؛؟])/g, '$1دێم')
-      .replace(/(^|\s)من\s+دەچم(?=\s|$|[.,!?;:،؛؟])/g, '$1دەچم')
-      .replace(/(^|\s)ئەو\s+دەزانێت(?=\s|$|[.,!?;:،؛؟])/g, '$1دەزانێت')
-      .replace(/(^|\s)ئەوان\s+دەزانن(?=\s|$|[.,!?;:،؛؟])/g, '$1دەزانن')
-      .replace(/(^|\s)ئێمە\s+دەزانین(?=\s|$|[.,!?;:،؛؟])/g, '$1دەزانین')
+      // Remove mechanical, non-dialogue question particle "ئایا" at start of sentences
+      .replace(/(^|[\s،؛؟.\n])ئایا\s+/g, '$1')
       .replace(/ئۆ خوای من/g, 'ئەی خوایە')
       .replace(/خوای من/g, 'ئەی خوایە')
+      .replace(/ئەی خوای گەورە/g, 'ئەی خوایە')
       .replace(/سەیر بکە،/g, 'سەیرکە،')
+      .replace(/سەیر بکە/g, 'سەیرکە')
       .replace(/من زۆر سوپاستان دەکەم/g, 'زۆر سوپاس')
       .replace(/هیچ کێشەیەک نییە/g, 'کێشە نییە')
+      .replace(/کێشەیەک نییە/g, 'کێشە نییە')
       .replace(/بە دڵنیاییەوە/g, 'بێگومان')
-      .replace(/تۆ چۆنیت/g, 'چۆنیت')
-      .replace(/تۆ لە کوێیت/g, 'لەکوێیت')
-      .replace(/کێشەیەک نییە/g, 'ئاساییە')
       .replace(/سوپاس بۆ تۆ/g, 'سوپاس')
+      .replace(/زۆر سوپاس بۆ تۆ/g, 'زۆر سوپاس')
+      .replace(/بە ڵێ/g, 'بەڵێ')
+      .replace(/بەل ێ/g, 'بەڵێ')
+      .replace(/دە ڵێ/g, 'دەڵێ')
+      .replace(/سو پاس/g, 'سوپاس')
+      .replace(/س ڵاو/g, 'سڵاو')
+      .replace(/سڵا و/g, 'سڵاو')
+      .replace(/خۆ شحاڵ/g, 'خۆشحاڵ')
+      .replace(/خۆش حاڵ/g, 'خۆشحاڵ')
+      .replace(/بێ گومان/g, 'بێگومان')
+      .replace(/لە کوێ/g, 'لەکوێ')
+      .replace(/بۆ چی/g, 'بۆچی')
+      .replace(/لە بەر/g, 'لەبەر')
+      .replace(/لە گەڵ/g, 'لەگەڵ')
+      .replace(/بە تایبەت/g, 'بەتایبەت')
+      .replace(/دە بارەی/g, 'دەربارەی')
+      .replace(/دەربارە ی/g, 'دەربارەی')
+      .replace(/ڕاستە قینە/g, 'ڕاستەقینە')
+      .replace(/پێش ئەوە ی/g, 'پێش ئەوەی')
+      .replace(/پاش ئەوە ی/g, 'پاش ئەوەی')
+      .replace(/هەر چەندە/g, 'هەرچەندە')
+      .replace(/هەر وەها/g, 'هەروەها')
+      .replace(/هەر یەک/g, 'هەریەک')
+      .replace(/هەر ئێستا/g, 'هەرئێستا')
+      .replace(/هەر چۆنێک بێت/g, 'هەرچۆنێک بێت')
+      .replace(/لە ئێستادا/g, 'لەئێستادا')
+      .replace(/لە ڕاستیدا/g, 'لەڕاستیدا')
+      .replace(/بە شێوەیەکی گشتی/g, 'بەگشتی')
+      .replace(/بە هیچ شێوەیەک/g, 'بەهیچ شێوەیەک')
+      .replace(/جێگای داخە/g, 'بەداخەوە')
+      .replace(/بەداخەوەم/g, 'بەداخەوە')
+      .replace(/تۆ لە کوێیت/g, 'لەکوێیت')
+      .replace(/لە کوێیت تۆ/g, 'لەکوێیت')
+      .replace(/چۆنیت تۆ/g, 'چۆنیت')
+      .replace(/تۆ چۆنیت/g, 'چۆنیت')
+      .replace(/تۆ کێیت/g, 'کێیت')
+      .replace(/کێیت تۆ/g, 'کێیت')
+      .replace(/بەخێر بێیت/g, 'بەخێربێیت')
+      .replace(/بەخێر بێن/g, 'بەخێربێن')
+      .replace(/دەستت خۆش بێت/g, 'دەستت خۆش')
       .replace(/خۆشحاڵ بووم بتبینم/g, 'خۆشحاڵ بووم بە بینینت');
   }
 
@@ -373,6 +431,33 @@ const Translator = (() => {
   }
 
   /**
+   * Standardize text for fast, forgiving search matches across Arabic, Persian, Kurdish, and Latin scripts.
+   * Strips diacritics, unifies Arabic/Kurdish letter variants (ڵ/ل, ڕ/ر, ێ/ی, ۆ/و, أ/إ/ا, ك/ک, ي/ى/ی, ة/ه/ە), converts numbers to ASCII, and lowercases.
+   */
+  function normalizeForSearch(str) {
+    if (!str) return '';
+    return String(str)
+      .toLowerCase()
+      .replace(/[\u064b-\u0652\u0670\u0640]/g, '') // strip Arabic diacritics & tatweel
+      .replace(/[\u0660-\u0669]/g, (d) => String(d.charCodeAt(0) - 0x0660)) // Arabic-Indic digits
+      .replace(/[\u06f0-\u06f9]/g, (d) => String(d.charCodeAt(0) - 0x06f0)) // Eastern Arabic digits
+      .replace(/[\u0622\u0623\u0625\u0626\u0671]/g, 'ا') // آ, أ, إ, ئ, ٱ -> ا
+      .replace(/\u0643/g, 'ک') // ك -> ک
+      .replace(/[\u064A\u0649\u06CE\u06CC]/g, 'ی') // ي, ى, ێ, ی -> ی
+      .replace(/[\u0629\u06BE\u06C1]/g, 'ە') // ة, ھ, ہ -> ە
+      .replace(/[\u06B5]/g, 'ل') // ڵ -> ل
+      .replace(/[\u0695\u0696]/g, 'ر') // ڕ, ڑ -> ر
+      .replace(/[\u06C6\u06C7\u06C8]/g, 'و') // ۆ, ۇ, ۈ -> و
+      .replace(/[،,]/g, ' ')
+      .replace(/[؟?]/g, ' ')
+      .replace(/[؛;]/g, ' ')
+      .replace(/[.!:_"-]/g, ' ')
+      .replace(/[\u200c\u200d\u200e\u200f]/g, '') // invisible zero-width chars
+      .replace(/\s+/g, ' ')
+      .trim();
+  }
+
+  /**
    * Translate an array of strings.
    * @param {string[]} lines source lines
    * @param {string} srcLang source lang code ('auto' allowed)
@@ -412,7 +497,8 @@ const Translator = (() => {
         const parts = splitBatch(translated);
         if (parts.length !== batch.length) throw new Error('merged batch');
         parts.forEach((part, k) => {
-          const norm = normalizeText(restoreNewlines(restore(part, batch[k].toks).trim()), isArabic, useKurdishDigits);
+          let norm = normalizeText(restoreNewlines(restore(part, batch[k].toks).trim()), isArabic, useKurdishDigits);
+          norm = fixPlacementAndTagOrder(norm, batch[k].raw);
           results[batch[k].index] = norm;
           if (norm && norm !== origNorm[batch[k].index]) anyTranslated = true;
         });
@@ -422,13 +508,16 @@ const Translator = (() => {
         for (const o of batch) {
           throwIfAborted(signal);
           try {
-            const norm = normalizeText(restoreNewlines(restore(await translateChunk(o.text, srcLang, tgtLang, signal), o.toks).trim()), isArabic, useKurdishDigits);
+            let norm = normalizeText(restoreNewlines(restore(await translateChunk(o.text, srcLang, tgtLang, signal), o.toks).trim()), isArabic, useKurdishDigits);
+            norm = fixPlacementAndTagOrder(norm, o.raw);
             results[o.index] = norm;
             if (norm && norm !== origNorm[o.index]) anyTranslated = true;
           } catch (e) {
             if (e && e.hard) sawHardFail = true;
             failedLines++;
-            results[o.index] = normalizeText(restoreNewlines(restore(o.text, o.toks)), isArabic, useKurdishDigits);
+            let norm = normalizeText(restoreNewlines(restore(o.text, o.toks)), isArabic, useKurdishDigits);
+            norm = fixPlacementAndTagOrder(norm, o.raw);
+            results[o.index] = norm;
           }
         }
       }
@@ -463,7 +552,8 @@ const Translator = (() => {
         const prep = preprocessSource(p.text, srcLang, tgtLang);
         try {
           const t = await translateChunk(prep, srcLang, tgtLang, signal);
-          const norm = normalizeText(restoreNewlines(restore(t, p.toks).trim()), isArabic, useKurdishDigits);
+          let norm = normalizeText(restoreNewlines(restore(t, p.toks).trim()), isArabic, useKurdishDigits);
+          norm = fixPlacementAndTagOrder(norm, lines[i]);
           if (norm && norm !== origNorm[i]) { results[i] = norm; if (opts.onBatch) opts.onBatch(results, doneLines + k + 1, totalLines + retryTotal); }
         } catch { /* keep the previous result */ }
         if (onProgress) onProgress(mainFraction + (1 - mainFraction) * (k + 1) / Math.max(1, retryTotal), doneLines + k + 1, totalLines + retryTotal);
@@ -483,7 +573,7 @@ const Translator = (() => {
 
   /**
    * Group non-empty lines into batches capped by line count and character count.
-   * @returns {Array<Array<{index:number,text:string}>>}
+   * @returns {Array<Array<{index:number,text:string,toks:string[],raw:string}>>}
    */
   function buildBatches(lines, srcLang, tgtLang) {
     const batches = [];
@@ -499,7 +589,7 @@ const Translator = (() => {
       }
       const c = protect(text.replace(/\r?\n/g, NL_SENTINEL));
       const prep = preprocessSource(c.text, srcLang, tgtLang);
-      current.push({ index, text: prep, toks: c.toks });
+      current.push({ index, text: prep, toks: c.toks, raw: text });
       chars += text.length;
     });
 
@@ -651,7 +741,7 @@ const Translator = (() => {
     } catch {}
   }
 
-  return { translateLines, warmup, normalizeText, normalizeDigits, preprocessSource };
+  return { translateLines, warmup, normalizeText, normalizeDigits, preprocessSource, protect, restore, cleanLeftoverTokens, fixPlacementAndTagOrder, naturalizeDialogue, normalizeForSearch };
 })();
 
 if (typeof module !== 'undefined' && module.exports) module.exports = Translator;
