@@ -1,0 +1,242 @@
+/* ============================================================
+   Kurdî Subtitle Translator — Fullscreen Mode
+   Fullscreen video preview overlay stage, scaling typography,
+   playback controls bar, timecode badge, and slide-up editor drawer.
+   ============================================================ */
+
+/* ---------- Fullscreen Edit Mode ---------- */
+.fs-edit {
+  position: fixed;
+  inset: 0;
+  z-index: 990;
+  display: flex;
+  flex-direction: column;
+  background: #09090b;
+  color: #fff;
+  padding: env(safe-area-inset-top, 0px) 0 env(safe-area-inset-bottom, 0px);
+  width: 100vw;
+  height: 100vh;
+  box-sizing: border-box;
+  overflow: hidden;
+}
+.fs-topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 16px;
+  background: rgba(18, 18, 22, 0.88);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  z-index: 10;
+  width: 100%;
+  box-sizing: border-box;
+  gap: 8px;
+}
+.fs-top-actions { display: flex; align-items: center; gap: 8px; }
+.fs-cuecount {
+  font-size: 12px;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.9);
+  background: rgba(255, 255, 255, 0.12);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  padding: 3px 10px;
+  border-radius: var(--md-shape-corner-full);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+/* ---------- Fullscreen Screen Stage ---------- */
+.fs-screen {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: space-between;
+  padding: 3% 6%;
+  position: relative;
+  cursor: pointer;
+  user-select: none;
+  min-height: 0;
+  min-width: 0;
+  overflow: hidden;
+  width: 100%;
+  box-sizing: border-box;
+}
+.fs-screen.pos-top { justify-content: flex-start; }
+.fs-screen.pos-mid { justify-content: center; }
+.fs-screen.pos-bottom { justify-content: flex-end; }
+.fs-zone {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  position: relative;
+  z-index: 1;
+  pointer-events: none;
+}
+.fs-zone.pos-top { margin-bottom: auto; }
+.fs-zone.pos-mid { margin-top: auto; margin-bottom: auto; }
+.fs-zone.pos-bottom { margin-top: auto; }
+.fs-screen:hover .fs-tap-hint { opacity: 1; }
+.fs-text {
+  display: block;
+  font-size: clamp(20px, 5.5vw, 42px);
+  font-weight: 600;
+  color: #ffffff;
+  text-align: center;
+  line-height: 1.45;
+  max-width: 92%;
+  word-wrap: break-word;
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
+  text-shadow: 0 4px 20px rgba(0, 0, 0, 0.95), 0 1px 3px rgba(0, 0, 0, 0.8);
+  transition: font-size 0.2s var(--ease);
+  z-index: 1;
+  max-height: 100%;
+  overflow: hidden;
+}
+.fs-text[dir="rtl"] {
+  direction: rtl;
+  unicode-bidi: isolate;
+  line-height: 1.6;
+  font-family: "Noto Sans Arabic", "Noto Naskh Arabic", "Vazirmatn", "Segoe UI", "Tahoma", sans-serif;
+}
+.fs-tap-hint {
+  font-size: 11.5px;
+  color: rgba(255, 255, 255, 0.5);
+  margin-top: 16px;
+  background: rgba(0, 0, 0, 0.4);
+  padding: 3px 10px;
+  border-radius: var(--md-shape-corner-full);
+  backdrop-filter: blur(8px);
+  opacity: 0.6;
+  transition: opacity 0.2s var(--ease);
+  text-align: center;
+}
+
+/* ---------- Fullscreen Control Bar ---------- */
+.fs-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 10px 16px;
+  background: rgba(24, 24, 28, 0.94);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  width: 100%;
+  box-sizing: border-box;
+}
+.fs-group { display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
+.fs-time-badge {
+  font-size: 12px;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.85);
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  padding: 4px 10px;
+  border-radius: var(--md-shape-corner-full);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.fs-btn {
+  font-family: inherit;
+  font-size: 12.5px;
+  font-weight: 600;
+  cursor: pointer;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  background: rgba(255, 255, 255, 0.08);
+  color: #fff;
+  border-radius: var(--md-shape-corner-full);
+  padding: 6px 14px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  transition: all var(--motion) var(--ease);
+  white-space: nowrap;
+}
+.fs-btn svg { fill: currentColor; }
+.fs-btn:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.18);
+  border-color: rgba(255, 255, 255, 0.3);
+}
+.fs-btn:disabled { opacity: 0.35; cursor: not-allowed; }
+.fs-icon-btn {
+  width: 38px;
+  height: 38px;
+  padding: 0;
+  border-radius: 50%;
+}
+.fs-play-btn {
+  width: 42px;
+  height: 42px;
+  background: var(--md-sys-color-primary);
+  color: var(--md-sys-color-on-primary);
+  border: none;
+}
+.fs-play-btn:hover:not(:disabled) {
+  background: var(--md-sys-color-primary);
+  filter: brightness(1.1);
+}
+.fs-edit-btn {
+  background: var(--md-sys-color-primary-container);
+  color: var(--md-sys-color-on-primary-container);
+  border: 1px solid var(--md-sys-color-outline-variant);
+}
+.fs-close {
+  width: 34px;
+  height: 34px;
+  padding: 0;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.1);
+  border: none;
+}
+
+/* ---------- Slide-up Editor Drawer ---------- */
+.fs-editor {
+  border-top: 1px solid rgba(255, 255, 255, 0.12);
+  padding: 12px 16px calc(14px + env(safe-area-inset-bottom, 0px));
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  background: #121215;
+  width: 100%;
+  box-sizing: border-box;
+}
+.fs-editor.hidden { display: none; }
+#fsInput {
+  width: 100%;
+  min-height: 80px;
+  resize: none;
+  background: rgba(255, 255, 255, 0.06);
+  color: #fff;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: var(--md-shape-corner-medium);
+  padding: 10px 14px;
+  font-size: 15px;
+  line-height: 1.45;
+  font-family: inherit;
+  transition: border-color 0.15s;
+  box-sizing: border-box;
+}
+#fsInput[dir="rtl"] {
+  text-align: right;
+  font-family: "Noto Sans Arabic", "Noto Naskh Arabic", "Vazirmatn", "Segoe UI", "Tahoma", sans-serif;
+}
+#fsInput:focus {
+  outline: none;
+  border-color: var(--md-sys-color-primary);
+  box-shadow: 0 0 0 2px var(--accent-glow);
+}
+.fs-actions { display: flex; justify-content: flex-end; align-items: center; gap: 8px; }
+.fs-done {
+  background: var(--md-sys-color-primary);
+  color: var(--md-sys-color-on-primary);
+  border: none;
+  padding: 7px 20px;
+}

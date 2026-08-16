@@ -208,28 +208,51 @@ const SubtitlePlayer = (() => {
     refresh(true);
   }
 
-  /** Find the cue active at pos. Cues are sorted by start, so a cached cursor
-   *  plus binary search keeps this O(log n) worst-case and O(1) during playback. */
+  /** Find the primary cue index active at pos. */
   function cueAt(pos) {
     const cur = cursor >= 0 ? cues[cursor] : null;
-    if (cur && pos >= cur.start && pos < cur.end) return cursor; // still in the same cue
+    if (cur && pos >= cur.start && pos < cur.end) return cursor;
     let lo = 0, hi = cues.length - 1, best = -1;
     while (lo <= hi) {
       const mid = (lo + hi) >> 1;
       if (cues[mid].start <= pos) { best = mid; lo = mid + 1; }
       else hi = mid - 1;
     }
-    // With several cues sharing one start time, show the earliest of them.
     while (best > 0 && cues[best - 1].start === cues[best].start) best--;
     cursor = best >= 0 && pos < cues[best].end ? best : -1;
     return cursor;
   }
 
+  /** Find all cues active at pos (supports simultaneous dialogue across speakers/positions). */
+  function cuesAt(pos) {
+    if (!cues.length) return [];
+    // Binary search for first cue candidate where end > pos
+    let lo = 0, hi = cues.length - 1, startIdx = cues.length;
+    while (lo <= hi) {
+      const mid = (lo + hi) >> 1;
+      if (cues[mid].end > pos) {
+        startIdx = mid;
+        hi = mid - 1;
+      } else {
+        lo = mid + 1;
+      }
+    }
+    const active = [];
+    for (let i = startIdx; i < cues.length; i++) {
+      const c = cues[i];
+      if (c.start > pos) break; // Cues are sorted by start time
+      if (pos >= c.start && pos < c.end) {
+        active.push(c);
+      }
+    }
+    return active;
+  }
+
   /** Extract vertical and horizontal placement from subtitle tags or settings (ASS {\anX}, {\aX}, WebVTT line/align). */
-  function getCuePlacement(cue) {
-    if (!cue) return { vAlign: 'bottom', hAlign: 'center' };
-    const raw = (cue.rawText || cue.text || '');
-    const settings = (cue.settings || '');
+  function getCuePlacement(cue, lineText) {
+    if (!cue && !lineText) return { vAlign: 'bottom', hAlign: 'center' };
+    const raw = lineText !== undefined ? String(lineText) : (cue ? (cue.rawText || cue.text || '') : '');
+    const settings = (cue && cue.settings) || '';
 
     let vAlign = 'bottom';
     let hAlign = 'center';
@@ -269,41 +292,106 @@ const SubtitlePlayer = (() => {
     return { vAlign, hAlign };
   }
 
+  function renderScreenCues(screenEl, activeList) {
+    if (!screenEl) return;
+
+    let zoneTop = screenEl.querySelector('.screen-zone.pos-top');
+    let zoneMid = screenEl.querySelector('.screen-zone.pos-mid');
+    let zoneBottom = screenEl.querySelector('.screen-zone.pos-bottom');
+
+    if (!zoneTop) {
+      zoneTop = document.createElement('div');
+      zoneTop.className = 'screen-zone pos-top';
+      screenEl.appendChild(zoneTop);
+    }
+    if (!zoneMid) {
+      zoneMid = document.createElement('div');
+      zoneMid.className = 'screen-zone pos-mid';
+      screenEl.appendChild(zoneMid);
+    }
+    if (!zoneBottom) {
+      zoneBottom = document.createElement('div');
+      zoneBottom.className = 'screen-zone pos-bottom';
+      screenEl.appendChild(zoneBottom);
+    }
+
+    zoneTop.innerHTML = '';
+    zoneMid.innerHTML = '';
+    zoneBottom.innerHTML = '';
+
+    if (!activeList || !activeList.length) {
+      return;
+    }
+
+    activeList.forEach((c) => {
+      const raw = String(c.rawText || c.text || '');
+      const clean = String(c.text || '').replace(/\\N/g, '\n');
+      const lines = clean.split('\n');
+      const rawLines = raw.split(/\\N|\n/);
+
+      // Handle multiline with distinct tag placement (e.g. {\an8} on line 1, {\an2} on line 2)
+      if (lines.length > 1 && (raw.includes('\\an') || raw.includes('\\a') || raw.includes('<top>'))) {
+        lines.forEach((line, i) => {
+          const stripped = line.replace(/<[^>]+>/g, '').replace(/\{[^}]*\}/g, '').trim();
+          if (!stripped) return;
+          const placement = getCuePlacement(c, rawLines[i] || rawLines[0] || '');
+          const span = document.createElement('span');
+          span.className = 'screen-text';
+          span.textContent = stripped;
+          span.setAttribute('dir', hasArabic(stripped) ? 'rtl' : 'ltr');
+          span.style.textAlign = placement.hAlign;
+
+          const targetZone = placement.vAlign === 'top' ? zoneTop : (placement.vAlign === 'mid' ? zoneMid : zoneBottom);
+          targetZone.appendChild(span);
+        });
+      } else {
+        const stripped = clean.replace(/<[^>]+>/g, '').replace(/\{[^}]*\}/g, '').trim();
+        if (stripped) {
+          const placement = getCuePlacement(c);
+          const span = document.createElement('span');
+          span.className = 'screen-text';
+          span.textContent = stripped;
+          span.setAttribute('dir', hasArabic(stripped) ? 'rtl' : 'ltr');
+          span.style.textAlign = placement.hAlign;
+
+          const targetZone = placement.vAlign === 'top' ? zoneTop : (placement.vAlign === 'mid' ? zoneMid : zoneBottom);
+          targetZone.appendChild(span);
+        }
+      }
+    });
+  }
+
+  let activeCuesKey = '';
+
   function refresh(force = false) {
-    const idx = cueAt(pos);
-    const cue = idx >= 0 ? cues[idx] : null;
-    const changed = cue !== activeCue;
+    const activeList = cuesAt(pos);
+    const primaryCue = activeList[0] || null;
+    const primaryIdx = primaryCue ? cues.indexOf(primaryCue) : -1;
+    const cuesKey = activeList.map((c) => `${c.index}:${c.text}`).join('|');
+    const changed = cuesKey !== activeCuesKey;
 
-    // Only touch the text DOM when the active cue actually changes.
     if (force || changed) {
-      activeCue = cue;
-      const cleanText = cue ? String(cue.text || '').replace(/<[^>]+>/g, '').replace(/\{[^}]*\}/g, '').replace(/\\N/g, '\n') : '';
-      if (el.text) {
-        el.text.textContent = cleanText;
-        el.text.style.display = cue ? 'block' : 'none';
-        el.text.setAttribute('dir', cue && hasArabic(cue.text) ? 'rtl' : 'ltr');
+      activeCuesKey = cuesKey;
+      activeCue = primaryCue;
+
+      renderScreenCues(el.screen, activeList);
+
+      if (changed && activeList.length && el.screen) {
+        const textEls = el.screen.querySelectorAll('.screen-text');
+        textEls.forEach((t) => {
+          t.classList.remove('caption-updated');
+          void t.offsetWidth;
+          t.classList.add('caption-updated');
+        });
       }
 
-      const placement = getCuePlacement(cue);
-      if (el.screen && el.screen.classList) {
-        el.screen.classList.remove('pos-top', 'pos-mid', 'pos-bottom');
-        el.screen.classList.add(`pos-${placement.vAlign}`);
-      }
-      if (el.text) {
-        el.text.style.textAlign = placement.hAlign;
-      }
-
-      if (changed && cue && el.text && el.text.classList) {
-        el.text.classList.remove('caption-updated');
-        void el.text.offsetWidth;
-        el.text.classList.add('caption-updated');
-      }
-      if (cue) {
+      if (activeList.length) {
         fitText();
       }
-      if (el.empty) el.empty.style.display = cues.length ? 'none' : 'block';
+
+      if (el.empty) el.empty.style.display = cues.length && !activeList.length ? 'none' : (cues.length ? 'none' : 'block');
       if (el.cueCount) {
-        el.cueCount.textContent = cues.length ? `${cue ? cue.index : 0} / ${cues.length}` : '';
+        el.cueCount.textContent = cues.length ? `${primaryCue ? primaryCue.index : 0} / ${cues.length}` : '';
         el.cueCount.style.display = cues.length ? 'block' : 'none';
       }
     }
@@ -318,17 +406,15 @@ const SubtitlePlayer = (() => {
     if (el.tlFill) el.tlFill.style.width = `${pct}%`;
     if (el.tlThumb) el.tlThumb.style.left = `${pct}%`;
 
-    if (changed && onCue) onCue(cue, idx);
+    if (changed && onCue) onCue(primaryCue, primaryIdx, activeList);
   }
 
   /** Replace the text of cue at an array index (used by the live editor). */
   function updateText(index, text) {
     if (!cues[index]) return;
     cues[index].text = text;
-    if (activeCue === cues[index]) {
-      refresh(true);
-      fitText();
-    }
+    refresh(true);
+    fitText();
   }
 
   /** Seek relative to current position (e.g. +5000ms or -5000ms). */
@@ -342,7 +428,7 @@ const SubtitlePlayer = (() => {
     seek(skipCue(dir));
   }
 
-  /** Register a callback fired with (cue, index) whenever playback moves to a cue. */
+  /** Register a callback fired with (cue, index, activeList) whenever playback moves to a cue. */
   function setCueCallback(fn) { onCue = fn; }
 
   function fmt(ms) {
@@ -356,32 +442,26 @@ const SubtitlePlayer = (() => {
 
   /** Dynamically scale subtitle preview text so it fits the player screen without clipping. */
   function fitText() {
-    if (!el.text || !el.screen) return;
-    const text = el.text.textContent;
-    if (!text || !text.trim()) {
-      el.text.style.fontSize = '';
-      return;
-    }
+    if (!el.screen) return;
+    const textEls = el.screen.querySelectorAll('.screen-text');
+    if (!textEls.length) return;
+
     const screenW = el.screen.clientWidth;
     const screenH = el.screen.clientHeight;
     if (!screenW || !screenH) return;
 
-    // Base font size is proportional to player screen dimensions, bounded cleanly
-    const base = Math.round(Math.min(
-      Math.max(14, screenW * 0.052),
-      Math.max(14, screenH * 0.16),
-      36
-    ));
-    let size = Math.round(base * fontScale);
-    const maxW = screenW * 0.90;
-    const maxH = screenH * 0.88;
+    const base = Math.round(Math.min(screenW * 0.052, screenH * 0.16));
+    let size = Math.max(14, Math.round(base * fontScale));
+    const maxH = Math.max(45, (screenH / Math.max(1, textEls.length)) * 0.85);
 
-    el.text.style.fontSize = `${size}px`;
-    // If long multiline text overflows container bounds, iteratively scale down
-    while (size > 11 && (el.text.scrollWidth > maxW || el.text.scrollHeight > maxH)) {
-      size -= 1;
-      el.text.style.fontSize = `${size}px`;
-    }
+    textEls.forEach((t) => {
+      t.style.fontSize = `${size}px`;
+      let currentSize = size;
+      while (currentSize > 12 && (t.offsetHeight > maxH || t.scrollHeight > maxH + 10)) {
+        currentSize -= 1;
+        t.style.fontSize = `${currentSize}px`;
+      }
+    });
   }
 
   /** Set font scale multiplier for subtitle preview text. */

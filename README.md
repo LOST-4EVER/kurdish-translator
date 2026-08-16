@@ -63,8 +63,16 @@ Translate movie, anime, and TV series subtitles into **Kurdish Sorani (کورد�
 - **UTF-8 BOM:** Optional `\uFEFF` byte order mark for Smart TVs, legacy players, and Windows media software.
 - **Windows CRLF Line Endings:** Optional `\r\n` line endings for hardware players.
 
-### 📱 Progressive Web App (PWA) & Offline Mode
-- **Installable:** Add to home screen on Android, iOS, Windows, macOS, and Linux.
+### 🎭 Smart Character Naming & Pronunciation System
+- **⚡ Automated Smart Recognition:** Scans subtitle files for speaker prefixes (e.g. `JOHN:`, `[MARY]`) and character mentions, automatically proposing proper Kurdish Sorani names and phonetic pronunciation guides.
+- **🗣️ Phonetic Pronunciation Cards:** Attach phonetic guides (e.g., `جۆن (Dzhon)`, `ئارثەر (Ar-ther)`) to preserve character identity across translations.
+- **🔄 Replace All in Subtitles:** Instantly replaces character names across all cues in the live editor, video player, and export files.
+- **🎯 Typo & Spelling Variation Protection:** Matches common spelling variations or typos (e.g., replacing `Jhon` or `Johnn` with `جۆن`).
+
+### 📱 Progressive Web App (PWA) & Native System Integration
+- **Direct File Share Target (`share_target`):** Share subtitle files directly from your mobile device or file manager share menu straight into the app.
+- **Native File Handler (`file_handlers`):** Double-click or open subtitle files (`.srt`, `.vtt`, `.ass`, `.ssa`, `.smi`, `.sub`, `.txt`) directly with Kurdî Subtitles on desktop and Android.
+- **Installable:** Add to home screen on Android, iOS, Windows, macOS, and Linux with custom shortcuts.
 - **Offline UI & Player:** Service worker caches app shell, fonts, icons, and player logic so you can edit and preview subtitles without an active internet connection.
 
 ---

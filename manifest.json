@@ -2,16 +2,66 @@
   "name": "Kurdî Subtitle Translator",
   "short_name": "Kurdî Subtitles",
   "description": "Translate subtitle files into Kurdish Sorani right in your browser. SRT, VTT, ASS, SSA, SUB, SMI. Installable and works offline.",
-  "id": "/",
+  "id": "./",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
-  "orientation": "portrait",
+  "display_override": ["window-controls-overlay", "standalone", "minimal-ui"],
+  "orientation": "any",
   "background_color": "#0b0d12",
   "theme_color": "#8b9aff",
   "lang": "ckb",
   "dir": "rtl",
-  "categories": ["utilities", "productivity"],
+  "categories": ["utilities", "productivity", "entertainment"],
+  "launch_handler": {
+    "client_mode": "focus-existing"
+  },
+  "share_target": {
+    "action": "./?share_target=1",
+    "method": "POST",
+    "enctype": "multipart/form-data",
+    "params": {
+      "files": [
+        {
+          "name": "subtitle_file",
+          "accept": [
+            ".srt",
+            ".vtt",
+            ".ass",
+            ".ssa",
+            ".smi",
+            ".sub",
+            ".txt",
+            "text/plain",
+            "text/vtt",
+            "application/x-subrip",
+            "application/x-ass"
+          ]
+        }
+      ]
+    }
+  },
+  "file_handlers": [
+    {
+      "action": "./",
+      "name": "Subtitle File",
+      "accept": {
+        "text/plain": [".srt", ".vtt", ".ass", ".ssa", ".smi", ".sub", ".txt"],
+        "application/x-subrip": [".srt"],
+        "text/vtt": [".vtt"],
+        "application/x-ass": [".ass", ".ssa"]
+      }
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Translate Subtitle",
+      "short_name": "Translate",
+      "description": "Open subtitle translator and drop a file",
+      "url": "./",
+      "icons": [{ "src": "assets/icons/icon-192.png", "sizes": "192x192" }]
+    }
+  ],
   "icons": [
     {
       "src": "assets/icons/icon.svg",

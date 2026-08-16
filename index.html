@@ -13,10 +13,18 @@
   <link rel="apple-touch-icon" href="assets/icons/apple-touch-icon.png" />
   <title>Kurdî Subtitle Translator | وەرگێڕی ژێرنووس</title>
   <link rel="icon" type="image/svg+xml" href="assets/icons/icon.svg" />
+  <link rel="stylesheet" href="assets/css/variables.css" />
+  <link rel="stylesheet" href="assets/css/base.css" />
+  <link rel="stylesheet" href="assets/css/components.css" />
+  <link rel="stylesheet" href="assets/css/translation.css" />
+  <link rel="stylesheet" href="assets/css/player.css" />
+  <link rel="stylesheet" href="assets/css/editor.css" />
+  <link rel="stylesheet" href="assets/css/fullscreen.css" />
+  <link rel="stylesheet" href="assets/css/toast.css" />
   <link rel="stylesheet" href="assets/css/style.css" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Noto+Naskh+Arabic:wght@500;600;700&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Noto+Sans+Arabic:wght@400;500;600;700;800;900&family=Noto+Naskh+Arabic:wght@500;600;700&display=swap" rel="stylesheet" />
 </head>
 <body>
   <div class="app">
@@ -198,6 +206,21 @@
               </span>
             </label>
 
+            <button type="button" class="adv-trigger-btn char-trigger-btn" id="openCharModalBtn">
+              <span class="adv-trigger-icon char-trigger-icon">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+                  <circle cx="12" cy="7" r="4"></circle>
+                </svg>
+              </span>
+              <span class="adv-trigger-info">
+                <strong data-i18n="charNamesTitle">Smart Character Naming</strong>
+                <span data-i18n="charNamesSub">Detect & replace character names with pronunciations</span>
+              </span>
+              <span class="adv-trigger-badge" id="charActiveBadge">0</span>
+              <svg class="adv-trigger-chevron" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>
+            </button>
+
             <button type="button" class="adv-trigger-btn" id="openAdvModalBtn">
               <span class="adv-trigger-icon">
                 <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -272,6 +295,94 @@
             </div>
           </div>
 
+          <!-- Smart Character Naming Modal -->
+          <div class="modal-backdrop hidden" id="charModalBackdrop">
+            <div class="modal-card char-modal-card" id="charModalCard" role="dialog" aria-modal="true" aria-labelledby="charModalTitle">
+              <div class="modal-header">
+                <div class="modal-title-group">
+                  <span class="modal-title-icon char-modal-icon">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                      <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+                      <circle cx="12" cy="7" r="4"></circle>
+                    </svg>
+                  </span>
+                  <div>
+                    <h3 class="modal-title" id="charModalTitle" data-i18n="charNamesTitle">Smart Character Naming</h3>
+                    <p class="modal-sub" data-i18n="charNamesSub">Detect & replace character names with pronunciations</p>
+                  </div>
+                </div>
+                <button type="button" class="modal-close-btn" id="closeCharModalBtn" aria-label="Close">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                </button>
+              </div>
+
+              <div class="modal-body char-modal-body">
+                <div class="char-toolbar">
+                  <button type="button" class="btn-secondary mini-btn" id="smartRecognizeBtn">
+                    <span data-i18n="btnSmartRecognize">⚡ Smart Recognize Names</span>
+                  </button>
+                  <button type="button" class="btn-ghost mini-btn" id="clearCharNamesBtn">
+                    <span data-i18n="btnClearAll">Clear All</span>
+                  </button>
+                </div>
+
+                <div class="char-add-card">
+                  <div class="char-input-group">
+                    <input type="text" id="charOrigInput" class="char-input" placeholder="Original Name (e.g. John)" data-i18n-placeholder="lblOrigName" />
+                    <input type="text" id="charKurdishInput" class="char-input" placeholder="Kurdish Name (e.g. جۆن)" data-i18n-placeholder="lblKurdishName" dir="rtl" />
+                    <input type="text" id="charPronunInput" class="char-input" placeholder="Pronunciation Guide (e.g. Dzhon)" data-i18n-placeholder="lblPronunciation" />
+                    <button type="button" id="addCharNameBtn" class="btn-primary mini-btn" data-i18n="btnAddName">+ Add Name</button>
+                  </div>
+                </div>
+
+                <div class="char-list-wrap">
+                  <div class="char-list" id="charNamesList"></div>
+                  <p class="char-empty-msg hidden" id="charEmptyMsg" data-i18n="noCharNamesFound">No character names added yet. Click Smart Recognize or add one manually.</p>
+                </div>
+
+                <div class="char-options-list">
+                  <label class="switch-row">
+                    <span>
+                      <strong data-i18n="optApplyNamesTrans">Replace character names during translation</strong>
+                    </span>
+                    <span class="switch">
+                      <input type="checkbox" id="applyNamesTransToggle" checked role="switch" />
+                      <span class="slider"></span>
+                    </span>
+                  </label>
+
+                  <label class="switch-row">
+                    <span>
+                      <strong data-i18n="optApplyNamesPreview">Replace character names in Preview live editor</strong>
+                    </span>
+                    <span class="switch">
+                      <input type="checkbox" id="applyNamesPreviewToggle" checked role="switch" />
+                      <span class="slider"></span>
+                    </span>
+                  </label>
+
+                  <label class="switch-row">
+                    <span>
+                      <strong data-i18n="optFuzzyTypo">Smart typo tolerance for names (e.g. Jhon -> John)</strong>
+                    </span>
+                    <span class="switch">
+                      <input type="checkbox" id="fuzzyTypoToggle" checked role="switch" />
+                      <span class="slider"></span>
+                    </span>
+                  </label>
+                </div>
+              </div>
+
+              <div class="modal-footer char-modal-footer">
+                <button type="button" class="btn-secondary modal-action-btn" id="replaceAllInSubtitlesBtn">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
+                  <span data-i18n="btnReplaceAllNames">Replace All in Subtitles</span>
+                </button>
+                <button type="button" class="btn-primary modal-done-btn" id="doneCharModalBtn" data-i18n="btnDone">Done</button>
+              </div>
+            </div>
+          </div>
+
           <button class="btn-primary" id="translateBtn">
             <span class="btn-icon">
               <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="m12.87 15.07-2.54-2.51.03-.03A17.52 17.52 0 0 0 14.07 6H17V4h-7V2H8v2H1v2h11.17C11.5 7.92 10.44 9.75 9 11.35 8.07 10.32 7.3 9.19 6.69 8h-2c.73 1.63 1.73 3.17 2.98 4.56l-5.09 5.02L4 19l5-5 3.11 3.11.76-2.04zM18.5 10h-2L12 22h2l1.12-3h4.75L21 22h2l-4.5-12zm-2.62 7 1.62-4.33L19.12 17h-3.24z"/></svg>
@@ -286,23 +397,54 @@
               <span class="progress-spinner"></span>
               <h2 data-i18n="progressTitle">Translating…</h2>
             </div>
-            <span id="progressPct">0%</span>
+            <div class="progress-badge-group">
+              <span class="progress-speed-badge" id="progressSpeed">⚡ Processing</span>
+              <span id="progressPct">0%</span>
+            </div>
           </div>
           <div class="progress-track"><div class="progress-fill" id="progressFill"></div></div>
           <div class="progress-meta">
             <span id="progressDetail" data-i18n="progressPrep">Preparing…</span>
             <span id="lineCount"></span>
           </div>
+
+          <!-- Cinematic Live Translation Stage -->
           <div class="live-reel">
             <div class="live-screen">
-              <span class="live-caption" id="liveCaption"></span>
-              <div class="live-placeholder" id="livePlaceholder">
-                <span class="live-pulse-dot"></span>
-                <span>Translating to Kurdish…</span>
+              <div class="live-screen-header">
+                <div class="live-screen-tag">
+                  <span class="live-pulse-dot"></span>
+                  <span>LIVE STAGE • KURDÎ SORANÎ</span>
+                </div>
+                <div class="live-timecode-badge" id="liveTimecode">00:00.000</div>
               </div>
+
+              <div class="live-caption-box">
+                <div class="live-orig-caption hidden" id="liveOrigCaption"></div>
+                <div class="live-caption hidden" id="liveCaption"></div>
+                <div class="live-placeholder" id="livePlaceholder">
+                  <div class="live-loading-waves">
+                    <span></span><span></span><span></span><span></span><span></span>
+                  </div>
+                  <span>Translating to Kurdish Sorani…</span>
+                </div>
+              </div>
+
+              <div class="live-screen-footer">
+                <div class="live-screen-status">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 14.5v-9l6 4.5-6 4.5z"/></svg>
+                  <span>Google AI Studio • Realtime Batch Stream</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Live Streamed Cue Feed -->
+            <div class="live-feed-header">
+              <span data-i18n="liveStreamTitle">⚡ Streamed Subtitle Cues</span>
             </div>
             <div class="live-feed" id="liveFeed"></div>
           </div>
+
           <button class="btn-ghost" id="cancelBtn" data-i18n="cancel">Cancel</button>
         </section>
 
@@ -402,10 +544,11 @@
               <div class="ctl-group right">
                 <div class="select-wrap speed" title="Subtitle Font Size">
                   <select id="fontSizeSel" aria-label="Subtitle Font Size">
-                    <option value="0.85">A- Small</option>
+                    <option value="0.75">A- Small</option>
                     <option value="1" selected>A Normal</option>
-                    <option value="1.2">A+ Large</option>
-                    <option value="1.45">A++ XL</option>
+                    <option value="1.25">A+ Large</option>
+                    <option value="1.55">A++ XL</option>
+                    <option value="1.85">A+++ XXL</option>
                   </select>
                 </div>
                 <div class="select-wrap speed" title="Playback Speed">
@@ -465,6 +608,13 @@
               </div>
             </div>
             <div class="editor-toggles">
+              <button class="icon-btn-action char-btn" id="edCharNamesBtn" title="Smart Character Names & Replacement" aria-label="Smart Character Names" data-i18n-title="charNamesTitle">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+                  <circle cx="12" cy="7" r="4"></circle>
+                </svg>
+                <span class="char-count-badge" id="edCharBadge">0</span>
+              </button>
               <button class="icon-btn-action" id="undoBtn" title="Undo change (Ctrl+Z)" aria-label="Undo edit" disabled>
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 14 4 9 9 4"></polyline><path d="M20 20v-7a4 4 0 0 0-4-4H4"></path></svg>
               </button>
@@ -519,10 +669,11 @@
       <div class="fs-top-actions">
         <div class="select-wrap speed" data-i18n-title="fontSize" title="Subtitle Font Size">
           <select id="fsFontSizeSel" aria-label="Subtitle Font Size">
-            <option value="0.85" data-i18n="fsFontSmall">A- Small</option>
+            <option value="0.75" data-i18n="fsFontSmall">A- Small</option>
             <option value="1" selected data-i18n="fsFontNormal">A Normal</option>
-            <option value="1.2" data-i18n="fsFontLarge">A+ Large</option>
-            <option value="1.45" data-i18n="fsFontXL">A++ XL</option>
+            <option value="1.25" data-i18n="fsFontLarge">A+ Large</option>
+            <option value="1.55" data-i18n="fsFontXL">A++ XL</option>
+            <option value="1.85" data-i18n="fsFontXXL">A+++ XXL</option>
           </select>
         </div>
         <button class="fs-btn fs-close" id="fsClose" data-i18n-title="fsExit" title="Exit full preview" aria-label="Exit full preview">
@@ -554,6 +705,8 @@
           <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M6 18l8.5-6L6 6v12zM16 6v12h2V6h-2z"/></svg>
         </button>
       </div>
+
+      <div class="fs-time-badge" id="fsTimeDisplay">0:00 / 0:00</div>
 
       <div class="fs-group right">
         <button class="fs-btn fs-icon-btn" id="fsUndoBtn" data-i18n-title="undo" title="Undo change" aria-label="Undo change" disabled>

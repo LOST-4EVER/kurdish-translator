@@ -48,11 +48,22 @@
     openAdvModalBtn: '#openAdvModalBtn', closeAdvModalBtn: '#closeAdvModalBtn',
     doneAdvModalBtn: '#doneAdvModalBtn', advModalBackdrop: '#advModalBackdrop',
     advActiveBadge: '#advActiveBadge',
+    openCharModalBtn: '#openCharModalBtn', closeCharModalBtn: '#closeCharModalBtn',
+    doneCharModalBtn: '#doneCharModalBtn', charModalBackdrop: '#charModalBackdrop',
+    charActiveBadge: '#charActiveBadge', edCharBadge: '#edCharBadge',
+    edCharNamesBtn: '#edCharNamesBtn', smartRecognizeBtn: '#smartRecognizeBtn',
+    clearCharNamesBtn: '#clearCharNamesBtn', charOrigInput: '#charOrigInput',
+    charKurdishInput: '#charKurdishInput', charPronunInput: '#charPronunInput',
+    addCharNameBtn: '#addCharNameBtn', charNamesList: '#charNamesList',
+    charEmptyMsg: '#charEmptyMsg', applyNamesTransToggle: '#applyNamesTransToggle',
+    applyNamesPreviewToggle: '#applyNamesPreviewToggle', fuzzyTypoToggle: '#fuzzyTypoToggle',
+    replaceAllInSubtitlesBtn: '#replaceAllInSubtitlesBtn',
     exportFormatSel: '#exportFormatSel', langToggleBtn: '#langToggleBtn',
     translateBtn: '#translateBtn',
-    progressFill: '#progressFill', progressPct: '#progressPct',
+    progressFill: '#progressFill', progressPct: '#progressPct', progressSpeed: '#progressSpeed',
     progressDetail: '#progressDetail', lineCount: '#lineCount', cancelBtn: '#cancelBtn',
-    liveCaption: '#liveCaption', livePlaceholder: '#livePlaceholder', liveFeed: '#liveFeed',
+    liveCaption: '#liveCaption', liveOrigCaption: '#liveOrigCaption', liveTimecode: '#liveTimecode',
+    livePlaceholder: '#livePlaceholder', liveFeed: '#liveFeed',
     downloadBtn: '#downloadBtn', edDownloadBtn: '#edDownloadBtn', copyBtn: '#copyBtn',
     translateAgainBtn: '#translateAgainBtn', doneFormat: '#doneFormat', doneSize: '#doneSize',
     previewBtn: '#previewBtn',
@@ -172,6 +183,12 @@
   let liveDone = 0;     // how many non-empty lines have been finalized
   let editorObserver = null;
   let copyTimer = null;
+
+  // Smart Character Naming System State
+  let charNames = [];   // Array of { id, original, kurdish, pronunciation }
+  let applyNamesTrans = true;
+  let applyNamesPreview = true;
+  let fuzzyTypo = true;
   const hasArabic = (s) => /[\u0600-\u06FF\u0750-\u077F]/.test(s);
   // Safari iOS ignores the `download` attribute on blob: URLs; iPadOS
   // identifies itself as a Mac, so detect touch too.
@@ -231,10 +248,10 @@
   const dirFor = (text) => (hasArabic(text) ? 'rtl' : 'ltr');
 
   /** Extract vertical and horizontal placement from subtitle tags or settings (ASS {\anX}, {\aX}, WebVTT line/align). */
-  function getCuePlacement(cue) {
-    if (!cue) return { vAlign: 'bottom', hAlign: 'center' };
-    const raw = (cue.rawText || cue.text || '');
-    const settings = (cue.settings || '');
+  function getCuePlacement(cue, lineText) {
+    if (!cue && !lineText) return { vAlign: 'bottom', hAlign: 'center' };
+    const raw = lineText !== undefined ? String(lineText) : (cue ? (cue.rawText || cue.text || '') : '');
+    const settings = (cue && cue.settings) || '';
 
     let vAlign = 'bottom';
     let hAlign = 'center';
@@ -293,23 +310,78 @@
     liveDone = upto;
     const latestIdx = liveItems[liveItems.length - 1];
     const latest = latestIdx !== undefined ? results[latestIdx] : '';
+
     if (latest && latest.trim()) {
+      if (els.livePlaceholder) els.livePlaceholder.classList.add('hidden');
+
+      const cue = parsed && parsed.cues ? parsed.cues[latestIdx] : null;
+
+      // Render Original Source Line
+      if (els.liveOrigCaption && cue) {
+        const origText = liveSource[latestIdx] || cue.text || '';
+        els.liveOrigCaption.textContent = displayText(origText);
+        els.liveOrigCaption.classList.remove('hidden');
+      }
+
+      // Render Kurdish Translated Line
       if (els.liveCaption) {
         els.liveCaption.textContent = displayText(latest);
         els.liveCaption.setAttribute('dir', dirFor(latest));
         els.liveCaption.classList.remove('hidden');
+        els.liveCaption.classList.remove('live-pop');
+        void els.liveCaption.offsetWidth; // trigger reflow for animation restart
+        els.liveCaption.classList.add('live-pop');
       }
-      if (els.livePlaceholder) els.livePlaceholder.classList.add('hidden');
+
+      // Render Timecode Badge
+      if (els.liveTimecode && cue) {
+        const startStr = typeof SubParser !== 'undefined' ? SubParser.fmtSRT(cue.start) : '00:00';
+        const endStr = typeof SubParser !== 'undefined' ? SubParser.fmtSRT(cue.end) : '00:00';
+        els.liveTimecode.textContent = `${startStr} ➔ ${endStr}`;
+      }
     }
+
+    // Render Stream Feed Cards
     if (els.liveFeed) {
       els.liveFeed.innerHTML = '';
-      liveItems.slice(-5).forEach((i) => {
-        const row = document.createElement('span');
-        row.className = 'live-item';
-        row.setAttribute('dir', dirFor(results[i]));
-        row.textContent = displayText(results[i]);
-        els.liveFeed.appendChild(row);
+      const recentIndices = liveItems.slice(-6);
+      const frag = document.createDocumentFragment();
+
+      recentIndices.forEach((i) => {
+        const cue = parsed && parsed.cues ? parsed.cues[i] : null;
+        const card = document.createElement('div');
+        card.className = 'live-feed-card';
+
+        const head = document.createElement('div');
+        head.className = 'live-feed-card-head';
+
+        const numPill = document.createElement('span');
+        numPill.className = 'live-feed-cue-num';
+        numPill.textContent = `#${i + 1}`;
+
+        const timePill = document.createElement('span');
+        timePill.className = 'live-feed-cue-time';
+        timePill.textContent = cue ? typeof SubParser !== 'undefined' ? SubParser.fmtSRT(cue.start) : '' : '';
+
+        head.appendChild(numPill);
+        if (timePill.textContent) head.appendChild(timePill);
+
+        const origLine = document.createElement('div');
+        origLine.className = 'live-feed-orig';
+        origLine.textContent = displayText(liveSource[i] || (cue ? cue.text : ''));
+
+        const kurdLine = document.createElement('div');
+        kurdLine.className = 'live-feed-kurdish';
+        kurdLine.setAttribute('dir', dirFor(results[i]));
+        kurdLine.textContent = displayText(results[i]);
+
+        card.appendChild(head);
+        card.appendChild(origLine);
+        card.appendChild(kurdLine);
+        frag.appendChild(card);
       });
+
+      els.liveFeed.appendChild(frag);
     }
   }
 
@@ -450,6 +522,11 @@
     recordPreEditSnapshot();
 
     workCues[i].text = text;
+    if (typeof Translator !== 'undefined' && Translator.normalizeForSearch) {
+      workCues[i]._normText = Translator.normalizeForSearch(text);
+    } else {
+      workCues[i]._normText = (text || '').toLowerCase();
+    }
     SubtitlePlayer.updateText(i, stripTags(text));
     dirty = true;
 
@@ -684,9 +761,11 @@
         const row = rowEls[i];
         if (!row) return;
         const text = cue.text || '';
-        const normText = typeof Translator !== 'undefined' && Translator.normalizeForSearch
-          ? Translator.normalizeForSearch(text)
-          : text.toLowerCase();
+        const normText = cue._normText !== undefined ? cue._normText : (
+          typeof Translator !== 'undefined' && Translator.normalizeForSearch
+            ? (cue._normText = Translator.normalizeForSearch(text))
+            : text.toLowerCase()
+        );
         const lowerText = text.toLowerCase();
         const time = `${SubParser.fmtSRT(cue.start)} ${SubParser.fmtSRT(cue.end)}`.toLowerCase();
         const cueNum = String(i + 1);
@@ -761,7 +840,15 @@
   /** Swap in a fresh cue set (original or translated) and rebuild everything. */
   function updateCues(cues) {
     baseCues = cues.map((c) => ({ ...c }));
-    workCues = cues.map((c) => ({ ...c }));
+    workCues = cues.map((c) => {
+      const copy = { ...c };
+      if (typeof Translator !== 'undefined' && Translator.normalizeForSearch) {
+        copy._normText = Translator.normalizeForSearch(c.text || '');
+      } else {
+        copy._normText = (c.text || '').toLowerCase();
+      }
+      return copy;
+    });
     undoStack = [];
     redoStack = [];
     updateUndoRedoUI();
@@ -787,60 +874,137 @@
 
   /** Shrink the fullscreen subtitle text until it fits the visible screen area without clipping. */
   function fitFsText() {
-    const el = els.fsText;
     const screen = els.fsScreen;
-    if (!el || !screen || !fsActive) return;
-    const text = el.textContent || '';
-    if (!text.trim()) {
-      el.style.fontSize = '';
-      return;
-    }
+    if (!screen || !fsActive) return;
+    const textEls = screen.querySelectorAll('.fs-text');
+    if (!textEls.length) return;
+
     const screenW = screen.clientWidth;
     const screenH = screen.clientHeight;
     if (!screenW || !screenH) return;
 
     const scale = els.fsFontSizeSel ? (parseFloat(els.fsFontSizeSel.value) || 1) : 1;
-    const base = Math.round(Math.min(
-      Math.max(18, screenW * 0.052),
-      Math.max(18, screenH * 0.14),
-      44
-    ));
-    let size = Math.round(base * scale);
+    const base = Math.round(Math.min(screenW * 0.055, screenH * 0.12));
+    let targetSize = Math.max(16, Math.round(base * scale));
 
     const isEditorOpen = els.fsEditor && !els.fsEditor.classList.contains('hidden');
-    const maxW = screenW * 0.90;
-    const maxH = isEditorOpen ? Math.max(70, screenH - 110) : Math.max(90, screenH - 65);
+    const maxH = isEditorOpen ? Math.max(50, screenH * 0.45) : Math.max(70, screenH * 0.75);
 
-    el.style.fontSize = `${size}px`;
-    while (size > 12 && (el.scrollWidth > maxW || el.scrollHeight > maxH)) {
-      size -= 1;
-      el.style.fontSize = `${size}px`;
+    textEls.forEach((el) => {
+      el.style.fontSize = `${targetSize}px`;
+      let sz = targetSize;
+      while (sz > 14 && (el.offsetHeight > maxH || el.scrollHeight > maxH + 10)) {
+        sz -= 1;
+        el.style.fontSize = `${sz}px`;
+      }
+    });
+  }
+
+  function renderFsCues(screenEl, activeList) {
+    if (!screenEl) return;
+
+    let zoneTop = screenEl.querySelector('.fs-zone.pos-top');
+    let zoneMid = screenEl.querySelector('.fs-zone.pos-mid');
+    let zoneBottom = screenEl.querySelector('.fs-zone.pos-bottom');
+
+    if (!zoneTop) {
+      zoneTop = document.createElement('div');
+      zoneTop.className = 'fs-zone pos-top';
+      screenEl.appendChild(zoneTop);
     }
+    if (!zoneMid) {
+      zoneMid = document.createElement('div');
+      zoneMid.className = 'fs-zone pos-mid';
+      screenEl.appendChild(zoneMid);
+    }
+    if (!zoneBottom) {
+      zoneBottom = document.createElement('div');
+      zoneBottom.className = 'fs-zone pos-bottom';
+      screenEl.appendChild(zoneBottom);
+    }
+
+    zoneTop.innerHTML = '';
+    zoneMid.innerHTML = '';
+    zoneBottom.innerHTML = '';
+
+    if (!activeList || !activeList.length) return;
+
+    activeList.forEach((c) => {
+      const raw = String(c.rawText || c.text || '');
+      const clean = String(c.text || '').replace(/\\N/g, '\n');
+      const lines = clean.split('\n');
+      const rawLines = raw.split(/\\N|\n/);
+
+      if (lines.length > 1 && (raw.includes('\\an') || raw.includes('\\a') || raw.includes('<top>'))) {
+        lines.forEach((line, i) => {
+          const stripped = line.replace(/<[^>]+>/g, '').replace(/\{[^}]*\}/g, '').trim();
+          if (!stripped) return;
+          const placement = getCuePlacement(c, rawLines[i] || rawLines[0] || '');
+          const span = document.createElement('span');
+          span.className = 'fs-text';
+          span.textContent = stripped;
+          span.setAttribute('dir', hasArabic(stripped) ? 'rtl' : 'ltr');
+          span.style.textAlign = placement.hAlign;
+
+          const targetZone = placement.vAlign === 'top' ? zoneTop : (placement.vAlign === 'mid' ? zoneMid : zoneBottom);
+          targetZone.appendChild(span);
+        });
+      } else {
+        const stripped = clean.replace(/<[^>]+>/g, '').replace(/\{[^}]*\}/g, '').trim();
+        if (stripped) {
+          const placement = getCuePlacement(c);
+          const span = document.createElement('span');
+          span.className = 'fs-text';
+          span.textContent = stripped;
+          span.setAttribute('dir', hasArabic(stripped) ? 'rtl' : 'ltr');
+          span.style.textAlign = placement.hAlign;
+
+          const targetZone = placement.vAlign === 'top' ? zoneTop : (placement.vAlign === 'mid' ? zoneMid : zoneBottom);
+          targetZone.appendChild(span);
+        }
+      }
+    });
   }
 
   function updateFsScreen() {
-    const cue = activeIdx >= 0 && workCues && workCues[activeIdx] ? workCues[activeIdx] : null;
-    if (els.fsText) {
-      els.fsText.textContent = cue ? displayText(cue.text) : '';
-      els.fsText.setAttribute('dir', cue ? dirFor(cue.text) : 'ltr');
+    const currentPos = typeof SubtitlePlayer !== 'undefined' ? SubtitlePlayer.position : 0;
+    const currentDuration = typeof SubtitlePlayer !== 'undefined' ? SubtitlePlayer.duration : 0;
+    let activeList = [];
+    if (typeof SubtitlePlayer !== 'undefined' && workCues && workCues.length) {
+      activeList = workCues.filter((c) => currentPos >= c.start && currentPos < c.end);
     }
-    if (els.fsCueCount) {
-      els.fsCueCount.textContent = cue && workCues ? `Cue ${cue.index} / ${workCues.length}` : 'Cue 0 / 0';
+    if (!activeList.length && activeIdx >= 0 && workCues && workCues[activeIdx]) {
+      activeList = [workCues[activeIdx]];
+    } else if (!activeList.length && workCues && workCues.length) {
+      let nearest = workCues[0];
+      for (let k = 0; k < workCues.length; k++) {
+        if (workCues[k].start <= currentPos) nearest = workCues[k];
+        else break;
+      }
+      if (nearest) activeList = [nearest];
     }
 
-    if (cue) {
-      const placement = getCuePlacement(cue);
-      if (els.fsScreen) {
-        els.fsScreen.classList.remove('pos-top', 'pos-mid', 'pos-bottom');
-        els.fsScreen.classList.add(`pos-${placement.vAlign}`);
-      }
-      if (els.fsText) els.fsText.style.textAlign = placement.hAlign;
-    } else {
-      if (els.fsScreen) {
-        els.fsScreen.classList.remove('pos-top', 'pos-mid');
-        els.fsScreen.classList.add('pos-bottom');
-      }
-      if (els.fsText) els.fsText.style.textAlign = 'center';
+    const primaryCue = activeList[0] || (workCues ? workCues[0] : null);
+    if (primaryCue && workCues) {
+      const idx = workCues.indexOf(primaryCue);
+      if (idx >= 0) activeIdx = idx;
+    }
+
+    renderFsCues(els.fsScreen, activeList);
+
+    if (els.fsCueCount) {
+      els.fsCueCount.textContent = primaryCue && workCues ? `Cue ${primaryCue.index} / ${workCues.length}` : 'Cue 0 / 0';
+    }
+
+    const fsTimeDisplay = document.querySelector('#fsTimeDisplay');
+    if (fsTimeDisplay) {
+      const fmtMs = (ms) => {
+        const sec = Math.floor(ms / 1000);
+        const m = Math.floor(sec / 60);
+        const s = sec % 60;
+        return `${m}:${String(s).padStart(2, '0')}`;
+      };
+      fsTimeDisplay.textContent = `${fmtMs(currentPos)} / ${fmtMs(currentDuration)}`;
     }
 
     if (els.fsPlayBtn) {
@@ -918,15 +1082,17 @@
   function bindFs() {
     if (els.fsToggleBtn) els.fsToggleBtn.addEventListener('click', () => (fsActive ? exitFs() : enterFs()));
     if (els.fsClose) els.fsClose.addEventListener('click', exitFs);
-    if (els.fsText) els.fsText.addEventListener('click', openFsEditor); // tap any word → editor at the bottom
+    if (els.fsScreen) els.fsScreen.addEventListener('click', (e) => {
+      if (!e.target.closest('.fs-btn, button, select, input, textarea')) openFsEditor();
+    });
     if (els.fsEditBtn) els.fsEditBtn.addEventListener('click', openFsEditor);
     if (els.fsDoneBtn) els.fsDoneBtn.addEventListener('click', closeFsEditor);
-    if (els.fsPrevBtn) els.fsPrevBtn.addEventListener('click', () => SubtitlePlayer.stepCue(-1));
-    if (els.fsNextBtn) els.fsNextBtn.addEventListener('click', () => SubtitlePlayer.stepCue(1));
+    if (els.fsPrevBtn) els.fsPrevBtn.addEventListener('click', () => { SubtitlePlayer.stepCue(-1); updateFsScreen(); });
+    if (els.fsNextBtn) els.fsNextBtn.addEventListener('click', () => { SubtitlePlayer.stepCue(1); updateFsScreen(); });
 
     if (els.fsPlayBtn) els.fsPlayBtn.addEventListener('click', () => { SubtitlePlayer.toggle(); updateFsScreen(); });
-    if (els.fsSkipBackBtn) els.fsSkipBackBtn.addEventListener('click', () => SubtitlePlayer.seek(SubtitlePlayer.position - 5000));
-    if (els.fsSkipForwardBtn) els.fsSkipForwardBtn.addEventListener('click', () => SubtitlePlayer.seek(SubtitlePlayer.position + 5000));
+    if (els.fsSkipBackBtn) els.fsSkipBackBtn.addEventListener('click', () => { SubtitlePlayer.seek(SubtitlePlayer.position - 5000); updateFsScreen(); });
+    if (els.fsSkipForwardBtn) els.fsSkipForwardBtn.addEventListener('click', () => { SubtitlePlayer.seek(SubtitlePlayer.position + 5000); updateFsScreen(); });
     if (els.fsUndoBtn) els.fsUndoBtn.addEventListener('click', performUndo);
     if (els.fsRedoBtn) els.fsRedoBtn.addEventListener('click', performRedo);
     if (els.fsEdUndoBtn) els.fsEdUndoBtn.addEventListener('click', performUndo);
@@ -1194,12 +1360,36 @@
       liveItems = [];
       cachedLiveTexts = null;
       if (els.liveCaption && els.liveCaption.classList) els.liveCaption.classList.add('hidden');
+      if (els.liveOrigCaption && els.liveOrigCaption.classList) els.liveOrigCaption.classList.add('hidden');
       if (els.livePlaceholder && els.livePlaceholder.classList) els.livePlaceholder.classList.remove('hidden');
+      if (els.liveTimecode) els.liveTimecode.textContent = '00:00.000';
+      if (els.progressSpeed) els.progressSpeed.textContent = '⚡ Processing…';
       if (els.liveFeed) els.liveFeed.innerHTML = '';
+
+      const startMs = Date.now();
       const translated = await Translator.translateLines(lines, srcLang, tgtLang, (p, done, total) => {
         if (cancelFlag) return;
+        const elapsedSec = (Date.now() - startMs) / 1000;
+        const speed = elapsedSec > 0.3 && done > 0 ? Math.round(done / elapsedSec) : 0;
+        const remainingSec = speed > 0 ? Math.ceil((total - done) / speed) : 0;
+
+        if (els.progressSpeed) {
+          if (speed > 0) {
+            els.progressSpeed.textContent = `⚡ ${speed} lines/sec • ~${remainingSec}s left`;
+          } else {
+            els.progressSpeed.textContent = `⚡ Streaming…`;
+          }
+        }
+        if (els.lineCount) els.lineCount.textContent = `${done} / ${total} lines`;
         setProgress(p, `Translated ${done} / ${total} lines`);
-      }, controller.signal, { accuracy, kurdishDigits, onBatch: (results, done) => { if (!cancelFlag) renderLive(results, done); } });
+      }, controller.signal, {
+        accuracy,
+        kurdishDigits,
+        applyNames: applyNamesTrans,
+        charNames: charNames,
+        fuzzyTypo: fuzzyTypo,
+        onBatch: (results, done) => { if (!cancelFlag) renderLive(results, done); }
+      });
       if (cancelFlag) return; // cancelled mid-run: discard results, stay on settings
 
       const finalCues = applyTranslation(translated);
@@ -1313,6 +1503,210 @@
     }
   }
 
+  // ---------- Smart Character Naming Logic ----------
+  function updateCharBadges() {
+    const count = charNames ? charNames.length : 0;
+    if (els.charActiveBadge) {
+      els.charActiveBadge.textContent = String(count);
+      els.charActiveBadge.classList.toggle('active', count > 0);
+    }
+    if (els.edCharBadge) {
+      els.edCharBadge.textContent = String(count);
+      els.edCharBadge.dataset.count = String(count);
+    }
+  }
+
+  function saveCharNames() {
+    store.set('app_char_names', JSON.stringify(charNames));
+    store.set('app_names_trans', applyNamesTrans ? '1' : '0');
+    store.set('app_names_preview', applyNamesPreview ? '1' : '0');
+    store.set('app_fuzzy_typo', fuzzyTypo ? '1' : '0');
+    updateCharBadges();
+    renderCharNamesList();
+  }
+
+  function renderCharNamesList() {
+    if (!els.charNamesList) return;
+    els.charNamesList.innerHTML = '';
+
+    if (!charNames || charNames.length === 0) {
+      if (els.charEmptyMsg) els.charEmptyMsg.classList.remove('hidden');
+      return;
+    }
+    if (els.charEmptyMsg) els.charEmptyMsg.classList.add('hidden');
+
+    const frag = document.createDocumentFragment();
+    charNames.forEach((item) => {
+      const card = document.createElement('div');
+      card.className = 'char-item';
+      card.dataset.id = item.id;
+
+      const namesGroup = document.createElement('div');
+      namesGroup.className = 'char-item-names';
+
+      const origPill = document.createElement('span');
+      origPill.className = 'char-pill-orig';
+      origPill.textContent = item.original;
+
+      const arrow = document.createElement('span');
+      arrow.className = 'char-arrow';
+      arrow.textContent = '→';
+
+      const kurdPill = document.createElement('span');
+      kurdPill.className = 'char-pill-kurdish';
+      kurdPill.textContent = item.kurdish;
+      kurdPill.setAttribute('dir', 'rtl');
+
+      namesGroup.appendChild(origPill);
+      namesGroup.appendChild(arrow);
+      namesGroup.appendChild(kurdPill);
+
+      if (item.pronunciation && item.pronunciation.trim()) {
+        const pronunChip = document.createElement('span');
+        pronunChip.className = 'char-pronun-chip';
+        pronunChip.textContent = `🗣️ ${item.pronunciation}`;
+        namesGroup.appendChild(pronunChip);
+      }
+
+      const delBtn = document.createElement('button');
+      delBtn.type = 'button';
+      delBtn.className = 'char-del-btn';
+      delBtn.title = 'Remove name';
+      delBtn.innerHTML = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>`;
+      delBtn.addEventListener('click', () => {
+        deleteCharName(item.id);
+      });
+
+      card.appendChild(namesGroup);
+      card.appendChild(delBtn);
+      frag.appendChild(card);
+    });
+
+    els.charNamesList.appendChild(frag);
+  }
+
+  function addCharName(original, kurdish, pronunciation) {
+    if (!original || !original.trim() || !kurdish || !kurdish.trim()) return;
+    const origTrim = original.trim();
+    const kurdTrim = kurdish.trim();
+    const pronunTrim = pronunciation ? pronunciation.trim() : '';
+
+    charNames = charNames.filter((c) => c.original.toLowerCase() !== origTrim.toLowerCase());
+    charNames.push({
+      id: Date.now().toString(36) + Math.random().toString(36).slice(2, 6),
+      original: origTrim,
+      kurdish: kurdTrim,
+      pronunciation: pronunTrim,
+    });
+
+    saveCharNames();
+    if (els.charOrigInput) els.charOrigInput.value = '';
+    if (els.charKurdishInput) els.charKurdishInput.value = '';
+    if (els.charPronunInput) els.charPronunInput.value = '';
+  }
+
+  function deleteCharName(id) {
+    charNames = charNames.filter((c) => c.id !== id);
+    saveCharNames();
+  }
+
+  function openCharModal() {
+    if (els.charModalBackdrop) {
+      renderCharNamesList();
+      els.charModalBackdrop.classList.remove('hidden');
+    }
+  }
+
+  function closeCharModal() {
+    if (els.charModalBackdrop) {
+      els.charModalBackdrop.classList.add('hidden');
+    }
+  }
+
+  function runSmartRecognition() {
+    let cuesToScan = workCues;
+    if (!cuesToScan || !cuesToScan.length) {
+      if (parsed && parsed.cues) cuesToScan = parsed.cues;
+    }
+
+    if (!cuesToScan || !cuesToScan.length) {
+      toast(
+        currentUiLang === 'ckb' ? 'تکایە سەرەتا فایلی ژێرنووس باربکە' : 'Please upload a subtitle file first',
+        true
+      );
+      return;
+    }
+
+    const recognized = Translator.smartRecognizeNamesFromCues(cuesToScan);
+    if (!recognized || !recognized.length) {
+      toast(
+        currentUiLang === 'ckb' ? 'هیچ ناوی نوێ دەستنیشان نەکرا' : 'No new character names detected',
+        false
+      );
+      return;
+    }
+
+    const existingOrigs = new Set(charNames.map((c) => c.original.toLowerCase()));
+    let addedCount = 0;
+    recognized.forEach((rec) => {
+      if (!existingOrigs.has(rec.original.toLowerCase())) {
+        charNames.push(rec);
+        addedCount++;
+      }
+    });
+
+    saveCharNames();
+    const dict = dicts[currentUiLang] || dicts.en;
+    toast(dict.toastNamesRecognized || 'Smart Recognition detected character names!');
+  }
+
+  function replaceAllCharNamesInSubtitles() {
+    if (!workCues || !workCues.length) {
+      toast(
+        currentUiLang === 'ckb' ? 'هیچ فایلی ژێرنووس بەردەست نییە' : 'No subtitle file loaded',
+        true
+      );
+      return;
+    }
+
+    if (!charNames || !charNames.length) {
+      toast(
+        currentUiLang === 'ckb' ? 'هیچ ناوی کەسایەتی بەردەست نییە' : 'No character names added yet',
+        true
+      );
+      return;
+    }
+
+    let replacedCount = 0;
+    const options = { fuzzyTypo: fuzzyTypo };
+
+    workCues = workCues.map((cue) => {
+      const oldText = cue.text || '';
+      const newText = Translator.applyCharacterReplacements(oldText, charNames, options);
+      if (oldText !== newText) replacedCount++;
+      return { ...cue, text: newText };
+    });
+
+    if (baseCues) {
+      baseCues = baseCues.map((cue) => {
+        const oldText = cue.text || '';
+        const newText = Translator.applyCharacterReplacements(oldText, charNames, options);
+        return { ...cue, text: newText };
+      });
+    }
+
+    dirty = true;
+    updateStatus();
+    buildEditor();
+    if (typeof SubtitlePlayer !== 'undefined') {
+      SubtitlePlayer.updateText(workCues);
+    }
+    prepareDownload();
+
+    const dict = dicts[currentUiLang] || dicts.en;
+    toast(dict.toastNamesReplaced || 'Replaced character names across subtitles!');
+  }
+
   // ---------- Wire up ----------
   function bindActions() {
     els.translateBtn.addEventListener('click', startTranslation);
@@ -1374,6 +1768,71 @@
     if (els.openAdvModalBtn && els.advModalBackdrop) {
       els.openAdvModalBtn.addEventListener('click', () => {
         els.advModalBackdrop.classList.remove('hidden');
+      });
+    }
+
+    if (els.openCharModalBtn) els.openCharModalBtn.addEventListener('click', openCharModal);
+    if (els.edCharNamesBtn) els.edCharNamesBtn.addEventListener('click', openCharModal);
+    if (els.closeCharModalBtn) els.closeCharModalBtn.addEventListener('click', closeCharModal);
+    if (els.doneCharModalBtn) els.doneCharModalBtn.addEventListener('click', closeCharModal);
+
+    if (els.charModalBackdrop) {
+      els.charModalBackdrop.addEventListener('click', (e) => {
+        if (e.target === els.charModalBackdrop) closeCharModal();
+      });
+    }
+
+    if (els.addCharNameBtn) {
+      els.addCharNameBtn.addEventListener('click', () => {
+        const orig = els.charOrigInput ? els.charOrigInput.value : '';
+        const kurd = els.charKurdishInput ? els.charKurdishInput.value : '';
+        const pron = els.charPronunInput ? els.charPronunInput.value : '';
+        addCharName(orig, kurd, pron);
+      });
+    }
+
+    const handleCharInputEnter = (e) => {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        const orig = els.charOrigInput ? els.charOrigInput.value : '';
+        const kurd = els.charKurdishInput ? els.charKurdishInput.value : '';
+        const pron = els.charPronunInput ? els.charPronunInput.value : '';
+        addCharName(orig, kurd, pron);
+      }
+    };
+    if (els.charOrigInput) els.charOrigInput.addEventListener('keydown', handleCharInputEnter);
+    if (els.charKurdishInput) els.charKurdishInput.addEventListener('keydown', handleCharInputEnter);
+    if (els.charPronunInput) els.charPronunInput.addEventListener('keydown', handleCharInputEnter);
+
+    if (els.smartRecognizeBtn) els.smartRecognizeBtn.addEventListener('click', runSmartRecognition);
+
+    if (els.clearCharNamesBtn) {
+      els.clearCharNamesBtn.addEventListener('click', () => {
+        charNames = [];
+        saveCharNames();
+      });
+    }
+
+    if (els.replaceAllInSubtitlesBtn) els.replaceAllInSubtitlesBtn.addEventListener('click', replaceAllCharNamesInSubtitles);
+
+    if (els.applyNamesTransToggle) {
+      els.applyNamesTransToggle.addEventListener('change', () => {
+        applyNamesTrans = els.applyNamesTransToggle.checked;
+        store.set('app_names_trans', applyNamesTrans ? '1' : '0');
+      });
+    }
+
+    if (els.applyNamesPreviewToggle) {
+      els.applyNamesPreviewToggle.addEventListener('change', () => {
+        applyNamesPreview = els.applyNamesPreviewToggle.checked;
+        store.set('app_names_preview', applyNamesPreview ? '1' : '0');
+      });
+    }
+
+    if (els.fuzzyTypoToggle) {
+      els.fuzzyTypoToggle.addEventListener('change', () => {
+        fuzzyTypo = els.fuzzyTypoToggle.checked;
+        store.set('app_fuzzy_typo', fuzzyTypo ? '1' : '0');
       });
     }
 
@@ -1974,6 +2433,92 @@
     }
   }
 
+  function setupPWA() {
+    // 1. Service Worker Registration & Update Notification
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('./sw.js').then((reg) => {
+        reg.addEventListener('updatefound', () => {
+          const newWorker = reg.installing;
+          if (newWorker) {
+            newWorker.addEventListener('statechange', () => {
+              if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                toast(
+                  currentUiLang === 'ckb'
+                    ? 'نۆژەنکردنەوەی نوێ ئامادەیە! لاپەڕەکە نوێبکەرەوە.'
+                    : 'A new update is available! Reload to use the latest version.'
+                );
+              }
+            });
+          }
+        });
+      }).catch((err) => {
+        console.warn('Service Worker registration failed:', err);
+      });
+    }
+
+    // 2. Install Prompt & App Installed Handler
+    let deferredInstall = null;
+    window.addEventListener('beforeinstallprompt', (e) => {
+      e.preventDefault();
+      deferredInstall = e;
+      if (els.installBtn) els.installBtn.hidden = false;
+    });
+
+    if (els.installBtn) {
+      els.installBtn.addEventListener('click', async () => {
+        if (!deferredInstall) return;
+        deferredInstall.prompt();
+        const { outcome } = await deferredInstall.userChoice;
+        if (outcome === 'accepted') {
+          toast(currentUiLang === 'ckb' ? 'سوپاس بۆ دابەزاندنی بەرنامەکە!' : 'Thank you for installing Kurdî Subtitles!');
+        }
+        deferredInstall = null;
+        els.installBtn.hidden = true;
+      });
+    }
+
+    window.addEventListener('appinstalled', () => {
+      deferredInstall = null;
+      if (els.installBtn) els.installBtn.hidden = true;
+      toast(currentUiLang === 'ckb' ? 'بەرنامەکە بەسەرکەوتوویی دابەزێنرا!' : 'App installed successfully!');
+    });
+
+    // 3. Web Share Target Handler (Receiving files shared directly from mobile/desktop folder/share menu)
+    if (window.location.search.includes('shared=1')) {
+      fetch('./shared-subtitle-data')
+        .then((res) => {
+          if (!res.ok) return null;
+          const headerFilename = res.headers.get('X-Shared-Filename');
+          const fileName = headerFilename ? decodeURIComponent(headerFilename) : 'shared_subtitle.srt';
+          return res.blob().then((blob) => new File([blob], fileName, { type: blob.type || 'text/plain' }));
+        })
+        .then((fileObj) => {
+          if (fileObj) {
+            const cleanUrl = window.location.pathname + window.location.hash;
+            window.history.replaceState({}, '', cleanUrl);
+            handleFile(fileObj);
+            toast(currentUiLang === 'ckb' ? 'فایلی هاوبەشکراو بەسەرکەوتوویی بارکرا!' : 'Shared file loaded successfully!');
+          }
+        })
+        .catch((err) => console.error('Error loading shared file:', err));
+    }
+
+    // 4. File Handling API (Opening subtitle files directly from OS/File Explorer)
+    if ('launchQueue' in window && 'files' in window.LaunchParams.prototype) {
+      window.launchQueue.setConsumer(async (launchParams) => {
+        if (!launchParams.files || !launchParams.files.length) return;
+        try {
+          const fileHandle = launchParams.files[0];
+          const fileData = await fileHandle.getFile();
+          handleFile(fileData);
+          toast(currentUiLang === 'ckb' ? 'فایلی کراوە بەسەرکەوتوویی بارکرا!' : 'Opened file loaded successfully!');
+        } catch (err) {
+          console.error('File Handling API error:', err);
+        }
+      });
+    }
+  }
+
   // ---------- Init ----------
   function init() {
     if (els.previewTab && els.previewTab.classList) els.previewTab.classList.add('disabled'); // enabled once a file is loaded
@@ -1993,32 +2538,12 @@
       SubtitlePlayer.init();
     }
 
-    // PWA: register service worker for installability + offline app shell.
-    if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.register('./sw.js').catch(() => {});
-    }
+    setupPWA();
 
     // Warm the translation endpoint so the first real request isn't a cold one
     // (Google sometimes throttles the first hit and answers on a warm retry).
     if (typeof Translator !== 'undefined' && Translator.warmup) {
       Translator.warmup();
-    }
-
-    // Show an Install button when the browser allows it (Android/desktop).
-    let deferredInstall = null;
-    window.addEventListener('beforeinstallprompt', (e) => {
-      e.preventDefault();
-      deferredInstall = e;
-      if (els.installBtn) els.installBtn.hidden = false;
-    });
-    if (els.installBtn) {
-      els.installBtn.addEventListener('click', async () => {
-        if (!deferredInstall) return;
-        deferredInstall.prompt();
-        await deferredInstall.userChoice;
-        deferredInstall = null;
-        els.installBtn.hidden = true;
-      });
     }
 
     if (els.srcLang) els.srcLang.value = store.get('srcLang', 'auto');
@@ -2032,7 +2557,22 @@
     if (els.saveEditsToggle) els.saveEditsToggle.checked = store.get('saveEdits', '1') === '1';
     if (els.syncVideoToggle) els.syncVideoToggle.checked = store.get('syncVideo', '0') === '1';
 
+    // Restore Character Naming State
+    try {
+      charNames = JSON.parse(store.get('app_char_names', '[]'));
+    } catch {
+      charNames = [];
+    }
+    applyNamesTrans = store.get('app_names_trans', '1') !== '0';
+    applyNamesPreview = store.get('app_names_preview', '1') !== '0';
+    fuzzyTypo = store.get('app_fuzzy_typo', '1') !== '0';
+
+    if (els.applyNamesTransToggle) els.applyNamesTransToggle.checked = applyNamesTrans;
+    if (els.applyNamesPreviewToggle) els.applyNamesPreviewToggle.checked = applyNamesPreview;
+    if (els.fuzzyTypoToggle) els.fuzzyTypoToggle.checked = fuzzyTypo;
+
     updateAdvBadge();
+    updateCharBadges();
 
     // Apply initial UI language
     const savedLang = store.get('app_ui_lang', 'en');

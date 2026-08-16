@@ -70,21 +70,42 @@ const Translator = (() => {
   function cleanLeftoverTokens(text) {
     if (!text) return '';
     return text
-      .replace(/\[\s*(?:T|t|Z|z|X|x|P|p|ت|تاک|تی|تۆ|پی|پێ|ٹی|ز|زێد)\s*[-_:]?\s*[\d\u0660-\u0669\u06f0-\u06f9]+\s*\]/gi, '')
-      .replace(/\(\s*(?:T|t|Z|z|X|x|P|p|ت|تاک|تی|تۆ|پی|پێ|ٹی|ز|زێد)\s*[-_:]?\s*[\d\u0660-\u0669\u06f0-\u06f9]+\s*\)/gi, '')
-      .replace(/\b(?:T|t|Z|z|X|x|P|p|ت|تاک|تی|تۆ|پی|پێ|ٹی|ز|زێد)\s*[-_:]?\s*[\d\u0660-\u0669\u06f0-\u06f9]+\b/gi, '');
+      // Clean bracketed/parenthesized/braced token remnants like [T0], [W0], [p0], (W1), {T2}, [W], [p], [ و ٠ ]
+      .replace(/\[\s*(?:T|t|W|w|P|p|Z|z|X|x|ت|تاک|تی|تۆ|پی|پێ|ٹی|ز|زێد|و)\s*[-_:]?\s*[\d\u0660-\u0669\u06f0-\u06f9]*\s*\]/gi, '')
+      .replace(/\(\s*(?:T|t|W|w|P|p|Z|z|X|x|ت|تاک|تی|تۆ|پی|پێ|ٹی|ز|زێد|و)\s*[-_:]?\s*[\d\u0660-\u0669\u06f0-\u06f9]*\s*\)/gi, '')
+      .replace(/\{\s*(?:T|t|W|w|P|p|Z|z|X|x|ت|تاک|تی|تۆ|پی|پێ|ٹی|ز|زێد|و)\s*[-_:]?\s*[\d\u0660-\u0669\u06f0-\u06f9]*\s*\}/gi, '')
+      // Clean word-boundary token remnants like T0, W0, p0, W1, p1, ت0, پ0, و0
+      .replace(/\b(?:T|t|W|w|P|p|Z|z|X|x)\s*[-_:]?\s*[\d\u0660-\u0669\u06f0-\u06f9]+\b/gi, '')
+      .replace(/(?:^|[\s،؛؟.,!?:])(?:[تپو][0-9\u0660-\u0669\u06f0-\u06f9]+)(?=[\s،؛؟.,!?:]|$)/g, ' ')
+      // Clean isolated stray 'W', 'w', 'p', 'P' letters produced by Google Translate placeholder glitches in Kurdish text
+      .replace(/(^|[\s،؛؟.\n])[WwPpTt](?=[\s،؛؟.,!?:-]|$)/g, '$1')
+      .replace(/[ \t]{2,}/g, ' ')
+      .trim();
   }
 
   function restore(s, toks) {
     if (!s) return '';
     if (!toks || !toks.length) return cleanLeftoverTokens(s);
-    let res = s.replace(/(?:\[|\()\s*(?:T|t|Z|z|X|x|P|p|ت|تاک|تی|تۆ|پی|پێ|ٹی|ز|زێد)\s*[-_:]?\s*([\d\u0660-\u0669\u06f0-\u06f9]+)\s*(?:\]|\))|\b(?:T|t|Z|z|X|x|P|p|ت|تاک|تی|تۆ|پی|پێ|ٹی|ز|زێد)\s*[-_:]?\s*([\d\u0660-\u0669\u06f0-\u06f9]+)\b/gi, (_, n1, n2) => {
-      const numStr = n1 || n2;
+
+    // Match all variations of tokens: [T0], [W0], [p0], (T0), (W0), W0, p0, [ T 0 ], [W:0], [و0], [ت0], [پ0], etc.
+    let res = s.replace(/(?:\[|\(|\{)\s*(?:T|t|W|w|P|p|Z|z|X|x|ت|تاک|تی|تۆ|پی|پێ|ٹی|ز|زێد|و|پ)\s*[-_:]?\s*([\d\u0660-\u0669\u06f0-\u06f9]+)\s*(?:\]|\)|\})|\b(?:T|t|W|w|P|p|Z|z|X|x)\s*[-_:]?\s*([\d\u0660-\u0669\u06f0-\u06f9]+)\b|(?:^|[\s،؛؟.,!?:])([تپو])\s*[-_:]?\s*([\d\u0660-\u0669\u06f0-\u06f9]+)(?=[\s،؛؟.,!?:]|$)/gi, (fullMatch, n1, n2, prefix, n3) => {
+      const numStr = n1 || n2 || n3;
+      if (!numStr) return '';
       const ascii = numStr.replace(/[\u0660-\u0669]/g, (d) => String(d.charCodeAt(0) - 0x0660))
                           .replace(/[\u06f0-\u06f9]/g, (d) => String(d.charCodeAt(0) - 0x06f0));
       const id = parseInt(ascii, 10);
       return toks[id] !== undefined ? toks[id] : '';
     });
+
+    // Fallback: If Google stripped the number and output e.g. [T], [W], [p], (W), (p)
+    // and there is exactly 1 token remaining, restore it
+    if (toks.length === 1 && !res.includes(toks[0])) {
+      const singleMatch = res.match(/(?:\[|\(|\{)\s*(?:T|t|W|w|P|p|و|ت|پ)\s*(?:\]|\)|\})/i);
+      if (singleMatch) {
+        res = res.replace(singleMatch[0], toks[0]);
+      }
+    }
+
     return cleanLeftoverTokens(res);
   }
 
@@ -95,33 +116,44 @@ const Translator = (() => {
   function fixPlacementAndTagOrder(text, originalText) {
     if (!text || !originalText) return text || '';
 
-    // Check for leading ASS/override/position tags in original: e.g. {\an8}, {\pos(x,y)}, {\c&H...&}, {\a6}, <top>
-    const leadTagMatch = originalText.match(/^((?:\{[^}]+\}|<[^>]+>\s*)+)/);
-    if (leadTagMatch) {
-      const leadTags = leadTagMatch[1].trim();
-      if (/^\{[^{}]*\\(?:an?\d|pos|move|fad|org|c&|1c&|3c&|4c&|fn|fs|b\d|i\d|shad|bord)[^{}]*\}/i.test(leadTags) || /^<(?:top|font\b)/i.test(leadTags)) {
-        if (!text.startsWith(leadTags)) {
-          let stripped = text;
-          const escaped = leadTags.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-          stripped = stripped.replace(new RegExp(escaped, 'g'), '').trim();
-          text = leadTags + (stripped ? ' ' + stripped : '');
+    // Split text and originalText by lines so multi-line cues preserve tag placement per line
+    const origLines = originalText.split('\n');
+    const transLines = text.split('\n');
+
+    const fixed = transLines.map((tLine, i) => {
+      const origLine = origLines[i] || origLines[0] || '';
+      let line = tLine;
+
+      // Check for leading ASS/override/position tags in original line: e.g. {\an8}, {\pos(x,y)}, {\c&H...&}, {\a6}, <top>
+      const leadTagMatch = origLine.match(/^((?:\{[^}]+\}|<[^>]+>\s*)+)/);
+      if (leadTagMatch) {
+        const leadTags = leadTagMatch[1].trim();
+        if (/^\{[^{}]*\\(?:an?\d|pos|move|fad|org|c&|1c&|3c&|4c&|fn|fs|b\d|i\d|shad|bord)[^{}]*\}/i.test(leadTags) || /^<(?:top|font\b)/i.test(leadTags)) {
+          if (!line.startsWith(leadTags)) {
+            let stripped = line;
+            const escaped = leadTags.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+            stripped = stripped.replace(new RegExp(escaped, 'g'), '').trim();
+            line = leadTags + (stripped ? ' ' + stripped : '');
+          }
         }
       }
-    }
 
-    // Check for trailing closing tags in original: e.g. </i>, </b>, </u>, </font>
-    const trailTagMatch = originalText.match(/((?:<\/[a-z0-9]+>\s*)+)$/i);
-    if (trailTagMatch) {
-      const trailTags = trailTagMatch[1].trim();
-      if (!text.endsWith(trailTags)) {
-        let stripped = text;
-        const escaped = trailTags.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-        stripped = stripped.replace(new RegExp(escaped, 'g'), '').trim();
-        text = (stripped ? stripped + ' ' : '') + trailTags;
+      // Check for trailing closing tags in original line: e.g. </i>, </b>, </u>, </font>
+      const trailTagMatch = origLine.match(/((?:<\/[a-z0-9]+>\s*)+)$/i);
+      if (trailTagMatch) {
+        const trailTags = trailTagMatch[1].trim();
+        if (!line.endsWith(trailTags)) {
+          let stripped = line;
+          const escaped = trailTags.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+          stripped = stripped.replace(new RegExp(escaped, 'g'), '').trim();
+          line = (stripped ? stripped + ' ' : '') + trailTags;
+        }
       }
-    }
 
-    return text.trim();
+      return line.trim();
+    });
+
+    return fixed.join('\n').trim();
   }
 
   // Arabic-script targets (Sorani Kurdish, Farsi, Arabic, Urdu, Pashto)
@@ -186,7 +218,33 @@ const Translator = (() => {
          .replace(/\bare\s+you\s+kidding(\s+me)?\b/gi, 'are you joking')
          .replace(/\bare\s+you\s+sure\b/gi, 'are you certain')
          .replace(/\bthank\s+goodness\b|\bthank\s+god\b/gi, 'thank God')
-         .replace(/\bgosh\b/gi, 'oh');
+         .replace(/\bgosh\b/gi, 'oh')
+         .replace(/\bi['’]?m\s+outta\s+here\b/gi, 'I am leaving now')
+         .replace(/\bno\s+biggie\b/gi, 'it is not important')
+         .replace(/\bfor\s+real\b/gi, 'seriously')
+         .replace(/\bfair\s+enough\b/gi, 'that is acceptable')
+         .replace(/\blong\s+time\s+no\s+see\b/gi, 'it has been a long time')
+         .replace(/\bmy\s+bad\b/gi, 'my mistake')
+         .replace(/\bcatch\s+you\s+later\b/gi, 'see you later')
+         .replace(/\bkeep\s+in\s+touch\b/gi, 'stay in contact')
+         .replace(/\bwhat['’]?s\s+going\s+on\b/gi, 'what is happening')
+         .replace(/\bare\s+you\s+insane\b/gi, 'are you crazy')
+         .replace(/\bhow\s+come\b/gi, 'why')
+         .replace(/\bso\s+far\s+so\s+good\b/gi, 'everything is going well')
+         .replace(/\bmake\s+up\s+your\s+mind\b/gi, 'decide')
+         .replace(/\bcount\s+me\s+in\b/gi, 'I will join')
+         .replace(/\bnever\s+heard\s+of\s+it\b/gi, 'I do not know it')
+         .replace(/\bgive\s+it\s+a\s+shot\b/gi, 'try it')
+         .replace(/\bbeat\s+it\b/gi, 'go away')
+         .replace(/\bkeep\s+it\s+up\b/gi, 'continue')
+         .replace(/\bas\s+far\s+as\s+i\s+know\b/gi, 'as far as I know')
+         .replace(/\bby\s+all\s+means\b/gi, 'certainly')
+         .replace(/\bi\s+have\s+no\s+idea\b/gi, 'I do not know')
+         .replace(/\bno\s+problem\b/gi, 'no problem')
+         .replace(/\byou\s+are\s+welcome\b/gi, 'you are welcome')
+         .replace(/\bdon['’]?t\s+worry\b/gi, 'do not worry')
+         .replace(/\btake\s+it\s+easy\b/gi, 'relax')
+         .replace(/\bmake\s+yourself\s+at\s+home\b/gi, 'feel comfortable');
 
     return s;
   }
@@ -421,10 +479,18 @@ const Translator = (() => {
       // Naturalize dialogue
       t = naturalizeDialogue(t);
 
-      // Kurdish Punctuation
-      t = t.replace(/,/g, '،')
-           .replace(/;/g, '؛')
-           .replace(/\?/g, '؟');
+      // Kurdish Punctuation (preserve HTML/ASS tags & bracket tokens)
+      t = t.replace(/(<[^>]*>|\{[^}]*\}|\[\s*T\s*[\d\u0660-\u0669\u06f0-\u06f9]+\s*\])|([,;?])/gi, (m, tag, punct) => {
+        if (tag) return tag;
+        if (punct === ',') return '،';
+        if (punct === ';') return '؛';
+        if (punct === '?') return '؟';
+        return punct;
+      });
+
+      // Purge isolated placeholder remnants (like stray 'W', 'w', 'p', 'P', 'T', 't')
+      t = t.replace(/(^|[\s،؛؟.\n])[WwPpTt](?=[\s،؛؟.,!?:-]|$)/g, '$1')
+           .replace(/[ \t]{2,}/g, ' ');
     }
 
     return t;
@@ -499,6 +565,9 @@ const Translator = (() => {
         parts.forEach((part, k) => {
           let norm = normalizeText(restoreNewlines(restore(part, batch[k].toks).trim()), isArabic, useKurdishDigits);
           norm = fixPlacementAndTagOrder(norm, batch[k].raw);
+          if (opts.applyNames && opts.charNames && opts.charNames.length) {
+            norm = applyCharacterReplacements(norm, opts.charNames, { fuzzyTypo: opts.fuzzyTypo });
+          }
           results[batch[k].index] = norm;
           if (norm && norm !== origNorm[batch[k].index]) anyTranslated = true;
         });
@@ -510,6 +579,9 @@ const Translator = (() => {
           try {
             let norm = normalizeText(restoreNewlines(restore(await translateChunk(o.text, srcLang, tgtLang, signal), o.toks).trim()), isArabic, useKurdishDigits);
             norm = fixPlacementAndTagOrder(norm, o.raw);
+            if (opts.applyNames && opts.charNames && opts.charNames.length) {
+              norm = applyCharacterReplacements(norm, opts.charNames, { fuzzyTypo: opts.fuzzyTypo });
+            }
             results[o.index] = norm;
             if (norm && norm !== origNorm[o.index]) anyTranslated = true;
           } catch (e) {
@@ -517,6 +589,9 @@ const Translator = (() => {
             failedLines++;
             let norm = normalizeText(restoreNewlines(restore(o.text, o.toks)), isArabic, useKurdishDigits);
             norm = fixPlacementAndTagOrder(norm, o.raw);
+            if (opts.applyNames && opts.charNames && opts.charNames.length) {
+              norm = applyCharacterReplacements(norm, opts.charNames, { fuzzyTypo: opts.fuzzyTypo });
+            }
             results[o.index] = norm;
           }
         }
@@ -730,6 +805,195 @@ const Translator = (() => {
     }
   }
 
+  /** Known character name mapping dictionary with Kurdish translation and phonetic pronunciation */
+  const KNOWN_CHARACTER_NAMES = {
+    john: { kurdish: 'جۆن', pronunciation: 'جۆن (Dzhon)' },
+    jhon: { kurdish: 'جۆن', pronunciation: 'جۆن (Dzhon)' },
+    johnn: { kurdish: 'جۆن', pronunciation: 'جۆن (Dzhon)' },
+    arthur: { kurdish: 'ئارثەر', pronunciation: 'ئارثەر (Ar-ther)' },
+    sarah: { kurdish: 'سارا', pronunciation: 'سارا (Sa-rah)' },
+    sara: { kurdish: 'سارا', pronunciation: 'سارا (Sa-rah)' },
+    mary: { kurdish: 'ماری', pronunciation: 'ماری (Ma-ry)' },
+    maria: { kurdish: 'ماریا', pronunciation: 'ماریا (Ma-ri-a)' },
+    michael: { kurdish: 'مایکڵ', pronunciation: 'مایکڵ (My-kel)' },
+    micheal: { kurdish: 'مایکڵ', pronunciation: 'مایکڵ (My-kel)' },
+    david: { kurdish: 'دەیڤد', pronunciation: 'دەیڤد (Day-vid)' },
+    peter: { kurdish: 'پیتەر', pronunciation: 'پیتەر (Pee-ter)' },
+    alex: { kurdish: 'ئەلێکس', pronunciation: 'ئەلێکس (A-lex)' },
+    jack: { kurdish: 'جاک', pronunciation: 'جاک (Jack)' },
+    tom: { kurdish: 'تۆم', pronunciation: 'تۆم (Tom)' },
+    harry: { kurdish: 'هاری', pronunciation: 'هاری (Har-ry)' },
+    james: { kurdish: 'جەیمس', pronunciation: 'جەیمس (James)' },
+    robert: { kurdish: 'ڕۆبەرت', pronunciation: 'ڕۆبەرت (Ro-bert)' },
+    charlie: { kurdish: 'چارلی', pronunciation: 'چارلی (Char-lie)' },
+    daniel: { kurdish: 'دانیال', pronunciation: 'دانیال (Da-ni-al)' },
+    emma: { kurdish: 'ئێما', pronunciation: 'ئێما (Em-ma)' },
+    oliver: { kurdish: 'ئۆلیڤەر', pronunciation: 'ئۆلیڤەر (O-li-ver)' },
+    spongebob: { kurdish: 'سپۆنجبۆب', pronunciation: 'سپۆنجبۆب (Sponge-Bob)' },
+    naruto: { kurdish: 'ناروتۆ', pronunciation: 'ناروتۆ (Na-ru-to)' },
+    sasuke: { kurdish: 'ساسکێ', pronunciation: 'ساسکێ (Sa-su-ke)' },
+    luffy: { kurdish: 'لوفی', pronunciation: 'لوفی (Luf-fy)' },
+    goku: { kurdish: 'گۆکو', pronunciation: 'گۆکو (Go-ku)' },
+    bruce: { kurdish: 'برووس', pronunciation: 'برووس (Bruce)' },
+    clark: { kurdish: 'کلارک', pronunciation: 'کلارک (Clark)' },
+    tony: { kurdish: 'تۆنی', pronunciation: 'تۆنی (To-ny)' },
+    steve: { kurdish: 'ستێڤ', pronunciation: 'ستێڤ (Steve)' },
+    sam: { kurdish: 'سام', pronunciation: 'سام (Sam)' },
+    alice: { kurdish: 'ئالیس', pronunciation: 'ئالیس (A-lice)' },
+    grace: { kurdish: 'گرەیْس', pronunciation: 'گرەیْس (Grace)' },
+  };
+
+  /** Auto-suggest Kurdish name and phonetic pronunciation guide for any character name */
+  function suggestKurdishNameAndPronun(origName) {
+    if (!origName) return { kurdish: '', pronunciation: '' };
+    const clean = origName.trim();
+    const lower = clean.toLowerCase();
+    if (KNOWN_CHARACTER_NAMES[lower]) {
+      return KNOWN_CHARACTER_NAMES[lower];
+    }
+
+    let kurdish = clean
+      .replace(/ph/gi, 'ف')
+      .replace(/sh/gi, 'ش')
+      .replace(/ch/gi, 'چ')
+      .replace(/th/gi, 'ث')
+      .replace(/kh/gi, 'خ')
+      .replace(/zh/gi, 'ژ')
+      .replace(/ck/gi, 'ک')
+      .replace(/ee/gi, 'ی')
+      .replace(/oo/gi, 'وو')
+      .replace(/ou/gi, 'وو')
+      .replace(/ai/gi, 'ەی')
+      .replace(/ea/gi, 'ی')
+      .replace(/ie/gi, 'ی')
+      .replace(/^a/gi, 'ئە')
+      .replace(/^e/gi, 'ئێـ')
+      .replace(/^i/gi, 'ئیـ')
+      .replace(/^o/gi, 'ئۆ')
+      .replace(/^u/gi, 'ئوو')
+      .replace(/a/gi, 'ا')
+      .replace(/b/gi, 'ب')
+      .replace(/c/gi, 'ک')
+      .replace(/d/gi, 'د')
+      .replace(/e/gi, 'ێ')
+      .replace(/f/gi, 'ف')
+      .replace(/g/gi, 'گ')
+      .replace(/h/gi, 'هـ')
+      .replace(/i/gi, 'ی')
+      .replace(/j/gi, 'ج')
+      .replace(/k/gi, 'ک')
+      .replace(/l/gi, 'ل')
+      .replace(/m/gi, 'م')
+      .replace(/n/gi, 'ن')
+      .replace(/o/gi, 'ۆ')
+      .replace(/p/gi, 'پ')
+      .replace(/q/gi, 'ق')
+      .replace(/r/gi, 'ڕ')
+      .replace(/s/gi, 'س')
+      .replace(/t/gi, 'ت')
+      .replace(/u/gi, 'وو')
+      .replace(/v/gi, 'ڤ')
+      .replace(/w/gi, 'و')
+      .replace(/x/gi, 'کس')
+      .replace(/y/gi, 'ی')
+      .replace(/z/gi, 'ز');
+
+    kurdish = kurdish.replace(/اا+/g, 'ا').replace(/یی+/g, 'ی').replace(/وووو+/g, 'وو');
+    return { kurdish, pronunciation: `${kurdish} (${clean})` };
+  }
+
+  /** Smart recognition scanning subtitle cues for speaker tags and character names */
+  function smartRecognizeNamesFromCues(cues) {
+    if (!cues || !cues.length) return [];
+    const nameCounts = new Map();
+
+    for (const cue of cues) {
+      const text = cue.rawText || cue.text || '';
+      if (!text) continue;
+
+      const speakerMatches = text.matchAll(/(?:^|[\r\n])(?:\[|\()?([A-Z][a-zA-Z'’-]{2,18})(?:\]|\))?\s*[:\-]/g);
+      for (const m of speakerMatches) {
+        const name = m[1].trim();
+        if (name && !/^(WEBVTT|NOTE|STYLE|REGION|DIALOGUE|START|END)$/i.test(name)) {
+          const norm = name.charAt(0).toUpperCase() + name.slice(1).toLowerCase();
+          nameCounts.set(norm, (nameCounts.get(norm) || 0) + 5);
+        }
+      }
+
+      const wordMatches = text.matchAll(/\b([A-Z][a-z]{2,15})\b/g);
+      for (const m of wordMatches) {
+        const name = m[1].trim();
+        if (!/^(The|And|You|They|What|Where|When|Why|How|This|That|Here|There|With|From|Have|Will|Would|Could|Should|Your|Their|Some|Many|Much|More|Most|Good|Well|Yeah|Okay|Sure|Please|Thank|Thanks|Hello|What's|There's|Here's)$/i.test(name)) {
+          nameCounts.set(name, (nameCounts.get(name) || 0) + 1);
+        }
+      }
+    }
+
+    const recognized = [];
+    const seenLower = new Set();
+    for (const [name, count] of nameCounts.entries()) {
+      if (count >= 2 && !seenLower.has(name.toLowerCase())) {
+        seenLower.add(name.toLowerCase());
+        const suggested = suggestKurdishNameAndPronun(name);
+        recognized.push({
+          id: Date.now().toString(36) + Math.random().toString(36).slice(2, 6),
+          original: name,
+          kurdish: suggested.kurdish,
+          pronunciation: suggested.pronunciation,
+        });
+      }
+    }
+
+    return recognized;
+  }
+
+  /** Apply character replacements to text across exact matches, speaker tags, and typo variations */
+  function applyCharacterReplacements(text, charNames, options = {}) {
+    if (!text || !charNames || !charNames.length) return text;
+    let result = text;
+    const fuzzy = options.fuzzyTypo !== false;
+
+    for (const entry of charNames) {
+      if (!entry || !entry.original || !entry.kurdish) continue;
+      const orig = entry.original.trim();
+      const kurdish = entry.kurdish.trim();
+      if (!orig || !kurdish) continue;
+
+      const escaped = orig.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
+      const speakerRe = new RegExp(`(^|[\\s[\({<"'\`])` + escaped + `([:\\s\\])\}'>"'\`-]|$)`, 'gi');
+      result = result.replace(speakerRe, (m, p1, p2) => p1 + kurdish + p2);
+
+      const wordRe = new RegExp(`\\b` + escaped + `\\b`, 'gi');
+      result = result.replace(wordRe, kurdish);
+
+      if (fuzzy && orig.length >= 3) {
+        const typoPatterns = [];
+
+        for (let i = 0; i < orig.length - 1; i++) {
+          const transposed = orig.slice(0, i) + orig[i + 1] + orig[i] + orig.slice(i + 2);
+          if (transposed.toLowerCase() !== orig.toLowerCase()) {
+            typoPatterns.push(transposed.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'));
+          }
+        }
+
+        for (let i = 0; i < orig.length; i++) {
+          const duped = orig.slice(0, i + 1) + orig[i] + orig.slice(i + 1);
+          if (duped.toLowerCase() !== orig.toLowerCase()) {
+            typoPatterns.push(duped.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'));
+          }
+        }
+
+        if (typoPatterns.length > 0) {
+          const typoRe = new RegExp(`\\b(?:` + typoPatterns.join('|') + `)\\b`, 'gi');
+          result = result.replace(typoRe, kurdish);
+        }
+      }
+    }
+
+    return result;
+  }
+
   /** Prime the connection so the user's first real translation isn't also the
    *  first request to the endpoint. Google sometimes throttles a fresh cold
    *  hit and answers on a warm one; firing a tiny request at page load moves
@@ -741,7 +1005,7 @@ const Translator = (() => {
     } catch {}
   }
 
-  return { translateLines, warmup, normalizeText, normalizeDigits, preprocessSource, protect, restore, cleanLeftoverTokens, fixPlacementAndTagOrder, naturalizeDialogue, normalizeForSearch };
+  return { translateLines, warmup, normalizeText, normalizeDigits, preprocessSource, protect, restore, cleanLeftoverTokens, fixPlacementAndTagOrder, naturalizeDialogue, normalizeForSearch, suggestKurdishNameAndPronun, smartRecognizeNamesFromCues, applyCharacterReplacements };
 })();
 
 if (typeof module !== 'undefined' && module.exports) module.exports = Translator;

@@ -1,0 +1,247 @@
+/* ============================================================
+   Kurdî Subtitle Translator — Base Layout & Header & Navigation
+   App layout structure, top app bar, navigation tabs, card containers,
+   footer, RTL alignment overrides, and global utility animations.
+   ============================================================ */
+
+/* ---------- Top App Bar ---------- */
+.topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: calc(14px + env(safe-area-inset-top, 0px)) 0 12px;
+  background: transparent;
+  width: 100%;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+
+.logo {
+  width: 44px;
+  height: 44px;
+  border-radius: var(--md-shape-corner-medium);
+  display: grid;
+  place-items: center;
+  color: var(--md-sys-color-on-primary-container);
+  background: var(--md-sys-color-primary-container);
+  border: 1px solid rgba(208, 188, 255, 0.2);
+  box-shadow: var(--md-elevation-1);
+  position: relative;
+  overflow: hidden;
+  flex-shrink: 0;
+  transition: transform var(--motion) var(--ease);
+}
+.logo:hover {
+  transform: scale(1.04);
+}
+.logo svg {
+  fill: currentColor;
+}
+
+.brand-text {
+  min-width: 0;
+}
+
+.brand-text h1 {
+  font-size: clamp(16px, 4.2vw, 20px);
+  font-weight: 700;
+  letter-spacing: -0.2px;
+  color: var(--md-sys-color-on-surface);
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  line-height: 1.2;
+  white-space: nowrap;
+}
+
+.brand-text p {
+  font-size: clamp(10px, 2.8vw, 11px);
+  color: var(--md-sys-color-on-surface-variant);
+  margin-top: 2px;
+  font-weight: 500;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.accent {
+  color: var(--md-sys-color-primary);
+  font-weight: 800;
+}
+
+.topbar-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+/* Language Switcher */
+.lang-switch-btn {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--md-sys-color-on-surface);
+  background: var(--md-sys-color-surface-container-low);
+  border: 1px solid var(--md-sys-color-outline-variant);
+  height: 38px;
+  padding: 0 12px;
+  border-radius: var(--md-shape-corner-medium);
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  cursor: pointer;
+  transition: all var(--motion) var(--ease);
+  user-select: none;
+  font-family: inherit;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+.lang-switch-btn:hover {
+  border-color: var(--md-sys-color-primary);
+  background: var(--md-sys-color-surface-container-high);
+  transform: translateY(-1px);
+}
+.lang-switch-btn:active {
+  transform: scale(0.97);
+}
+.lang-switch-btn .lang-opt {
+  color: var(--md-sys-color-on-surface-variant);
+  transition: color 0.2s ease, font-weight 0.2s ease;
+}
+.lang-switch-btn .lang-opt.active {
+  color: var(--md-sys-color-primary);
+  font-weight: 800;
+}
+.lang-switch-btn .lang-sep {
+  opacity: 0.35;
+  font-weight: 400;
+}
+
+#installBtn { display: inline-flex; align-items: center; gap: 6px; }
+#installBtn[hidden] { display: none !important; }
+
+/* ---------- Navigation Segmented Tabs ---------- */
+.tabs {
+  display: flex;
+  gap: 8px;
+  padding: 10px 0 14px;
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  background: var(--md-sys-color-surface);
+  width: 100%;
+}
+.tab {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  background: var(--md-sys-color-surface-container-low);
+  color: var(--md-sys-color-on-surface-variant);
+  border: 1px solid var(--md-sys-color-outline-variant);
+  height: 44px;
+  border-radius: var(--md-shape-corner-medium);
+  font-size: 13.5px;
+  font-weight: 600;
+  font-family: inherit;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.2, 0, 0, 1);
+  white-space: nowrap;
+  min-width: 0;
+}
+.tab .tab-ic { display: flex; align-items: center; transition: transform 0.2s ease; }
+.tab .tab-ic svg { fill: currentColor; }
+.tab:hover {
+  background: var(--md-sys-color-surface-container-high);
+  color: var(--md-sys-color-on-surface);
+  border-color: var(--md-sys-color-outline);
+}
+.tab:hover .tab-ic {
+  transform: scale(1.06);
+}
+.tab:active:not(.disabled) {
+  transform: scale(0.98);
+}
+.tab.active {
+  color: var(--md-sys-color-on-secondary-container);
+  border-color: var(--md-sys-color-primary);
+  background: var(--md-sys-color-secondary-container);
+  box-shadow: 0 2px 8px rgba(208, 188, 255, 0.16);
+}
+.tab.disabled { opacity: 0.4; cursor: not-allowed; pointer-events: none; }
+
+/* ---------- Stage & Cards ---------- */
+.stage {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 4px 0 28px;
+  width: 100%;
+}
+
+.card {
+  background: var(--md-sys-color-surface-container);
+  border: 1px solid var(--md-sys-color-outline-variant);
+  border-radius: var(--md-shape-corner-extra-large);
+  padding: 22px;
+  box-shadow: var(--md-elevation-1);
+  animation: cardRise 0.3s cubic-bezier(0.16, 1, 0.3, 1) both;
+  position: relative;
+  overflow: hidden;
+  width: 100%;
+  box-sizing: border-box;
+  transition: transform 0.25s ease, box-shadow 0.25s ease;
+}
+
+@keyframes cardRise {
+  0% { opacity: 0; transform: translateY(12px) scale(0.99); }
+  100% { opacity: 1; transform: translateY(0) scale(1); }
+}
+@keyframes rise {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: none; }
+}
+.hidden { display: none !important; }
+
+:is(button, a, select, textarea, .dropzone):focus-visible {
+  outline: 2px solid var(--md-sys-color-primary);
+  outline-offset: 2px;
+}
+
+/* ---------- Footer ---------- */
+.footer {
+  padding: 10px 0 calc(18px + env(safe-area-inset-bottom, 0px));
+  text-align: center;
+  width: 100%;
+}
+.footer p { font-size: 11.5px; color: var(--md-sys-color-outline); }
+
+/* ---------- RTL Support ---------- */
+[dir="rtl"] .brand { text-align: right; }
+[dir="rtl"] .settings-grid { text-align: right; }
+[dir="rtl"] .settings-options .switch-row { text-align: right; }
+[dir="rtl"] .file-info { text-align: right; }
+[dir="rtl"] .done-card { text-align: right; }
+[dir="rtl"] .editor-title { text-align: right; }
+[dir="rtl"] .select-wrap::after { right: auto; left: 14px; }
+[dir="rtl"] select { padding: 11px 12px 11px 32px; }
+
+/* ---------- Subtle UI Animations ---------- */
+.btn-primary.downloading {
+  background: #34a853 !important;
+  color: #ffffff !important;
+  animation: downloadPulse 0.4s ease;
+}
+@keyframes downloadPulse {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.03); }
+  100% { transform: scale(1); }
+}

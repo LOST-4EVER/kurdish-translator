@@ -1,0 +1,173 @@
+/* ============================================================
+   Kurdî Subtitle Translator — Design Tokens & Variables
+   Material 3 Expressive UI, dark theme color system,
+   adaptive layout tokens, rounded shapes, and state layers.
+   ============================================================ */
+
+:root {
+  /* Material 3 Expressive Dark Palette */
+  --md-sys-color-primary: #d0bcff;
+  --md-sys-color-on-primary: #381e72;
+  --md-sys-color-primary-container: #4f378b;
+  --md-sys-color-on-primary-container: #eaddff;
+  
+  --md-sys-color-secondary: #ccc2dc;
+  --md-sys-color-on-secondary: #332d41;
+  --md-sys-color-secondary-container: #4a4458;
+  --md-sys-color-on-secondary-container: #e8def8;
+
+  --md-sys-color-tertiary: #efb8c8;
+  --md-sys-color-on-tertiary: #492532;
+  --md-sys-color-tertiary-container: #633b48;
+  --md-sys-color-on-tertiary-container: #ffd8e4;
+
+  --md-sys-color-surface: #141218;
+  --md-sys-color-on-surface: #e6e0e9;
+  --md-sys-color-surface-variant: #49454f;
+  --md-sys-color-on-surface-variant: #cac4d0;
+
+  --md-sys-color-surface-container-lowest: #0f0d13;
+  --md-sys-color-surface-container-low: #1d1b20;
+  --md-sys-color-surface-container: #211f26;
+  --md-sys-color-surface-container-high: #2b2930;
+  --md-sys-color-surface-container-highest: #36343b;
+
+  --md-sys-color-outline: #938f99;
+  --md-sys-color-outline-variant: #44424a;
+
+  --md-sys-color-error: #f2b8b5;
+  --md-sys-color-on-error: #601410;
+  --md-sys-color-error-container: #8c1d18;
+  --md-sys-color-on-error-container: #f9dedc;
+
+  --md-sys-color-success: #a6f4c5;
+  --md-sys-color-on-success: #003822;
+
+  /* Legacy variable mapping for complete compatibility */
+  --bg: var(--md-sys-color-surface);
+  --surface: var(--md-sys-color-surface-container);
+  --surface-solid: var(--md-sys-color-surface-container-low);
+  --surface-2: var(--md-sys-color-surface-container-high);
+  --surface-3: var(--md-sys-color-surface-container-highest);
+  --border: var(--md-sys-color-outline-variant);
+  --border-soft: rgba(255, 255, 255, 0.08);
+  --text: var(--md-sys-color-on-surface);
+  --text-2: var(--md-sys-color-on-surface-variant);
+  --text-3: var(--md-sys-color-outline);
+  --accent: var(--md-sys-color-primary);
+  --accent-hover: #e8def8;
+  --accent-soft: rgba(208, 188, 255, 0.12);
+  --accent-glow: rgba(208, 188, 255, 0.25);
+  --accent-ink: var(--md-sys-color-on-primary);
+  --green: #a6f4c5;
+  --green-soft: rgba(166, 244, 197, 0.12);
+  --red: #f2b8b5;
+  --red-soft: rgba(242, 184, 181, 0.12);
+
+  /* Material 3 Shape Tokens - Crisp, modern structured radii */
+  --md-shape-corner-none: 0px;
+  --md-shape-corner-extra-small: 4px;
+  --md-shape-corner-small: 6px;
+  --md-shape-corner-medium: 8px;
+  --md-shape-corner-large: 12px;
+  --md-shape-corner-extra-large: 16px;
+  --md-shape-corner-full: 8px;
+
+  /* Compatibility radius tokens */
+  --radius-sm: var(--md-shape-corner-small);
+  --radius-md: var(--md-shape-corner-medium);
+  --radius-lg: var(--md-shape-corner-large);
+  --radius-xl: 16px;
+  --radius-full: 8px;
+
+  /* Material 3 Elevations */
+  --md-elevation-1: 0 1px 3px 1px rgba(0, 0, 0, 0.25), 0 1px 2px 0 rgba(0, 0, 0, 0.3);
+  --md-elevation-2: 0 2px 6px 2px rgba(0, 0, 0, 0.3), 0 1px 2px 0 rgba(0, 0, 0, 0.35);
+  --md-elevation-3: 0 4px 8px 3px rgba(0, 0, 0, 0.35), 0 1px 3px 0 rgba(0, 0, 0, 0.4);
+  --md-elevation-4: 0 6px 10px 4px rgba(0, 0, 0, 0.4), 0 2px 4px 0 rgba(0, 0, 0, 0.45);
+
+  --shadow-1: var(--md-elevation-1);
+  --shadow-2: var(--md-elevation-2);
+  --shadow-3: var(--md-elevation-3);
+
+  /* Material Motion */
+  --md-motion-easing-standard: cubic-bezier(0.2, 0.0, 0.0, 1.0);
+  --md-motion-easing-emphasized: cubic-bezier(0.2, 0.0, 0.0, 1.25);
+  --md-motion-duration-short: 150ms;
+  --md-motion-duration-medium: 300ms;
+
+  --ease: var(--md-motion-easing-standard);
+  --motion: var(--md-motion-duration-short);
+}
+
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  -webkit-tap-highlight-color: transparent;
+}
+
+html, body {
+  width: 100%;
+  max-width: 100vw;
+  min-height: 100%;
+  overflow-x: hidden;
+}
+
+body {
+  font-family: "Inter", system-ui, -apple-system, Roboto, sans-serif;
+  background-color: var(--md-sys-color-surface);
+  color: var(--md-sys-color-on-surface);
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  -webkit-font-smoothing: antialiased;
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+  line-height: 1.5;
+  position: relative;
+}
+
+/* Subtle Material 3 Ambient Lighting Glows */
+body::before, body::after {
+  content: "";
+  position: fixed;
+  width: min(380px, 80vw);
+  height: min(380px, 80vw);
+  border-radius: 50%;
+  filter: blur(120px);
+  pointer-events: none;
+  z-index: -1;
+  opacity: 0.18;
+}
+body::before {
+  top: -120px;
+  left: 15%;
+  background: var(--md-sys-color-primary-container);
+}
+body::after {
+  bottom: 10%;
+  right: 10%;
+  background: var(--md-sys-color-tertiary-container);
+}
+
+::selection {
+  background: var(--md-sys-color-primary-container);
+  color: var(--md-sys-color-on-primary-container);
+}
+
+html {
+  scrollbar-color: var(--md-sys-color-surface-container-highest) transparent;
+}
+
+.app {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  max-width: 720px;
+  margin: 0 auto;
+  padding: 0 16px;
+  box-sizing: border-box;
+  overflow-x: hidden;
+}

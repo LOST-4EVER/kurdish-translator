@@ -27,14 +27,16 @@ const SubParser = (() => {
 
   // ⚡ Bolt: Highly-optimized toMs to avoid array allocation, string splitting, and regex.
   function toMs(str) {
-    let dotIdx = str.indexOf('.');
-    if (dotIdx === -1) dotIdx = str.indexOf(',');
+    if (!str) return 0;
+    const cleanStr = str.trim();
+    let dotIdx = cleanStr.indexOf('.');
+    if (dotIdx === -1) dotIdx = cleanStr.indexOf(',');
 
-    let timePart = str;
+    let timePart = cleanStr;
     let frac = 0;
     if (dotIdx !== -1) {
-      timePart = str.substring(0, dotIdx);
-      const fracPart = str.substring(dotIdx + 1);
+      timePart = cleanStr.substring(0, dotIdx);
+      const fracPart = cleanStr.substring(dotIdx + 1);
       const len = fracPart.length;
       if (len === 3) {
         frac = parseInt(fracPart, 10);
@@ -50,14 +52,18 @@ const SubParser = (() => {
     const firstColon = timePart.indexOf(':');
     const secondColon = timePart.indexOf(':', firstColon + 1);
 
+    if (firstColon === -1) {
+      return (parseInt(timePart, 10) || 0) * 1000 + frac;
+    }
+
     if (secondColon === -1) {
-      const m = parseInt(timePart.substring(0, firstColon), 10);
-      const s = parseInt(timePart.substring(firstColon + 1), 10);
+      const m = parseInt(timePart.substring(0, firstColon), 10) || 0;
+      const s = parseInt(timePart.substring(firstColon + 1), 10) || 0;
       return m * 60000 + s * 1000 + frac;
     } else {
-      const h = parseInt(timePart.substring(0, firstColon), 10);
-      const m = parseInt(timePart.substring(firstColon + 1, secondColon), 10);
-      const s = parseInt(timePart.substring(secondColon + 1), 10);
+      const h = parseInt(timePart.substring(0, firstColon), 10) || 0;
+      const m = parseInt(timePart.substring(firstColon + 1, secondColon), 10) || 0;
+      const s = parseInt(timePart.substring(secondColon + 1), 10) || 0;
       return h * 3600000 + m * 60000 + s * 1000 + frac;
     }
   }
@@ -72,12 +78,25 @@ const SubParser = (() => {
   }
   function fmtASS(ms) {
     const t = splitMs(ms);
-    return `${t.h}:${pad(t.m)}:${pad(t.s)}.${pad(Math.floor(t.ms / 10), 2)}`;
+    const cs = Math.min(99, Math.max(0, Math.floor(t.ms / 10)));
+    return `${t.h}:${pad(t.m)}:${pad(t.s)}.${pad(cs, 2)}`;
   }
   function assToMs(str) {
-    const [h, m, rest] = str.split(':');
-    const [s, cs] = rest.split('.');
-    return Number(h) * 3600000 + Number(m) * 60000 + Number(s) * 1000 + Number(cs) * 10;
+    if (!str) return 0;
+    const parts = str.trim().split(':');
+    if (parts.length < 3) return 0;
+    const h = Number(parts[0]) || 0;
+    const m = Number(parts[1]) || 0;
+    const [sStr, csStr] = parts[2].split('.');
+    const s = Number(sStr) || 0;
+    let csMs = 0;
+    if (csStr) {
+      const num = Number(csStr) || 0;
+      if (csStr.length === 1) csMs = num * 100;
+      else if (csStr.length === 2) csMs = num * 10;
+      else csMs = Math.min(999, num);
+    }
+    return h * 3600000 + m * 60000 + s * 1000 + csMs;
   }
 
   // ---------- Format detection ----------
@@ -99,7 +118,7 @@ const SubParser = (() => {
 
   // ---------- SRT / VTT ----------
   // Line-based parser: works whether or not cues are separated by blank lines,
-  // and ignores the WEBVTT header, cue identifiers/indexes and NOTE comments.
+  // and ignores WEBVTT headers, cue identifiers/indexes, NOTE comments, STYLE and REGION blocks.
   // A timing line must START with a timecode so subtitle text that merely
   // mentions a time range isn't mistaken for a new cue; a VTT trailer
   // ("align:start position:0%") is allowed after the arrow.
@@ -108,13 +127,12 @@ const SubParser = (() => {
     const lines = content.replace(/\r/g, '').split('\n');
     const cues = [];
     let current = null;
-    let inNote = false;
+    let inHeaderBlock = false;
 
     for (let i = 0; i < lines.length; i++) {
       const line = lines[i].trim();
-      // NOTE blocks end at the first blank line and are never subtitle text,
-      // even when a comment contains a timecode.
-      if (inNote) { if (!line) inNote = false; continue; }
+      // NOTE, STYLE, and REGION blocks end at the first blank line and are never subtitle text
+      if (inHeaderBlock) { if (!line) inHeaderBlock = false; continue; }
       const m = line.match(TIMECODE_LINE);
       if (m) {
         if (current) cues.push(current);
@@ -122,7 +140,7 @@ const SubParser = (() => {
         current = { start: toMs(m[1]), end: toMs(m[2]), settings, text: [] };
         continue;
       }
-      if (/^NOTE\b/i.test(line)) { inNote = true; continue; }
+      if (/^(?:NOTE|STYLE|REGION)\b/i.test(line)) { inHeaderBlock = true; continue; }
       if (!current || !line) continue;
       // A line immediately followed by a timing line is a cue identifier/index.
       const next = lines[i + 1];
@@ -368,9 +386,19 @@ Style: Default,Arial,20,16777215,65535,0,0,0,0,1,2,2,2,10,10,10,0,1
 
 [Events]`;
 
-  function normalizeTextForStandard(text) {
+  function normalizeTextForStandard(text, cleanTags = true) {
     if (!text) return '';
-    return text.replace(/\\N/g, '\n').replace(/\r\n/g, '\n').replace(/\r/g, '\n');
+    let res = text.replace(/\\N/g, '\n').replace(/\r\n/g, '\n').replace(/\r/g, '\n');
+    if (cleanTags) {
+      // Convert basic ASS inline formatting tags to standard HTML tags
+      res = res
+        .replace(/\{\\i1\}/gi, '<i>').replace(/\{\\i0\}/gi, '</i>')
+        .replace(/\{\\b1\}/gi, '<b>').replace(/\{\\b0\}/gi, '</b>')
+        .replace(/\{\\u1\}/gi, '<u>').replace(/\{\\u0\}/gi, '</u>');
+      // Strip remaining ASS control override tags (e.g. {\pos(...)}, {\an8}, {\c&H...&})
+      res = res.replace(/\{[^{}]*\}/g, '');
+    }
+    return res;
   }
 
   function serialize(parsedOrFormat, cues) {
