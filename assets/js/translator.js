@@ -133,7 +133,7 @@ const Translator = (() => {
             let stripped = line;
             const escaped = leadTags.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
             stripped = stripped.replace(new RegExp(escaped, 'g'), '').trim();
-            line = leadTags + (stripped ? ' ' + stripped : '');
+            line = leadTags + (stripped ? (leadTags.startsWith('{') ? stripped : ' ' + stripped) : '');
           }
         }
       }
@@ -271,8 +271,22 @@ const Translator = (() => {
     s = s.replace(/\bgonna\b/gi, 'going to')
          .replace(/\bwanna\b/gi, 'want to')
          .replace(/\bgotta\b/gi, 'have to')
+         .replace(/\bwoulda\b/gi, 'would have')
+         .replace(/\bcoulda\b/gi, 'could have')
+         .replace(/\bshoulda\b/gi, 'should have')
+         .replace(/\bmusta\b/gi, 'must have')
          .replace(/\bkinda\b/gi, 'kind of')
          .replace(/\bsorta\b/gi, 'sort of')
+         .replace(/\blotta\b/gi, 'lot of')
+         .replace(/\alot\b/gi, 'a lot')
+         .replace(/\binfront\b/gi, 'in front')
+         .replace(/\basap\b/gi, 'as soon as possible')
+         .replace(/\bfyi\b/gi, 'for your information')
+         .replace(/\bbtw\b/gi, 'by the way')
+         .replace(/\btbh\b/gi, 'to be honest')
+         .replace(/\bimo\b/gi, 'in my opinion')
+         .replace(/\bimho\b/gi, 'in my humble opinion')
+         .replace(/\baka\b/gi, 'also known as')
          .replace(/\bdunno\b/gi, 'do not know')
          .replace(/\bi['’]?mma\b/gi, 'I am going to')
          .replace(/\bain['’]?t\b/gi, 'is not')
@@ -480,6 +494,8 @@ const Translator = (() => {
       .replace(/(^|\s)دا\s+(نیشە|دەنیشێت|پۆشە|خستن|داخە|دابخە|گرتن|بەزین|بەزی|مەپۆشە)(?=\s|$|[.,!?;:،؛؟])/g, '$1دا$2')
       .replace(/(^|\s)[هھ]ەڵ\s+(بگرە|ستە|دەستێت|گرتن|گرە|بژێرە|بڕژێ|کشان|واسە|مەگرە)(?=\s|$|[.,!?;:،؛؟])/g, '$1هەڵ$2')
       .replace(/(^|\s)دەست\s+(پێکرد|پێبکە|پێدەکات|پێکردن|پێ بگە|بەردار|نیشان|پێکە)(?=\s|$|[.,!?;:،؛؟])/g, '$1دەست$2')
+      .replace(/([\p{L}\u0600-\u06FF]+)\s+تر(?=\s|$|[.,!?;:،؛؟])/gu, '$1تر')
+      .replace(/([\p{L}\u0600-\u06FF]+)\s+ترین(?=\s|$|[.,!?;:،؛؟])/gu, '$1ترین')
       .replace(/\s+ەوە(?=\s|$|[.,!?;:،؛؟])/g, 'ەوە')
       .replace(/\s+یش(?=\s|$|[.,!?;:،؛؟])/g, 'یش');
   }
@@ -509,12 +525,30 @@ const Translator = (() => {
       .replace(/سڵا و/g, 'سڵاو')
       .replace(/خۆ شحاڵ/g, 'خۆشحاڵ')
       .replace(/خۆش حاڵ/g, 'خۆشحاڵ')
+      .replace(/خۆشحاڵم بتبینم/g, 'خۆشحاڵم بە بینینت')
       .replace(/بێ گومان/g, 'بێگومان')
       .replace(/لە کوێ/g, 'لەکوێ')
       .replace(/بۆ چی/g, 'بۆچی')
       .replace(/لە بەر/g, 'لەبەر')
       .replace(/لە گەڵ/g, 'لەگەڵ')
       .replace(/بە تایبەت/g, 'بەتایبەت')
+      .replace(/بە ڕاستی/g, 'بەڕاستی')
+      .replace(/لە ڕاستیدا/g, 'لەڕاستیدا')
+      .replace(/بێ ئەوەی/g, 'بێئەوەی')
+      .replace(/لەبەر ئەوەی/g, 'لەبەرئەوەی')
+      .replace(/لێ ببوورە/g, 'لێببوورە')
+      .replace(/لێ ببوورن/g, 'لێببوورن')
+      .replace(/سەر کەوتن/g, 'سەرکەوتن')
+      .replace(/سەر دەکەوێت/g, 'سەردەکەوێت')
+      .replace(/تێک دان/g, 'تێکدان')
+      .replace(/تێک دەدات/g, 'تێکدەدات')
+      .replace(/پێک هاتن/g, 'پێکهاتن')
+      .replace(/پێک دەهێنێت/g, 'پێکهێنێت')
+      .replace(/بە جێ هێشتن/g, 'بەجێهێشتن')
+      .replace(/دەست پێ کردن/g, 'دەستپێکردن')
+      .replace(/دەست پێ دەکات/g, 'دەستپێدەکات')
+      .replace(/چاودێری کردن/g, 'چاودێریکردن')
+      .replace(/یارمەتی دان/g, 'یارمەتیدان')
       .replace(/دە بارەی/g, 'دەربارەی')
       .replace(/دەربارە ی/g, 'دەربارەی')
       .replace(/ڕاستە قینە/g, 'ڕاستەقینە')
@@ -590,8 +624,8 @@ const Translator = (() => {
    * @returns {{score: number, issues: string[], suggestions: string[], issueDetails: Array, alternatives: Array, improvedText: string}}
    */
   function checkLineQuality(arg1, arg2 = '') {
-    let kurdishLine = arg1 || '';
-    let origLine = arg2 || '';
+    let kurdishLine = typeof arg1 === 'string' ? arg1 : (arg1 != null ? String(arg1) : '');
+    let origLine = typeof arg2 === 'string' ? arg2 : (arg2 != null ? String(arg2) : '');
 
     // Auto-detect argument order if reversed
     const hasArabic1 = /[\u0600-\u06ff]/.test(kurdishLine);
@@ -1110,7 +1144,8 @@ const Translator = (() => {
         const sub = line.split(BATCH_SEP);
         for (let s = 0; s < sub.length; s++) {
           if (s > 0) { parts.push(cur.join('\n')); cur = []; }
-          const item = sub[s].replace(/^[ \t\u200e\u200f.,!?;:،؛؟]+|[ \t\u200e\u200f.,!?;:،؛؟]+$/g, '').trim();
+          let item = sub[s].replace(/^[ \t\u200e\u200f]+|[ \t\u200e\u200f]+$/g, '').trim();
+          if (s > 0) item = item.replace(/^[.,!?;:،؛؟]+\s*/, '');
           if (item) cur.push(item);
         }
       } else {
