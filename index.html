@@ -206,20 +206,16 @@
               </span>
             </label>
 
-            <button type="button" class="adv-trigger-btn char-trigger-btn" id="openCharModalBtn">
-              <span class="adv-trigger-icon char-trigger-icon">
-                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                  <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
-                  <circle cx="12" cy="7" r="4"></circle>
-                </svg>
+            <label class="switch-row">
+              <span>
+                <strong data-i18n="optFixOverlapTitle">Fix Dialogue Overlaps & Collisions</strong>
+                <em data-i18n="optFixOverlapSub">prevent subtitle collision when two speakers talk or cues clash across media players</em>
               </span>
-              <span class="adv-trigger-info">
-                <strong data-i18n="charNamesTitle">Smart Character Naming</strong>
-                <span data-i18n="charNamesSub">Detect & replace character names with pronunciations</span>
+              <span class="switch">
+                <input type="checkbox" id="fixOverlapToggle" checked role="switch" />
+                <span class="slider"></span>
               </span>
-              <span class="adv-trigger-badge" id="charActiveBadge">0</span>
-              <svg class="adv-trigger-chevron" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>
-            </button>
+            </label>
 
             <button type="button" class="adv-trigger-btn" id="openAdvModalBtn">
               <span class="adv-trigger-icon">
@@ -291,94 +287,6 @@
 
               <div class="modal-footer">
                 <button type="button" class="btn-primary modal-done-btn" id="doneAdvModalBtn" data-i18n="btnDone">Done</button>
-              </div>
-            </div>
-          </div>
-
-          <!-- Smart Character Naming Modal -->
-          <div class="modal-backdrop hidden" id="charModalBackdrop">
-            <div class="modal-card char-modal-card" id="charModalCard" role="dialog" aria-modal="true" aria-labelledby="charModalTitle">
-              <div class="modal-header">
-                <div class="modal-title-group">
-                  <span class="modal-title-icon char-modal-icon">
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                      <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
-                      <circle cx="12" cy="7" r="4"></circle>
-                    </svg>
-                  </span>
-                  <div>
-                    <h3 class="modal-title" id="charModalTitle" data-i18n="charNamesTitle">Smart Character Naming</h3>
-                    <p class="modal-sub" data-i18n="charNamesSub">Detect & replace character names with pronunciations</p>
-                  </div>
-                </div>
-                <button type="button" class="modal-close-btn" id="closeCharModalBtn" aria-label="Close">
-                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
-                </button>
-              </div>
-
-              <div class="modal-body char-modal-body">
-                <div class="char-toolbar">
-                  <button type="button" class="btn-secondary mini-btn" id="smartRecognizeBtn">
-                    <span data-i18n="btnSmartRecognize">⚡ Smart Recognize Names</span>
-                  </button>
-                  <button type="button" class="btn-ghost mini-btn" id="clearCharNamesBtn">
-                    <span data-i18n="btnClearAll">Clear All</span>
-                  </button>
-                </div>
-
-                <div class="char-add-card">
-                  <div class="char-input-group">
-                    <input type="text" id="charOrigInput" class="char-input" placeholder="Original Name (e.g. John)" data-i18n-placeholder="lblOrigName" />
-                    <input type="text" id="charKurdishInput" class="char-input" placeholder="Kurdish Name (e.g. جۆن)" data-i18n-placeholder="lblKurdishName" dir="rtl" />
-                    <input type="text" id="charPronunInput" class="char-input" placeholder="Pronunciation Guide (e.g. Dzhon)" data-i18n-placeholder="lblPronunciation" />
-                    <button type="button" id="addCharNameBtn" class="btn-primary mini-btn" data-i18n="btnAddName">+ Add Name</button>
-                  </div>
-                </div>
-
-                <div class="char-list-wrap">
-                  <div class="char-list" id="charNamesList"></div>
-                  <p class="char-empty-msg hidden" id="charEmptyMsg" data-i18n="noCharNamesFound">No character names added yet. Click Smart Recognize or add one manually.</p>
-                </div>
-
-                <div class="char-options-list">
-                  <label class="switch-row">
-                    <span>
-                      <strong data-i18n="optApplyNamesTrans">Replace character names during translation</strong>
-                    </span>
-                    <span class="switch">
-                      <input type="checkbox" id="applyNamesTransToggle" checked role="switch" />
-                      <span class="slider"></span>
-                    </span>
-                  </label>
-
-                  <label class="switch-row">
-                    <span>
-                      <strong data-i18n="optApplyNamesPreview">Replace character names in Preview live editor</strong>
-                    </span>
-                    <span class="switch">
-                      <input type="checkbox" id="applyNamesPreviewToggle" checked role="switch" />
-                      <span class="slider"></span>
-                    </span>
-                  </label>
-
-                  <label class="switch-row">
-                    <span>
-                      <strong data-i18n="optFuzzyTypo">Smart typo tolerance for names (e.g. Jhon -> John)</strong>
-                    </span>
-                    <span class="switch">
-                      <input type="checkbox" id="fuzzyTypoToggle" checked role="switch" />
-                      <span class="slider"></span>
-                    </span>
-                  </label>
-                </div>
-              </div>
-
-              <div class="modal-footer char-modal-footer">
-                <button type="button" class="btn-secondary modal-action-btn" id="replaceAllInSubtitlesBtn">
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
-                  <span data-i18n="btnReplaceAllNames">Replace All in Subtitles</span>
-                </button>
-                <button type="button" class="btn-primary modal-done-btn" id="doneCharModalBtn" data-i18n="btnDone">Done</button>
               </div>
             </div>
           </div>
@@ -501,7 +409,7 @@
       <div id="tabPreview" class="hidden">
         <section class="card player-card">
           <div class="player">
-            <div class="screen" id="playerScreen">
+            <div class="screen" id="playerScreen" title="Click to play / pause">
               <span class="screen-text" id="playerText"></span>
               <div class="screen-empty" id="playerEmpty">
                 <span class="se-ic">
@@ -512,16 +420,24 @@
               </div>
               <span class="cue-count" id="cueCount"></span>
             </div>
-            <div class="timeline" id="timeline">
-              <div class="tl-cues" id="tlCues"></div>
-              <div class="tl-fill" id="tlFill"></div>
-              <div class="tl-thumb" id="tlThumb"></div>
-              <div class="tl-tooltip hidden" id="tlTooltip">0:00</div>
+
+            <!-- Pro Timeline Scrubber -->
+            <div class="timeline-container">
+              <div class="timeline" id="timeline" role="slider" aria-label="Playback timeline" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
+                <div class="tl-track">
+                  <div class="tl-cues" id="tlCues"></div>
+                  <div class="tl-fill" id="tlFill"></div>
+                  <div class="tl-thumb" id="tlThumb"></div>
+                </div>
+                <div class="tl-tooltip hidden" id="tlTooltip">0:00</div>
+              </div>
             </div>
+
+            <!-- Master Playback Controls -->
             <div class="controls">
-              <div class="ctl-group">
-                <button class="ctrl-btn play" id="playBtn" title="Play / Pause (Space)" aria-label="Play">
-                  <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
+              <div class="ctl-primary-group">
+                <button class="ctrl-btn ctl-mini" id="restartBtn" title="Restart to start (0:00)" aria-label="Restart to start">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>
                 </button>
                 <button class="ctrl-btn" id="prevCueBtn" title="Previous cue (↑)" aria-label="Previous cue">
                   <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M6 6h2v12H6zm3.5 6l8.5 6V6z"/></svg>
@@ -529,20 +445,24 @@
                 <button class="ctrl-btn" id="skipBackBtn" title="Jump back 5s (←)" aria-label="Jump back 5 seconds">
                   <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M11 18V6l-8.5 6 8.5 6zm.5-6l8.5 6V6l-8.5 6z"/></svg>
                 </button>
+                <button class="ctrl-btn play-master" id="playBtn" title="Play / Pause (Space)" aria-label="Play">
+                  <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
+                </button>
                 <button class="ctrl-btn" id="skipForwardBtn" title="Jump forward 5s (→)" aria-label="Jump forward 5 seconds">
                   <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M4 18l8.5-6L4 6v12zm9-12v12l8.5-6L13 6z"/></svg>
                 </button>
                 <button class="ctrl-btn" id="nextCueBtn" title="Next cue (↓)" aria-label="Next cue">
                   <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M6 18l8.5-6L6 6v12zM16 6v12h2V6h-2z"/></svg>
                 </button>
-                <button class="ctrl-btn" id="restartBtn" title="Restart (0:00)" aria-label="Restart">
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>
-                </button>
               </div>
-              <div class="time" id="timeDisplay">0:00 / 0:00</div>
-              <div class="spacer"></div>
-              <div class="ctl-group right">
-                <div class="select-wrap speed" title="Subtitle Font Size">
+
+              <div class="ctl-meta-group">
+                <div class="time-badge" id="timeDisplay" title="Click to toggle remaining time" role="button" tabindex="0">0:00 / 0:00</div>
+              </div>
+
+              <div class="ctl-secondary-group">
+                <div class="select-wrap speed ctl-select" title="Subtitle Font Size">
+                  <span class="select-icon">A</span>
                   <select id="fontSizeSel" aria-label="Subtitle Font Size">
                     <option value="0.75">A- Small</option>
                     <option value="1" selected>A Normal</option>
@@ -551,7 +471,7 @@
                     <option value="1.85">A+++ XXL</option>
                   </select>
                 </div>
-                <div class="select-wrap speed" title="Playback Speed">
+                <div class="select-wrap speed ctl-select" title="Playback Speed">
                   <select id="speedSel" aria-label="Playback Speed">
                     <option value="0.5">0.5×</option>
                     <option value="0.75">0.75×</option>
@@ -561,93 +481,114 @@
                     <option value="2">2×</option>
                   </select>
                 </div>
-                <button class="ctrl-btn" id="fsToggleBtn" title="Fullscreen edit mode" aria-label="Fullscreen edit mode">
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <button class="ctrl-btn fs-launch-btn" id="fsToggleBtn" title="Fullscreen cinema preview mode" aria-label="Fullscreen cinema preview mode">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
                     <path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"></path>
                   </svg>
+                  <span class="fs-btn-label">Fullscreen</span>
                 </button>
               </div>
             </div>
           </div>
-          <p class="player-note">Previews your subtitle synced to timing. Keyboard: <b>Space</b> play/pause · <b>← →</b> seek · <b>↑ ↓</b> prev/next cue</p>
+          <p class="player-note">Previews your subtitle synced to timing · <b>Space</b> play/pause · <b>← →</b> seek 5s · <b>↑ ↓</b> prev/next cue</p>
         </section>
 
-        <!-- subtitle editor -->
+        <!-- Subtitle Editor Card -->
         <section class="card editor-card">
-          <div class="editor-toolbar">
-            <div class="editor-title">
+          <!-- Segment 1: Header title and primary action -->
+          <div class="ed-header-bar">
+            <div class="ed-header-title">
               <span class="ed-ic">
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                   <path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"></path>
                 </svg>
               </span>
-              <div>
-                <h3><span data-i18n="edTitle">Edit subtitles</span> <span class="ed-count" id="edCount"></span></h3>
-                <p id="editorStatus" data-i18n="edStatusSynced">Synced with the preview — edits apply live</p>
-              </div>
-            </div>
-            <div class="editor-search-box">
-              <div class="ed-search-wrap">
-                <svg class="ed-search-ic" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                  <circle cx="11" cy="11" r="8"></circle>
-                  <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
-                </svg>
-                <input type="text" id="edSearchInput" class="ed-search-input" placeholder="Search subtitles..." aria-label="Search subtitles" data-i18n-placeholder="searchPlaceholder" />
-                <span class="ed-search-badge hidden" id="edSearchCount">0</span>
-                <div class="ed-search-nav hidden" id="edSearchNav">
-                  <button type="button" class="ed-search-nav-btn" id="edSearchPrevBtn" title="Previous match (Shift+Enter)" aria-label="Previous match" data-i18n-title="searchPrev">
-                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="18 15 12 9 6 15"></polyline></svg>
-                  </button>
-                  <button type="button" class="ed-search-nav-btn" id="edSearchNextBtn" title="Next match (Enter)" aria-label="Next match" data-i18n-title="searchNext">
-                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
-                  </button>
+              <div class="ed-header-text">
+                <div class="ed-title-row">
+                  <h3 data-i18n="edTitle">Edit subtitles</h3>
+                  <span class="ed-count" id="edCount">0</span>
                 </div>
-                <button type="button" class="ed-search-clear hidden" id="edSearchClearBtn" aria-label="Clear search" title="Clear search (Esc)" data-i18n-title="searchClear">
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
-                </button>
+                <span class="ed-sync-pill"><span class="ed-sync-dot"></span> <span id="editorStatus" data-i18n="edStatusSynced">Synced with preview</span></span>
               </div>
             </div>
-            <div class="editor-toggles">
-              <button class="icon-btn-action char-btn" id="edCharNamesBtn" title="Smart Character Names & Replacement" aria-label="Smart Character Names" data-i18n-title="charNamesTitle">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                  <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
-                  <circle cx="12" cy="7" r="4"></circle>
-                </svg>
-                <span class="char-count-badge" id="edCharBadge">0</span>
-              </button>
-              <button class="icon-btn-action" id="undoBtn" title="Undo change (Ctrl+Z)" aria-label="Undo edit" disabled>
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 14 4 9 9 4"></polyline><path d="M20 20v-7a4 4 0 0 0-4-4H4"></path></svg>
-              </button>
-              <button class="icon-btn-action" id="redoBtn" title="Redo change (Ctrl+Y)" aria-label="Redo edit" disabled>
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 14 20 9 15 4"></polyline><path d="M4 20v-7a4 4 0 0 1 4-4h12"></path></svg>
-              </button>
+            <div class="ed-header-actions">
               <a class="ed-download-btn" id="edDownloadBtn" title="Save &amp; Download Edited Subtitles" aria-label="Save &amp; Download" download style="display: none;">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
                 <span class="btn-text" data-i18n="edSaveDownload">Save &amp; Download</span>
               </a>
-              <label class="switch-row mini" title="Sync video player with editor row when clicked or focused">
-                <span data-i18n="edSyncVideo">Sync video</span>
-                <span class="switch">
-                  <input type="checkbox" id="syncVideoToggle" role="switch" />
-                  <span class="slider"></span>
+            </div>
+          </div>
+
+          <!-- Segment 2: Full-width search bar -->
+          <div class="ed-search-bar">
+            <div class="ed-search-wrap">
+              <svg class="ed-search-ic" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="11" cy="11" r="8"></circle>
+                <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+              </svg>
+              <input type="text" id="edSearchInput" class="ed-search-input" placeholder="Search subtitle lines..." aria-label="Search subtitles" data-i18n-placeholder="searchPlaceholder" />
+              <span class="ed-search-badge hidden" id="edSearchCount">0</span>
+              <div class="ed-search-nav hidden" id="edSearchNav">
+                <button type="button" class="ed-search-nav-btn" id="edSearchPrevBtn" title="Previous match (Shift+Enter)" aria-label="Previous match" data-i18n-title="searchPrev">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="18 15 12 9 6 15"></polyline></svg>
+                </button>
+                <button type="button" class="ed-search-nav-btn" id="edSearchNextBtn" title="Next match (Enter)" aria-label="Next match" data-i18n-title="searchNext">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
+                </button>
+              </div>
+              <button type="button" class="ed-search-clear hidden" id="edSearchClearBtn" aria-label="Clear search" title="Clear search (Esc)" data-i18n-title="searchClear">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+              </button>
+            </div>
+          </div>
+
+          <!-- Segment 3: Tool Suite & Settings bar -->
+          <div class="ed-subtoolbar">
+            <div class="ed-tool-group">
+              <button class="icon-btn-action quality-btn" id="edQualityCheckBtn" title="Line-by-Line Kurdish Quality Check & Polish" aria-label="Line-by-Line Kurdish Quality Check" data-i18n-title="edQualityCheck">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
+                  <polyline points="9 12 11 14 15 10"></polyline>
+                </svg>
+                <span class="tool-btn-text">Quality</span>
+                <span class="quality-badge" id="edQualityBadge">100%</span>
+              </button>
+              <div class="ed-undo-redo-wrap">
+                <button class="icon-btn-action mini-icon" id="undoBtn" title="Undo change (Ctrl+Z)" aria-label="Undo edit" disabled>
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 14 4 9 9 4"></polyline><path d="M20 20v-7a4 4 0 0 0-4-4H4"></path></svg>
+                </button>
+                <button class="icon-btn-action mini-icon" id="redoBtn" title="Redo change (Ctrl+Y)" aria-label="Redo edit" disabled>
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 14 20 9 15 4"></polyline><path d="M4 20v-7a4 4 0 0 1 4-4h12"></path></svg>
+                </button>
+              </div>
+            </div>
+
+            <div class="ed-switch-group">
+              <label class="switch-chip" title="Sync video player with editor row when clicked or focused">
+                <input type="checkbox" id="syncVideoToggle" role="switch" />
+                <span class="switch-chip-inner">
+                  <span class="switch-indicator"></span>
+                  <span data-i18n="edSyncVideo">Sync video</span>
                 </span>
               </label>
-              <label class="switch-row mini">
-                <span data-i18n="edTimes">Times</span>
-                <span class="switch">
-                  <input type="checkbox" id="showTimeToggle" checked role="switch" />
-                  <span class="slider"></span>
+              <label class="switch-chip" title="Show subtitle start and end timecodes">
+                <input type="checkbox" id="showTimeToggle" checked role="switch" />
+                <span class="switch-chip-inner">
+                  <span class="switch-indicator"></span>
+                  <span data-i18n="edTimes">Times</span>
                 </span>
               </label>
-              <label class="switch-row mini">
-                <span data-i18n="edSave">Save</span>
-                <span class="switch">
-                  <input type="checkbox" id="saveEditsToggle" checked role="switch" />
-                  <span class="slider"></span>
+              <label class="switch-chip" title="Save live edits into output file">
+                <input type="checkbox" id="saveEditsToggle" checked role="switch" />
+                <span class="switch-chip-inner">
+                  <span class="switch-indicator"></span>
+                  <span data-i18n="edSave">Save</span>
                 </span>
               </label>
             </div>
           </div>
+
+          <!-- Segment 4: Cue List -->
           <div class="editor-list" id="editorList" aria-label="Editable subtitle cues"></div>
           <p class="editor-hint" data-i18n="edHint">Click a row to jump player · Type to edit live · <b>Esc</b> or <b>Ctrl+Enter</b> to finish</p>
         </section>
@@ -662,12 +603,21 @@
   <div class="toast-container" id="toastContainer"></div>
   <div class="toast" id="toast" role="status"></div>
 
-  <!-- Fullscreen subtitle editor overlay -->
+  <!-- Fullscreen Cinema Theater Overlay -->
   <div class="fs-edit hidden" id="fsEdit">
+    <!-- Cinema Top Bar -->
     <div class="fs-topbar">
-      <span class="fs-cuecount" id="fsCueCount">Cue 0 / 0</span>
-      <div class="fs-top-actions">
-        <div class="select-wrap speed" data-i18n-title="fontSize" title="Subtitle Font Size">
+      <div class="fs-top-left">
+        <button class="fs-btn fs-exit-btn" id="fsClose" data-i18n-title="fsExit" title="Exit full preview (Esc)" aria-label="Exit full preview">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+          <span data-i18n="fsExit">Exit Full Preview</span>
+        </button>
+        <span class="fs-cuecount-chip" id="fsCueCount">Cue 0 / 0</span>
+      </div>
+
+      <div class="fs-top-right">
+        <div class="select-wrap speed fs-select-wrap" data-i18n-title="fontSize" title="Subtitle Font Size">
+          <span class="fs-select-icon">A</span>
           <select id="fsFontSizeSel" aria-label="Subtitle Font Size">
             <option value="0.75" data-i18n="fsFontSmall">A- Small</option>
             <option value="1" selected data-i18n="fsFontNormal">A Normal</option>
@@ -676,67 +626,190 @@
             <option value="1.85" data-i18n="fsFontXXL">A+++ XXL</option>
           </select>
         </div>
-        <button class="fs-btn fs-close" id="fsClose" data-i18n-title="fsExit" title="Exit full preview" aria-label="Exit full preview">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
-        </button>
-      </div>
-    </div>
-
-    <div class="fs-screen" id="fsScreen">
-      <div class="fs-zone pos-top"></div>
-      <div class="fs-zone pos-mid"></div>
-      <div class="fs-zone pos-bottom"></div>
-      <span class="fs-tap-hint" data-i18n="fsTapHint">Tap text or click Edit to modify</span>
-    </div>
-
-    <div class="fs-bar">
-      <div class="fs-group">
-        <button class="fs-btn fs-icon-btn" id="fsPrevBtn" data-i18n-title="stepPrevCue" title="Previous cue" aria-label="Previous cue">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M6 6h2v12H6zm3.5 6l8.5 6V6z"/></svg>
-        </button>
-        <button class="fs-btn fs-icon-btn" id="fsSkipBackBtn" data-i18n-title="rewind5s" title="Jump back 5s" aria-label="Jump back 5s">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M11 18V6l-8.5 6 8.5 6zm.5-6l8.5 6V6l-8.5 6z"/></svg>
-        </button>
-        <button class="fs-btn fs-icon-btn fs-play-btn" id="fsPlayBtn" title="Play / Pause" aria-label="Play">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
-        </button>
-        <button class="fs-btn fs-icon-btn" id="fsSkipForwardBtn" data-i18n-title="forward5s" title="Jump forward 5s" aria-label="Jump forward 5s">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M4 18l8.5-6L4 6v12zm9-12v12l8.5-6L13 6z"/></svg>
-        </button>
-        <button class="fs-btn fs-icon-btn" id="fsNextBtn" data-i18n-title="stepNextCue" title="Next cue" aria-label="Next cue">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M6 18l8.5-6L6 6v12zM16 6v12h2V6h-2z"/></svg>
-        </button>
-      </div>
-
-      <div class="fs-time-badge" id="fsTimeDisplay">0:00 / 0:00</div>
-
-      <div class="fs-group right">
-        <button class="fs-btn fs-icon-btn" id="fsUndoBtn" data-i18n-title="undo" title="Undo change" aria-label="Undo change" disabled>
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 14 4 9 9 4"></polyline><path d="M20 20v-7a4 4 0 0 0-4-4H4"></path></svg>
-        </button>
-        <button class="fs-btn fs-icon-btn" id="fsRedoBtn" data-i18n-title="redo" title="Redo change" aria-label="Redo change" disabled>
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 14 20 9 15 4"></polyline><path d="M4 20v-7a4 4 0 0 1 4-4h12"></path></svg>
-        </button>
-        <button class="fs-btn fs-edit-btn" id="fsEditBtn" aria-label="Edit text">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"></path></svg>
+        <button class="fs-btn fs-edit-trigger" id="fsEditBtn" aria-label="Edit text" title="Open subtitle editor drawer (E)">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"></path></svg>
           <span data-i18n="fsEditText">Edit text</span>
         </button>
       </div>
     </div>
 
+    <!-- Cinema Stage -->
+    <div class="fs-screen" id="fsScreen">
+      <div class="fs-gesture-feedback fs-rewind-feedback hidden" id="fsRewindFeedback">
+        <svg width="28" height="28" viewBox="0 0 24 24" fill="currentColor"><path d="M11 18V6l-8.5 6 8.5 6zm.5-6l8.5 6V6l-8.5 6z"/></svg>
+        <span>-5s</span>
+      </div>
+      <div class="fs-gesture-feedback fs-forward-feedback hidden" id="fsForwardFeedback">
+        <svg width="28" height="28" viewBox="0 0 24 24" fill="currentColor"><path d="M4 18l8.5-6L4 6v12zm9-12v12l8.5-6L13 6z"/></svg>
+        <span>+5s</span>
+      </div>
+      <div class="fs-zone pos-top"></div>
+      <div class="fs-zone pos-mid"></div>
+      <div class="fs-zone pos-bottom"></div>
+      <span class="fs-tap-hint" data-i18n="fsTapHint">Double-tap sides to ±5s · Tap text or click Edit to modify</span>
+    </div>
+
+    <!-- Cinema Bottom Control Bar -->
+    <div class="fs-bar">
+      <!-- Fullscreen Scrubber Timeline -->
+      <div class="fs-timeline-container">
+        <div class="fs-timeline" id="fsTimeline" role="slider" aria-label="Fullscreen playback timeline">
+          <div class="fs-tl-track">
+            <div class="fs-tl-fill" id="fsTlFill"></div>
+            <div class="fs-tl-thumb" id="fsTlThumb"></div>
+          </div>
+          <div class="fs-tl-tooltip hidden" id="fsTlTooltip">0:00</div>
+        </div>
+      </div>
+
+      <div class="fs-bar-controls">
+        <div class="fs-group left">
+          <button class="fs-btn fs-icon-btn" id="fsRestartBtn" title="Restart (0:00)" aria-label="Restart">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>
+          </button>
+          <button class="fs-btn fs-icon-btn" id="fsPrevBtn" data-i18n-title="stepPrevCue" title="Previous cue (↑)" aria-label="Previous cue">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M6 6h2v12H6zm3.5 6l8.5 6V6z"/></svg>
+          </button>
+          <button class="fs-btn fs-icon-btn" id="fsSkipBackBtn" data-i18n-title="rewind5s" title="Jump back 5s (←)" aria-label="Jump back 5s">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M11 18V6l-8.5 6 8.5 6zm.5-6l8.5 6V6l-8.5 6z"/></svg>
+          </button>
+          <button class="fs-btn fs-play-master-btn" id="fsPlayBtn" title="Play / Pause (Space)" aria-label="Play">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
+          </button>
+          <button class="fs-btn fs-icon-btn" id="fsSkipForwardBtn" data-i18n-title="forward5s" title="Jump forward 5s (→)" aria-label="Jump forward 5s">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M4 18l8.5-6L4 6v12zm9-12v12l8.5-6L13 6z"/></svg>
+          </button>
+          <button class="fs-btn fs-icon-btn" id="fsNextBtn" data-i18n-title="stepNextCue" title="Next cue (↓)" aria-label="Next cue">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M6 18l8.5-6L6 6v12zM16 6v12h2V6h-2z"/></svg>
+          </button>
+        </div>
+
+        <div class="fs-time-badge" id="fsTimeDisplay">0:00 / 0:00</div>
+
+        <div class="fs-group right">
+          <div class="select-wrap speed fs-select-wrap" title="Playback Speed">
+            <select id="fsSpeedSel" aria-label="Playback Speed">
+              <option value="0.5">0.5×</option>
+              <option value="0.75">0.75×</option>
+              <option value="1" selected>1×</option>
+              <option value="1.25">1.25×</option>
+              <option value="1.5">1.5×</option>
+              <option value="2">2×</option>
+            </select>
+          </div>
+          <button class="fs-btn fs-icon-btn" id="fsUndoBtn" data-i18n-title="undo" title="Undo change" aria-label="Undo change" disabled>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 14 4 9 9 4"></polyline><path d="M20 20v-7a4 4 0 0 0-4-4H4"></path></svg>
+          </button>
+          <button class="fs-btn fs-icon-btn" id="fsRedoBtn" data-i18n-title="redo" title="Redo change" aria-label="Redo change" disabled>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 14 20 9 15 4"></polyline><path d="M4 20v-7a4 4 0 0 1 4-4h12"></path></svg>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Live Subtitle Editor Slide-Up Drawer in Fullscreen -->
     <div class="fs-editor hidden" id="fsEditor">
-      <textarea id="fsInput" aria-label="Edit active subtitle text" placeholder="Type subtitle text... Press Ctrl+Enter to save"></textarea>
+      <div class="fs-editor-header">
+        <span class="fs-ed-title">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"></path></svg>
+          <span id="fsEdCueLabel">Edit Subtitle Cue</span>
+        </span>
+        <div class="fs-ed-tools">
+          <button type="button" class="fs-btn-chip" id="fsEdPolishBtn" title="Auto-polish Kurdish typography on this line">⚡ Polish</button>
+          <button type="button" class="fs-btn fs-icon-btn fs-btn-mini" id="fsEdUndoBtn" data-i18n-title="undo" title="Undo change" aria-label="Undo change" disabled>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 14 4 9 9 4"></polyline><path d="M20 20v-7a4 4 0 0 0-4-4H4"></path></svg>
+          </button>
+          <button type="button" class="fs-btn fs-icon-btn fs-btn-mini" id="fsEdRedoBtn" data-i18n-title="redo" title="Redo change" aria-label="Redo change" disabled>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 14 20 9 15 4"></polyline><path d="M4 20v-7a4 4 0 0 1 4-4h12"></path></svg>
+          </button>
+        </div>
+      </div>
+      <textarea id="fsInput" aria-label="Edit active subtitle text" placeholder="Type subtitle text... (Ctrl+Enter to save)"></textarea>
       <div class="fs-actions">
-        <button class="fs-btn fs-icon-btn" id="fsEdUndoBtn" data-i18n-title="undo" title="Undo change" aria-label="Undo change" disabled>
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 14 4 9 9 4"></polyline><path d="M20 20v-7a4 4 0 0 0-4-4H4"></path></svg>
-        </button>
-        <button class="fs-btn fs-icon-btn" id="fsEdRedoBtn" data-i18n-title="redo" title="Redo change" aria-label="Redo change" disabled>
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 14 20 9 15 4"></polyline><path d="M4 20v-7a4 4 0 0 1 4-4h12"></path></svg>
-        </button>
-        <button class="fs-btn fs-done" id="fsDoneBtn" data-i18n="fsDone">Done</button>
+        <span class="fs-char-counter" id="fsCharCounter">0 characters</span>
+        <div class="fs-actions-right">
+          <button type="button" class="fs-btn fs-nav-cue-btn" id="fsEdPrevCueBtn">← Prev</button>
+          <button type="button" class="fs-btn fs-nav-cue-btn" id="fsEdNextCueBtn">Next →</button>
+          <button type="button" class="fs-btn fs-done" id="fsDoneBtn" data-i18n="fsDone">Done</button>
+        </div>
       </div>
     </div>
   </div>
+
+    <!-- Kurdish Quality & Line-by-Line Inspector Modal -->
+    <div class="modal-backdrop hidden" id="qualityModalBackdrop">
+      <div class="modal-card quality-modal-card" id="qualityModalCard" role="dialog" aria-modal="true" aria-labelledby="qualityModalTitle">
+        <div class="modal-header">
+          <div class="modal-title-group">
+            <span class="modal-title-icon quality-modal-icon">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
+                <polyline points="9 12 11 14 15 10"></polyline>
+              </svg>
+            </span>
+            <div>
+              <h3 class="modal-title" id="qualityModalTitle" data-i18n="edQualityCheck">Line-by-Line Kurdish Quality Check</h3>
+              <p class="modal-sub" id="qualityModalSub">Orthography, dialogue collision check &amp; advanced vocabulary</p>
+            </div>
+          </div>
+          <button type="button" class="modal-close-btn" id="closeQualityModalBtn" aria-label="Close">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+          </button>
+        </div>
+
+        <div class="modal-body quality-modal-body">
+          <div class="quality-summary-card">
+            <div class="quality-score-ring">
+              <span class="quality-score-val" id="qualityScoreVal">100%</span>
+              <span class="quality-score-lbl">Kurdish Accuracy</span>
+            </div>
+            <div class="quality-stats">
+              <div class="quality-stat-item">
+                <span class="stat-num" id="qualityIssuesCount">0</span>
+                <span class="stat-lbl">Lines with suggestions</span>
+              </div>
+              <div class="quality-stat-item">
+                <span class="stat-num" id="qualityOverlapCount">0</span>
+                <span class="stat-lbl">Dialogue overlaps found</span>
+              </div>
+              <div class="quality-stat-item">
+                <span class="stat-num" id="qualityAdvancedCount">0</span>
+                <span class="stat-lbl">Advanced idioms found</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="quality-actions-bar">
+            <button type="button" class="btn-primary" id="fixAllQualityBtn" data-i18n="btnFixAllIssues">⚡ Auto-Polish &amp; Fix Kurdish</button>
+            <button type="button" class="btn-secondary" id="fixOverlapsNowBtn">⚡ Fix Dialogue Overlaps</button>
+          </div>
+
+          <!-- Quality Modal Filter Tabs & Search -->
+          <div class="quality-filter-bar">
+            <div class="quality-tabs" role="tablist" id="qualityCategoryTabs">
+              <button type="button" class="quality-tab active" data-filter="all" role="tab">All (<span id="qTabAllCount">0</span>)</button>
+              <button type="button" class="quality-tab" data-filter="orthography" role="tab">Orthography (<span id="qTabOrthoCount">0</span>)</button>
+              <button type="button" class="quality-tab" data-filter="prefix" role="tab">Prefixes (<span id="qTabPrefixCount">0</span>)</button>
+              <button type="button" class="quality-tab" data-filter="timing" role="tab">Timing &amp; Overlaps (<span id="qTabTimingCount">0</span>)</button>
+              <button type="button" class="quality-tab" data-filter="idioms" role="tab">Idioms (<span id="qTabIdiomsCount">0</span>)</button>
+            </div>
+            <div class="quality-search-wrap">
+              <svg class="quality-search-ic" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+              <input type="text" id="qualitySearchInput" class="quality-search-input" placeholder="Filter issues..." aria-label="Filter quality issues" />
+              <button type="button" class="quality-search-clear hidden" id="qualitySearchClear" aria-label="Clear filter">×</button>
+            </div>
+          </div>
+
+          <div class="quality-issues-list" id="qualityIssuesList">
+            <!-- Populated dynamically with line checks, suggestions, and advanced alternatives -->
+          </div>
+        </div>
+
+        <div class="modal-footer">
+          <button type="button" class="btn-primary modal-done-btn" id="doneQualityModalBtn" data-i18n="btnDone">Done</button>
+        </div>
+      </div>
+    </div>
 
   <!-- Lightweight Welcome Tour Overlay -->
   <div class="tour-overlay hidden" id="tourOverlay" aria-hidden="true">

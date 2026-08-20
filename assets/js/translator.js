@@ -159,10 +159,110 @@ const Translator = (() => {
   // Arabic-script targets (Sorani Kurdish, Farsi, Arabic, Urdu, Pashto)
   const ARABIC_SCRIPT = new Set(['ckb', 'fa', 'ar', 'ur', 'ps']);
 
+  /**
+   * Comprehensive dictionary of Advanced English Expressions, idioms, phrasal verbs,
+   * and subtitles colloquialisms with rich, nuanced Kurdish translations and alternatives.
+   */
+  const ADVANCED_SUBTITLE_LEXICON = {
+    'piece of cake': { kurdish: 'کارێکی زۆر ئاسان', context: 'Very easy', alternatives: ['وەک ئاو خواردنەوە', 'زۆر سادەیە'] },
+    'break a leg': { kurdish: 'بەهیوای سەرکەوتن', context: 'Good luck', alternatives: ['بەختێکی باش', 'سەرکەوتوو بیت'] },
+    'out of the blue': { kurdish: 'لەناکاو', context: 'Unexpectedly', alternatives: ['کتوپڕ', 'بەبێ چاوەڕوانی', 'لە پڕێکدا'] },
+    'all of a sudden': { kurdish: 'لەپڕدا', context: 'Suddenly', alternatives: ['لەناکاو', 'کتوپڕ'] },
+    'at the end of the day': { kurdish: 'لە کۆتاییدا', context: 'Ultimately', alternatives: ['سەرەنجام', 'لە ئەنجامدا', 'لە دەرئەنجامدا'] },
+    'make sense': { kurdish: 'مانای هەیە', context: 'Logical/clear', alternatives: ['لۆژیکییە', 'جێی باوەڕە', 'تێگەیشتنی ئاسانە'] },
+    'does not make sense': { kurdish: 'هیچ مانایەکی نییە', context: 'Nonsense', alternatives: ['جێی تێگەیشتن نییە', 'بێ مانایە'] },
+    "doesn't make sense": { kurdish: 'هیچ مانایەکی نییە', context: 'Nonsense', alternatives: ['جێی تێگەیشتن نییە', 'بێ مانایە'] },
+    'never mind': { kurdish: 'کێشە نییە، لەبیری کە', context: 'Don\'t worry / ignore', alternatives: ['گرنگ نییە', 'بێ خەم بە', 'واز لەوە بێنە'] },
+    'as a matter of fact': { kurdish: 'لە ڕاستیدا', context: 'In reality', alternatives: ['بە پێچەوانەوە، لە واقیعدا', 'لە حەقیقەتدا'] },
+    'in fact': { kurdish: 'لە ڕاستیدا', context: 'Actually', alternatives: ['بە ڕاستی', 'لە واقیعدا'] },
+    'by the way': { kurdish: 'لەم نێوەندەدا / بە بۆنەیەوە', context: 'Incidentally', alternatives: ['بە ڕێکەوت', 'لێرەدا شتێک بڵێم'] },
+    'on the other hand': { kurdish: 'لە لایەکی ترەوە', context: 'Conversely', alternatives: ['بە پێچەوانەوە', 'لە ڕوانگەیەکی ترەوە'] },
+    'sooner or later': { kurdish: 'زوو بێت یان درەنگ', context: 'Inevitably', alternatives: ['ڕۆژێک لە ڕۆژان', 'لە کۆتاییدا هەر ڕوودەدات'] },
+    'take it easy': { kurdish: 'ئارام بە، خەمت نەبێت', context: 'Relax / calm down', alternatives: ['هێمن بەوە', 'ئاسان وەریگرە'] },
+    'hang in there': { kurdish: 'خۆڕاگر بە', context: 'Stay strong', alternatives: ['بەردەوام بە و کۆڵ مەدە', 'ئارام بگرە'] },
+    'pull yourself together': { kurdish: 'خۆت کۆبکەرەوە', context: 'Control emotions', alternatives: ['ئاگات لە خۆت بێت', 'هێمن بەرەوە'] },
+    'call it a day': { kurdish: 'با کۆتایی پێ بهێنین', context: 'Finish work for today', alternatives: ['بۆ ئەمڕۆ بەسە', 'کارەکان کۆتایی پێبهێنین'] },
+    'no big deal': { kurdish: 'شتێکی ئەوتۆ نییە', context: 'Not important', alternatives: ['کێشەیەکی گەورە نییە', 'گرنگ نییە'] },
+    'fair enough': { kurdish: 'قسەیەکی بەجێیە', context: 'Acceptable point', alternatives: ['قبووڵکراوە', 'پێم باشە'] },
+    'for what it is worth': { kurdish: 'ئەگەر سودی هەبێت', context: 'If helpful', alternatives: ['بە ڕای من', 'تەنها بۆ زانیاری'] },
+    "for what it's worth": { kurdish: 'ئەگەر سودی هەبێت', context: 'If helpful', alternatives: ['بە ڕای من', 'تەنها بۆ زانیاری'] },
+    'ring a bell': { kurdish: 'ئاشنا دیارە', context: 'Sounds familiar', alternatives: ['وەبیرم دێتەوە', 'ناسیاوە', 'ناوی ئاشنایە'] },
+    'hands down': { kurdish: 'بێگومان', context: 'Undoubtedly', alternatives: ['بە دڵنیاییەوە', 'بێ ڕکابەر', 'بێ چەندوچۆن'] },
+    'keep an eye on': { kurdish: 'ئاگاداری بە', context: 'Watch closely', alternatives: ['چاوێکی لێ بێت', 'چاودێری بکە', 'چاو لەسەر دانێ'] },
+    'read between the lines': { kurdish: 'لە مەبەستە شاراوەکە تێبگە', context: 'Hidden meaning', alternatives: ['لە نهێنییەکان تێبگە', 'قووڵتر بیربکەرەوە'] },
+    'think outside the box': { kurdish: 'جیاواز بیربکەرەوە', context: 'Creative thinking', alternatives: ['داهێنەرانە بیربکەرەوە', 'لە دەرەوەی چوارچێوە بیربکەرەوە'] },
+    'cost an arm and a leg': { kurdish: 'زۆر گرانە', context: 'Very expensive', alternatives: ['نرخێکی خەیاڵیی هەیە', 'بە پارەیەکی زۆرە'] },
+    'spill the beans': { kurdish: 'نهێنییەکە ئاشکرا بکە', context: 'Reveal secret', alternatives: ['ڕاستییەکان بدرکێنە', 'قسە بکە'] },
+    'safe and sound': { kurdish: 'ساغ و سەلامەت', context: 'Unharmed', alternatives: ['بە سەلامەتی', 'بێ زیان'] },
+    'in a nutshell': { kurdish: 'بە کورتی', context: 'Briefly', alternatives: ['بە کورت و پوختی', 'پوختەکەی'] },
+    'from scratch': { kurdish: 'لە سەرەتاوە', context: 'From beginning', alternatives: ['لە بنەڕەتەوە', 'لە سفرەوە'] },
+    'by all means': { kurdish: 'بێگومان', context: 'Certainly', alternatives: ['بە دڵنیاییەوە', 'بە هەموو شێوەیەک'] },
+    'point of view': { kurdish: 'دیدگا', context: 'Perspective', alternatives: ['بۆچوون', 'ڕوانگە', 'تێڕوانین'] },
+    'day in and day out': { kurdish: 'ڕۆژ لە دوای ڕۆژ', context: 'Continuously', alternatives: ['بە بەردەوامی', 'هەموو ڕۆژێک'] },
+    'time will tell': { kurdish: 'کات هەموو شتێک دەردەخات', context: 'Future will reveal', alternatives: ['ڕۆژگار دەیسەلمێنێت', 'پاشان دەردەکەوێت'] },
+    'figure out': { kurdish: 'تێبگە', context: 'Understand/solve', alternatives: ['چارەسەر بدۆزەرەوە', 'پێی بزانیت', 'سەری لێ دەربکەیت'] },
+    'come up with': { kurdish: 'بدۆزەرەوە', context: 'Propose/create', alternatives: ['پێشنیار بکە', 'بەرهەم بهێنە'] },
+    'call off': { kurdish: 'هەڵوەشاندنەوە', context: 'Cancel', alternatives: ['ڕاگرتن', 'بەتاڵکردنەوە'] },
+    'put off': { kurdish: 'دواخستن', context: 'Postpone', alternatives: ['وەپاشخستن', 'پاشخستن'] },
+    'look forward to': { kurdish: 'بەپەرۆشەوە چاوەڕێم', context: 'Eagerly anticipate', alternatives: ['بە تامەزرۆییەوە چاوەڕوانی دەکەم', 'چاوەڕوانم'] },
+    'bear in mind': { kurdish: 'لەبیرت بێت', context: 'Remember', alternatives: ['لەبەرچاوی بگرە', 'لە یادتبێت'] },
+    'take for granted': { kurdish: 'بە ئاسایی وەریگرە', context: 'Underestimate', alternatives: ['قەدری نەزانیت', 'بە کەم سەیریکردن'] },
+    'cross the line': { kurdish: 'سنوور بەزاندن', context: 'Go too far', alternatives: ['لە سنوور دەرچوون', 'پێشێلکردن'] },
+    'get out of hand': { kurdish: 'لە کۆنتڕۆڵ دەرچوون', context: 'Out of control', alternatives: ['لە دەست دەربچێت', 'ئاڵۆز بوون'] },
+    'get rid of': { kurdish: 'ڕزگاربوون لێی', context: 'Eliminate', alternatives: ['خۆ دەربازکردن', 'لە کۆڵکردنەوە', 'فڕێدان'] },
+    'hit the road': { kurdish: 'کەوتنە ڕێ', context: 'Depart', alternatives: ['بەڕێکەوتن', 'دەست بە گەشتکردن'] },
+    'under the weather': { kurdish: 'تەندروستیم باش نییە', context: 'Feeling unwell', alternatives: ['کەمێک ناڕەحەتم', 'هەست بە نەخۆشی دەکەم'] },
+    'bite the bullet': { kurdish: 'بەرگەی بگرە', context: 'Endure difficulty', alternatives: ['سەبر بگرە', 'قبووڵی بکە'] },
+    'call it a day': { kurdish: 'بۆ ئەمڕۆ بەسە', context: 'Finish working', alternatives: ['کۆتایی پێبهێنە', 'دەست هەڵگرە'] },
+    'face the music': { kurdish: 'ڕووبەڕووی لێکەوتەکان ببەرەوە', context: 'Accept consequences', alternatives: ['باجەکەی بدە', 'ئەنجامەکەی قبووڵ بکە'] },
+    'once in a blue moon': { kurdish: 'زۆر بە دەگمەن', context: 'Very rarely', alternatives: ['هەر لە کەونارا جارێک', 'جاروبارێکی کەم'] },
+    'see eye to eye': { kurdish: 'هاوڕابوون', context: 'Agree fully', alternatives: ['ڕێککەوتن', 'یەکهەڵوێست بوون'] },
+    'speak of the devil': { kurdish: 'ناوی هات و خۆی هات', context: 'Speaking of person', alternatives: ['هەر باسی تۆمان دەکرد'] },
+    'burn the midnight oil': { kurdish: 'شەونخوونی کردن', context: 'Work late', alternatives: ['تا درەنگ کارکردن'] },
+    'cut corners': { kurdish: 'کەمکردنەوەی کوالیتی', context: 'Rush work cheaply', alternatives: ['ڕێگەی کورت گرتنەبەر'] },
+    'on the fence': { kurdish: 'دوودڵ', context: 'Undecided', alternatives: ['بڕیارنەدراو', 'لە نێوان دوو بڕیاردا'] },
+    'pull someone leg': { kurdish: 'گاڵتەکردن لەگەڵ کەسێک', context: 'Tease someone', alternatives: ['ڕابواردن', 'فریودانی بە گاڵتە'] },
+    "pull someone's leg": { kurdish: 'گاڵتەکردن لەگەڵ کەسێک', context: 'Tease someone', alternatives: ['ڕابواردن', 'فریودانی بە گاڵتە'] },
+    'the elephant in the room': { kurdish: 'بابەتە گرنگە پشتگوێخراوەکە', context: 'Obvious problem', alternatives: ['کێشە سەرەکییە نەبینراوەکە'] },
+    'through thick and thin': { kurdish: 'لە خۆشی و لە ناخۆشیدا', context: 'In all circumstances', alternatives: ['لە هەموو بارودۆخێکدا'] },
+    'actions speak louder than words': { kurdish: 'کردار لە قسە بەهێزترە', context: 'Action over words', alternatives: ['کردار شەرتە نەک قسە'] },
+    'better safe than sorry': { kurdish: 'خۆپاراستن لە پەشیمانی باشترە', context: 'Caution is best', alternatives: ['وریا بە'] },
+    'easier said than done': { kurdish: 'قسەکردن لە کردار ئاسانترە', context: 'Hard to do', alternatives: ['کرداری قورسە'] },
+    'every cloud has a silver lining': { kurdish: 'لە هەموو ناخۆشییەکدا خێرێک هەیە', context: 'Silver lining', alternatives: ['هیوایەک هەیە'] },
+    'leave no stone unturned': { kurdish: 'هەموو هەوڵێک بدە', context: 'Search everywhere', alternatives: ['هەموو شوێنێک بگەڕێ'] },
+    'look before you leap': { kurdish: 'پێش هەنگاونان بیربکەرەوە', context: 'Think before acting', alternatives: ['بە ژیری مامەڵە بکە'] },
+    'no pain no gain': { kurdish: 'بێ ڕەنج کێشان بەرهەم نابێت', context: 'Effort brings results', alternatives: ['هەوڵدان پێویستە'] },
+    'practice makes perfect': { kurdish: 'ڕاهێنان دەبێتە هۆی لێهاتوویی', context: 'Practice makes skill', alternatives: ['بە مەشق دەگەیتە ئامانج'] },
+    'the early bird catches the worm': { kurdish: 'سەحەرخێز بەختەوەرە', context: 'Early starter wins', alternatives: ['زوو دەستپێکردن سەرکەوتنە'] },
+    'time is money': { kurdish: 'کات زێڕە', context: 'Time is valuable', alternatives: ['کات بەنرخە'] },
+    'back to square one': { kurdish: 'گەڕانەوە بۆ خاڵی سەرەتا', context: 'Start over', alternatives: ['دەستپێکردنەوە لە سەرەتاوە'] },
+    'burn bridges': { kurdish: 'پردەکانی پەیوەندی بپچڕێنە', context: 'Cut all ties', alternatives: ['ڕێگەی گەڕانەوە مەهێڵەرەوە'] },
+    'drive someone crazy': { kurdish: 'کەسێک شێت کردن', context: 'Infuriate', alternatives: ['لە هۆش خۆ بردن', 'بێزارکردنی توند'] },
+    'curiosity killed the cat': { kurdish: 'زۆرزانی زیانی هەیە', context: 'Excess curiosity', alternatives: ['لە هەموو شت مەکۆڵەرەوە'] },
+    'ubiquitous': { kurdish: 'لە هەموو شوێنێک بەربڵاو', context: 'Everywhere', alternatives: ['گشتگیر', 'هەمەلایەنە'] },
+    'ephemeral': { kurdish: 'تەمەن کورت و کاتی', context: 'Short-lived', alternatives: ['زووگوزەر', 'نەبڕاوە'] },
+    'resilience': { kurdish: 'خۆڕاگری', context: 'Toughness', alternatives: ['پشوودرێژی', 'توانای بەردەوامی'] },
+    'paradigm shift': { kurdish: 'گۆڕانکاری بنەڕەتی', context: 'Fundamental change', alternatives: ['وەرچەرخانی مێژوویی', 'سەرلەنوێ داڕشتنەوە'] },
+    'meticulous': { kurdish: 'زۆر بە دیقەت و وردبین', context: 'Detailed/careful', alternatives: ['وردکار', 'بە سەلیقە'] },
+    'quintessential': { kurdish: 'نموونەی باڵا', context: 'Perfect example', alternatives: ['پوختەی سەرەکی', 'بەرجەستەکەری تەواو'] },
+    'serendipity': { kurdish: 'ڕێکەوتی بەختەوەرانە', context: 'Lucky discovery', alternatives: ['دەستکەوتی چاوەڕواننەکراو', 'بەختی چاک'] },
+    'inevitable': { kurdish: 'حەتمی و چاوەڕوانکراو', context: 'Unavoidable', alternatives: ['خۆلێلادان مەحاڵ', 'ڕوودانی مسۆگەرە'] },
+    'ambiguous': { kurdish: 'ناڕوون و دوومانادار', context: 'Unclear', alternatives: ['تەمومژاوی', 'لێڵ'] },
+    'eloquent': { kurdish: 'ڕەوانبێژ و زمانپاراو', context: 'Well-spoken', alternatives: ['قسەزان', 'شیرین زمان'] },
+    'profound': { kurdish: 'قووڵ و پڕواتا', context: 'Deep meaning', alternatives: ['کاریگەر', 'بنەڕەتی'] },
+    'lucid': { kurdish: 'ڕوون و ئاشکرا', context: 'Clear/bright', alternatives: ['ڕۆشن', 'هۆشیار'] },
+    'pragmatic': { kurdish: 'واقیعبین و کردارەکی', context: 'Realistic/practical', alternatives: ['سوودخواز', 'پراکتیکی'] },
+    'superfluous': { kurdish: 'زیادە و ناپێویست', context: 'Unnecessary', alternatives: ['بێسوود', 'پێویست پێی نەکراو'] },
+  };
+
   /** Preprocess source text to improve translation accuracy for English to Kurdish Sorani. */
   function preprocessSource(text, srcLang, tgtLang) {
     if (tgtLang !== 'ckb' || (srcLang !== 'en' && srcLang !== 'auto')) return text;
     let s = text;
+
+    // Handle subtitle dialogue multi-speaker hyphens on a single line:
+    // e.g. "- Hello! - How are you?" -> "- Hello!\n- How are you?"
+    s = s.replace(/(?:^|\n)\s*[-—–]\s*([^\n]+?)\s+[-—–]\s*([^\n]+)/g, '- $1\n- $2');
 
     // Expand gerund colloquialisms in subtitle dialogues (e.g., lookin' -> looking, runnin' -> running, doin' -> doing)
     s = s.replace(/\b([a-zA-Z]{2,})in['’](?=\s|[.,!?;:'"()[\]{}<>]|$)/gi, '$1ing');
@@ -444,6 +544,239 @@ const Translator = (() => {
   }
 
   /**
+   * Postprocess a Kurdish subtitle string:
+   * - Normalizes Sorani punctuation & typography (comma, question mark, semicolon).
+   * - Replaces raw Arabic letters with Kurdish Sorani equivalents (ك/ي/ة -> ک/ی/ە).
+   * - Naturalizes conversational syntax and fixes compound word spacing.
+   * - Optionally applies Kurdish digits and character name glossary replacements.
+   */
+  function postprocessSorani(text, options = {}) {
+    if (text == null) return '';
+    const str = typeof text === 'string' ? text : String(text);
+    if (!str.trim()) return '';
+    let res = normalizeText(str, true, !!options.kurdishDigits);
+    res = naturalizeDialogue(res);
+    return res;
+  }
+
+  /**
+   * Check for advanced English phrases in source text and return alternative translations.
+   */
+  function getAdvancedAlternatives(englishText) {
+    if (!englishText) return [];
+    const lower = englishText.toLowerCase();
+    const found = [];
+    for (const [expr, data] of Object.entries(ADVANCED_SUBTITLE_LEXICON)) {
+      if (lower.includes(expr)) {
+        found.push({
+          expression: expr,
+          kurdish: data.kurdish,
+          primary: data.kurdish,
+          context: data.context || expr,
+          alternatives: data.alternatives || [],
+        });
+      }
+    }
+    return found;
+  }
+
+  /**
+   * Perform line-for-line quality check and Kurdish validation on a subtitle line.
+   * Returns a detailed score, detected linguistic or formatting issues, suggestions,
+   * detailed issue objects, alternative wordings, and the auto-improved text.
+   *
+   * @param {string} arg1 The Kurdish translated line (or original line)
+   * @param {string} [arg2] The original source line (or Kurdish line)
+   * @returns {{score: number, issues: string[], suggestions: string[], issueDetails: Array, alternatives: Array, improvedText: string}}
+   */
+  function checkLineQuality(arg1, arg2 = '') {
+    let kurdishLine = arg1 || '';
+    let origLine = arg2 || '';
+
+    // Auto-detect argument order if reversed
+    const hasArabic1 = /[\u0600-\u06ff]/.test(kurdishLine);
+    const hasArabic2 = /[\u0600-\u06ff]/.test(origLine);
+    if (!hasArabic1 && hasArabic2) {
+      const tmp = kurdishLine;
+      kurdishLine = origLine;
+      origLine = tmp;
+    }
+
+    const text = (kurdishLine || '').trim();
+    if (!text) {
+      return { score: 100, issues: [], suggestions: [], issueDetails: [], alternatives: [], improvedText: '' };
+    }
+
+    const issues = [];
+    const suggestions = [];
+    const issueDetails = [];
+    let penalties = 0;
+
+    // 1. Check for untranslated Latin / English words
+    const latinWords = text.match(/\b[a-zA-Z]{3,}\b/g);
+    if (latinWords && !text.includes('{\\')) {
+      const filtered = latinWords.filter((w) => !/^(WEBVTT|NOTE|STYLE|ASS|SSA|pos|an\d|fs|fn)$/i.test(w));
+      if (filtered.length > 0) {
+        const msg = `وشەی وەرنەگێڕدراو یان ئینگلیزی: "${filtered.slice(0, 3).join(', ')}"`;
+        issues.push(msg);
+        suggestions.push('وشە ئینگلیزییەکان وەربگێڕە بۆ کوردی');
+        issueDetails.push({
+          id: 'untranslated_words',
+          category: 'untranslated',
+          severity: 'error',
+          title: 'وشەی ئینگلیزی وەرنەگێڕدراو',
+          description: msg,
+          fixAvailable: false,
+        });
+        penalties += Math.min(30, filtered.length * 15);
+      }
+    }
+
+    // 2. Check for Arabic letter relics (Kaf ك, Yaa ي, Teh Marbuta ة, Tatweel ـ)
+    const arabicRelics = [];
+    if (/[\u0643]/.test(text)) arabicRelics.push('ك');
+    if (/[\u064A\u0649]/.test(text)) arabicRelics.push('ي/ى');
+    if (/[\u0629]/.test(text)) arabicRelics.push('ة');
+    if (/[\u0640]/.test(text)) arabicRelics.push('ـ');
+
+    if (arabicRelics.length > 0) {
+      const msg = `پیتە عەرەبییەکان لە جێگەی پیتی کوردی بەکارهاتوون (${arabicRelics.join('، ')})`;
+      issues.push(msg);
+      suggestions.push('پیتەکان بگۆڕە بۆ (ک، ی، ە)');
+      issueDetails.push({
+        id: 'arabic_relics',
+        category: 'orthography',
+        severity: 'warning',
+        title: 'پیت و نیشانەی نادروستی عەرەبی',
+        description: msg,
+        fixAvailable: true,
+      });
+      penalties += arabicRelics.length * 8;
+    }
+
+    // 3. Check for mechanical question starter "ئایا"
+    if (/(?:^|[\s\n])ئایا\s+/.test(text)) {
+      const msg = 'دەستپێکی ڕستە بە "ئایا" لە ژێرنووسی کوردیدا نەگونجاو و ڕۆبۆتییە';
+      issues.push(msg);
+      suggestions.push('پیت یان وشەی "ئایا" لاببە بۆ ئەوەی ڕستەکە سروشتی و ڕەوان بێت');
+      issueDetails.push({
+        id: 'mechanical_aya',
+        category: 'dialogue',
+        severity: 'warning',
+        title: 'دەستپێکی نادروستی "ئایا"',
+        description: msg,
+        fixAvailable: true,
+      });
+      penalties += 8;
+    }
+
+    // 4. Check for split verbal prefixes (e.g. "دە کات", "نا زانم", "نە بوو", "مە ڕۆ", "تێ دەگەم")
+    if (/(?:^|\s)(?:دە|ئە|نا|نە|مە|بی|تێ|ڕێ|پێ|وەر|دەر|دا|هەڵ|دەست)\s+(?:بێت|زانم|زانی|کات|کەم|کەن|چێت|چم|چن|ڵێم|ڵێت|توانم|بوو|کرد|کە|ڕۆ|دەگەم|کەوتن|دان|گرتن)/.test(text)) {
+      const msg = 'پێشگرە لێکدراوەکانی کردار لێکجیاکراونەتەوە (وەک: دە کات، نا زانم)';
+      issues.push(msg);
+      suggestions.push('پێشگرەکە بلکێنە بە کردارەکەوە (دەستکاریکردن بۆ: دەکات، نازانم)');
+      issueDetails.push({
+        id: 'split_verbal_affix',
+        category: 'prefix',
+        severity: 'warning',
+        title: 'لێکجیابوونەوەی پێشگری کردار',
+        description: msg,
+        fixAvailable: true,
+      });
+      penalties += 10;
+    }
+
+    // 5. Check punctuation marks
+    if (/[?;,]/.test(text) && !text.includes('{\\')) {
+      const msg = 'هێماکانی خاڵبەندی بە شێوازی لاتینی ماونەتەوە (?, ;, ,)';
+      issues.push(msg);
+      suggestions.push('خاڵبەندی کوردی بەکاربهێنە (؟، ؛، ،)');
+      issueDetails.push({
+        id: 'latin_punctuation',
+        category: 'punctuation',
+        severity: 'info',
+        title: 'خاڵبەندی لاتینی لە دەقی کوردی',
+        description: msg,
+        fixAvailable: true,
+      });
+      penalties += 5;
+    }
+
+    // 6. Check dual-speaker dialogue formatting
+    if (origLine && (origLine.includes('\n-') || origLine.startsWith('- ') || origLine.includes(' - '))) {
+      if (!text.includes('-')) {
+        const msg = 'هێمای دیالۆگی دوو کەس (-) لە ژێرنووسەکەدا نییە';
+        issues.push(msg);
+        suggestions.push('هێمای - لە سەرەتای هەر دێڕێکی دیالۆگ دابنێ');
+        issueDetails.push({
+          id: 'dialogue_hyphen_missing',
+          category: 'dialogue',
+          severity: 'info',
+          title: 'دیالۆگی چەندکەسی',
+          description: msg,
+          fixAvailable: true,
+        });
+        penalties += 8;
+      }
+    }
+
+    // 7. Check for bracket token residue
+    if (/\[\s*(?:T|W|p)\d*\s*\]|\b[TWp]\d+\b|[\u0001\u0002\u0003§]/.test(text)) {
+      const msg = 'کۆدی کاتی پاشماوەی وەرگێڕان یان نیشانەی کاتی ماوەتەوە';
+      issues.push(msg);
+      suggestions.push('کۆدەکان پاکبکەرەوە');
+      issueDetails.push({
+        id: 'token_residue',
+        category: 'token',
+        severity: 'error',
+        title: 'پاشماوەی کۆدی تەکنیکی',
+        description: msg,
+        fixAvailable: true,
+      });
+      penalties += 20;
+    }
+
+    // 8. Line length / subtitle readability warning (> 42 characters on a single line)
+    const lines = text.split('\n');
+    const tooLongLine = lines.find((l) => l.length > 42);
+    if (tooLongLine) {
+      const msg = `درێژی دێڕ زۆرە (${tooLongLine.length} پیت) و خوێندنەوەی لەسەر شاشە گران دەکات`;
+      issues.push(msg);
+      suggestions.push('دێڕەکە بەسەر دوو دێڕدا دابەش بکە');
+      issueDetails.push({
+        id: 'line_length',
+        category: 'timing',
+        severity: 'info',
+        title: 'درێژیی دێڕی ژێرنووس',
+        description: msg,
+        fixAvailable: false,
+      });
+      penalties += 5;
+    }
+
+    // Alternatives check from Advanced Lexicon
+    const alternatives = getAdvancedAlternatives(origLine);
+
+    // Compute improved text
+    let improved = normalizeSoraniAlphabet(text);
+    improved = rejoinVerbalAffixes(improved);
+    improved = naturalizeDialogue(improved);
+    improved = normalizeText(improved, true, false);
+    improved = fixPlacementAndTagOrder(improved, origLine);
+
+    const score = Math.max(15, Math.min(100, 100 - penalties));
+
+    return {
+      score,
+      issues,
+      suggestions,
+      issueDetails,
+      alternatives,
+      improvedText: improved,
+    };
+  }
+
+  /**
    * Clean up Google's typography and grammar for a subtitle line, applying Sorani Kurdish
    * conventions (r12a orthography notes / Kurdish Academy & subtitle natural dialogue):
    *  - remove stray space before punctuation ("word !" -> "word!")
@@ -565,9 +898,6 @@ const Translator = (() => {
         parts.forEach((part, k) => {
           let norm = normalizeText(restoreNewlines(restore(part, batch[k].toks).trim()), isArabic, useKurdishDigits);
           norm = fixPlacementAndTagOrder(norm, batch[k].raw);
-          if (opts.applyNames && opts.charNames && opts.charNames.length) {
-            norm = applyCharacterReplacements(norm, opts.charNames, { fuzzyTypo: opts.fuzzyTypo });
-          }
           results[batch[k].index] = norm;
           if (norm && norm !== origNorm[batch[k].index]) anyTranslated = true;
         });
@@ -579,9 +909,6 @@ const Translator = (() => {
           try {
             let norm = normalizeText(restoreNewlines(restore(await translateChunk(o.text, srcLang, tgtLang, signal), o.toks).trim()), isArabic, useKurdishDigits);
             norm = fixPlacementAndTagOrder(norm, o.raw);
-            if (opts.applyNames && opts.charNames && opts.charNames.length) {
-              norm = applyCharacterReplacements(norm, opts.charNames, { fuzzyTypo: opts.fuzzyTypo });
-            }
             results[o.index] = norm;
             if (norm && norm !== origNorm[o.index]) anyTranslated = true;
           } catch (e) {
@@ -589,9 +916,6 @@ const Translator = (() => {
             failedLines++;
             let norm = normalizeText(restoreNewlines(restore(o.text, o.toks)), isArabic, useKurdishDigits);
             norm = fixPlacementAndTagOrder(norm, o.raw);
-            if (opts.applyNames && opts.charNames && opts.charNames.length) {
-              norm = applyCharacterReplacements(norm, opts.charNames, { fuzzyTypo: opts.fuzzyTypo });
-            }
             results[o.index] = norm;
           }
         }
@@ -805,195 +1129,6 @@ const Translator = (() => {
     }
   }
 
-  /** Known character name mapping dictionary with Kurdish translation and phonetic pronunciation */
-  const KNOWN_CHARACTER_NAMES = {
-    john: { kurdish: 'جۆن', pronunciation: 'جۆن (Dzhon)' },
-    jhon: { kurdish: 'جۆن', pronunciation: 'جۆن (Dzhon)' },
-    johnn: { kurdish: 'جۆن', pronunciation: 'جۆن (Dzhon)' },
-    arthur: { kurdish: 'ئارثەر', pronunciation: 'ئارثەر (Ar-ther)' },
-    sarah: { kurdish: 'سارا', pronunciation: 'سارا (Sa-rah)' },
-    sara: { kurdish: 'سارا', pronunciation: 'سارا (Sa-rah)' },
-    mary: { kurdish: 'ماری', pronunciation: 'ماری (Ma-ry)' },
-    maria: { kurdish: 'ماریا', pronunciation: 'ماریا (Ma-ri-a)' },
-    michael: { kurdish: 'مایکڵ', pronunciation: 'مایکڵ (My-kel)' },
-    micheal: { kurdish: 'مایکڵ', pronunciation: 'مایکڵ (My-kel)' },
-    david: { kurdish: 'دەیڤد', pronunciation: 'دەیڤد (Day-vid)' },
-    peter: { kurdish: 'پیتەر', pronunciation: 'پیتەر (Pee-ter)' },
-    alex: { kurdish: 'ئەلێکس', pronunciation: 'ئەلێکس (A-lex)' },
-    jack: { kurdish: 'جاک', pronunciation: 'جاک (Jack)' },
-    tom: { kurdish: 'تۆم', pronunciation: 'تۆم (Tom)' },
-    harry: { kurdish: 'هاری', pronunciation: 'هاری (Har-ry)' },
-    james: { kurdish: 'جەیمس', pronunciation: 'جەیمس (James)' },
-    robert: { kurdish: 'ڕۆبەرت', pronunciation: 'ڕۆبەرت (Ro-bert)' },
-    charlie: { kurdish: 'چارلی', pronunciation: 'چارلی (Char-lie)' },
-    daniel: { kurdish: 'دانیال', pronunciation: 'دانیال (Da-ni-al)' },
-    emma: { kurdish: 'ئێما', pronunciation: 'ئێما (Em-ma)' },
-    oliver: { kurdish: 'ئۆلیڤەر', pronunciation: 'ئۆلیڤەر (O-li-ver)' },
-    spongebob: { kurdish: 'سپۆنجبۆب', pronunciation: 'سپۆنجبۆب (Sponge-Bob)' },
-    naruto: { kurdish: 'ناروتۆ', pronunciation: 'ناروتۆ (Na-ru-to)' },
-    sasuke: { kurdish: 'ساسکێ', pronunciation: 'ساسکێ (Sa-su-ke)' },
-    luffy: { kurdish: 'لوفی', pronunciation: 'لوفی (Luf-fy)' },
-    goku: { kurdish: 'گۆکو', pronunciation: 'گۆکو (Go-ku)' },
-    bruce: { kurdish: 'برووس', pronunciation: 'برووس (Bruce)' },
-    clark: { kurdish: 'کلارک', pronunciation: 'کلارک (Clark)' },
-    tony: { kurdish: 'تۆنی', pronunciation: 'تۆنی (To-ny)' },
-    steve: { kurdish: 'ستێڤ', pronunciation: 'ستێڤ (Steve)' },
-    sam: { kurdish: 'سام', pronunciation: 'سام (Sam)' },
-    alice: { kurdish: 'ئالیس', pronunciation: 'ئالیس (A-lice)' },
-    grace: { kurdish: 'گرەیْس', pronunciation: 'گرەیْس (Grace)' },
-  };
-
-  /** Auto-suggest Kurdish name and phonetic pronunciation guide for any character name */
-  function suggestKurdishNameAndPronun(origName) {
-    if (!origName) return { kurdish: '', pronunciation: '' };
-    const clean = origName.trim();
-    const lower = clean.toLowerCase();
-    if (KNOWN_CHARACTER_NAMES[lower]) {
-      return KNOWN_CHARACTER_NAMES[lower];
-    }
-
-    let kurdish = clean
-      .replace(/ph/gi, 'ف')
-      .replace(/sh/gi, 'ش')
-      .replace(/ch/gi, 'چ')
-      .replace(/th/gi, 'ث')
-      .replace(/kh/gi, 'خ')
-      .replace(/zh/gi, 'ژ')
-      .replace(/ck/gi, 'ک')
-      .replace(/ee/gi, 'ی')
-      .replace(/oo/gi, 'وو')
-      .replace(/ou/gi, 'وو')
-      .replace(/ai/gi, 'ەی')
-      .replace(/ea/gi, 'ی')
-      .replace(/ie/gi, 'ی')
-      .replace(/^a/gi, 'ئە')
-      .replace(/^e/gi, 'ئێـ')
-      .replace(/^i/gi, 'ئیـ')
-      .replace(/^o/gi, 'ئۆ')
-      .replace(/^u/gi, 'ئوو')
-      .replace(/a/gi, 'ا')
-      .replace(/b/gi, 'ب')
-      .replace(/c/gi, 'ک')
-      .replace(/d/gi, 'د')
-      .replace(/e/gi, 'ێ')
-      .replace(/f/gi, 'ف')
-      .replace(/g/gi, 'گ')
-      .replace(/h/gi, 'هـ')
-      .replace(/i/gi, 'ی')
-      .replace(/j/gi, 'ج')
-      .replace(/k/gi, 'ک')
-      .replace(/l/gi, 'ل')
-      .replace(/m/gi, 'م')
-      .replace(/n/gi, 'ن')
-      .replace(/o/gi, 'ۆ')
-      .replace(/p/gi, 'پ')
-      .replace(/q/gi, 'ق')
-      .replace(/r/gi, 'ڕ')
-      .replace(/s/gi, 'س')
-      .replace(/t/gi, 'ت')
-      .replace(/u/gi, 'وو')
-      .replace(/v/gi, 'ڤ')
-      .replace(/w/gi, 'و')
-      .replace(/x/gi, 'کس')
-      .replace(/y/gi, 'ی')
-      .replace(/z/gi, 'ز');
-
-    kurdish = kurdish.replace(/اا+/g, 'ا').replace(/یی+/g, 'ی').replace(/وووو+/g, 'وو');
-    return { kurdish, pronunciation: `${kurdish} (${clean})` };
-  }
-
-  /** Smart recognition scanning subtitle cues for speaker tags and character names */
-  function smartRecognizeNamesFromCues(cues) {
-    if (!cues || !cues.length) return [];
-    const nameCounts = new Map();
-
-    for (const cue of cues) {
-      const text = cue.rawText || cue.text || '';
-      if (!text) continue;
-
-      const speakerMatches = text.matchAll(/(?:^|[\r\n])(?:\[|\()?([A-Z][a-zA-Z'’-]{2,18})(?:\]|\))?\s*[:\-]/g);
-      for (const m of speakerMatches) {
-        const name = m[1].trim();
-        if (name && !/^(WEBVTT|NOTE|STYLE|REGION|DIALOGUE|START|END)$/i.test(name)) {
-          const norm = name.charAt(0).toUpperCase() + name.slice(1).toLowerCase();
-          nameCounts.set(norm, (nameCounts.get(norm) || 0) + 5);
-        }
-      }
-
-      const wordMatches = text.matchAll(/\b([A-Z][a-z]{2,15})\b/g);
-      for (const m of wordMatches) {
-        const name = m[1].trim();
-        if (!/^(The|And|You|They|What|Where|When|Why|How|This|That|Here|There|With|From|Have|Will|Would|Could|Should|Your|Their|Some|Many|Much|More|Most|Good|Well|Yeah|Okay|Sure|Please|Thank|Thanks|Hello|What's|There's|Here's)$/i.test(name)) {
-          nameCounts.set(name, (nameCounts.get(name) || 0) + 1);
-        }
-      }
-    }
-
-    const recognized = [];
-    const seenLower = new Set();
-    for (const [name, count] of nameCounts.entries()) {
-      if (count >= 2 && !seenLower.has(name.toLowerCase())) {
-        seenLower.add(name.toLowerCase());
-        const suggested = suggestKurdishNameAndPronun(name);
-        recognized.push({
-          id: Date.now().toString(36) + Math.random().toString(36).slice(2, 6),
-          original: name,
-          kurdish: suggested.kurdish,
-          pronunciation: suggested.pronunciation,
-        });
-      }
-    }
-
-    return recognized;
-  }
-
-  /** Apply character replacements to text across exact matches, speaker tags, and typo variations */
-  function applyCharacterReplacements(text, charNames, options = {}) {
-    if (!text || !charNames || !charNames.length) return text;
-    let result = text;
-    const fuzzy = options.fuzzyTypo !== false;
-
-    for (const entry of charNames) {
-      if (!entry || !entry.original || !entry.kurdish) continue;
-      const orig = entry.original.trim();
-      const kurdish = entry.kurdish.trim();
-      if (!orig || !kurdish) continue;
-
-      const escaped = orig.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-
-      const speakerRe = new RegExp(`(^|[\\s[\({<"'\`])` + escaped + `([:\\s\\])\}'>"'\`-]|$)`, 'gi');
-      result = result.replace(speakerRe, (m, p1, p2) => p1 + kurdish + p2);
-
-      const wordRe = new RegExp(`\\b` + escaped + `\\b`, 'gi');
-      result = result.replace(wordRe, kurdish);
-
-      if (fuzzy && orig.length >= 3) {
-        const typoPatterns = [];
-
-        for (let i = 0; i < orig.length - 1; i++) {
-          const transposed = orig.slice(0, i) + orig[i + 1] + orig[i] + orig.slice(i + 2);
-          if (transposed.toLowerCase() !== orig.toLowerCase()) {
-            typoPatterns.push(transposed.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'));
-          }
-        }
-
-        for (let i = 0; i < orig.length; i++) {
-          const duped = orig.slice(0, i + 1) + orig[i] + orig.slice(i + 1);
-          if (duped.toLowerCase() !== orig.toLowerCase()) {
-            typoPatterns.push(duped.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'));
-          }
-        }
-
-        if (typoPatterns.length > 0) {
-          const typoRe = new RegExp(`\\b(?:` + typoPatterns.join('|') + `)\\b`, 'gi');
-          result = result.replace(typoRe, kurdish);
-        }
-      }
-    }
-
-    return result;
-  }
-
   /** Prime the connection so the user's first real translation isn't also the
    *  first request to the endpoint. Google sometimes throttles a fresh cold
    *  hit and answers on a warm one; firing a tiny request at page load moves
@@ -1005,7 +1140,23 @@ const Translator = (() => {
     } catch {}
   }
 
-  return { translateLines, warmup, normalizeText, normalizeDigits, preprocessSource, protect, restore, cleanLeftoverTokens, fixPlacementAndTagOrder, naturalizeDialogue, normalizeForSearch, suggestKurdishNameAndPronun, smartRecognizeNamesFromCues, applyCharacterReplacements };
+  return {
+    translateLines,
+    warmup,
+    normalizeText,
+    normalizeDigits,
+    preprocessSource,
+    protect,
+    restore,
+    cleanLeftoverTokens,
+    fixPlacementAndTagOrder,
+    naturalizeDialogue,
+    normalizeForSearch,
+    checkLineQuality,
+    getAdvancedAlternatives,
+    postprocessSorani,
+    ADVANCED_SUBTITLE_LEXICON,
+  };
 })();
 
 if (typeof module !== 'undefined' && module.exports) module.exports = Translator;

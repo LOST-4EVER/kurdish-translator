@@ -147,6 +147,7 @@ const SubtitlePlayer = (() => {
   }
 
   function buildTimeline() {
+    if (!el.tlCues) return;
     el.tlCues.innerHTML = '';
     if (!total) return;
     const frag = document.createDocumentFragment();

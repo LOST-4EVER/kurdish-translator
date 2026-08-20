@@ -43,21 +43,23 @@
     fileName: '#fileName', fileMeta: '#fileMeta', changeFile: '#changeFile',
     srcLang: '#srcLang', tgtLang: '#tgtLang', keepOnly: '#keepOnly',
     includeOriginal: '#includeOriginal', accuracyToggle: '#accuracyToggle',
-    kurdishDigitsToggle: '#kurdishDigitsToggle', addBomToggle: '#addBomToggle',
-    crlfToggle: '#crlfToggle',
+    kurdishDigitsToggle: '#kurdishDigitsToggle', fixOverlapToggle: '#fixOverlapToggle',
+    addBomToggle: '#addBomToggle', crlfToggle: '#crlfToggle',
     openAdvModalBtn: '#openAdvModalBtn', closeAdvModalBtn: '#closeAdvModalBtn',
     doneAdvModalBtn: '#doneAdvModalBtn', advModalBackdrop: '#advModalBackdrop',
     advActiveBadge: '#advActiveBadge',
-    openCharModalBtn: '#openCharModalBtn', closeCharModalBtn: '#closeCharModalBtn',
-    doneCharModalBtn: '#doneCharModalBtn', charModalBackdrop: '#charModalBackdrop',
-    charActiveBadge: '#charActiveBadge', edCharBadge: '#edCharBadge',
-    edCharNamesBtn: '#edCharNamesBtn', smartRecognizeBtn: '#smartRecognizeBtn',
-    clearCharNamesBtn: '#clearCharNamesBtn', charOrigInput: '#charOrigInput',
-    charKurdishInput: '#charKurdishInput', charPronunInput: '#charPronunInput',
-    addCharNameBtn: '#addCharNameBtn', charNamesList: '#charNamesList',
-    charEmptyMsg: '#charEmptyMsg', applyNamesTransToggle: '#applyNamesTransToggle',
-    applyNamesPreviewToggle: '#applyNamesPreviewToggle', fuzzyTypoToggle: '#fuzzyTypoToggle',
-    replaceAllInSubtitlesBtn: '#replaceAllInSubtitlesBtn',
+    edQualityCheckBtn: '#edQualityCheckBtn', edQualityBadge: '#edQualityBadge',
+    qualityModalBackdrop: '#qualityModalBackdrop', qualityModalCard: '#qualityModalCard',
+    closeQualityModalBtn: '#closeQualityModalBtn', doneQualityModalBtn: '#doneQualityModalBtn',
+    qualityScoreVal: '#qualityScoreVal', qualityIssuesCount: '#qualityIssuesCount',
+    qualityOverlapCount: '#qualityOverlapCount', qualityAdvancedCount: '#qualityAdvancedCount',
+    fixAllQualityBtn: '#fixAllQualityBtn', fixOverlapsNowBtn: '#fixOverlapsNowBtn',
+    qualityCategoryTabs: '#qualityCategoryTabs', qualitySearchInput: '#qualitySearchInput',
+    qualitySearchClear: '#qualitySearchClear',
+    qTabAllCount: '#qTabAllCount', qTabOrthoCount: '#qTabOrthoCount',
+    qTabPrefixCount: '#qTabPrefixCount', qTabTimingCount: '#qTabTimingCount',
+    qTabIdiomsCount: '#qTabIdiomsCount',
+    qualityIssuesList: '#qualityIssuesList',
     exportFormatSel: '#exportFormatSel', langToggleBtn: '#langToggleBtn',
     translateBtn: '#translateBtn',
     progressFill: '#progressFill', progressPct: '#progressPct', progressSpeed: '#progressSpeed',
@@ -78,13 +80,17 @@
     syncVideoToggle: '#syncVideoToggle',
     skipBackBtn: '#skipBackBtn', skipForwardBtn: '#skipForwardBtn',
     fontSizeSel: '#fontSizeSel', fsFontSizeSel: '#fsFontSizeSel',
-    fsEdit: '#fsEdit', fsText: '#fsText', fsCueCount: '#fsCueCount',
+    fsEdit: '#fsEdit', fsScreen: '#fsScreen', fsCueCount: '#fsCueCount',
     fsToggleBtn: '#fsToggleBtn', fsEditBtn: '#fsEditBtn', fsClose: '#fsClose',
     fsPrevBtn: '#fsPrevBtn', fsNextBtn: '#fsNextBtn',
     fsUndoBtn: '#fsUndoBtn', fsRedoBtn: '#fsRedoBtn',
     fsEdUndoBtn: '#fsEdUndoBtn', fsEdRedoBtn: '#fsEdRedoBtn',
-    fsPlayBtn: '#fsPlayBtn', fsSkipBackBtn: '#fsSkipBackBtn', fsSkipForwardBtn: '#fsSkipForwardBtn',
-    fsEditor: '#fsEditor', fsInput: '#fsInput', fsDoneBtn: '#fsDoneBtn',
+    fsPlayBtn: '#fsPlayBtn', fsRestartBtn: '#fsRestartBtn', fsSpeedSel: '#fsSpeedSel',
+    fsSkipBackBtn: '#fsSkipBackBtn', fsSkipForwardBtn: '#fsSkipForwardBtn',
+    fsTimeline: '#fsTimeline', fsTlFill: '#fsTlFill', fsTlThumb: '#fsTlThumb', fsTlTooltip: '#fsTlTooltip',
+    fsEditor: '#fsEditor', fsInput: '#fsInput', fsDoneBtn: '#fsDoneBtn', fsEdPolishBtn: '#fsEdPolishBtn',
+    fsCharCount: '#fsCharCounter', fsPrevCueNavBtn: '#fsEdPrevCueBtn', fsNextCueNavBtn: '#fsEdNextCueBtn',
+    fsRewindFeedback: '#fsRewindFeedback', fsForwardFeedback: '#fsForwardFeedback',
     tourTriggerBtn: '#tourTriggerBtn', tourOverlay: '#tourOverlay',
     tourBackdrop: '#tourBackdrop', tourHighlight: '#tourHighlight',
     tourCard: '#tourCard', tourStepBadge: '#tourStepBadge',
@@ -170,7 +176,6 @@
   let workCues = null;  // editable cue set (what the player + editor show)
   let baseCues = null;  // saved cue set (used for download when "Save edits" is off)
   let dirty = false;    // true once the user has edited a line
-  let prepareTimer = null;
   let activeIdx = -1;   // cue index currently on screen
   let fsActive = false; // fullscreen edit mode on
   let fsCueIndex = -1;  // cue being edited in fullscreen
@@ -184,11 +189,6 @@
   let editorObserver = null;
   let copyTimer = null;
 
-  // Smart Character Naming System State
-  let charNames = [];   // Array of { id, original, kurdish, pronunciation }
-  let applyNamesTrans = true;
-  let applyNamesPreview = true;
-  let fuzzyTypo = true;
   const hasArabic = (s) => /[\u0600-\u06FF\u0750-\u077F]/.test(s);
   // Safari iOS ignores the `download` attribute on blob: URLs; iPadOS
   // identifies itself as a Mac, so detect touch too.
@@ -618,7 +618,9 @@
 
       const time = document.createElement('span');
       time.className = 'ed-time';
-      time.textContent = `${SubParser.fmtSRT(c.start)} → ${SubParser.fmtSRT(c.end)}`;
+      const startStr = SubParser.fmtSRT(c.start);
+      const endStr = SubParser.fmtSRT(c.end);
+      time.innerHTML = `<span class="ed-time-start">${startStr}</span><span class="ed-time-sep">➔</span><span class="ed-time-end">${endStr}</span>`;
       time.classList.toggle('hidden', !showTime);
 
       meta.appendChild(idx);
@@ -868,6 +870,7 @@
     buildEditor();
     prepareDownload();
     updateStatus();
+    runQualityInspection();
   }
 
   // ---------- Fullscreen edit mode ----------
@@ -1004,22 +1007,28 @@
       els.fsCueCount.textContent = primaryCue && workCues ? `Cue ${primaryCue.index} / ${workCues.length}` : 'Cue 0 / 0';
     }
 
+    const fmtMs = (ms) => {
+      const sec = Math.floor(ms / 1000);
+      const m = Math.floor(sec / 60);
+      const s = sec % 60;
+      return `${m}:${String(s).padStart(2, '0')}`;
+    };
+
     const fsTimeDisplay = document.querySelector('#fsTimeDisplay');
     if (fsTimeDisplay) {
-      const fmtMs = (ms) => {
-        const sec = Math.floor(ms / 1000);
-        const m = Math.floor(sec / 60);
-        const s = sec % 60;
-        return `${m}:${String(s).padStart(2, '0')}`;
-      };
       fsTimeDisplay.textContent = `${fmtMs(currentPos)} / ${fmtMs(currentDuration)}`;
     }
+
+    // Update Fullscreen Timeline Scrubber
+    const pct = currentDuration ? (currentPos / currentDuration) * 100 : 0;
+    if (els.fsTlFill) els.fsTlFill.style.width = `${pct}%`;
+    if (els.fsTlThumb) els.fsTlThumb.style.left = `${pct}%`;
 
     if (els.fsPlayBtn) {
       const isPlaying = typeof SubtitlePlayer !== 'undefined' && SubtitlePlayer.playing;
       els.fsPlayBtn.innerHTML = isPlaying
-        ? '<svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>'
-        : '<svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>';
+        ? '<svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>'
+        : '<svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>';
       els.fsPlayBtn.setAttribute('aria-label', isPlaying ? 'Pause' : 'Play');
     }
     fitFsText();
@@ -1031,20 +1040,31 @@
     if (els.fsInput) {
       els.fsInput.value = displayText(workCues[i].text);
       els.fsInput.setAttribute('dir', dirFor(els.fsInput.value));
+      updateFsCharCount();
+    }
+  }
+
+  function updateFsCharCount() {
+    if (els.fsCharCount && els.fsInput) {
+      const len = els.fsInput.value.length;
+      els.fsCharCount.textContent = `${len} chars`;
     }
   }
 
   let fsInitialText = '';
 
   function openFsEditor() {
-    const i = activeIdx;
+    const i = activeIdx >= 0 ? activeIdx : 0;
     if (i < 0 || !workCues || !workCues[i]) return;
     syncFsEditor(i);
     fsInitialText = els.fsInput ? els.fsInput.value : '';
     if (els.fsEditor) els.fsEditor.classList.remove('hidden');
     editWasPlaying = typeof SubtitlePlayer !== 'undefined' && SubtitlePlayer.playing;
-    if (typeof SubtitlePlayer !== 'undefined' && SubtitlePlayer.pause) SubtitlePlayer.pause(); // freeze the cue so you can type without it skipping away
-    if (els.fsInput) els.fsInput.focus(); // pops the keyboard so you can tap-edit immediately
+    if (typeof SubtitlePlayer !== 'undefined' && SubtitlePlayer.pause) SubtitlePlayer.pause();
+    if (els.fsInput) {
+      els.fsInput.focus();
+      updateFsCharCount();
+    }
     fitFsText();
   }
 
@@ -1062,8 +1082,6 @@
     if (!parsed || !workCues || !workCues.length) { toast('Load a subtitle file first.', true); return; }
     fsActive = true;
     if (els.fsEdit) els.fsEdit.classList.remove('hidden');
-    // Show the cue now on screen (falling back to active/first cue) so the
-    // fullscreen view is never a blank screen.
     const pos = typeof SubtitlePlayer !== 'undefined' ? SubtitlePlayer.position : 0;
     let i = workCues.findIndex((c) => pos >= c.start && pos < c.end);
     if (i < 0) {
@@ -1092,24 +1110,149 @@
     }
   }
 
+  function triggerGestureFeedback(type) {
+    const feedbackEl = type === 'rewind' ? els.fsRewindFeedback : els.fsForwardFeedback;
+    if (!feedbackEl) return;
+    feedbackEl.classList.remove('hidden');
+    feedbackEl.style.animation = 'none';
+    void feedbackEl.offsetWidth;
+    feedbackEl.style.animation = '';
+    setTimeout(() => {
+      if (feedbackEl) feedbackEl.classList.add('hidden');
+    }, 450);
+  }
+
+  function polishKurdishText(all = false) {
+    if (!workCues || !workCues.length) return;
+    if (typeof Translator === 'undefined' || !Translator.postprocessSorani) return;
+
+    if (all) {
+      workCues = workCues.map((cue) => ({
+        ...cue,
+        text: Translator.postprocessSorani(cue.text || '', { fixPunct: true })
+      }));
+      pushUndoState();
+      buildEditor();
+      if (typeof SubtitlePlayer !== 'undefined') SubtitlePlayer.updateText(workCues);
+      prepareDownload();
+      updateFsScreen();
+      toast(currentUiLang === 'ckb' ? 'هەموو دێڕەکان بە ستاندارد ڕێکخران!' : 'All lines polished with Kurdish Sorani typography!');
+    } else {
+      const idx = fsActive ? (fsCueIndex >= 0 ? fsCueIndex : activeIdx) : activeIdx;
+      if (idx >= 0 && workCues[idx]) {
+        const polished = Translator.postprocessSorani(workCues[idx].text || '', { fixPunct: true });
+        applyCueEdit(idx, polished);
+        if (els.fsInput) els.fsInput.value = polished;
+        updateFsScreen();
+        toast(currentUiLang === 'ckb' ? 'دێڕەکە ڕێکخرا!' : 'Line polished!');
+      }
+    }
+  }
+
   function bindFs() {
     if (els.fsToggleBtn) els.fsToggleBtn.addEventListener('click', () => (fsActive ? exitFs() : enterFs()));
     if (els.fsClose) els.fsClose.addEventListener('click', exitFs);
-    if (els.fsScreen) els.fsScreen.addEventListener('click', (e) => {
-      if (!e.target.closest('.fs-btn, button, select, input, textarea')) openFsEditor();
-    });
+
+    // Gestures on Fullscreen Screen Stage
+    let lastTapTime = 0;
+    let lastTapX = 0;
+
+    if (els.fsScreen) {
+      els.fsScreen.addEventListener('pointerdown', (e) => {
+        if (e.target.closest('.fs-btn, button, select, input, textarea')) return;
+        const now = Date.now();
+        const rect = els.fsScreen.getBoundingClientRect();
+        const tapXRatio = (e.clientX - rect.left) / rect.width;
+
+        if (now - lastTapTime < 320 && Math.abs(e.clientX - lastTapX) < 80) {
+          // Double Tap Triggered
+          if (tapXRatio < 0.35) {
+            // Double Tap Left: Skip Back 5s
+            SubtitlePlayer.jump(-5000);
+            updateFsScreen();
+            triggerGestureFeedback('rewind');
+          } else if (tapXRatio > 0.65) {
+            // Double Tap Right: Skip Forward 5s
+            SubtitlePlayer.jump(5000);
+            updateFsScreen();
+            triggerGestureFeedback('forward');
+          } else {
+            // Double Tap Center: Toggle Play
+            SubtitlePlayer.toggle();
+            updateFsScreen();
+          }
+          lastTapTime = 0;
+        } else {
+          lastTapTime = now;
+          lastTapX = e.clientX;
+        }
+      });
+
+      els.fsScreen.addEventListener('click', (e) => {
+        if (e.target.closest('.fs-btn, button, select, input, textarea')) return;
+        // Single tap opens/focuses the quick edit drawer
+        setTimeout(() => {
+          if (Date.now() - lastTapTime >= 300) {
+            openFsEditor();
+          }
+        }, 320);
+      });
+    }
+
     if (els.fsEditBtn) els.fsEditBtn.addEventListener('click', openFsEditor);
     if (els.fsDoneBtn) els.fsDoneBtn.addEventListener('click', closeFsEditor);
     if (els.fsPrevBtn) els.fsPrevBtn.addEventListener('click', () => { SubtitlePlayer.stepCue(-1); updateFsScreen(); });
     if (els.fsNextBtn) els.fsNextBtn.addEventListener('click', () => { SubtitlePlayer.stepCue(1); updateFsScreen(); });
+    if (els.fsRestartBtn) els.fsRestartBtn.addEventListener('click', () => { SubtitlePlayer.seek(0); updateFsScreen(); });
+
+    if (els.fsPrevCueNavBtn) {
+      els.fsPrevCueNavBtn.addEventListener('click', () => {
+        if (fsCueIndex > 0) {
+          syncFsEditor(fsCueIndex - 1);
+          SubtitlePlayer.seek(workCues[fsCueIndex].start);
+          updateFsScreen();
+        }
+      });
+    }
+    if (els.fsNextCueNavBtn) {
+      els.fsNextCueNavBtn.addEventListener('click', () => {
+        if (workCues && fsCueIndex < workCues.length - 1) {
+          syncFsEditor(fsCueIndex + 1);
+          SubtitlePlayer.seek(workCues[fsCueIndex].start);
+          updateFsScreen();
+        }
+      });
+    }
 
     if (els.fsPlayBtn) els.fsPlayBtn.addEventListener('click', () => { SubtitlePlayer.toggle(); updateFsScreen(); });
-    if (els.fsSkipBackBtn) els.fsSkipBackBtn.addEventListener('click', () => { SubtitlePlayer.seek(SubtitlePlayer.position - 5000); updateFsScreen(); });
-    if (els.fsSkipForwardBtn) els.fsSkipForwardBtn.addEventListener('click', () => { SubtitlePlayer.seek(SubtitlePlayer.position + 5000); updateFsScreen(); });
+    if (els.fsSkipBackBtn) {
+      els.fsSkipBackBtn.addEventListener('click', () => {
+        SubtitlePlayer.jump(-5000);
+        updateFsScreen();
+        triggerGestureFeedback('rewind');
+      });
+    }
+    if (els.fsSkipForwardBtn) {
+      els.fsSkipForwardBtn.addEventListener('click', () => {
+        SubtitlePlayer.jump(5000);
+        updateFsScreen();
+        triggerGestureFeedback('forward');
+      });
+    }
+    if (els.fsSpeedSel) {
+      els.fsSpeedSel.addEventListener('change', (e) => {
+        if (typeof SubtitlePlayer !== 'undefined' && els.speedSel) {
+          els.speedSel.value = e.target.value;
+          els.speedSel.dispatchEvent(new Event('change'));
+        }
+      });
+    }
+
     if (els.fsUndoBtn) els.fsUndoBtn.addEventListener('click', performUndo);
     if (els.fsRedoBtn) els.fsRedoBtn.addEventListener('click', performRedo);
     if (els.fsEdUndoBtn) els.fsEdUndoBtn.addEventListener('click', performUndo);
     if (els.fsEdRedoBtn) els.fsEdRedoBtn.addEventListener('click', performRedo);
+    if (els.fsEdPolishBtn) els.fsEdPolishBtn.addEventListener('click', () => polishKurdishText(false));
 
     if (els.fsFontSizeSel) {
       els.fsFontSizeSel.addEventListener('change', (e) => {
@@ -1117,18 +1260,68 @@
       });
     }
 
-    els.fsInput.addEventListener('input', () => {
-      if (fsCueIndex < 0 || !workCues[fsCueIndex]) return;
-      applyCueEdit(fsCueIndex, els.fsInput.value);
+    // Fullscreen Scrubber Timeline Interaction
+    const handleFsScrub = (e) => {
+      if (!els.fsTimeline) return;
+      const rect = els.fsTimeline.getBoundingClientRect();
+      const clampVal = (v, min, max) => Math.min(max, Math.max(min, v));
+      const ratio = clampVal((e.clientX - rect.left) / rect.width, 0, 1);
+      const targetMs = ratio * SubtitlePlayer.duration;
+      SubtitlePlayer.seek(targetMs);
       updateFsScreen();
-    });
+    };
 
-    els.fsInput.addEventListener('keydown', (e) => {
-      if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
-        e.preventDefault();
-        closeFsEditor();
+    if (els.fsTimeline) {
+      els.fsTimeline.addEventListener('pointerdown', (e) => {
+        els.fsTimeline.setPointerCapture(e.pointerId);
+        if (SubtitlePlayer.playing) SubtitlePlayer.pause();
+        handleFsScrub(e);
+
+        const onFsPointerMove = (moveEvent) => handleFsScrub(moveEvent);
+        const onFsPointerUp = (upEvent) => {
+          els.fsTimeline.releasePointerCapture(upEvent.pointerId);
+          els.fsTimeline.removeEventListener('pointermove', onFsPointerMove);
+          els.fsTimeline.removeEventListener('pointerup', onFsPointerUp);
+        };
+        els.fsTimeline.addEventListener('pointermove', onFsPointerMove);
+        els.fsTimeline.addEventListener('pointerup', onFsPointerUp);
+      });
+
+      if (els.fsTlTooltip) {
+        els.fsTimeline.addEventListener('pointermove', (e) => {
+          if (!SubtitlePlayer.duration) return;
+          const rect = els.fsTimeline.getBoundingClientRect();
+          const clampVal = (v, min, max) => Math.min(max, Math.max(min, v));
+          const ratio = clampVal((e.clientX - rect.left) / rect.width, 0, 1);
+          const hoverMs = ratio * SubtitlePlayer.duration;
+          const sec = Math.floor(hoverMs / 1000);
+          const m = Math.floor(sec / 60);
+          const s = sec % 60;
+          els.fsTlTooltip.textContent = `${m}:${String(s).padStart(2, '0')}`;
+          els.fsTlTooltip.style.left = `${ratio * 100}%`;
+          els.fsTlTooltip.classList.remove('hidden');
+        });
+        els.fsTimeline.addEventListener('pointerleave', () => {
+          els.fsTlTooltip.classList.add('hidden');
+        });
       }
-    });
+    }
+
+    if (els.fsInput) {
+      els.fsInput.addEventListener('input', () => {
+        if (fsCueIndex < 0 || !workCues || !workCues[fsCueIndex]) return;
+        applyCueEdit(fsCueIndex, els.fsInput.value);
+        updateFsCharCount();
+        updateFsScreen();
+      });
+
+      els.fsInput.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
+          e.preventDefault();
+          closeFsEditor();
+        }
+      });
+    }
 
     document.addEventListener('keydown', (e) => {
       if (!fsActive) return;
@@ -1137,7 +1330,6 @@
       }
     });
 
-    // Auto-fit fullscreen text on screen container resize (orientation change, keyboard toggle)
     if (typeof ResizeObserver !== 'undefined' && els.fsScreen) {
       const fsRo = new ResizeObserver(() => {
         if (fsActive) fitFsText();
@@ -1145,7 +1337,6 @@
       fsRo.observe(els.fsScreen);
     }
 
-    // Keep state in sync when the browser enters or exits fullscreen natively (Esc).
     const onFullscreenChange = () => {
       if (!document.fullscreenElement && !document.webkitFullscreenElement) {
         if (fsActive) exitFs();
@@ -1398,14 +1589,15 @@
       }, controller.signal, {
         accuracy,
         kurdishDigits,
-        applyNames: applyNamesTrans,
-        charNames: charNames,
-        fuzzyTypo: fuzzyTypo,
         onBatch: (results, done) => { if (!cancelFlag) renderLive(results, done); }
       });
       if (cancelFlag) return; // cancelled mid-run: discard results, stay on settings
 
-      const finalCues = applyTranslation(translated);
+      let finalCues = applyTranslation(translated);
+      const fixOverlapChecked = els.fixOverlapToggle ? els.fixOverlapToggle.checked : true;
+      if (fixOverlapChecked && typeof SubParser !== 'undefined' && SubParser.fixOverlaps) {
+        finalCues = SubParser.fixOverlaps(finalCues, { mode: 'trim', minDurationMs: 600, gapMs: 20 });
+      }
 
       updateCues(finalCues);
       showStep('done');
@@ -1459,7 +1651,12 @@
   function prepareDownload() {
     if (!parsed || !file) return;
     // Edits are included in the output only when "Save edits" is on.
-    const cues = els.saveEditsToggle.checked ? workCues : baseCues;
+    let cues = els.saveEditsToggle.checked ? workCues : baseCues;
+
+    const fixOverlapChecked = els.fixOverlapToggle ? els.fixOverlapToggle.checked : true;
+    if (fixOverlapChecked && typeof SubParser !== 'undefined' && SubParser.fixOverlaps) {
+      cues = SubParser.fixOverlaps(cues, { mode: 'trim', minDurationMs: 600, gapMs: 20 });
+    }
 
     // Determine chosen export format
     const formatChoice = els.exportFormatSel ? els.exportFormatSel.value : 'original';
@@ -1516,208 +1713,410 @@
     }
   }
 
-  // ---------- Smart Character Naming Logic ----------
-  function updateCharBadges() {
-    const count = charNames ? charNames.length : 0;
-    if (els.charActiveBadge) {
-      els.charActiveBadge.textContent = String(count);
-      els.charActiveBadge.classList.toggle('active', count > 0);
+  // ---------- Line Quality & Advanced Expression Inspector ----------
+  let currentQualityFilter = 'all';
+  let currentQualityQuery = '';
+  let lastQualityIssues = [];
+
+  function openQualityModal() {
+    if (!els.qualityModalBackdrop) return;
+    currentQualityFilter = 'all';
+    currentQualityQuery = '';
+    if (els.qualitySearchInput) els.qualitySearchInput.value = '';
+    if (els.qualitySearchClear) els.qualitySearchClear.classList.add('hidden');
+    if (els.qualityCategoryTabs) {
+      els.qualityCategoryTabs.querySelectorAll('.quality-tab').forEach((tab) => {
+        tab.classList.toggle('active', tab.dataset.filter === 'all');
+      });
     }
-    if (els.edCharBadge) {
-      els.edCharBadge.textContent = String(count);
-      els.edCharBadge.dataset.count = String(count);
+    runQualityInspection();
+    els.qualityModalBackdrop.classList.remove('hidden');
+  }
+
+  function closeQualityModal() {
+    if (els.qualityModalBackdrop) {
+      els.qualityModalBackdrop.classList.add('hidden');
     }
   }
 
-  function saveCharNames() {
-    store.set('app_char_names', JSON.stringify(charNames));
-    store.set('app_names_trans', applyNamesTrans ? '1' : '0');
-    store.set('app_names_preview', applyNamesPreview ? '1' : '0');
-    store.set('app_fuzzy_typo', fuzzyTypo ? '1' : '0');
-    updateCharBadges();
-    renderCharNamesList();
-  }
-
-  function renderCharNamesList() {
-    if (!els.charNamesList) return;
-    els.charNamesList.innerHTML = '';
-
-    if (!charNames || charNames.length === 0) {
-      if (els.charEmptyMsg) els.charEmptyMsg.classList.remove('hidden');
+  function runQualityInspection() {
+    const cues = workCues || (parsed && parsed.cues) || [];
+    if (!cues.length) {
+      if (els.qualityScoreVal) els.qualityScoreVal.textContent = '100%';
+      if (els.qualityIssuesCount) els.qualityIssuesCount.textContent = '0';
+      if (els.qualityOverlapCount) els.qualityOverlapCount.textContent = '0';
+      if (els.qualityAdvancedCount) els.qualityAdvancedCount.textContent = '0';
+      if (els.qTabAllCount) els.qTabAllCount.textContent = '0';
+      if (els.qTabOrthoCount) els.qTabOrthoCount.textContent = '0';
+      if (els.qTabPrefixCount) els.qTabPrefixCount.textContent = '0';
+      if (els.qTabTimingCount) els.qTabTimingCount.textContent = '0';
+      if (els.qTabIdiomsCount) els.qTabIdiomsCount.textContent = '0';
+      if (els.qualityIssuesList) {
+        els.qualityIssuesList.innerHTML = `<div class="char-empty-msg" style="padding: 2.5rem 1rem; text-align: center; color: var(--text-muted);">
+          ${currentUiLang === 'ckb' ? 'هیچ فایلی ژێرنووس بارنەکراوە.' : 'No subtitles loaded yet. Upload a file to inspect line quality.'}
+        </div>`;
+      }
       return;
     }
-    if (els.charEmptyMsg) els.charEmptyMsg.classList.add('hidden');
 
-    const frag = document.createDocumentFragment();
-    charNames.forEach((item) => {
-      const card = document.createElement('div');
-      card.className = 'char-item';
-      card.dataset.id = item.id;
+    let totalScore = 0;
+    const issuesFound = [];
+    let overlapCount = 0;
+    let advancedCount = 0;
+    let orthoCount = 0;
+    let prefixCount = 0;
+    let timingCount = 0;
+    let idiomsLineCount = 0;
 
-      const namesGroup = document.createElement('div');
-      namesGroup.className = 'char-item-names';
+    // Check dialogue overlap
+    for (let i = 0; i < cues.length - 1; i++) {
+      if (cues[i].end > cues[i + 1].start) {
+        overlapCount++;
+      }
+    }
 
-      const origPill = document.createElement('span');
-      origPill.className = 'char-pill-orig';
-      origPill.textContent = item.original;
+    cues.forEach((cue, index) => {
+      const kurdText = cue.text || '';
+      const srcText = (liveSource && liveSource[index]) || (parsed && parsed.cues && parsed.cues[index] && parsed.cues[index].text) || kurdText;
+      const res = (typeof Translator !== 'undefined' && Translator.checkLineQuality)
+        ? Translator.checkLineQuality(srcText, kurdText)
+        : { score: 100, issues: [], issueDetails: [], suggestions: [] };
+      const advAlts = (typeof Translator !== 'undefined' && Translator.getAdvancedAlternatives)
+        ? Translator.getAdvancedAlternatives(srcText)
+        : [];
 
-      const arrow = document.createElement('span');
-      arrow.className = 'char-arrow';
-      arrow.textContent = '→';
-
-      const kurdPill = document.createElement('span');
-      kurdPill.className = 'char-pill-kurdish';
-      kurdPill.textContent = item.kurdish;
-      kurdPill.setAttribute('dir', 'rtl');
-
-      namesGroup.appendChild(origPill);
-      namesGroup.appendChild(arrow);
-      namesGroup.appendChild(kurdPill);
-
-      if (item.pronunciation && item.pronunciation.trim()) {
-        const pronunChip = document.createElement('span');
-        pronunChip.className = 'char-pronun-chip';
-        pronunChip.textContent = `🗣️ ${item.pronunciation}`;
-        namesGroup.appendChild(pronunChip);
+      // Check if this cue has an overlap with next cue
+      const hasOverlap = index < cues.length - 1 && cue.end > cues[index + 1].start;
+      if (hasOverlap) {
+        res.issues.push(currentUiLang === 'ckb' ? 'تێکەڵبوونی کات لەگەڵ دێڕی دواتر (Overlap)' : 'Timing overlap with next line');
+        res.score = Math.max(10, res.score - 15);
       }
 
-      const delBtn = document.createElement('button');
-      delBtn.type = 'button';
-      delBtn.className = 'char-del-btn';
-      delBtn.title = 'Remove name';
-      delBtn.innerHTML = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>`;
-      delBtn.addEventListener('click', () => {
-        deleteCharName(item.id);
+      // Determine categories for this line
+      const categories = new Set();
+      if (res.issueDetails && res.issueDetails.length > 0) {
+        res.issueDetails.forEach((d) => {
+          if (d.category) categories.add(d.category);
+        });
+      }
+      res.issues.forEach((iss) => {
+        if (/ڕێنووس|پیت|Arabic|letter|alphabet|glyph|tatweel|hamza/i.test(iss)) categories.add('orthography');
+        else if (/پێشگر|دیالۆگ|prefix|affix|verbal|dialogue/i.test(iss)) categories.add('prefix');
+        else if (/کات|overlap|duration|timing|length|درێژی/i.test(iss)) categories.add('timing');
       });
+      if (hasOverlap) categories.add('timing');
+      if (advAlts.length > 0) {
+        categories.add('idioms');
+        advancedCount += advAlts.length;
+      }
 
-      card.appendChild(namesGroup);
-      card.appendChild(delBtn);
+      totalScore += res.score;
+
+      const hasLineIssues = res.issues.length > 0 || advAlts.length > 0 || hasOverlap;
+      if (hasLineIssues) {
+        if (categories.has('orthography')) orthoCount++;
+        if (categories.has('prefix')) prefixCount++;
+        if (categories.has('timing')) timingCount++;
+        if (categories.has('idioms')) idiomsLineCount++;
+
+        issuesFound.push({
+          index: index + 1,
+          cueIndex: index,
+          start: cue.start,
+          end: cue.end,
+          srcText,
+          kurdText,
+          score: res.score,
+          issues: res.issues,
+          issueDetails: res.issueDetails || [],
+          categories: Array.from(categories),
+          suggestions: res.suggestions,
+          advancedAlternatives: advAlts,
+          hasOverlap: hasOverlap
+        });
+      }
+    });
+
+    const avgScore = Math.max(10, Math.min(100, Math.round(totalScore / Math.max(1, cues.length))));
+    if (els.qualityScoreVal) els.qualityScoreVal.textContent = `${avgScore}%`;
+    if (els.edQualityBadge) {
+      els.edQualityBadge.textContent = `${avgScore}%`;
+      els.edQualityBadge.classList.toggle('warning', avgScore < 85 && avgScore >= 60);
+      els.edQualityBadge.classList.toggle('alert', avgScore < 60);
+    }
+    if (els.qualityIssuesCount) els.qualityIssuesCount.textContent = String(issuesFound.length);
+    if (els.qualityOverlapCount) els.qualityOverlapCount.textContent = String(overlapCount);
+    if (els.qualityAdvancedCount) els.qualityAdvancedCount.textContent = String(advancedCount);
+
+    if (els.qTabAllCount) els.qTabAllCount.textContent = String(issuesFound.length);
+    if (els.qTabOrthoCount) els.qTabOrthoCount.textContent = String(orthoCount);
+    if (els.qTabPrefixCount) els.qTabPrefixCount.textContent = String(prefixCount);
+    if (els.qTabTimingCount) els.qTabTimingCount.textContent = String(timingCount);
+    if (els.qTabIdiomsCount) els.qTabIdiomsCount.textContent = String(idiomsLineCount);
+
+    lastQualityIssues = issuesFound;
+    renderQualityIssuesList(issuesFound);
+  }
+
+  function renderQualityIssuesList(issues) {
+    if (!els.qualityIssuesList) return;
+    els.qualityIssuesList.innerHTML = '';
+
+    const listToRender = issues || lastQualityIssues || [];
+
+    if (!listToRender.length) {
+      els.qualityIssuesList.innerHTML = `<div class="char-empty-msg" style="padding: 2.5rem 1rem; text-align: center; color: var(--text-muted);">
+        <div style="font-size: 2.5rem; margin-bottom: 0.5rem;">🎉</div>
+        <div style="font-weight: 600; font-size: 1.1rem; color: var(--text-primary); margin-bottom: 0.25rem;">
+          ${currentUiLang === 'ckb' ? 'هەموو دێڕەکان بێ کێشەن و ستانداردن!' : 'All Lines Look Great!'}
+        </div>
+        <div>${currentUiLang === 'ckb' ? 'هیچ کێشەیەکی ڕێزمانی، پیت، یان تێکەڵبوونی کات نەدۆزرایەوە.' : 'No punctuation anomalies, raw Arabic glyphs, or dialogue overlaps detected.'}</div>
+      </div>`;
+      return;
+    }
+
+    const query = (currentQualityQuery || '').trim().toLowerCase();
+    const filterCat = currentQualityFilter || 'all';
+
+    let visibleCount = 0;
+    const frag = document.createDocumentFragment();
+
+    listToRender.forEach((item) => {
+      // Category filter check
+      if (filterCat !== 'all') {
+        if (filterCat === 'orthography' && !item.categories.includes('orthography')) return;
+        if (filterCat === 'prefix' && !item.categories.includes('prefix')) return;
+        if (filterCat === 'timing' && !item.categories.includes('timing')) return;
+        if (filterCat === 'idioms' && !item.categories.includes('idioms')) return;
+      }
+
+      // Search query check
+      if (query) {
+        const textMatch = item.srcText.toLowerCase().includes(query) || item.kurdText.toLowerCase().includes(query);
+        const issueMatch = item.issues.some((iss) => iss.toLowerCase().includes(query));
+        const altMatch = (item.advancedAlternatives || []).some((alt) => alt.kurdish.toLowerCase().includes(query) || (alt.context && alt.context.toLowerCase().includes(query)));
+        if (!textMatch && !issueMatch && !altMatch) return;
+      }
+
+      visibleCount++;
+
+      const card = document.createElement('div');
+      card.className = 'quality-issue-card';
+      card.dataset.cueIndex = String(item.cueIndex);
+      card.dataset.categories = item.categories.join(' ');
+
+      const timeFmt = (typeof SubParser !== 'undefined') ? `${SubParser.fmtSRT(item.start)} ➔ ${SubParser.fmtSRT(item.end)}` : '';
+
+      let tagsHtml = item.issues.map((iss) => {
+        let tagClass = 'quality-issue-tag';
+        if (/overlap|timing|تێکەڵبوونی/i.test(iss)) tagClass += ' warning';
+        else if (/character|name|ناو/i.test(iss)) tagClass += ' info';
+        return `<span class="${tagClass}">${iss}</span>`;
+      }).join('');
+
+      if (item.advancedAlternatives && item.advancedAlternatives.length > 0) {
+        tagsHtml += `<span class="quality-issue-tag idiom">
+          ⚡ ${currentUiLang === 'ckb' ? 'دەستەواژەی پێشکەوتوو' : 'Advanced Expressions'}
+        </span>`;
+      }
+
+      let altsHtml = '';
+      if (item.advancedAlternatives && item.advancedAlternatives.length > 0) {
+        altsHtml = `
+          <div class="quality-alts-box" style="margin-top: 0.75rem; padding: 0.6rem 0.75rem; background: var(--surface-secondary, rgba(255,255,255,0.04)); border-radius: 8px; border: 1px dashed var(--border-color, rgba(255,255,255,0.15));">
+            <div style="font-size: 0.75rem; font-weight: 600; color: var(--text-muted, #94a3b8); margin-bottom: 0.4rem;">
+              💡 ${currentUiLang === 'ckb' ? 'پێشنیارە گونجاوەکانی کوردی (کلیک بکە بۆ جێبەجێکردن):' : 'Natural Kurdish alternatives (click to apply):'}
+            </div>
+            <div style="display: flex; flex-wrap: wrap; gap: 0.4rem;">
+              ${item.advancedAlternatives.map((alt) => `
+                <button type="button" class="alt-chip-btn" data-cue-index="${item.cueIndex}" data-rep="${alt.kurdish.replace(/"/g, '&quot;')}" style="font-size: 0.8rem; padding: 0.35rem 0.65rem; background: var(--bg-surface, #1e293b); border: 1px solid var(--accent-primary, #6366f1); border-radius: 6px; color: var(--accent-primary, #818cf8); cursor: pointer; display: inline-flex; align-items: center; gap: 0.35rem; transition: all 0.15s ease;">
+                  <span style="font-weight: bold;">+</span>
+                  <span dir="rtl" style="font-weight: 600; font-family: 'Noto Naskh Arabic', sans-serif;">${alt.kurdish}</span>
+                  ${alt.context ? `<span style="font-size: 0.7rem; opacity: 0.75;">(${alt.context})</span>` : ''}
+                </button>
+              `).join('')}
+            </div>
+          </div>
+        `;
+      }
+
+      card.innerHTML = `
+        <div class="quality-issue-head" style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.5rem;">
+          <div style="display: flex; align-items: center; gap: 0.5rem;">
+            <span style="font-weight: 700; font-size: 0.85rem; color: var(--accent-primary, #818cf8);">#${item.index}</span>
+            <span style="font-size: 0.75rem; font-family: monospace; color: var(--text-muted, #94a3b8);">${timeFmt}</span>
+          </div>
+          <div style="display: flex; gap: 0.4rem; align-items: center;">
+            <button type="button" class="quick-fix-row-btn btn-xs" data-cue-index="${item.cueIndex}" style="font-size: 0.75rem; padding: 0.3rem 0.6rem; background: var(--accent-primary, #6366f1); color: #fff; border: none; border-radius: 4px; cursor: pointer; font-weight: 600; transition: opacity 0.15s ease;">
+              ⚡ ${currentUiLang === 'ckb' ? 'چاکسازی خۆکار' : 'Auto Polish'}
+            </button>
+            <button type="button" class="goto-cue-btn btn-xs" data-cue-index="${item.cueIndex}" style="font-size: 0.75rem; padding: 0.3rem 0.6rem; background: var(--surface-secondary, rgba(255,255,255,0.06)); color: var(--text-primary, #f8fafc); border: 1px solid var(--border-color, rgba(255,255,255,0.12)); border-radius: 4px; cursor: pointer;">
+              ${currentUiLang === 'ckb' ? 'دەستکاری' : 'Edit'}
+            </button>
+          </div>
+        </div>
+        <div style="display: flex; flex-wrap: wrap; gap: 0.35rem; margin-bottom: 0.6rem;">
+          ${tagsHtml}
+        </div>
+        <div class="quality-texts" style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; font-size: 0.85rem;">
+          <div style="padding: 0.6rem; background: var(--surface-secondary, rgba(255,255,255,0.03)); border-radius: 6px; border: 1px solid var(--border-color, rgba(255,255,255,0.1)); color: var(--text-muted, #94a3b8); word-break: break-word;">
+            <div style="font-size: 0.7rem; font-weight: 700; text-transform: uppercase; margin-bottom: 0.25rem; letter-spacing: 0.5px;">Original</div>
+            <div style="line-height: 1.4;">${displayText(item.srcText)}</div>
+          </div>
+          <div style="padding: 0.6rem; background: var(--bg-surface, rgba(0,0,0,0.25)); border-radius: 6px; border: 1px solid var(--border-color, rgba(255,255,255,0.1)); word-break: break-word;" dir="rtl">
+            <div style="font-size: 0.7rem; font-weight: 700; text-transform: uppercase; margin-bottom: 0.25rem; color: var(--text-muted, #94a3b8); letter-spacing: 0.5px;" dir="ltr">Kurdish Sorani</div>
+            <div class="kurd-val-text" style="font-family: 'Noto Naskh Arabic', 'Vazirmatn', sans-serif; font-size: 14px; line-height: 1.5; color: var(--text-primary, #f8fafc);">${displayText(item.kurdText)}</div>
+          </div>
+        </div>
+        ${altsHtml}
+      `;
+
       frag.appendChild(card);
     });
 
-    els.charNamesList.appendChild(frag);
-  }
+    if (visibleCount === 0) {
+      els.qualityIssuesList.innerHTML = `<div class="char-empty-msg" style="padding: 2.5rem 1rem; text-align: center; color: var(--text-muted);">
+        ${currentUiLang === 'ckb' ? 'هیچ ئەنجامێک نەدۆزرایەوە بۆ ئەم فلتەرە.' : 'No issues found matching current filter/search.'}
+      </div>`;
+      return;
+    }
 
-  function addCharName(original, kurdish, pronunciation) {
-    if (!original || !original.trim() || !kurdish || !kurdish.trim()) return;
-    const origTrim = original.trim();
-    const kurdTrim = kurdish.trim();
-    const pronunTrim = pronunciation ? pronunciation.trim() : '';
+    els.qualityIssuesList.appendChild(frag);
 
-    charNames = charNames.filter((c) => c.original.toLowerCase() !== origTrim.toLowerCase());
-    charNames.push({
-      id: Date.now().toString(36) + Math.random().toString(36).slice(2, 6),
-      original: origTrim,
-      kurdish: kurdTrim,
-      pronunciation: pronunTrim,
+    // Bind event handlers inside list
+    els.qualityIssuesList.querySelectorAll('.alt-chip-btn').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const cIdx = parseInt(btn.dataset.cueIndex, 10);
+        const rep = btn.dataset.rep;
+        if (!isNaN(cIdx) && rep && workCues && workCues[cIdx]) {
+          applyCueEdit(cIdx, rep);
+          btn.style.background = 'var(--accent-primary, #6366f1)';
+          btn.style.color = '#fff';
+          btn.textContent = '✓ Applied';
+          setTimeout(() => runQualityInspection(), 250);
+        }
+      });
     });
 
-    saveCharNames();
-    if (els.charOrigInput) els.charOrigInput.value = '';
-    if (els.charKurdishInput) els.charKurdishInput.value = '';
-    if (els.charPronunInput) els.charPronunInput.value = '';
+    els.qualityIssuesList.querySelectorAll('.quick-fix-row-btn').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const cIdx = parseInt(btn.dataset.cueIndex, 10);
+        if (!isNaN(cIdx) && workCues && workCues[cIdx]) {
+          const kurdDigitsVal = els.kurdishDigitsToggle ? els.kurdishDigitsToggle.checked : false;
+          const polished = Translator.postprocessSorani(workCues[cIdx].text, {
+            kurdishDigits: kurdDigitsVal
+          });
+          applyCueEdit(cIdx, polished);
+          btn.textContent = '✓ Fixed';
+          btn.disabled = true;
+          setTimeout(() => runQualityInspection(), 250);
+        }
+      });
+    });
+
+    els.qualityIssuesList.querySelectorAll('.goto-cue-btn').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const cIdx = parseInt(btn.dataset.cueIndex, 10);
+        closeQualityModal();
+        switchTab('preview');
+        setTimeout(() => {
+          if (rowEls && rowEls[cIdx]) {
+            rowEls[cIdx].scrollIntoView({ behavior: 'smooth', block: 'center' });
+            const input = rowEls[cIdx].querySelector('.ed-input');
+            if (input) input.focus();
+          }
+        }, 150);
+      });
+    });
   }
 
-  function deleteCharName(id) {
-    charNames = charNames.filter((c) => c.id !== id);
-    saveCharNames();
-  }
-
-  function openCharModal() {
-    if (els.charModalBackdrop) {
-      renderCharNamesList();
-      els.charModalBackdrop.classList.remove('hidden');
-    }
-  }
-
-  function closeCharModal() {
-    if (els.charModalBackdrop) {
-      els.charModalBackdrop.classList.add('hidden');
-    }
-  }
-
-  function runSmartRecognition() {
-    let cuesToScan = workCues;
-    if (!cuesToScan || !cuesToScan.length) {
-      if (parsed && parsed.cues) cuesToScan = parsed.cues;
-    }
-
-    if (!cuesToScan || !cuesToScan.length) {
-      toast(
-        currentUiLang === 'ckb' ? 'تکایە سەرەتا فایلی ژێرنووس باربکە' : 'Please upload a subtitle file first',
-        true
-      );
-      return;
-    }
-
-    const recognized = Translator.smartRecognizeNamesFromCues(cuesToScan);
-    if (!recognized || !recognized.length) {
-      toast(
-        currentUiLang === 'ckb' ? 'هیچ ناوی نوێ دەستنیشان نەکرا' : 'No new character names detected',
-        false
-      );
-      return;
-    }
-
-    const existingOrigs = new Set(charNames.map((c) => c.original.toLowerCase()));
-    let addedCount = 0;
-    recognized.forEach((rec) => {
-      if (!existingOrigs.has(rec.original.toLowerCase())) {
-        charNames.push(rec);
-        addedCount++;
+  function filterQualityList() {
+    if (els.qualitySearchInput) {
+      currentQualityQuery = els.qualitySearchInput.value;
+      if (els.qualitySearchClear) {
+        els.qualitySearchClear.classList.toggle('hidden', !currentQualityQuery);
       }
-    });
-
-    saveCharNames();
-    const dict = dicts[currentUiLang] || dicts.en;
-    toast(dict.toastNamesRecognized || 'Smart Recognition detected character names!');
+    }
+    renderQualityIssuesList(lastQualityIssues);
   }
 
-  function replaceAllCharNamesInSubtitles() {
+  function fixAllQuality() {
     if (!workCues || !workCues.length) {
-      toast(
-        currentUiLang === 'ckb' ? 'هیچ فایلی ژێرنووس بەردەست نییە' : 'No subtitle file loaded',
-        true
-      );
+      toast(currentUiLang === 'ckb' ? 'هیچ ژێرنووسێک نییە بۆ چاکسازی.' : 'No subtitles to polish.', true);
       return;
     }
 
-    if (!charNames || !charNames.length) {
-      toast(
-        currentUiLang === 'ckb' ? 'هیچ ناوی کەسایەتی بەردەست نییە' : 'No character names added yet',
-        true
-      );
-      return;
-    }
+    const kurdDigitsVal = els.kurdishDigitsToggle ? els.kurdishDigitsToggle.checked : false;
 
-    let replacedCount = 0;
-    const options = { fuzzyTypo: fuzzyTypo };
-
-    workCues = workCues.map((cue) => {
-      const oldText = cue.text || '';
-      const newText = Translator.applyCharacterReplacements(oldText, charNames, options);
-      if (oldText !== newText) replacedCount++;
-      return { ...cue, text: newText };
+    // 1. Polish all Kurdish text
+    workCues = workCues.map((c) => {
+      const pol = Translator.postprocessSorani(c.text, {
+        kurdishDigits: kurdDigitsVal
+      });
+      return { ...c, text: pol };
     });
 
     if (baseCues) {
-      baseCues = baseCues.map((cue) => {
-        const oldText = cue.text || '';
-        const newText = Translator.applyCharacterReplacements(oldText, charNames, options);
-        return { ...cue, text: newText };
+      baseCues = baseCues.map((c) => {
+        const pol = Translator.postprocessSorani(c.text, {
+          kurdishDigits: kurdDigitsVal
+        });
+        return { ...c, text: pol };
       });
+    }
+
+    // 2. Fix all dialogue overlaps
+    if (typeof SubParser !== 'undefined' && SubParser.fixOverlaps) {
+      workCues = SubParser.fixOverlaps(workCues, { mode: 'trim', minDurationMs: 600, gapMs: 20 });
+      if (baseCues) {
+        baseCues = SubParser.fixOverlaps(baseCues, { mode: 'trim', minDurationMs: 600, gapMs: 20 });
+      }
     }
 
     dirty = true;
     updateStatus();
     buildEditor();
     if (typeof SubtitlePlayer !== 'undefined') {
-      SubtitlePlayer.updateText(workCues);
+      SubtitlePlayer.load(workCues);
     }
     prepareDownload();
+    runQualityInspection();
 
     const dict = dicts[currentUiLang] || dicts.en;
-    toast(dict.toastNamesReplaced || 'Replaced character names across subtitles!');
+    toast(
+      currentUiLang === 'ckb'
+        ? '🎉 هەموو دێڕەکان بە ستانداردی کوردی چاککران و کاتەکان ڕێکخران!'
+        : '🎉 Auto-polished all lines and resolved dialogue overlaps!'
+    );
+  }
+
+  function fixDialogueOverlapsNow() {
+    if (!workCues || !workCues.length) {
+      toast(currentUiLang === 'ckb' ? 'هیچ ژێرنووسێک بارنەکراوە.' : 'No subtitles loaded.', true);
+      return;
+    }
+
+    if (typeof SubParser !== 'undefined' && SubParser.fixOverlaps) {
+      workCues = SubParser.fixOverlaps(workCues, { mode: 'trim', minDurationMs: 600, gapMs: 20 });
+      if (baseCues) {
+        baseCues = SubParser.fixOverlaps(baseCues, { mode: 'trim', minDurationMs: 600, gapMs: 20 });
+      }
+    }
+
+    dirty = true;
+    updateStatus();
+    buildEditor();
+    if (typeof SubtitlePlayer !== 'undefined') {
+      SubtitlePlayer.load(workCues);
+    }
+    prepareDownload();
+    runQualityInspection();
+
+    toast(
+      currentUiLang === 'ckb'
+        ? '✓ کاتی ژێرنووسە تێکەڵبووەکان بە سەرکەوتوویی ڕێکخرانەوە!'
+        : '✓ Dialogue overlaps resolved and timed cleanly!'
+    );
   }
 
   // ---------- Wire up ----------
@@ -1784,70 +2183,61 @@
       });
     }
 
-    if (els.openCharModalBtn) els.openCharModalBtn.addEventListener('click', openCharModal);
-    if (els.edCharNamesBtn) els.edCharNamesBtn.addEventListener('click', openCharModal);
-    if (els.closeCharModalBtn) els.closeCharModalBtn.addEventListener('click', closeCharModal);
-    if (els.doneCharModalBtn) els.doneCharModalBtn.addEventListener('click', closeCharModal);
 
-    if (els.charModalBackdrop) {
-      els.charModalBackdrop.addEventListener('click', (e) => {
-        if (e.target === els.charModalBackdrop) closeCharModal();
+
+    if (els.fixOverlapToggle) {
+      els.fixOverlapToggle.addEventListener('change', () => {
+        store.set('fix_overlap', els.fixOverlapToggle.checked ? '1' : '0');
+        prepareDownload();
+        runQualityInspection();
       });
     }
 
-    if (els.addCharNameBtn) {
-      els.addCharNameBtn.addEventListener('click', () => {
-        const orig = els.charOrigInput ? els.charOrigInput.value : '';
-        const kurd = els.charKurdishInput ? els.charKurdishInput.value : '';
-        const pron = els.charPronunInput ? els.charPronunInput.value : '';
-        addCharName(orig, kurd, pron);
+    // Quality Inspection modal bindings
+    if (els.edQualityCheckBtn) els.edQualityCheckBtn.addEventListener('click', openQualityModal);
+    if (els.closeQualityModalBtn) els.closeQualityModalBtn.addEventListener('click', closeQualityModal);
+    if (els.doneQualityModalBtn) els.doneQualityModalBtn.addEventListener('click', closeQualityModal);
+    if (els.fixAllQualityBtn) els.fixAllQualityBtn.addEventListener('click', fixAllQuality);
+    if (els.fixOverlapsNowBtn) els.fixOverlapsNowBtn.addEventListener('click', fixDialogueOverlapsNow);
+
+    if (els.qualityCategoryTabs) {
+      els.qualityCategoryTabs.querySelectorAll('.quality-tab').forEach((tab) => {
+        tab.addEventListener('click', () => {
+          els.qualityCategoryTabs.querySelectorAll('.quality-tab').forEach((t) => t.classList.remove('active'));
+          tab.classList.add('active');
+          currentQualityFilter = tab.dataset.filter || 'all';
+          renderQualityIssuesList(lastQualityIssues);
+        });
       });
     }
 
-    const handleCharInputEnter = (e) => {
-      if (e.key === 'Enter') {
-        e.preventDefault();
-        const orig = els.charOrigInput ? els.charOrigInput.value : '';
-        const kurd = els.charKurdishInput ? els.charKurdishInput.value : '';
-        const pron = els.charPronunInput ? els.charPronunInput.value : '';
-        addCharName(orig, kurd, pron);
+    if (els.qualitySearchInput) {
+      els.qualitySearchInput.addEventListener('input', () => {
+        filterQualityList();
+      });
+    }
+
+    if (els.qualitySearchClear) {
+      els.qualitySearchClear.addEventListener('click', () => {
+        if (els.qualitySearchInput) {
+          els.qualitySearchInput.value = '';
+          els.qualitySearchInput.focus();
+        }
+        filterQualityList();
+      });
+    }
+
+    if (els.qualityModalBackdrop) {
+      els.qualityModalBackdrop.addEventListener('click', (e) => {
+        if (e.target === els.qualityModalBackdrop) closeQualityModal();
+      });
+    }
+
+    window.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && els.qualityModalBackdrop && !els.qualityModalBackdrop.classList.contains('hidden')) {
+        closeQualityModal();
       }
-    };
-    if (els.charOrigInput) els.charOrigInput.addEventListener('keydown', handleCharInputEnter);
-    if (els.charKurdishInput) els.charKurdishInput.addEventListener('keydown', handleCharInputEnter);
-    if (els.charPronunInput) els.charPronunInput.addEventListener('keydown', handleCharInputEnter);
-
-    if (els.smartRecognizeBtn) els.smartRecognizeBtn.addEventListener('click', runSmartRecognition);
-
-    if (els.clearCharNamesBtn) {
-      els.clearCharNamesBtn.addEventListener('click', () => {
-        charNames = [];
-        saveCharNames();
-      });
-    }
-
-    if (els.replaceAllInSubtitlesBtn) els.replaceAllInSubtitlesBtn.addEventListener('click', replaceAllCharNamesInSubtitles);
-
-    if (els.applyNamesTransToggle) {
-      els.applyNamesTransToggle.addEventListener('change', () => {
-        applyNamesTrans = els.applyNamesTransToggle.checked;
-        store.set('app_names_trans', applyNamesTrans ? '1' : '0');
-      });
-    }
-
-    if (els.applyNamesPreviewToggle) {
-      els.applyNamesPreviewToggle.addEventListener('change', () => {
-        applyNamesPreview = els.applyNamesPreviewToggle.checked;
-        store.set('app_names_preview', applyNamesPreview ? '1' : '0');
-      });
-    }
-
-    if (els.fuzzyTypoToggle) {
-      els.fuzzyTypoToggle.addEventListener('change', () => {
-        fuzzyTypo = els.fuzzyTypoToggle.checked;
-        store.set('app_fuzzy_typo', fuzzyTypo ? '1' : '0');
-      });
-    }
+    });
 
     const closeAdvModal = () => {
       if (els.advModalBackdrop) els.advModalBackdrop.classList.add('hidden');
@@ -2564,28 +2954,14 @@
     if (els.includeOriginal) els.includeOriginal.checked = store.get('includeOriginal', '0') === '1';
     if (els.accuracyToggle) els.accuracyToggle.checked = store.get('accuracy', '0') === '1';
     if (els.kurdishDigitsToggle) els.kurdishDigitsToggle.checked = store.get('kurdishDigits', '0') === '1';
+    if (els.fixOverlapToggle) els.fixOverlapToggle.checked = store.get('fix_overlap', '1') !== '0';
     if (els.addBomToggle) els.addBomToggle.checked = store.get('addBom', '0') === '1';
     if (els.crlfToggle) els.crlfToggle.checked = store.get('useCrlf', '0') === '1';
     if (els.showTimeToggle) els.showTimeToggle.checked = store.get('showTime', '1') === '1';
     if (els.saveEditsToggle) els.saveEditsToggle.checked = store.get('saveEdits', '1') === '1';
     if (els.syncVideoToggle) els.syncVideoToggle.checked = store.get('syncVideo', '0') === '1';
 
-    // Restore Character Naming State
-    try {
-      charNames = JSON.parse(store.get('app_char_names', '[]'));
-    } catch {
-      charNames = [];
-    }
-    applyNamesTrans = store.get('app_names_trans', '1') !== '0';
-    applyNamesPreview = store.get('app_names_preview', '1') !== '0';
-    fuzzyTypo = store.get('app_fuzzy_typo', '1') !== '0';
-
-    if (els.applyNamesTransToggle) els.applyNamesTransToggle.checked = applyNamesTrans;
-    if (els.applyNamesPreviewToggle) els.applyNamesPreviewToggle.checked = applyNamesPreview;
-    if (els.fuzzyTypoToggle) els.fuzzyTypoToggle.checked = fuzzyTypo;
-
     updateAdvBadge();
-    updateCharBadges();
 
     // Apply initial UI language
     const savedLang = store.get('app_ui_lang', 'en');

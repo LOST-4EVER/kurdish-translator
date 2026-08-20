@@ -101,7 +101,9 @@ const SubParser = (() => {
 
   // ---------- Format detection ----------
   function detect(content) {
+    if (typeof content !== 'string') return 'unknown';
     const t = content.trim();
+    if (!t) return 'unknown';
     if (/^WEBVTT/i.test(t)) return 'vtt';
     // ASS/SSA files always carry a [Script Info] section; requiring it avoids
     // misdetecting dialogue inside other formats that mentions [Events].
@@ -324,31 +326,35 @@ const SubParser = (() => {
   }
 
   function parse(content, formatHint) {
-    let format = detect(content);
+    const raw = typeof content === 'string' ? content : (content != null ? String(content) : '');
+    let format = detect(raw);
     if (format === 'unknown' && formatHint) {
       const h = formatHint.toLowerCase().replace(/^\./, '');
       if (['srt', 'vtt', 'ass', 'ssa', 'sub', 'smi', 'txt'].includes(h)) {
         format = h;
       }
     }
+    if (format === 'unknown') {
+      format = 'srt';
+    }
     let result;
     switch (format) {
-      case 'vtt': result = { format, cues: parseSRTVTT(content) }; break;
-      case 'srt': result = { format, cues: parseSRTVTT(content) }; break;
+      case 'vtt': result = { format, cues: parseSRTVTT(raw) }; break;
+      case 'srt': result = { format, cues: parseSRTVTT(raw) }; break;
       case 'ass':
       case 'ssa': {
-        const { cues, meta } = parseASS(content);
+        const { cues, meta } = parseASS(raw);
         result = { format, cues, meta };
         break;
       }
       case 'sub': {
-        const { cues, meta } = parseSUB(content);
+        const { cues, meta } = parseSUB(raw);
         result = { format, cues, meta };
         break;
       }
-      case 'smi': result = { format, cues: parseSMI(content) }; break;
-      case 'txt': result = { format, cues: parseTXT(content) }; break;
-      default: throw new Error('Unsupported subtitle format');
+      case 'smi': result = { format, cues: parseSMI(raw) }; break;
+      case 'txt': result = { format, cues: parseTXT(raw) }; break;
+      default: result = { format: 'srt', cues: [] }; break;
     }
     if (result && Array.isArray(result.cues)) {
       result.cues.sort((a, b) => a.start - b.start);
@@ -483,7 +489,85 @@ Style: Default,Arial,20,16777215,65535,0,0,0,0,1,2,2,2,10,10,10,0,1
     return text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
   }
 
-  return { parse, serialize, fmtSRT, fmtVTT, fmtASS, detect, toMs, splitMs };
+  /**
+   * Fix overlapping subtitle cue timestamps to prevent visual collisions
+   * in video players (e.g. VLC, MPV, PotPlayer, Smart TVs, web/mobile apps)
+   * where two cues speaking simultaneously or overlapping in time collide.
+   *
+   * @param {Array<{index:number,start:number,end:number,text:string,settings?:string,extra?:object}>} cues
+   * @param {{mode?: 'trim'|'merge', minDuration?: number, gap?: number}} [options]
+   * @returns {{cues: Array, fixedCount: number}}
+   */
+  function fixOverlaps(cues, options = {}) {
+    if (!cues || !cues.length) return { cues: [], fixedCount: 0 };
+    const minDur = options.minDuration !== undefined ? options.minDuration : 750;
+    const gap = options.gap !== undefined ? options.gap : 40; // 40ms buffer prevents player collision
+    const mode = options.mode || 'trim';
+
+    // Clone and ensure sorted by start time
+    const sorted = cues.map((c, i) => ({ ...c, originalIndex: i })).sort((a, b) => {
+      if (a.start !== b.start) return a.start - b.start;
+      return a.end - b.end;
+    });
+
+    let fixedCount = 0;
+    const result = [];
+
+    for (let i = 0; i < sorted.length; i++) {
+      const cur = { ...sorted[i] };
+      const next = sorted[i + 1] ? { ...sorted[i + 1] } : null;
+
+      if (next) {
+        // Case 1: Identical start time (e.g. 2 speakers starting at the same time across 2 separate cues)
+        if (cur.start === next.start && mode === 'merge') {
+          // Merge text into a multi-line dual-speaker cue: "- Line1\n- Line2"
+          const t1 = (cur.text || '').trim();
+          const t2 = (next.text || '').trim();
+          const p1 = t1.startsWith('-') || t1.startsWith('—') ? t1 : `- ${t1}`;
+          const p2 = t2.startsWith('-') || t2.startsWith('—') ? t2 : `- ${t2}`;
+          cur.text = `${p1}\n${p2}`;
+          cur.end = Math.max(cur.end, next.end);
+          sorted[i + 1] = cur; // carry merged forward
+          fixedCount++;
+          continue;
+        }
+
+        // Case 2: Temporal overlap (cur.end > next.start)
+        if (cur.end > next.start) {
+          const maxAllowedEnd = Math.max(cur.start + minDur, next.start - gap);
+          if (cur.end > maxAllowedEnd) {
+            cur.end = maxAllowedEnd;
+            fixedCount++;
+          }
+          // If next cue start is before cur.end after adjustment, nudge next start slightly if safe
+          if (next.start < cur.end + gap && next.end > cur.end + gap + minDur) {
+            sorted[i + 1].start = cur.end + gap;
+            fixedCount++;
+          }
+        }
+      }
+
+      // Ensure minimum readable duration
+      if (cur.end <= cur.start) {
+        cur.end = cur.start + minDur;
+        fixedCount++;
+      }
+
+      result.push(cur);
+    }
+
+    // Restore original ordering & renumber index
+    result.forEach((c, i) => {
+      c.index = i + 1;
+      delete c.originalIndex;
+    });
+
+    result.cues = result;
+    result.fixedCount = fixedCount;
+    return result;
+  }
+
+  return { parse, serialize, fmtSRT, fmtVTT, fmtASS, detect, toMs, splitMs, fixOverlaps };
 })();
 
 if (typeof module !== 'undefined' && module.exports) module.exports = SubParser;

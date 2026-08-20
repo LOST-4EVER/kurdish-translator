@@ -203,7 +203,7 @@
 /* ---------- Responsive Breakpoints & Desktop Layout ---------- */
 @media (min-width: 860px) {
   .app {
-    max-width: 960px;
+    max-width: 1040px;
     padding: 0 20px;
   }
   .settings-grid {
@@ -211,8 +211,8 @@
   }
   #tabPreview {
     display: grid;
-    grid-template-columns: minmax(0, 1.12fr) minmax(0, 1fr);
-    gap: 18px;
+    grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr);
+    gap: 20px;
     align-items: start;
   }
   #tabPreview .player-card {
@@ -224,6 +224,16 @@
   }
   #tabPreview .editor-list {
     max-height: calc(100vh - 220px);
+  }
+}
+
+@media (min-width: 1200px) {
+  .app {
+    max-width: 1220px;
+  }
+  #tabPreview {
+    grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr);
+    gap: 24px;
   }
 }
 
