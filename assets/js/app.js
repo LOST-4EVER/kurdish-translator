@@ -2565,12 +2565,20 @@
     showStep('done');
   }
 
+  const TOUR_STEP_ICONS = [
+    `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="12" y1="18" x2="12" y2="12"></line><line x1="9" y1="15" x2="15" y2="15"></line></svg>`,
+    `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>`,
+    `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><polygon points="10 8 16 12 10 16 10 8"></polygon></svg>`,
+    `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>`,
+    `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path><polyline points="9 12 11 14 15 10"></polyline></svg>`
+  ];
+
   const TOUR_STEPS = [
     {
       targetSel: '#dropzone',
       titleKey: 'tourStep1Title',
       textKey: 'tourStep1Text',
-      badge: '1 / 4',
+      badge: '1 / 5',
       showPrev: false,
       nextKey: 'tourNext',
       ensureTab: 'translate',
@@ -2583,7 +2591,7 @@
       targetSel: '#stepSettings',
       titleKey: 'tourStep2Title',
       textKey: 'tourStep2Text',
-      badge: '2 / 4',
+      badge: '2 / 5',
       showPrev: true,
       nextKey: 'tourNext',
       ensureTab: 'translate',
@@ -2603,7 +2611,7 @@
       targetSel: '.player-card',
       titleKey: 'tourStep3Title',
       textKey: 'tourStep3Text',
-      badge: '3 / 4',
+      badge: '3 / 5',
       showPrev: true,
       nextKey: 'tourNext',
       ensureTab: 'preview',
@@ -2617,7 +2625,20 @@
       targetSel: '.editor-card',
       titleKey: 'tourStep4Title',
       textKey: 'tourStep4Text',
-      badge: '4 / 4',
+      badge: '4 / 5',
+      showPrev: true,
+      nextKey: 'tourNext',
+      ensureTab: 'preview',
+      onEnter: () => {
+        if (!parsed) loadDemoForTour();
+        switchTab('preview');
+      }
+    },
+    {
+      targetSel: '#edQualityCheckBtn',
+      titleKey: 'tourStep5Title',
+      textKey: 'tourStep5Text',
+      badge: '5 / 5',
       showPrev: true,
       nextKey: 'tourDone',
       ensureTab: 'preview',
@@ -2715,6 +2736,19 @@
     if (els.tourTitle) els.tourTitle.textContent = dict[step.titleKey] || '';
     if (els.tourText) els.tourText.textContent = dict[step.textKey] || '';
     if (els.tourStepBadge) els.tourStepBadge.textContent = step.badge;
+    
+    // Update icon badge
+    const iconBadge = $('#tourIconBadge');
+    if (iconBadge && TOUR_STEP_ICONS[index]) {
+      iconBadge.innerHTML = TOUR_STEP_ICONS[index];
+    }
+
+    // Update dots
+    const dots = $$('.tour-dot');
+    dots.forEach((dot, dIdx) => {
+      dot.classList.toggle('active', dIdx === index);
+    });
+
     if (els.tourPrevBtn) {
       els.tourPrevBtn.classList.toggle('hidden', !step.showPrev);
       els.tourPrevBtn.textContent = dict.tourPrev || 'Back';
@@ -2757,8 +2791,8 @@
     els.tourHighlight.style.height = `${rect.height + pad * 2}px`;
 
     if (!isMobile) {
-      const cardWidth = 350;
-      const cardHeight = els.tourCard.offsetHeight || 190;
+      const cardWidth = 360;
+      const cardHeight = els.tourCard.offsetHeight || 210;
 
       let top = rect.bottom + 14;
       let left = rect.left + (rect.width / 2) - (cardWidth / 2);
@@ -2834,6 +2868,16 @@
         }
       });
     }
+
+    // Direct dot navigation click
+    $$('.tour-dot').forEach((dot) => {
+      dot.addEventListener('click', (e) => {
+        const targetStep = parseInt(e.currentTarget.dataset.step, 10);
+        if (!isNaN(targetStep) && targetStep >= 0 && targetStep < TOUR_STEPS.length) {
+          renderTourStep(targetStep);
+        }
+      });
+    });
   }
 
   function setupPWA() {

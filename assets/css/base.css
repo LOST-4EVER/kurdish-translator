@@ -30,19 +30,21 @@
   display: grid;
   place-items: center;
   color: var(--md-sys-color-on-primary-container);
-  background: var(--md-sys-color-primary-container);
-  border: 1px solid rgba(208, 188, 255, 0.2);
-  box-shadow: var(--md-elevation-1);
+  background: radial-gradient(circle at 30% 20%, rgba(124, 92, 252, 0.25), rgba(15, 12, 29, 0.85)), var(--md-sys-color-surface-container-high);
+  border: 1px solid rgba(168, 85, 247, 0.35);
+  box-shadow: 0 2px 10px rgba(124, 92, 252, 0.2), var(--md-elevation-1);
   position: relative;
   overflow: hidden;
   flex-shrink: 0;
-  transition: transform var(--motion) var(--ease);
+  transition: transform var(--motion) var(--ease), box-shadow var(--motion) var(--ease), border-color var(--motion) var(--ease);
 }
 .logo:hover {
-  transform: scale(1.04);
+  transform: scale(1.06);
+  border-color: rgba(244, 114, 182, 0.6);
+  box-shadow: 0 4px 16px rgba(244, 114, 182, 0.35), 0 0 12px rgba(56, 189, 248, 0.25);
 }
 .logo svg {
-  fill: currentColor;
+  display: block;
 }
 
 .brand-text {
@@ -193,20 +195,20 @@
   border-radius: var(--md-shape-corner-extra-large);
   padding: 22px;
   box-shadow: var(--md-elevation-1);
-  animation: cardRise 0.3s cubic-bezier(0.16, 1, 0.3, 1) both;
+  animation: cardRise 0.35s cubic-bezier(0.16, 1, 0.3, 1) both;
   position: relative;
   overflow: hidden;
   width: 100%;
   box-sizing: border-box;
-  transition: transform 0.25s ease, box-shadow 0.25s ease;
+  transition: transform 0.25s cubic-bezier(0.2, 0, 0, 1), box-shadow 0.25s cubic-bezier(0.2, 0, 0, 1), border-color 0.25s ease;
 }
 
 @keyframes cardRise {
-  0% { opacity: 0; transform: translateY(12px) scale(0.99); }
-  100% { opacity: 1; transform: translateY(0) scale(1); }
+  0% { opacity: 0; transform: translateY(10px) scale(0.992); filter: blur(1px); }
+  100% { opacity: 1; transform: translateY(0) scale(1); filter: blur(0); }
 }
 @keyframes rise {
-  from { opacity: 0; transform: translateY(8px); }
+  from { opacity: 0; transform: translateY(6px); }
   to { opacity: 1; transform: none; }
 }
 .hidden { display: none !important; }

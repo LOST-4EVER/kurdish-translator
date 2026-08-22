@@ -30,12 +30,177 @@
   <div class="app">
     <header class="topbar">
       <div class="brand">
-        <span class="logo">
-          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <rect x="2" y="4" width="20" height="16" rx="2"></rect>
-            <path d="M6 10h4"></path>
-            <path d="M14 10h4"></path>
-            <path d="M6 14h12"></path>
+        <span class="logo" id="brandLogo">
+          <svg class="anime-logo" width="40" height="40" viewBox="0 0 52 52" fill="none" xmlns="http://www.w3.org/2000/svg" aria-label="Kurdî Subtitle Translator Brand Logo">
+            <defs>
+              <linearGradient id="topbarScreenBg" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" stop-color="#18122e"/>
+                <stop offset="50%" stop-color="#231442"/>
+                <stop offset="100%" stop-color="#0e0a1b"/>
+              </linearGradient>
+              <linearGradient id="topbarBorderGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" stop-color="#f472b6"/>
+                <stop offset="35%" stop-color="#a855f7"/>
+                <stop offset="70%" stop-color="#38bdf8"/>
+                <stop offset="100%" stop-color="#fbbf24"/>
+              </linearGradient>
+              <linearGradient id="topbarSubKaraoke" x1="0%" y1="0%" x2="100%" y2="0%">
+                <stop offset="0%" stop-color="#fbbf24"/>
+                <stop offset="50%" stop-color="#fef08a"/>
+                <stop offset="100%" stop-color="#f59e0b"/>
+              </linearGradient>
+              <linearGradient id="topbarBeamGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+                <stop offset="0%" stop-color="#38bdf8"/>
+                <stop offset="50%" stop-color="#e879f9"/>
+                <stop offset="100%" stop-color="#fbbf24"/>
+              </linearGradient>
+              <linearGradient id="topbarSourceGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+                <stop offset="0%" stop-color="#38bdf8"/>
+                <stop offset="100%" stop-color="#818cf8"/>
+              </linearGradient>
+
+              <filter id="topbarNeonGlow" x="-25%" y="-25%" width="150%" height="150%">
+                <feGaussianBlur stdDeviation="1.2" result="blur"/>
+                <feMerge>
+                  <feMergeNode in="blur"/>
+                  <feMergeNode in="SourceGraphic"/>
+                </feMerge>
+              </filter>
+
+              <filter id="topbarSparkleGlow" x="-60%" y="-60%" width="220%" height="220%">
+                <feGaussianBlur stdDeviation="1.8" result="blur"/>
+                <feMerge>
+                  <feMergeNode in="blur"/>
+                  <feMergeNode in="SourceGraphic"/>
+                </feMerge>
+              </filter>
+
+              <style>
+                .tb-screen {
+                  animation: tbScreenPulse 4s ease-in-out infinite alternate;
+                }
+                .tb-beam {
+                  stroke-dasharray: 4 3;
+                  animation: tbBeamMove 1.2s linear infinite;
+                }
+                .tb-sparkle-tr {
+                  transform-origin: 43px 9px;
+                  animation: tbSparkleSpin 3s ease-in-out infinite;
+                }
+                .tb-sparkle-bl {
+                  transform-origin: 9px 43px;
+                  animation: tbSparkleTwinkle 2.4s ease-in-out infinite 0.6s;
+                }
+                .tb-rec-dot {
+                  animation: tbRecBlink 1.2s ease-in-out infinite;
+                }
+                .tb-sub-shimmer {
+                  animation: tbSubShimmer 2.2s ease-in-out infinite;
+                }
+                .tb-glyph-src {
+                  animation: tbFloatSrc 3.2s ease-in-out infinite;
+                }
+                .tb-glyph-ku {
+                  animation: tbFloatKu 3.2s ease-in-out infinite 1.6s;
+                }
+                .tb-scanline {
+                  animation: tbScanlines 3.5s linear infinite;
+                }
+
+                @keyframes tbScreenPulse {
+                  0% { filter: drop-shadow(0 0 2px rgba(168, 85, 247, 0.45)); }
+                  100% { filter: drop-shadow(0 0 7px rgba(56, 189, 248, 0.65)); }
+                }
+                @keyframes tbBeamMove {
+                  to { stroke-dashoffset: -14; }
+                }
+                @keyframes tbSparkleSpin {
+                  0% { transform: scale(0.6) rotate(0deg); opacity: 0.4; }
+                  50% { transform: scale(1.18) rotate(90deg); opacity: 1; filter: drop-shadow(0 0 3.5px #fbbf24); }
+                  100% { transform: scale(0.6) rotate(180deg); opacity: 0.4; }
+                }
+                @keyframes tbSparkleTwinkle {
+                  0%, 100% { transform: scale(0.4); opacity: 0.2; }
+                  50% { transform: scale(1.05); opacity: 0.95; }
+                }
+                @keyframes tbRecBlink {
+                  0%, 100% { opacity: 0.95; transform: scale(1); }
+                  50% { opacity: 0.2; transform: scale(0.7); }
+                }
+                @keyframes tbSubShimmer {
+                  0% { opacity: 0.8; transform: translateX(-0.8px); }
+                  50% { opacity: 1; transform: translateX(0.8px); filter: drop-shadow(0 0 3.5px #fbbf24); }
+                  100% { opacity: 0.8; transform: translateX(-0.8px); }
+                }
+                @keyframes tbFloatSrc {
+                  0%, 100% { transform: translateY(0); }
+                  50% { transform: translateY(-1.4px); }
+                }
+                @keyframes tbFloatKu {
+                  0%, 100% { transform: translateY(0); }
+                  50% { transform: translateY(-1.4px); }
+                }
+                @keyframes tbScanlines {
+                  0% { opacity: 0.04; transform: translateY(0); }
+                  50% { opacity: 0.09; }
+                  100% { opacity: 0.04; transform: translateY(2px); }
+                }
+              </style>
+            </defs>
+
+            <!-- Screen Outer Frame with Cyber Neon Gradient Border -->
+            <rect class="tb-screen" x="3" y="3" width="46" height="46" rx="11" fill="url(#topbarScreenBg)" stroke="url(#topbarBorderGrad)" stroke-width="1.8"/>
+
+            <!-- Screen Inner Display -->
+            <rect x="5" y="5" width="42" height="42" rx="9" fill="#0b0817" fill-opacity="0.85"/>
+
+            <!-- CRT Scanlines / Ambient Subtitle Speed Grids -->
+            <g class="tb-scanline">
+              <line x1="6" y1="16" x2="46" y2="16" stroke="#ffffff" stroke-width="0.75"/>
+              <line x1="6" y1="27" x2="46" y2="27" stroke="#ffffff" stroke-width="0.75"/>
+              <line x1="6" y1="38" x2="46" y2="38" stroke="#ffffff" stroke-width="0.75"/>
+            </g>
+
+            <!-- Top Status: Live Recording Glow Dot & LIVE tag -->
+            <circle class="tb-rec-dot" cx="9.5" cy="9.5" r="2.2" fill="#ef4444"/>
+            <rect x="14" y="7.5" width="16" height="5" rx="2.5" fill="#a855f7" fill-opacity="0.35" stroke="#a855f7" stroke-width="0.5" stroke-opacity="0.6"/>
+            <text x="22" y="11.4" font-family="system-ui, -apple-system, sans-serif" font-size="3.8" font-weight="900" fill="#f3e8ff" text-anchor="middle" letter-spacing="0.5">SUB</text>
+
+            <!-- Top-Right Sparkling Kurdish Star -->
+            <g class="tb-sparkle-tr" filter="url(#topbarSparkleGlow)">
+              <path d="M 43 5 Q 43 9.5 47.5 9.5 Q 43 9.5 43 14 Q 43 9.5 38.5 9.5 Q 43 9.5 43 5 Z" fill="#fbbf24"/>
+            </g>
+
+            <!-- Central Anime & Subtitle Translation Arena -->
+            <!-- Source Capsule: Japanese/English あ -->
+            <g class="tb-glyph-src">
+              <circle cx="14" cy="24" r="8" fill="#38bdf8" fill-opacity="0.14" stroke="#38bdf8" stroke-opacity="0.45" stroke-width="0.85"/>
+              <text x="14" y="27.8" font-family="'Noto Sans JP', 'Segoe UI', system-ui, sans-serif" font-size="9.8" font-weight="900" fill="#38bdf8" text-anchor="middle" filter="url(#topbarNeonGlow)">あ</text>
+            </g>
+
+            <!-- Translation Speed & Particle Beam Stream -->
+            <path class="tb-beam" d="M 23 24 L 28.5 24" stroke="url(#topbarBeamGrad)" stroke-width="2" stroke-linecap="round"/>
+            <polygon points="28.5,21.8 32,24 28.5,26.2" fill="#fbbf24" filter="url(#topbarNeonGlow)"/>
+
+            <!-- Kurdish Target Capsule: Sorani ک -->
+            <g class="tb-glyph-ku">
+              <circle cx="38" cy="24" r="8" fill="#fbbf24" fill-opacity="0.14" stroke="#fbbf24" stroke-opacity="0.5" stroke-width="0.85"/>
+              <text x="38" y="28.2" font-family="'Noto Sans Arabic', 'Noto Naskh Arabic', system-ui, sans-serif" font-size="11.2" font-weight="900" fill="#fbbf24" text-anchor="middle" filter="url(#topbarNeonGlow)">ک</text>
+            </g>
+
+            <!-- Bottom Animated Subtitle Karaoke Glass Bar -->
+            <g class="tb-sub-shimmer">
+              <!-- Subtitle pill container -->
+              <rect x="7" y="36" width="38" height="9" rx="4.5" fill="#080611" fill-opacity="0.9" stroke="#f472b6" stroke-opacity="0.45" stroke-width="0.8"/>
+              <!-- Karaoke sync bars -->
+              <rect x="10" y="39.2" width="14" height="2.6" rx="1.3" fill="url(#topbarSubKaraoke)"/>
+              <rect x="26.5" y="39.2" width="15" height="2.6" rx="1.3" fill="url(#topbarSourceGrad)"/>
+            </g>
+
+            <!-- Bottom-left mini sparkle -->
+            <g class="tb-sparkle-bl">
+              <path d="M 9 42 Q 9 44.5 11.5 44.5 Q 9 44.5 9 47 Q 9 44.5 6.5 44.5 Q 9 44.5 9 42 Z" fill="#38bdf8"/>
+            </g>
           </svg>
         </span>
         <div class="brand-text">
@@ -817,12 +982,25 @@
     <div class="tour-highlight" id="tourHighlight"></div>
     <div class="tour-card" id="tourCard" role="dialog" aria-modal="true" aria-labelledby="tourTitle">
       <div class="tour-card-header">
-        <div class="tour-step-badge" id="tourStepBadge">1 / 4</div>
-        <button class="tour-close-btn" id="tourCloseBtn" title="Close tour" aria-label="Close tour">
+        <div class="tour-step-badge" id="tourStepBadge">1 / 5</div>
+        <div class="tour-dots" id="tourDots">
+          <span class="tour-dot active" data-step="0"></span>
+          <span class="tour-dot" data-step="1"></span>
+          <span class="tour-dot" data-step="2"></span>
+          <span class="tour-dot" data-step="3"></span>
+          <span class="tour-dot" data-step="4"></span>
+        </div>
+        <button class="tour-close-btn" id="tourCloseBtn" title="Close tour (Esc)" aria-label="Close tour">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
         </button>
       </div>
       <div class="tour-card-body">
+        <div class="tour-icon-badge" id="tourIconBadge">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+            <polyline points="14 2 14 8 20 8"></polyline>
+          </svg>
+        </div>
         <h4 class="tour-card-title" id="tourTitle" data-i18n="tourStep1Title">Drop Translate File</h4>
         <p class="tour-card-text" id="tourText" data-i18n="tourStep1Text">Drag and drop your subtitle file (.srt, .vtt, .ass, etc.) or click to browse. Processing is 100% private in your browser.</p>
       </div>
