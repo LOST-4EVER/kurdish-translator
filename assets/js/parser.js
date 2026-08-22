@@ -9,14 +9,14 @@ const SubParser = (() => {
   // ---------- Regex ----------
   // WebVTT allows both mm:ss.mmm and hh:mm:ss.mmm (hours optional).
   const TIMECODE = /(\d{1,2}:\d{2}(?::\d{2})?[,.]\d{1,3})\s*-->\s*(\d{1,2}:\d{2}(?::\d{2})?[,.]\d{1,3})/;
-  const ASS_TIMECODE = /(\d+:\d{2}:\d{2}\.\d{2})/;
+  const ASS_TIMECODE = /(\d+:\d{2}:\d{2}[.,]\d{1,3})/;
   const SUB_LINE = /^\{(\d+)\}\{(\d+)\}(.*)$/;
 
   // ---------- Time helpers ----------
   const pad = (n, len = 2) => String(n).padStart(len, '0');
 
   function splitMs(ms) {
-    const val = Math.max(0, ms);
+    const val = Math.round(Math.max(0, Number(ms) || 0));
     return {
       h: Math.floor(val / 3600000),
       m: Math.floor((val % 3600000) / 60000),
@@ -87,7 +87,7 @@ const SubParser = (() => {
     if (parts.length < 3) return 0;
     const h = Number(parts[0]) || 0;
     const m = Number(parts[1]) || 0;
-    const [sStr, csStr] = parts[2].split('.');
+    const [sStr, csStr] = parts[2].split(/[.,]/);
     const s = Number(sStr) || 0;
     let csMs = 0;
     if (csStr) {
@@ -233,7 +233,7 @@ const SubParser = (() => {
     const lines = content.replace(/\r/g, '').split('\n');
     let fps = 23.976;
     const first = lines[0] && lines[0].trim();
-    const fpsMatch = first && first.match(/^\{\d+\}\{\d+\}\s*(\d+(?:\.\d+)?)\s*$/);
+    const fpsMatch = first && first.match(/^\{(?:0|1)\}\{(?:0|1)\}\s*(?:FPS\s*=\s*|FPS\s*:\s*)?(\d+(?:\.\d+)?)\s*$/i);
     if (fpsMatch && Number(fpsMatch[1]) > 0) {
       fps = Number(fpsMatch[1]);
       lines.shift();
@@ -394,8 +394,15 @@ Style: Default,Arial,20,16777215,65535,0,0,0,0,1,2,2,2,10,10,10,0,1
 
   function normalizeTextForStandard(text, cleanTags = true) {
     if (!text) return '';
-    let res = text.replace(/\\N/g, '\n').replace(/\r\n/g, '\n').replace(/\r/g, '\n');
+    let res = String(text)
+      .replace(/\\N/gi, '\n')
+      .replace(/\\n/gi, '\n')
+      .replace(/\\h/gi, ' ')
+      .replace(/\r\n/g, '\n')
+      .replace(/\r/g, '\n');
     if (cleanTags) {
+      // Strip drawing commands like {\p1}...{\p0}
+      res = res.replace(/\{\\p\d+\}[\s\S]*?(\{\\p0\}|$)/gi, '');
       // Convert basic ASS inline formatting tags to standard HTML tags
       res = res
         .replace(/\{\\i1\}/gi, '<i>').replace(/\{\\i0\}/gi, '</i>')
@@ -404,7 +411,7 @@ Style: Default,Arial,20,16777215,65535,0,0,0,0,1,2,2,2,10,10,10,0,1
       // Strip remaining ASS control override tags (e.g. {\pos(...)}, {\an8}, {\c&H...&})
       res = res.replace(/\{[^{}]*\}/g, '');
     }
-    return res;
+    return res.trim();
   }
 
   function serialize(parsedOrFormat, cues) {
@@ -500,8 +507,8 @@ Style: Default,Arial,20,16777215,65535,0,0,0,0,1,2,2,2,10,10,10,0,1
    */
   function fixOverlaps(cues, options = {}) {
     if (!cues || !cues.length) return { cues: [], fixedCount: 0 };
-    const minDur = options.minDuration !== undefined ? options.minDuration : 750;
-    const gap = options.gap !== undefined ? options.gap : 40; // 40ms buffer prevents player collision
+    const minDur = options.minDuration !== undefined ? options.minDuration : (options.minDurationMs !== undefined ? options.minDurationMs : 750);
+    const gap = options.gap !== undefined ? options.gap : (options.gapMs !== undefined ? options.gapMs : 40); // 40ms buffer prevents player collision
     const mode = options.mode || 'trim';
 
     // Clone and ensure sorted by start time

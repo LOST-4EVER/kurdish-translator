@@ -160,45 +160,97 @@ const Translator = (() => {
   const ARABIC_SCRIPT = new Set(['ckb', 'fa', 'ar', 'ur', 'ps']);
 
   /**
-   * Comprehensive dictionary of Advanced English Expressions, idioms, phrasal verbs,
-   * and subtitles colloquialisms with rich, nuanced Kurdish translations and alternatives.
+   * Comprehensive dictionary of Advanced English Expressions, Cinema Profanity, and Subtitle Idioms.
    */
   const ADVANCED_SUBTITLE_LEXICON = {
-    'piece of cake': { kurdish: 'کارێکی زۆر ئاسان', context: 'Very easy', alternatives: ['وەک ئاو خواردنەوە', 'زۆر سادەیە'] },
-    'break a leg': { kurdish: 'بەهیوای سەرکەوتن', context: 'Good luck', alternatives: ['بەختێکی باش', 'سەرکەوتوو بیت'] },
-    'out of the blue': { kurdish: 'لەناکاو', context: 'Unexpectedly', alternatives: ['کتوپڕ', 'بەبێ چاوەڕوانی', 'لە پڕێکدا'] },
-    'all of a sudden': { kurdish: 'لەپڕدا', context: 'Suddenly', alternatives: ['لەناکاو', 'کتوپڕ'] },
-    'at the end of the day': { kurdish: 'لە کۆتاییدا', context: 'Ultimately', alternatives: ['سەرەنجام', 'لە ئەنجامدا', 'لە دەرئەنجامدا'] },
-    'make sense': { kurdish: 'مانای هەیە', context: 'Logical/clear', alternatives: ['لۆژیکییە', 'جێی باوەڕە', 'تێگەیشتنی ئاسانە'] },
-    'does not make sense': { kurdish: 'هیچ مانایەکی نییە', context: 'Nonsense', alternatives: ['جێی تێگەیشتن نییە', 'بێ مانایە'] },
-    "doesn't make sense": { kurdish: 'هیچ مانایەکی نییە', context: 'Nonsense', alternatives: ['جێی تێگەیشتن نییە', 'بێ مانایە'] },
-    'never mind': { kurdish: 'کێشە نییە، لەبیری کە', context: 'Don\'t worry / ignore', alternatives: ['گرنگ نییە', 'بێ خەم بە', 'واز لەوە بێنە'] },
-    'as a matter of fact': { kurdish: 'لە ڕاستیدا', context: 'In reality', alternatives: ['بە پێچەوانەوە، لە واقیعدا', 'لە حەقیقەتدا'] },
-    'in fact': { kurdish: 'لە ڕاستیدا', context: 'Actually', alternatives: ['بە ڕاستی', 'لە واقیعدا'] },
-    'by the way': { kurdish: 'لەم نێوەندەدا / بە بۆنەیەوە', context: 'Incidentally', alternatives: ['بە ڕێکەوت', 'لێرەدا شتێک بڵێم'] },
-    'on the other hand': { kurdish: 'لە لایەکی ترەوە', context: 'Conversely', alternatives: ['بە پێچەوانەوە', 'لە ڕوانگەیەکی ترەوە'] },
-    'sooner or later': { kurdish: 'زوو بێت یان درەنگ', context: 'Inevitably', alternatives: ['ڕۆژێک لە ڕۆژان', 'لە کۆتاییدا هەر ڕوودەدات'] },
-    'take it easy': { kurdish: 'ئارام بە، خەمت نەبێت', context: 'Relax / calm down', alternatives: ['هێمن بەوە', 'ئاسان وەریگرە'] },
-    'hang in there': { kurdish: 'خۆڕاگر بە', context: 'Stay strong', alternatives: ['بەردەوام بە و کۆڵ مەدە', 'ئارام بگرە'] },
-    'pull yourself together': { kurdish: 'خۆت کۆبکەرەوە', context: 'Control emotions', alternatives: ['ئاگات لە خۆت بێت', 'هێمن بەرەوە'] },
-    'call it a day': { kurdish: 'با کۆتایی پێ بهێنین', context: 'Finish work for today', alternatives: ['بۆ ئەمڕۆ بەسە', 'کارەکان کۆتایی پێبهێنین'] },
-    'no big deal': { kurdish: 'شتێکی ئەوتۆ نییە', context: 'Not important', alternatives: ['کێشەیەکی گەورە نییە', 'گرنگ نییە'] },
-    'fair enough': { kurdish: 'قسەیەکی بەجێیە', context: 'Acceptable point', alternatives: ['قبووڵکراوە', 'پێم باشە'] },
-    'for what it is worth': { kurdish: 'ئەگەر سودی هەبێت', context: 'If helpful', alternatives: ['بە ڕای من', 'تەنها بۆ زانیاری'] },
-    "for what it's worth": { kurdish: 'ئەگەر سودی هەبێت', context: 'If helpful', alternatives: ['بە ڕای من', 'تەنها بۆ زانیاری'] },
+    // Cinema Profanity, Expletives & Subtitle Curse Translations
+    'fuck': { kurdish: 'نەفرەت', context: 'Expletive', alternatives: ['شەیتان', 'دۆزەخ', 'سەگباب'] },
+    'fucking': { kurdish: 'نەفرەتی', context: 'Emphasis', alternatives: ['سەگباب', 'نەعلەتی', 'دۆزەخ'] },
+    'fuck off': { kurdish: 'سەری خۆت هەڵگرە', context: 'Dismissal', alternatives: ['لەبەرچاوم وون بە', 'بڕۆ بۆ دۆزەخ', 'بە نەفرەت بێت'] },
+    'fuck you': { kurdish: 'نەفرەتت لێ بێت', context: 'Invective', alternatives: ['بە نەفرەت بێت', 'تۆ بڕۆ بۆ دۆزەخ'] },
+    'fuck it': { kurdish: 'بە نەفرەت بێت', context: 'Resignation', alternatives: ['واز لەوە بێنە', 'خەمیم نییە'] },
+    'what the fuck': { kurdish: 'چی دۆزەخێکە', context: 'Shock/Anger', alternatives: ['چی نەعلەتییەکە', 'ئەمە چی نەفرەتییەکە', 'چی گویەکە'] },
+    'wtf': { kurdish: 'چی دۆزەخێکە', context: 'Shock', alternatives: ['چی نەعلەتییەکە', 'ئەمە چییە'] },
+    'shut the fuck up': { kurdish: 'دەمت دابخە', context: 'Silencing', alternatives: ['دەمپیس دەمت دابخە', 'دەمت بەستە', 'دەنگی خۆت ببڕە'] },
+    'shit': { kurdish: 'نەفرەت', context: 'Frustration', alternatives: ['پیسایی', 'کەریەتی', 'دۆزەخ'] },
+    'holy shit': { kurdish: 'ئەی هاوار', context: 'Astonishment', alternatives: ['ئەی خوایە', 'خوایە گیان', 'بەڕاستی سەیرە'] },
+    'bullshit': { kurdish: 'قسەی پووچ', context: 'Lies/Nonsense', alternatives: ['قسەی بێمانا', 'ڕیسوایی', 'درۆی شاخدار'] },
+    'damn': { kurdish: 'نەفرەتی', context: 'Disappointment', alternatives: ['داخەکەم', 'نەعلەتی', 'دۆزەخ'] },
+    'goddamn': { kurdish: 'نەفرەتی', context: 'Emphasis', alternatives: ['نەعلەتی', 'سەگباب'] },
+    'bastard': { kurdish: 'سەگباب', context: 'Insult', alternatives: ['حەرامزادە', 'کەڵەگا', 'سووک'] },
+    'bitch': { kurdish: 'سووک', context: 'Insult', alternatives: ['پێڵاوپیس', 'سەگباب', 'چەتەڵ'] },
+    'son of a bitch': { kurdish: 'سەگباب', context: 'Insult', alternatives: ['کوڕی سەگ', 'کوڕی پێڵاوپیس'] },
+    'motherfucker': { kurdish: 'نەعلەتی', context: 'Insult', alternatives: ['سەگباب', 'سەگی بێباوک', 'سووک'] },
+    'asshole': { kurdish: 'سووک', context: 'Insult', alternatives: ['سەگباب', 'گەمژەی بێئابڕوو', 'کەر'] },
+    'dickhead': { kurdish: 'گەمژە', context: 'Insult', alternatives: ['کەر', 'کەلەپووت', 'بێئەقڵ'] },
+    'dumbass': { kurdish: 'گەمژە', context: 'Insult', alternatives: ['کەر', 'نەفام', 'سەربەتاڵ'] },
+    'idiot': { kurdish: 'گەمژە', context: 'Insult', alternatives: ['نەفام', 'کەر', 'بێئەقڵ'] },
+    'screw you': { kurdish: 'نەعلەتت لێ بێت', context: 'Dismissal', alternatives: ['بڕۆ بۆ دۆزەخ', 'بە نەفرەت بێت'] },
+    'screw it': { kurdish: 'واز لەوە بێنە', context: 'Dismissal', alternatives: ['خەمیم نییە', 'گرنگ نییە'] },
+    'go to hell': { kurdish: 'بڕۆ بۆ دۆزەخ', context: 'Curse', alternatives: ['تۆ بڕۆ بۆ جەهەننەم', 'لەناو بچیت'] },
+    'kiss my ass': { kurdish: 'واز لە من بێنە', context: 'Defiance', alternatives: ['سەری خۆت بدە لە بەرد', 'گرنگی بە تۆ نادەم'] },
+    'get lost': { kurdish: 'لەبەرچاوم وون بە', context: 'Dismissal', alternatives: ['تێپەڕە لە لای من', 'سەری خۆت هەڵگرە'] },
+    'shut up': { kurdish: 'دەمت دابخە', context: 'Silence', alternatives: ['بێدەنگ بە', 'دەنگی خۆت ببڕە'] },
+    'shut your mouth': { kurdish: 'دەمت دابخە', context: 'Silence', alternatives: ['دەنگ مەکە', 'قسە مەکە'] },
+    'piece of shit': { kurdish: 'پیاوی سووک', context: 'Insult', alternatives: ['سەگباب', 'کەسی بێئابڕوو'] },
+    'freaking': { kurdish: 'نەفرەتی', context: 'Emphasis', alternatives: ['زۆر', 'بە نەفرەت'] },
+
+    // Film & TV Subtitle Idioms and Conversational Phrases
+    'are you out of your mind': { kurdish: 'تۆ شێت بوویت؟', context: 'Disbelief', alternatives: ['ئەقڵت لەدەستداوە؟', 'سەرت گەرم بووە؟'] },
+    'are you crazy': { kurdish: 'تۆ شێت بوویت؟', context: 'Disbelief', alternatives: ['ئاوێتەی شێتی بوویت؟', 'هۆشت لەسەر نییە؟'] },
+    'what on earth': { kurdish: 'چی گوزەر دەکات', context: 'Inquiry', alternatives: ['ئەمە چییە', 'چی ڕوویداوە'] },
+    'what the hell': { kurdish: 'چی دۆزەخێکە', context: 'Shock', alternatives: ['چی گوزەر دەکات', 'ئەمە چییە'] },
+    'you gotta be kidding me': { kurdish: 'گاڵتەم لەگەڵ دەکەیت؟', context: 'Incredulity', alternatives: ['ڕاست ناکەیت؟', 'پێم ڕابوێرە!'] },
+    'you must be kidding': { kurdish: 'گاڵتەم لەگەڵ دەکەیت؟', context: 'Incredulity', alternatives: ['ڕاست ناکەیت؟', 'باوڕ ناکەم'] },
+    'no offense': { kurdish: 'بێ ڕێزی نەبێت', context: 'Politeness', alternatives: ['مەبەستم بێڕێزی نییە', 'خۆت بێزار مەکە'] },
+    'none of your business': { kurdish: 'پەیوەندی بە تۆوە نییە', context: 'Privacy', alternatives: ['کاری تۆ نییە', 'سەری خۆت بە کارتەوە بێت'] },
+    'over my dead body': { kurdish: 'مەحاڵە تا زیندوم', context: 'Defiance', alternatives: ['لەسەر جەستەی من ڕوودەدات', 'هەرگیز نا'] },
+    "I don't give a damn": { kurdish: 'گرنگی پێ نادەم', context: 'Indifference', alternatives: ['تەنانەت باکشم نییە', 'باکم بەوە نییە'] },
+    "I don't care": { kurdish: 'گرنگی پێ نادەم', context: 'Indifference', alternatives: ['خەمم نییە', 'باکم نییە'] },
+    "I don't give a shit": { kurdish: 'هیچ باکم نییە', context: 'Strong Indifference', alternatives: ['گرنگی پێ نادەم', 'سەر لەوە نادەم'] },
+    'keep your mouth shut': { kurdish: 'دەمت بپۆشە', context: 'Secrecy', alternatives: ['قسە مەکە', 'دەمت دابخە'] },
+    'cut it out': { kurdish: 'بەسی بکە', context: 'Stop it', alternatives: ['ڕایبگرە', 'واز لەوە بێنە'] },
+    'knock it off': { kurdish: 'بەسی بکە', context: 'Stop it', alternatives: ['خۆت کۆبکەرەوە', 'وەستاو بێت'] },
+    'get out of my face': { kurdish: 'لەبەرچاوم دوورکەوەرەوە', context: 'Anger', alternatives: ['لەبەرچاوم وون بە', 'تێپەڕە'] },
+    'give me a break': { kurdish: 'مۆڵەتم بدە', context: 'Exasperation', alternatives: ['واز لە من بێنە', 'دەستم لێ هەڵگرە'] },
+    'watch your tongue': { kurdish: 'ئاگاداری زمانت بە', context: 'Warning', alternatives: ['بە ڕێزەوە قسە بکە', 'زمانت بپێچەوە'] },
+    'watch your mouth': { kurdish: 'ئاگاداری دەمت بە', context: 'Warning', alternatives: ['بە ڕێزەوە قسە بکە', 'قسەی ناشیرین مەکە'] },
+    'dead serious': { kurdish: 'بە تەواوی ڕاستمە', context: 'Seriousness', alternatives: ['پێکەنینی تێدا نییە', 'بە هەموو جدییەتێکەوە'] },
+    'piece of cake': { kurdish: 'کارێکی زۆر ئاسان', context: 'Very easy', alternatives: ['وەک ئاو خواردنەوە', 'زۆر سادەیە', 'ئاسانتر لەوەی بیرت لێ دەکردەوە'] },
+    'break a leg': { kurdish: 'بەهیوای سەرکەوتن', context: 'Good luck', alternatives: ['بەختێکی باش', 'سەرکەوتوو بیت', 'بەخت لەگەڵت بێت'] },
+    'out of the blue': { kurdish: 'لەناکاو', context: 'Unexpectedly', alternatives: ['کتوپڕ', 'بەبێ چاوەڕوانی', 'لە پڕێکدا', 'لە هیچ کۆیەکەوە'] },
+    'all of a sudden': { kurdish: 'لەپڕدا', context: 'Suddenly', alternatives: ['لەناکاو', 'کتوپڕ', 'بە بێئاگایی'] },
+    'at the end of the day': { kurdish: 'لە کۆتاییدا', context: 'Ultimately', alternatives: ['سەرەنجام', 'لە ئەنجامدا', 'لە دەرئەنجامدا', 'بە کورتی'] },
+    'make sense': { kurdish: 'مانای هەیە', context: 'Logical/clear', alternatives: ['لۆژیکییە', 'جێی باوەڕە', 'تێگەیشتنی ئاسانە', 'ڕاست دەردەکەوێت'] },
+    'does not make sense': { kurdish: 'هیچ مانایەکی نییە', context: 'Nonsense', alternatives: ['جێی تێگەیشتن نییە', 'بێ مانایە', 'سەری لێ دەرناچێت'] },
+    "doesn't make sense": { kurdish: 'هیچ مانایەکی نییە', context: 'Nonsense', alternatives: ['جێی تێگەیشتن نییە', 'بێ مانایە', 'سەری لێ دەرناچێت'] },
+    'never mind': { kurdish: 'کێشە نییە، لەبیری کە', context: 'Don\'t worry / ignore', alternatives: ['گرنگ نییە', 'بێ خەم بە', 'واز لەوە بێنە', 'لەبیریبکە'] },
+    'as a matter of fact': { kurdish: 'لە ڕاستیدا', context: 'In reality', alternatives: ['بە پێچەوانەوە، لە واقیعدا', 'لە حەقیقەتدا', 'ڕاستییەکەی'] },
+    'in fact': { kurdish: 'لە ڕاستیدا', context: 'Actually', alternatives: ['بە ڕاستی', 'لە واقیعدا', 'ڕاستییەکەی'] },
+    'by the way': { kurdish: 'لەم نێوەندەدا / بە بۆنەیەوە', context: 'Incidentally', alternatives: ['بە ڕێکەوت', 'لێرەدا شتێک بڵێم', 'بەنۆبەی خۆی'] },
+    'on the other hand': { kurdish: 'لە لایەکی ترەوە', context: 'Conversely', alternatives: ['بە پێچەوانەوە', 'لە ڕوانگەیەکی ترەوە', 'لە ڕوویەکی دیکەوە'] },
+    'sooner or later': { kurdish: 'زوو بێت یان درەنگ', context: 'Inevitably', alternatives: ['ڕۆژێک لە ڕۆژان', 'لە کۆتاییدا هەر ڕوودەدات', 'سەرەنجام'] },
+    'take it easy': { kurdish: 'ئارام بە، خەمت نەبێت', context: 'Relax / calm down', alternatives: ['هێمن بەوە', 'ئاسان وەریگرە', 'خۆت تێک مەدە'] },
+    'hang in there': { kurdish: 'خۆڕاگر بە', context: 'Stay strong', alternatives: ['بەردەوام بە و کۆڵ مەدە', 'ئارام بگرە', 'ورەت نەبەزێت'] },
+    'pull yourself together': { kurdish: 'خۆت کۆبکەرەوە', context: 'Control emotions', alternatives: ['ئاگات لە خۆت بێت', 'هێمن بەرەوە', 'هۆشت کۆبکەرەوە'] },
+    'call it a day': { kurdish: 'با کۆتایی پێ بهێنین', context: 'Finish work for today', alternatives: ['بۆ ئەمڕۆ بەسە', 'کارەکان کۆتایی پێبهێنین', 'بەسی بکەین'] },
+    'no big deal': { kurdish: 'شتێکی ئەوتۆ نییە', context: 'Not important', alternatives: ['کێشەیەکی گەورە نییە', 'گرنگ نییە', 'خەمی ناوێت'] },
+    'fair enough': { kurdish: 'قسەیەکی بەجێیە', context: 'Acceptable point', alternatives: ['قبووڵکراوە', 'پێم باشە', 'ڕاست دەکەیت'] },
+    'for what it is worth': { kurdish: 'ئەگەر سودی هەبێت', context: 'If helpful', alternatives: ['بە ڕای من', 'تەنها بۆ زانیاری', 'ئەگەر یارمەتیدەر بێت'] },
+    "for what it's worth": { kurdish: 'ئەگەر سودی هەبێت', context: 'If helpful', alternatives: ['بە ڕای من', 'تەنها بۆ زانیاری', 'ئەگەر یارمەتیدەر بێت'] },
     'ring a bell': { kurdish: 'ئاشنا دیارە', context: 'Sounds familiar', alternatives: ['وەبیرم دێتەوە', 'ناسیاوە', 'ناوی ئاشنایە'] },
-    'hands down': { kurdish: 'بێگومان', context: 'Undoubtedly', alternatives: ['بە دڵنیاییەوە', 'بێ ڕکابەر', 'بێ چەندوچۆن'] },
+    'hands down': { kurdish: 'بێگومان', context: 'Undoubtedly', alternatives: ['بە دڵنیاییەوە', 'بێ ڕکابەر', 'بێ چەندوچۆن', 'بە تەواوی'] },
     'keep an eye on': { kurdish: 'ئاگاداری بە', context: 'Watch closely', alternatives: ['چاوێکی لێ بێت', 'چاودێری بکە', 'چاو لەسەر دانێ'] },
-    'read between the lines': { kurdish: 'لە مەبەستە شاراوەکە تێبگە', context: 'Hidden meaning', alternatives: ['لە نهێنییەکان تێبگە', 'قووڵتر بیربکەرەوە'] },
+    'read between the lines': { kurdish: 'لە مەبەستە شاراوەکە تێبگە', context: 'Hidden meaning', alternatives: ['لە نهێنییەکان تێبگە', 'قووڵتر بیربکەرەوە', 'وەردبە'] },
     'think outside the box': { kurdish: 'جیاواز بیربکەرەوە', context: 'Creative thinking', alternatives: ['داهێنەرانە بیربکەرەوە', 'لە دەرەوەی چوارچێوە بیربکەرەوە'] },
     'cost an arm and a leg': { kurdish: 'زۆر گرانە', context: 'Very expensive', alternatives: ['نرخێکی خەیاڵیی هەیە', 'بە پارەیەکی زۆرە'] },
-    'spill the beans': { kurdish: 'نهێنییەکە ئاشکرا بکە', context: 'Reveal secret', alternatives: ['ڕاستییەکان بدرکێنە', 'قسە بکە'] },
-    'safe and sound': { kurdish: 'ساغ و سەلامەت', context: 'Unharmed', alternatives: ['بە سەلامەتی', 'بێ زیان'] },
-    'in a nutshell': { kurdish: 'بە کورتی', context: 'Briefly', alternatives: ['بە کورت و پوختی', 'پوختەکەی'] },
-    'from scratch': { kurdish: 'لە سەرەتاوە', context: 'From beginning', alternatives: ['لە بنەڕەتەوە', 'لە سفرەوە'] },
-    'by all means': { kurdish: 'بێگومان', context: 'Certainly', alternatives: ['بە دڵنیاییەوە', 'بە هەموو شێوەیەک'] },
-    'point of view': { kurdish: 'دیدگا', context: 'Perspective', alternatives: ['بۆچوون', 'ڕوانگە', 'تێڕوانین'] },
-    'day in and day out': { kurdish: 'ڕۆژ لە دوای ڕۆژ', context: 'Continuously', alternatives: ['بە بەردەوامی', 'هەموو ڕۆژێک'] },
+    'spill the beans': { kurdish: 'نهێنییەکە ئاشکرا بکە', context: 'Reveal secret', alternatives: ['ڕاستییەکان بدرکێنە', 'قسە بکە', 'ڕاستییەکە بڵێ'] },
+    'safe and sound': { kurdish: 'ساغ و سەلامەت', context: 'Unharmed', alternatives: ['بە سەلامەتی', 'بێ زیان', 'ساغ و وڵاغ'] },
+    'in a nutshell': { kurdish: 'بە کورتی', context: 'Briefly', alternatives: ['بە کورت و پوختی', 'پوختەکەی', 'پوختەی قسە'] },
+    'from scratch': { kurdish: 'لە سەرەتاوە', context: 'From beginning', alternatives: ['لە بنەڕەتەوە', 'لە سفرەوە', 'لە بنچینەوە'] },
+    'by all means': { kurdish: 'بێگومان', context: 'Certainly', alternatives: ['بە دڵنیاییەوە', 'بە هەموو شێوەیەک', 'دڵنیابە'] },
+    'point of view': { kurdish: 'دیدگا', context: 'Perspective', alternatives: ['بۆچوون', 'ڕوانگە', 'تێڕوانین', 'گۆشەنیگا'] },
+    'day in and day out': { kurdish: 'ڕۆژ لە دوای ڕۆژ', context: 'Continuously', alternatives: ['بە بەردەوامی', 'هەموو ڕۆژێک', 'بە ڕۆژ و شەو'] },
     'time will tell': { kurdish: 'کات هەموو شتێک دەردەخات', context: 'Future will reveal', alternatives: ['ڕۆژگار دەیسەلمێنێت', 'پاشان دەردەکەوێت'] },
     'figure out': { kurdish: 'تێبگە', context: 'Understand/solve', alternatives: ['چارەسەر بدۆزەرەوە', 'پێی بزانیت', 'سەری لێ دەربکەیت'] },
     'come up with': { kurdish: 'بدۆزەرەوە', context: 'Propose/create', alternatives: ['پێشنیار بکە', 'بەرهەم بهێنە'] },
@@ -238,6 +290,21 @@ const Translator = (() => {
     'burn bridges': { kurdish: 'پردەکانی پەیوەندی بپچڕێنە', context: 'Cut all ties', alternatives: ['ڕێگەی گەڕانەوە مەهێڵەرەوە'] },
     'drive someone crazy': { kurdish: 'کەسێک شێت کردن', context: 'Infuriate', alternatives: ['لە هۆش خۆ بردن', 'بێزارکردنی توند'] },
     'curiosity killed the cat': { kurdish: 'زۆرزانی زیانی هەیە', context: 'Excess curiosity', alternatives: ['لە هەموو شت مەکۆڵەرەوە'] },
+    'mind your own business': { kurdish: 'دەست لە کارمەوە مەدە', context: 'Stay out of it', alternatives: ['ئاگاداری کاری خۆت بە', 'سەری خۆت بە کارتەوە بێت'] },
+    'step by step': { kurdish: 'هەنگاو بە هەنگاو', context: 'Gradually', alternatives: ['کەم کەم', 'پلە بە پلە'] },
+    'as long as': { kurdish: 'مادام', context: 'Provided that', alternatives: ['تا ئەو کاتەی', 'ئەگەر'] },
+    'no matter what': { kurdish: 'چی ڕووبدات', context: 'In any case', alternatives: ['بە هەموو بارێکدا', 'بە هەر نرخێک بێت'] },
+    "it's up to you": { kurdish: 'بڕیارەکە لای تۆیە', context: 'Your choice', alternatives: ['تۆ بڕیار بدە', 'وەک خۆت دەتەوێت'] },
+    'it is up to you': { kurdish: 'بڕیارەکە لای تۆیە', context: 'Your choice', alternatives: ['تۆ بڕیار بدە', 'وەک خۆت دەتەوێت'] },
+    'make yourself at home': { kurdish: 'ماڵی خۆتە', context: 'Feel comfortable', alternatives: ['ئاسوودە بە', 'تەواو بە ئاسودەیی بە'] },
+    "for god's sake": { kurdish: 'لەبەر خاتری خوا', context: 'For goodness sake', alternatives: ['پێ خاتری خوا', 'لەپێناو خوادا'] },
+    'on my way': { kurdish: 'لە ڕێگام', context: 'Coming now', alternatives: ['بەڕێوەم', 'ئێستا دێم'] },
+    'give me a hand': { kurdish: 'یارمەتیم بدە', context: 'Help me', alternatives: ['دەستم بگرە', 'کەمێک هاوکاریم بکە'] },
+    'hit the hay': { kurdish: 'چوون بۆ خەوتن', context: 'Go to sleep', alternatives: ['خەوتن', 'پاڵکەوتن'] },
+    'out of order': { kurdish: 'لەکارکەوتووە', context: 'Not working', alternatives: ['خراپبووە', 'تێکچووە'] },
+    'back and forth': { kurdish: 'هاتووچۆ', context: 'Repeatedly', alternatives: ['پێش و پاش', 'بەردەوام هەڵبەز و دابەز'] },
+    'so be it': { kurdish: 'با وابێت', context: 'Let it be', alternatives: ['با ڕووبدات', 'باشە بەو شێوەیە'] },
+    'in the blink of an eye': { kurdish: 'لە چاوتروکانێکدا', context: 'Instantly', alternatives: ['بە خێرایی بەرق', 'زۆر بە پەلە'] },
     'ubiquitous': { kurdish: 'لە هەموو شوێنێک بەربڵاو', context: 'Everywhere', alternatives: ['گشتگیر', 'هەمەلایەنە'] },
     'ephemeral': { kurdish: 'تەمەن کورت و کاتی', context: 'Short-lived', alternatives: ['زووگوزەر', 'نەبڕاوە'] },
     'resilience': { kurdish: 'خۆڕاگری', context: 'Toughness', alternatives: ['پشوودرێژی', 'توانای بەردەوامی'] },
@@ -252,6 +319,24 @@ const Translator = (() => {
     'lucid': { kurdish: 'ڕوون و ئاشکرا', context: 'Clear/bright', alternatives: ['ڕۆشن', 'هۆشیار'] },
     'pragmatic': { kurdish: 'واقیعبین و کردارەکی', context: 'Realistic/practical', alternatives: ['سوودخواز', 'پراکتیکی'] },
     'superfluous': { kurdish: 'زیادە و ناپێویست', context: 'Unnecessary', alternatives: ['بێسوود', 'پێویست پێی نەکراو'] },
+
+    // Action, Thriller & Cinematic Dialogue Subtitle Expressions
+    'on the run': { kurdish: 'لە هەڵهاتندا', context: 'Action/Escape', alternatives: ['ڕاکردوو', 'لەژێر داواکارییدا'] },
+    'take cover': { kurdish: 'پەنا ببەرە', context: 'Tactical Warning', alternatives: ['خۆت بپۆشە', 'خۆت بشارەوە'] },
+    'watch your back': { kurdish: 'ئاگاداری پشت سەرت بە', context: 'Threat Warning', alternatives: ['وریا بە', 'ئاگات لە خۆت بێت'] },
+    'double cross': { kurdish: 'خەیانەتکردن', context: 'Treachery', alternatives: ['پشتکردنە هاوڕێ', 'فریودان'] },
+    'lock and load': { kurdish: 'چەکەکانتان ئامادە بکەن', context: 'Combat Ready', alternatives: ['ئامادەبن بۆ شەڕ', 'خۆتان کۆبکەنەوە'] },
+    'undercover': { kurdish: 'بە نهێنی', context: 'Spy/Police', alternatives: ['بە جلی سڤیلەوە', 'شانۆگەری نهێنی'] },
+    'code red': { kurdish: 'باری لەناکاوی سوور', context: 'Emergency', alternatives: ['خەتەری توند', 'مەترسیی ئاستی بەرز'] },
+    'keep your head down': { kurdish: 'سەرت نەوی بکە', context: 'Combat Caution', alternatives: ['خۆت بشارەوە', 'سەرت هەڵمەبرە'] },
+    "don't mess with me": { kurdish: 'دەست لە کارمەوە مەدە', context: 'Warning', alternatives: ['یاری بە ئاگری من مەکە', 'تێکەڵم مەبە'] },
+    "i got your back": { kurdish: 'پشتیوانیت دەکەم', context: 'Loyalty', alternatives: ['پشتت دەگرم', 'ئاگام لە تۆ دەبێت'] },
+    'make no mistake': { kurdish: 'هیچ گومانێک مەهێڵەرەوە', context: 'Certainty', alternatives: ['دڵنیابە', 'دڵنیا بەوەی'] },
+    'mind-boggling': { kurdish: 'سەرسوڕهێنەر', context: 'Amazement', alternatives: ['ئەقڵڕفێن', 'سەیر و سەمەرە'] },
+    'breathtaking': { kurdish: 'سەرنجڕاکێشی بێئەندازە', context: 'Awe', alternatives: ['دڵڕفێن', 'شاکار'] },
+    'flabbergasted': { kurdish: 'پڕ لە سەرسوڕمان', context: 'Shock', alternatives: ['سەرسامبوو', 'دەمتەقێن'] },
+    'relentless': { kurdish: 'بێبەزەییانە و نەپچڕاو', context: 'Persistence', alternatives: ['بێوەستان', 'توند'] },
+    'formidable': { kurdish: 'سەخت و بەهێز', context: 'Strength', alternatives: ['سامناک', 'بەهێز'] },
   };
 
   /** Preprocess source text to improve translation accuracy for English to Kurdish Sorani. */
@@ -357,7 +442,10 @@ const Translator = (() => {
          .replace(/\byou\s+are\s+welcome\b/gi, 'you are welcome')
          .replace(/\bdon['’]?t\s+worry\b/gi, 'do not worry')
          .replace(/\btake\s+it\s+easy\b/gi, 'relax')
-         .replace(/\bmake\s+yourself\s+at\s+home\b/gi, 'feel comfortable');
+         .replace(/\bmake\s+yourself\s+at\s+home\b/gi, 'feel comfortable')
+         .replace(/\bmind\s+your\s+own\s+business\b/gi, 'do not interfere')
+         .replace(/\bon\s+my\s+way\b/gi, 'coming now')
+         .replace(/\bgive\s+me\s+a\s+hand\b/gi, 'help me');
 
     return s;
   }
@@ -487,7 +575,7 @@ const Translator = (() => {
       .replace(/(^|\s)بی\s+(کە|بە|بینە|گەیەنە|خۆ|نووسە|هێنە|بەخشە|پارێزە|کوژە|دە|خوێنەوە|شکێنە)(?=\s|$|[.,!?;:،؛؟])/g, '$1بی$2')
       .replace(/(^|\s)تێ\s+(دەگەم|بگە|دەگەیت|دەگەن|دەگەین|پەڕی|پەڕین|ناگەم|پەڕیوە)(?=\s|$|[.,!?;:،؛؟])/g, '$1تێ$2')
       .replace(/(^|\s)ڕێ\s+(گرتن|دەگرێت|بگرە|ناگرێت|بگرن|کەوتن|کەوتین|کەوتنەوە|کەوتووە)(?=\s|$|[.,!?;:،؛؟])/g, '$1ڕێ$2')
-      .replace(/(^|\s)پێ\s+(دان|دەدات|دەڵێت|دەبەخشێت|بڵێ|بڵێن|بدە|نادەم|نادات|بەخشی)(?=\s|$|[.,!?;:،؛؟])/g, '$1پێ$2')
+      .replace(/(^|\s)پێ\s+(دان|دەدات|دەڵێت|دەبەخشێت|بڵێ|بڵێن|بدە|نادەم|نادات|بەخشی|مبڵێ|یبڵێ|مانبڵێ|یانبڵێ)(?=\s|$|[.,!?;:،؛؟])/g, '$1پێ$2')
       .replace(/(^|\s)وەر\s+(بگرە|گرتن|دەگرێت|ناگرێت|مەگرە|گیرا|گیراوە)(?=\s|$|[.,!?;:،؛؟])/g, '$1وەر$2')
       .replace(/(^|\s)دەر\s+(کەوت|کەوتن|چوون|چوونی|بێنە|هێنانی|دەچێت|دەخات|دەکەوێت|کەوتووە)(?=\s|$|[.,!?;:،؛؟])/g, '$1دەر$2')
       .replace(/(^|\s)دا\s+(نیشە|دەنیشێت|پۆشە|خستن|داخە|دابخە|گرتن|بەزین|بەزی|مەپۆشە)(?=\s|$|[.,!?;:،؛؟])/g, '$1دا$2')
@@ -502,7 +590,7 @@ const Translator = (() => {
   /** Naturalize machine-translated subtitle dialogue for fluent Sorani Kurdish. */
   function naturalizeDialogue(str) {
     if (!str) return '';
-    return str
+    let res = str
       // Remove mechanical, non-dialogue question particle "ئایا" at start of sentences
       .replace(/(^|[\s،؛؟.\n])ئایا\s+/g, '$1')
       .replace(/ئۆ خوای من/g, 'ئەی خوایە')
@@ -564,16 +652,42 @@ const Translator = (() => {
       .replace(/بە هیچ شێوەیەک/g, 'بەهیچ شێوەیەک')
       .replace(/جێگای داخە/g, 'بەداخەوە')
       .replace(/بەداخەوەم/g, 'بەداخەوە')
-      .replace(/تۆ لە کوێیت/g, 'لەکوێیت')
-      .replace(/لە کوێیت تۆ/g, 'لەکوێیت')
-      .replace(/چۆنیت تۆ/g, 'چۆنیت')
-      .replace(/تۆ چۆنیت/g, 'چۆنیت')
-      .replace(/تۆ کێیت/g, 'کێیت')
-      .replace(/کێیت تۆ/g, 'کێیت')
+      .replace(/(^|[\s،؛؟.\n])تۆ لە کوێیت(?=\s|$|[.,!?;:،؛؟])/g, '$1لەکوێیت')
+      .replace(/(^|[\s،؛؟.\n])لە کوێیت تۆ(?=\s|$|[.,!?;:،؛؟])/g, '$1لەکوێیت')
+      .replace(/(^|[\s،؛؟.\n])چۆنیت تۆ(?=\s|$|[.,!?;:،؛؟])/g, '$1چۆنیت')
+      .replace(/(^|[\s،؛؟.\n])تۆ چۆنیت(?=\s|$|[.,!?;:،؛؟])/g, '$1چۆنیت')
+      .replace(/(^|[\s،؛؟.\n])تۆ کێیت(?=\s|$|[.,!?;:،؛؟])/g, '$1کێیت')
+      .replace(/(^|[\s،؛؟.\n])کێیت تۆ(?=\s|$|[.,!?;:،؛؟])/g, '$1کێیت')
       .replace(/بەخێر بێیت/g, 'بەخێربێیت')
       .replace(/بەخێر بێن/g, 'بەخێربێن')
       .replace(/دەستت خۆش بێت/g, 'دەستت خۆش')
-      .replace(/خۆشحاڵ بووم بتبینم/g, 'خۆشحاڵ بووم بە بینینت');
+      .replace(/خۆشحاڵ بووم بتبینم/g, 'خۆشحاڵ بووم بە بینینت')
+
+      // Drop redundant subjective pronouns in conversational Sorani Kurdish
+      .replace(/(^|[\s،؛؟.\n])من نازانم(?=\s|$|[.,!?;:،؛؟])/g, '$1نازانم')
+      .replace(/(^|[\s،؛؟.\n])من دەزانم(?=\s|$|[.,!?;:،؛؟])/g, '$1دەزانم')
+      .replace(/(^|[\s،؛؟.\n])من دەبێت(?=\s|$|[.,!?;:،؛؟])/g, '$1دەبێت')
+      .replace(/(^|[\s،؛؟.\n])من دڵنیام(?=\s|$|[.,!?;:،؛؟])/g, '$1دڵنیام')
+      .replace(/(^|[\s،؛؟.\n])من پێم وایە(?=\s|$|[.,!?;:،؛؟])/g, '$1پێم وایە')
+      .replace(/(^|[\s،؛؟.\n])تۆ دەتوانیت(?=\s|$|[.,!?;:،؛؟])/g, '$1دەتوانیت')
+
+      // Fix machine-translated word-for-word idioms into fluid Sorani dialogue
+      .replace(/ئەوەیە بۆچی/g, 'بۆیە')
+      .replace(/ئەوەیە چۆن/g, 'ئاوا')
+      .replace(/ئەوەیە کاتێک/g, 'کاتێک')
+      .replace(/هیچ شتێک نییە/g, 'هیچ نییە')
+      .replace(/چاوەڕێ بە/g, 'بۆستە')
+      .replace(/هێمن بە/g, 'هێمن ببەوە')
+      .replace(/لێ ى/g, 'لێی')
+      .replace(/پێ ى/g, 'پێی')
+      .replace(/تێ ى/g, 'تێی')
+      .replace(/بۆ ى/g, 'بۆیی')
+      .replace(/پێ م/g, 'پێم')
+      .replace(/لێ م/g, 'لێم')
+      .replace(/تێ م/g, 'تێم')
+      .replace(/بۆ م/g, 'بۆم');
+
+    return res;
   }
 
   /**
