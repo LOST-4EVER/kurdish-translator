@@ -97,6 +97,13 @@
     tourCloseBtn: '#tourCloseBtn', tourTitle: '#tourTitle',
     tourText: '#tourText', tourSkipBtn: '#tourSkipBtn',
     tourPrevBtn: '#tourPrevBtn', tourNextBtn: '#tourNextBtn',
+    refreshMenuWrap: '#refreshMenuWrap', refreshBtn: '#refreshBtn',
+    refreshDropdown: '#refreshDropdown', updateBadgeDot: '#updateBadgeDot',
+    currentVerTag: '#currentVerTag', refreshStatusTxt: '#refreshStatusTxt',
+    btnQuickRefresh: '#btnQuickRefresh', btnForceRefresh: '#btnForceRefresh',
+    btnCheckUpdate: '#btnCheckUpdate', updateBanner: '#updateBanner',
+    bannerUpdateNowBtn: '#bannerUpdateNowBtn', bannerForceRefreshBtn: '#bannerForceRefreshBtn',
+    bannerCloseBtn: '#bannerCloseBtn',
   });
   const tabButtons = $$('.tab');
 
@@ -2880,30 +2887,237 @@
     });
   }
 
-  function setupPWA() {
-    // 1. Service Worker Registration & Update Notification
+  let swRegistration = null;
+  let waitingWorker = null;
+  let isCheckingUpdate = false;
+
+  function showUpdateAvailable(worker) {
+    if (worker) waitingWorker = worker;
+    if (els.updateBadgeDot) els.updateBadgeDot.classList.remove('hidden');
+    if (els.updateBanner) els.updateBanner.classList.remove('hidden');
+    if (els.refreshStatusTxt) {
+      const dict = dicts[currentUiLang] || dicts.en;
+      els.refreshStatusTxt.textContent = dict.updateAvailable || 'Update available!';
+      els.refreshStatusTxt.style.color = '#f43f5e';
+    }
+  }
+
+  function applySWUpdate() {
+    if (waitingWorker) {
+      waitingWorker.postMessage({ type: 'SKIP_WAITING' });
+    } else if (swRegistration && swRegistration.waiting) {
+      swRegistration.waiting.postMessage({ type: 'SKIP_WAITING' });
+    } else {
+      window.location.reload();
+    }
+  }
+
+  function performForceRefresh() {
+    const dict = dicts[currentUiLang] || dicts.en;
+    toast(dict.forceRefreshing || 'Purging cache & hard reloading…');
+
     if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.getRegistrations().then((regs) => {
+        regs.forEach((r) => r.unregister());
+      }).catch(() => {});
+    }
+
+    if ('caches' in window) {
+      caches.keys().then((keys) => {
+        return Promise.all(keys.map((k) => caches.delete(k)));
+      }).catch(() => {});
+    }
+
+    try {
+      sessionStorage.clear();
+    } catch {}
+
+    setTimeout(() => {
+      const cleanUrl = new URL(window.location.href);
+      cleanUrl.searchParams.set('force_refresh', Date.now());
+      window.location.href = cleanUrl.toString();
+    }, 350);
+  }
+
+  function checkForAppUpdates(manual = false) {
+    if (isCheckingUpdate) return;
+    isCheckingUpdate = true;
+    const dict = dicts[currentUiLang] || dicts.en;
+
+    if (els.refreshBtn) els.refreshBtn.classList.add('spinning');
+    if (els.refreshStatusTxt) {
+      els.refreshStatusTxt.textContent = dict.checkingUpdate || 'Checking for updates…';
+      els.refreshStatusTxt.style.color = '';
+    }
+
+    let foundNewVersion = false;
+
+    if (swRegistration) {
+      swRegistration.update().catch(() => {});
+      if (swRegistration.waiting) {
+        foundNewVersion = true;
+        showUpdateAvailable(swRegistration.waiting);
+      }
+    }
+
+    // Secondary network check on sw.js to catch new deployments immediately
+    fetch('./sw.js?v=' + Date.now(), { cache: 'no-store' })
+      .then((res) => {
+        if (!res.ok) return null;
+        return res.text();
+      })
+      .then((swText) => {
+        if (swText) {
+          const match = swText.match(/CACHE\s*=\s*['"]([^'"]+)['"]/);
+          if (match && match[1]) {
+            const serverVer = match[1];
+            if (els.currentVerTag) {
+              const currentVer = els.currentVerTag.textContent.trim();
+              if (currentVer && currentVer !== serverVer && !serverVer.includes(currentVer)) {
+                foundNewVersion = true;
+                showUpdateAvailable();
+              }
+            }
+          }
+        }
+      })
+      .catch(() => {})
+      .finally(() => {
+        setTimeout(() => {
+          if (els.refreshBtn) els.refreshBtn.classList.remove('spinning');
+          isCheckingUpdate = false;
+          if (!foundNewVersion) {
+            if (els.refreshStatusTxt) {
+              els.refreshStatusTxt.textContent = dict.appUpToDate || 'App up to date';
+              els.refreshStatusTxt.style.color = '';
+            }
+            if (manual) {
+              toast(dict.appUpToDate || 'App is up to date!');
+            }
+          } else {
+            toast(dict.updateAvailable || 'A new update is available!');
+          }
+        }, 500);
+      });
+  }
+
+  function setupPWA() {
+    // 1. Service Worker Registration & Version Checker
+    if ('serviceWorker' in navigator) {
+      let refreshing = false;
+      navigator.serviceWorker.addEventListener('controllerchange', () => {
+        if (refreshing) return;
+        refreshing = true;
+        window.location.reload();
+      });
+
       navigator.serviceWorker.register('./sw.js').then((reg) => {
+        swRegistration = reg;
+
+        if (reg.waiting) {
+          showUpdateAvailable(reg.waiting);
+        }
+
         reg.addEventListener('updatefound', () => {
           const newWorker = reg.installing;
           if (newWorker) {
             newWorker.addEventListener('statechange', () => {
               if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
-                toast(
-                  currentUiLang === 'ckb'
-                    ? 'نۆژەنکردنەوەی نوێ ئامادەیە! لاپەڕەکە نوێبکەرەوە.'
-                    : 'A new update is available! Reload to use the latest version.'
-                );
+                showUpdateAvailable(newWorker);
               }
             });
           }
         });
+
+        // Trigger an update check on startup
+        reg.update().catch(() => {});
       }).catch((err) => {
         console.warn('Service Worker registration failed:', err);
       });
+
+      // Auto check version every time app comes into foreground or goes online
+      document.addEventListener('visibilitychange', () => {
+        if (!document.hidden) checkForAppUpdates(false);
+      });
+      window.addEventListener('online', () => checkForAppUpdates(false));
     }
 
-    // 2. Install Prompt & App Installed Handler
+    // 2. Refresh Menu & Update Banner Event Listeners
+    if (els.refreshBtn) {
+      els.refreshBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        if (els.refreshDropdown) {
+          els.refreshDropdown.classList.toggle('hidden');
+          const isExpanded = !els.refreshDropdown.classList.contains('hidden');
+          els.refreshBtn.setAttribute('aria-expanded', isExpanded ? 'true' : 'false');
+        }
+      });
+    }
+
+    if (els.btnQuickRefresh) {
+      els.btnQuickRefresh.addEventListener('click', () => {
+        if (els.refreshDropdown) els.refreshDropdown.classList.add('hidden');
+        if (waitingWorker || (swRegistration && swRegistration.waiting)) {
+          applySWUpdate();
+        } else {
+          const dict = dicts[currentUiLang] || dicts.en;
+          toast(dict.refreshingApp || 'Refreshing application…');
+          setTimeout(() => window.location.reload(), 200);
+        }
+      });
+    }
+
+    if (els.btnForceRefresh) {
+      els.btnForceRefresh.addEventListener('click', () => {
+        if (els.refreshDropdown) els.refreshDropdown.classList.add('hidden');
+        performForceRefresh();
+      });
+    }
+
+    if (els.btnCheckUpdate) {
+      els.btnCheckUpdate.addEventListener('click', () => {
+        if (els.refreshDropdown) els.refreshDropdown.classList.add('hidden');
+        checkForAppUpdates(true);
+      });
+    }
+
+    if (els.bannerUpdateNowBtn) {
+      els.bannerUpdateNowBtn.addEventListener('click', () => {
+        applySWUpdate();
+      });
+    }
+
+    if (els.bannerForceRefreshBtn) {
+      els.bannerForceRefreshBtn.addEventListener('click', () => {
+        performForceRefresh();
+      });
+    }
+
+    if (els.bannerCloseBtn) {
+      els.bannerCloseBtn.addEventListener('click', () => {
+        if (els.updateBanner) els.updateBanner.classList.add('hidden');
+      });
+    }
+
+    // Close dropdown menu when clicking anywhere outside
+    document.addEventListener('click', (e) => {
+      if (els.refreshMenuWrap && !els.refreshMenuWrap.contains(e.target)) {
+        if (els.refreshDropdown) els.refreshDropdown.classList.add('hidden');
+        if (els.refreshBtn) els.refreshBtn.setAttribute('aria-expanded', 'false');
+      }
+    });
+
+    // Escape key closes dropdown menu
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') {
+        if (els.refreshDropdown && !els.refreshDropdown.classList.contains('hidden')) {
+          els.refreshDropdown.classList.add('hidden');
+          if (els.refreshBtn) els.refreshBtn.setAttribute('aria-expanded', 'false');
+        }
+      }
+    });
+
+    // 3. Install Prompt & App Installed Handler
     let deferredInstall = null;
     window.addEventListener('beforeinstallprompt', (e) => {
       e.preventDefault();
@@ -2930,7 +3144,7 @@
       toast(currentUiLang === 'ckb' ? 'بەرنامەکە بەسەرکەوتوویی دابەزێنرا!' : 'App installed successfully!');
     });
 
-    // 3. Web Share Target Handler (Receiving files shared directly from mobile/desktop folder/share menu)
+    // 4. Web Share Target Handler (Receiving files shared directly from mobile/desktop folder/share menu)
     if (window.location.search.includes('shared=1')) {
       fetch('./shared-subtitle-data')
         .then((res) => {
@@ -2950,7 +3164,7 @@
         .catch((err) => console.error('Error loading shared file:', err));
     }
 
-    // 4. File Handling API (Opening subtitle files directly from OS/File Explorer)
+    // 5. File Handling API (Opening subtitle files directly from OS/File Explorer)
     if ('launchQueue' in window && 'files' in window.LaunchParams.prototype) {
       window.launchQueue.setConsumer(async (launchParams) => {
         if (!launchParams.files || !launchParams.files.length) return;
