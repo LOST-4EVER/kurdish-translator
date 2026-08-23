@@ -228,6 +228,39 @@ const UI_I18N = {
   }
 };
 
+UI_I18N.getCurrentLang = function() {
+  try {
+    return localStorage.getItem('app_ui_lang') || localStorage.getItem('kurdish_ui_lang') || 'en';
+  } catch {
+    return 'en';
+  }
+};
+
+UI_I18N.setLang = function(lang) {
+  try {
+    const l = lang === 'ckb' ? 'ckb' : 'en';
+    localStorage.setItem('app_ui_lang', l);
+    localStorage.setItem('kurdish_ui_lang', l);
+  } catch {}
+};
+
+UI_I18N.getText = function(key, fallback = '') {
+  const lang = UI_I18N.getCurrentLang();
+  const dict = UI_I18N[lang] || UI_I18N.en;
+  if (dict && dict[key] !== undefined) {
+    return dict[key];
+  }
+  if (UI_I18N.en && UI_I18N.en[key] !== undefined) {
+    return UI_I18N.en[key];
+  }
+  return fallback;
+};
+
+UI_I18N.getDict = function(lang) {
+  const target = lang || UI_I18N.getCurrentLang();
+  return UI_I18N[target] || UI_I18N.en;
+};
+
 if (typeof module !== 'undefined' && module.exports) {
   module.exports = UI_I18N;
 }

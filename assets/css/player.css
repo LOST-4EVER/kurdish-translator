@@ -92,6 +92,10 @@
   -webkit-backdrop-filter: blur(2px);
 }
 
+.screen-text:empty {
+  display: none !important;
+}
+
 .caption-updated {
   animation: captionPop 0.22s cubic-bezier(0.16, 1, 0.3, 1) both;
 }

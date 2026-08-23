@@ -27,18 +27,21 @@ Translate movie, anime, and TV series subtitles into **Kurdish Sorani (کورد�
 
 ## ✨ Features & Highlights
 
-### 🚀 High-Speed Batch Translation
-- **Intelligent Batching:** Groups subtitle lines into delimited batches for fast translations.
+### 🚀 High-Speed Multi-API Batch Translation
+- **Multi-API Failover Architecture:** High-availability translation engine combining distributed Google Translate web endpoints, privacy-preserving Lingva Translate instances, and MyMemory API fallback with exponential backoff and jittered socket recovery.
+- **Intelligent Batching:** Groups subtitle lines into delimited batches for fast, high-throughput translations.
 - **Markup Protection:** Replaces HTML tags, ASS tags (`{\...}`), and MicroDVD codes with bracketed tokens before translation, restoring them intact afterward.
 - **Newline Sentinel Preservation:** Multiline subtitle cues are protected with literal sentinels so line breaks match the original timing.
 - **Failover & Self-Healing:** Merged or truncated responses automatically fallback to individual line translation with exponential backoff and alternate endpoint routing.
 
-### ✍️ Kurdish Sorani Orthography & Natural Dialogue Engine
+### ✍️ Kurdish Sorani Orthography, Anime & British English Localization Engine
+- **Cinema & Anime Dialogue Idiom Recognition:** Deep understanding of common movie, anime tropes, and dramatic colloquial expressions (*make yourself at home, get out of here, suit yourself, it cannot be helped, leave it to me, don't get cocky, don't underestimate me, show me what you got, give it your all, got your back, not on my watch, I won't let you down, what a pain/drag, hold your horses, mark my words*) mapped accurately to natural Sorani Kurdish dialogue rather than awkward literal calques.
+- **British English Idiom & Slang Mastery:** Specialized preprocessing and dictionary localization for British colloquialisms (*bloody hell, bollocks, bugger off, blimey, chuffed, gutted, dodgy, knackered, proper, cheers mate, taking the piss, not my cup of tea, sorted, bob's your uncle, give us a bell*).
 - **Accurate Kurdish Typography:** Converts punctuation to Arabic-script marks (`,` &rarr; `،`, `;` &rarr; `؛`, `?` &rarr; `؟`).
 - **Alphabet Normalization:** Normalizes Arabic Kaf (`ك` &rarr; `ک`), Yaa (`ي`/`ى` &rarr; `ی`), and Teh Marbuta (`ة` &rarr; `ە`).
-- **Heavy R (ڕ) & Velarized L (ڵ):** Context-aware Kurdish root and affix orthography corrections (e.g. `ڕۆژ`, `ڕاست`, `ماڵ`, `بەڵێ`, `خۆشحاڵ`).
-- **Verbal Prefix & Affix Rejoining:** Reconnects split preverbs and aspect markers (`دە-`, `نا-`, `نە-`, `مە-`, `هەڵ-`, `تێ-`, `پێ-`, `وەر-`).
-- **Colloquial Subtitle Slang Preprocessing:** Expands spoken idioms (*gonna, wanna, gotta, hold on a sec, what's up, never mind*) into clear, translatable expressions.
+- **Heavy R (ڕ) & Velarized L (ڵ):** Context-aware Kurdish root and affix orthography corrections (e.g. `ڕۆژ`, `ڕاست`, `ماڵ`, `بەڵێ`, `خۆشحاڵ`, `منداڵ`, `سڵاو`).
+- **Verbal Prefix & Affix Rejoining:** Reconnects split preverbs and aspect markers (`دە-`, `نا-`, `نە-`, `مە-`, `هەڵ-`, `تێ-`, `پێ-`, `وەر-`, `دەر-`, `دا-`, `دەست-`).
+- **Colloquial Subtitle Slang Preprocessing:** Expands spoken idioms (*gonna, wanna, gotta, hold on a sec, what's up, never mind, fair enough*) into clear, translatable expressions.
 - **Kurdish Numbers Option (٠١٢٣):** Optional toggle to convert Western digits to Kurdish Eastern Arabic digits while protecting technical tags.
 
 ### 🎬 Real-Time Subtitle Player & Preview

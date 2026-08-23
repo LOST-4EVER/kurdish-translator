@@ -1,27 +1,39 @@
 /**
- * translator.js — Batch translation engine using Google Translate's free
- * web endpoint (no API key, no backend). Works on GitHub Pages.
+ * translator.js — Multi-provider batch translation engine using Google Translate,
+ * Lingva Translate instances, and MyMemory APIs (no API key required, 100% free,
+ * works directly on GitHub Pages and offline-ready PWA).
  *
- * Batching: we send many subtitle lines joined by "\n" in one request, then
- * split the returned string back into lines. Much faster than one call per cue.
+ * Provides deep British English colloquialism & idiom normalizers, multi-engine
+ * fallback routing, cinema dialogue naturalization, and Kurdish Sorani orthography.
  */
 const Translator = (() => {
-  // Google's free endpoint lives on a few interchangeable hosts. Trying them in
-  // order matters: GitHub Pages is served from datacenter IPs that Google
-  // throttles more aggressively than home networks, so a second host often
-  // still answers when the first keeps returning 429.
-  const ENDPOINTS = [
-    'https://translate.googleapis.com/translate_a/single',
+  // Primary Google free endpoints (interchangeable hosts with jittered rotation across clients 1-5)
+  const GOOGLE_ENDPOINTS = [
     'https://clients5.google.com/translate_a/single',
-    'https://translate.google.com/translate_a/single',
     'https://clients1.google.com/translate_a/single',
+    'https://clients2.google.com/translate_a/single',
+    'https://clients3.google.com/translate_a/single',
+    'https://clients4.google.com/translate_a/single',
+    'https://translate.googleapis.com/translate_a/single',
+    'https://translate.google.com/translate_a/single',
   ];
+
+  // Secondary public privacy-friendly Lingva Translate instances (Open-source Google Translate frontends)
+  const LINGVA_INSTANCES = [
+    'https://lingva.ml/api/v1',
+    'https://translate.plausibility.cloud/api/v1',
+    'https://lingva.garudalinux.org/api/v1',
+    'https://lingva.lunar.icu/api/v1',
+  ];
+
+  // MyMemory Translation API endpoint
+  const MYMEMORY_ENDPOINT = 'https://api.mymemory.translated.net/get';
 
   // Keep requests modest to avoid timeouts on mobile networks.
   const BATCH_LINES = 35;
   const MAX_CHARS_PER_REQUEST = 2500;
   const DELAY_MS = 250;         // polite spacing between batches
-  const MAX_ATTEMPTS = 5;       // retries per chunk
+  const MAX_ATTEMPTS = 6;       // retries across providers
   const REQUEST_TIMEOUT_MS = 25000; // hang-up guard so a stalled socket retries
 
   // Sentinel protecting internal line breaks inside a cue so cue boundaries
@@ -29,19 +41,14 @@ const Translator = (() => {
   // is used with a literal split/join.
   const NL_SENTINEL = '§§';
 
-  // Control character that delimits lines inside a batch request. Google keeps
-  // it verbatim, so line boundaries survive even when it adds or removes plain
-  // newlines. Never appears in real subtitle text.
+  // Control character that delimits lines inside a batch request.
   const BATCH_SEP = '\u0001';
   const BATCH_SEP_RE = /^[ \t\u200e\u200f.,!?;:،؛؟]*\u0001[ \t\u200e\u200f.,!?;:،؛؟]*$/;
 
-  // Placeholder token format: [T0], [T1], etc. Google preserves bracketed tokens
-  // verbatim across language pairs (including RTL targets like Kurdish ckb),
-  // whereas invisible control chars (\u0002/\u0003) get stripped or mangled.
+  // Placeholder token format: [T0], [T1], etc.
   const MARKUP_RE = /\{[^}]*\}|<[^>]*>/g;
 
-  // Abort-aware delay: Cancel (or a timed-out scoped signal) wakes the wait
-  // immediately, so a long Retry-After/backoff can't outlive the user's choice.
+  // Abort-aware delay
   const sleep = (ms, signal) => new Promise((resolve) => {
     if (!signal) { setTimeout(resolve, ms); return; }
     if (signal.aborted) { resolve(); return; }
@@ -55,7 +62,7 @@ const Translator = (() => {
     s.replace(/[\s\u200e\u200f]*§[\s\u200e\u200f]*§[\s\u200e\u200f]*/g, '\n')
      .replace(/[\s\u200e\u200f]*§[\s\u200e\u200f]*/g, '\n');
 
-  /** Replace subtitle markup with bracketed tokens so Google keeps them verbatim. */
+  /** Replace subtitle markup with bracketed tokens so translation engines keep them verbatim. */
   function protect(text) {
     const toks = [];
     const out = text.replace(MARKUP_RE, (m) => {
@@ -160,188 +167,21 @@ const Translator = (() => {
   const ARABIC_SCRIPT = new Set(['ckb', 'fa', 'ar', 'ur', 'ps']);
 
   /**
-   * Comprehensive dictionary of Advanced English Expressions, Cinema Profanity, and Subtitle Idioms.
+   * Reference the modularized Kurdish Subtitle Lexicon from TranslatorDict.
    */
-  const ADVANCED_SUBTITLE_LEXICON = {
-    // Cinema Profanity, Expletives & Subtitle Curse Translations
-    'fuck': { kurdish: 'نەفرەت', context: 'Expletive', alternatives: ['شەیتان', 'دۆزەخ', 'سەگباب'] },
-    'fucking': { kurdish: 'نەفرەتی', context: 'Emphasis', alternatives: ['سەگباب', 'نەعلەتی', 'دۆزەخ'] },
-    'fuck off': { kurdish: 'سەری خۆت هەڵگرە', context: 'Dismissal', alternatives: ['لەبەرچاوم وون بە', 'بڕۆ بۆ دۆزەخ', 'بە نەفرەت بێت'] },
-    'fuck you': { kurdish: 'نەفرەتت لێ بێت', context: 'Invective', alternatives: ['بە نەفرەت بێت', 'تۆ بڕۆ بۆ دۆزەخ'] },
-    'fuck it': { kurdish: 'بە نەفرەت بێت', context: 'Resignation', alternatives: ['واز لەوە بێنە', 'خەمیم نییە'] },
-    'what the fuck': { kurdish: 'چی دۆزەخێکە', context: 'Shock/Anger', alternatives: ['چی نەعلەتییەکە', 'ئەمە چی نەفرەتییەکە', 'چی گویەکە'] },
-    'wtf': { kurdish: 'چی دۆزەخێکە', context: 'Shock', alternatives: ['چی نەعلەتییەکە', 'ئەمە چییە'] },
-    'shut the fuck up': { kurdish: 'دەمت دابخە', context: 'Silencing', alternatives: ['دەمپیس دەمت دابخە', 'دەمت بەستە', 'دەنگی خۆت ببڕە'] },
-    'shit': { kurdish: 'نەفرەت', context: 'Frustration', alternatives: ['پیسایی', 'کەریەتی', 'دۆزەخ'] },
-    'holy shit': { kurdish: 'ئەی هاوار', context: 'Astonishment', alternatives: ['ئەی خوایە', 'خوایە گیان', 'بەڕاستی سەیرە'] },
-    'bullshit': { kurdish: 'قسەی پووچ', context: 'Lies/Nonsense', alternatives: ['قسەی بێمانا', 'ڕیسوایی', 'درۆی شاخدار'] },
-    'damn': { kurdish: 'نەفرەتی', context: 'Disappointment', alternatives: ['داخەکەم', 'نەعلەتی', 'دۆزەخ'] },
-    'goddamn': { kurdish: 'نەفرەتی', context: 'Emphasis', alternatives: ['نەعلەتی', 'سەگباب'] },
-    'bastard': { kurdish: 'سەگباب', context: 'Insult', alternatives: ['حەرامزادە', 'کەڵەگا', 'سووک'] },
-    'bitch': { kurdish: 'سووک', context: 'Insult', alternatives: ['پێڵاوپیس', 'سەگباب', 'چەتەڵ'] },
-    'son of a bitch': { kurdish: 'سەگباب', context: 'Insult', alternatives: ['کوڕی سەگ', 'کوڕی پێڵاوپیس'] },
-    'motherfucker': { kurdish: 'نەعلەتی', context: 'Insult', alternatives: ['سەگباب', 'سەگی بێباوک', 'سووک'] },
-    'asshole': { kurdish: 'سووک', context: 'Insult', alternatives: ['سەگباب', 'گەمژەی بێئابڕوو', 'کەر'] },
-    'dickhead': { kurdish: 'گەمژە', context: 'Insult', alternatives: ['کەر', 'کەلەپووت', 'بێئەقڵ'] },
-    'dumbass': { kurdish: 'گەمژە', context: 'Insult', alternatives: ['کەر', 'نەفام', 'سەربەتاڵ'] },
-    'idiot': { kurdish: 'گەمژە', context: 'Insult', alternatives: ['نەفام', 'کەر', 'بێئەقڵ'] },
-    'screw you': { kurdish: 'نەعلەتت لێ بێت', context: 'Dismissal', alternatives: ['بڕۆ بۆ دۆزەخ', 'بە نەفرەت بێت'] },
-    'screw it': { kurdish: 'واز لەوە بێنە', context: 'Dismissal', alternatives: ['خەمیم نییە', 'گرنگ نییە'] },
-    'go to hell': { kurdish: 'بڕۆ بۆ دۆزەخ', context: 'Curse', alternatives: ['تۆ بڕۆ بۆ جەهەننەم', 'لەناو بچیت'] },
-    'kiss my ass': { kurdish: 'واز لە من بێنە', context: 'Defiance', alternatives: ['سەری خۆت بدە لە بەرد', 'گرنگی بە تۆ نادەم'] },
-    'get lost': { kurdish: 'لەبەرچاوم وون بە', context: 'Dismissal', alternatives: ['تێپەڕە لە لای من', 'سەری خۆت هەڵگرە'] },
-    'shut up': { kurdish: 'دەمت دابخە', context: 'Silence', alternatives: ['بێدەنگ بە', 'دەنگی خۆت ببڕە'] },
-    'shut your mouth': { kurdish: 'دەمت دابخە', context: 'Silence', alternatives: ['دەنگ مەکە', 'قسە مەکە'] },
-    'piece of shit': { kurdish: 'پیاوی سووک', context: 'Insult', alternatives: ['سەگباب', 'کەسی بێئابڕوو'] },
-    'freaking': { kurdish: 'نەفرەتی', context: 'Emphasis', alternatives: ['زۆر', 'بە نەفرەت'] },
-
-    // Film & TV Subtitle Idioms and Conversational Phrases
-    'are you out of your mind': { kurdish: 'تۆ شێت بوویت؟', context: 'Disbelief', alternatives: ['ئەقڵت لەدەستداوە؟', 'سەرت گەرم بووە؟'] },
-    'are you crazy': { kurdish: 'تۆ شێت بوویت؟', context: 'Disbelief', alternatives: ['ئاوێتەی شێتی بوویت؟', 'هۆشت لەسەر نییە؟'] },
-    'what on earth': { kurdish: 'چی گوزەر دەکات', context: 'Inquiry', alternatives: ['ئەمە چییە', 'چی ڕوویداوە'] },
-    'what the hell': { kurdish: 'چی دۆزەخێکە', context: 'Shock', alternatives: ['چی گوزەر دەکات', 'ئەمە چییە'] },
-    'you gotta be kidding me': { kurdish: 'گاڵتەم لەگەڵ دەکەیت؟', context: 'Incredulity', alternatives: ['ڕاست ناکەیت؟', 'پێم ڕابوێرە!'] },
-    'you must be kidding': { kurdish: 'گاڵتەم لەگەڵ دەکەیت؟', context: 'Incredulity', alternatives: ['ڕاست ناکەیت؟', 'باوڕ ناکەم'] },
-    'no offense': { kurdish: 'بێ ڕێزی نەبێت', context: 'Politeness', alternatives: ['مەبەستم بێڕێزی نییە', 'خۆت بێزار مەکە'] },
-    'none of your business': { kurdish: 'پەیوەندی بە تۆوە نییە', context: 'Privacy', alternatives: ['کاری تۆ نییە', 'سەری خۆت بە کارتەوە بێت'] },
-    'over my dead body': { kurdish: 'مەحاڵە تا زیندوم', context: 'Defiance', alternatives: ['لەسەر جەستەی من ڕوودەدات', 'هەرگیز نا'] },
-    "I don't give a damn": { kurdish: 'گرنگی پێ نادەم', context: 'Indifference', alternatives: ['تەنانەت باکشم نییە', 'باکم بەوە نییە'] },
-    "I don't care": { kurdish: 'گرنگی پێ نادەم', context: 'Indifference', alternatives: ['خەمم نییە', 'باکم نییە'] },
-    "I don't give a shit": { kurdish: 'هیچ باکم نییە', context: 'Strong Indifference', alternatives: ['گرنگی پێ نادەم', 'سەر لەوە نادەم'] },
-    'keep your mouth shut': { kurdish: 'دەمت بپۆشە', context: 'Secrecy', alternatives: ['قسە مەکە', 'دەمت دابخە'] },
-    'cut it out': { kurdish: 'بەسی بکە', context: 'Stop it', alternatives: ['ڕایبگرە', 'واز لەوە بێنە'] },
-    'knock it off': { kurdish: 'بەسی بکە', context: 'Stop it', alternatives: ['خۆت کۆبکەرەوە', 'وەستاو بێت'] },
-    'get out of my face': { kurdish: 'لەبەرچاوم دوورکەوەرەوە', context: 'Anger', alternatives: ['لەبەرچاوم وون بە', 'تێپەڕە'] },
-    'give me a break': { kurdish: 'مۆڵەتم بدە', context: 'Exasperation', alternatives: ['واز لە من بێنە', 'دەستم لێ هەڵگرە'] },
-    'watch your tongue': { kurdish: 'ئاگاداری زمانت بە', context: 'Warning', alternatives: ['بە ڕێزەوە قسە بکە', 'زمانت بپێچەوە'] },
-    'watch your mouth': { kurdish: 'ئاگاداری دەمت بە', context: 'Warning', alternatives: ['بە ڕێزەوە قسە بکە', 'قسەی ناشیرین مەکە'] },
-    'dead serious': { kurdish: 'بە تەواوی ڕاستمە', context: 'Seriousness', alternatives: ['پێکەنینی تێدا نییە', 'بە هەموو جدییەتێکەوە'] },
-    'piece of cake': { kurdish: 'کارێکی زۆر ئاسان', context: 'Very easy', alternatives: ['وەک ئاو خواردنەوە', 'زۆر سادەیە', 'ئاسانتر لەوەی بیرت لێ دەکردەوە'] },
-    'break a leg': { kurdish: 'بەهیوای سەرکەوتن', context: 'Good luck', alternatives: ['بەختێکی باش', 'سەرکەوتوو بیت', 'بەخت لەگەڵت بێت'] },
-    'out of the blue': { kurdish: 'لەناکاو', context: 'Unexpectedly', alternatives: ['کتوپڕ', 'بەبێ چاوەڕوانی', 'لە پڕێکدا', 'لە هیچ کۆیەکەوە'] },
-    'all of a sudden': { kurdish: 'لەپڕدا', context: 'Suddenly', alternatives: ['لەناکاو', 'کتوپڕ', 'بە بێئاگایی'] },
-    'at the end of the day': { kurdish: 'لە کۆتاییدا', context: 'Ultimately', alternatives: ['سەرەنجام', 'لە ئەنجامدا', 'لە دەرئەنجامدا', 'بە کورتی'] },
-    'make sense': { kurdish: 'مانای هەیە', context: 'Logical/clear', alternatives: ['لۆژیکییە', 'جێی باوەڕە', 'تێگەیشتنی ئاسانە', 'ڕاست دەردەکەوێت'] },
-    'does not make sense': { kurdish: 'هیچ مانایەکی نییە', context: 'Nonsense', alternatives: ['جێی تێگەیشتن نییە', 'بێ مانایە', 'سەری لێ دەرناچێت'] },
-    "doesn't make sense": { kurdish: 'هیچ مانایەکی نییە', context: 'Nonsense', alternatives: ['جێی تێگەیشتن نییە', 'بێ مانایە', 'سەری لێ دەرناچێت'] },
-    'never mind': { kurdish: 'کێشە نییە، لەبیری کە', context: 'Don\'t worry / ignore', alternatives: ['گرنگ نییە', 'بێ خەم بە', 'واز لەوە بێنە', 'لەبیریبکە'] },
-    'as a matter of fact': { kurdish: 'لە ڕاستیدا', context: 'In reality', alternatives: ['بە پێچەوانەوە، لە واقیعدا', 'لە حەقیقەتدا', 'ڕاستییەکەی'] },
-    'in fact': { kurdish: 'لە ڕاستیدا', context: 'Actually', alternatives: ['بە ڕاستی', 'لە واقیعدا', 'ڕاستییەکەی'] },
-    'by the way': { kurdish: 'لەم نێوەندەدا / بە بۆنەیەوە', context: 'Incidentally', alternatives: ['بە ڕێکەوت', 'لێرەدا شتێک بڵێم', 'بەنۆبەی خۆی'] },
-    'on the other hand': { kurdish: 'لە لایەکی ترەوە', context: 'Conversely', alternatives: ['بە پێچەوانەوە', 'لە ڕوانگەیەکی ترەوە', 'لە ڕوویەکی دیکەوە'] },
-    'sooner or later': { kurdish: 'زوو بێت یان درەنگ', context: 'Inevitably', alternatives: ['ڕۆژێک لە ڕۆژان', 'لە کۆتاییدا هەر ڕوودەدات', 'سەرەنجام'] },
-    'take it easy': { kurdish: 'ئارام بە، خەمت نەبێت', context: 'Relax / calm down', alternatives: ['هێمن بەوە', 'ئاسان وەریگرە', 'خۆت تێک مەدە'] },
-    'hang in there': { kurdish: 'خۆڕاگر بە', context: 'Stay strong', alternatives: ['بەردەوام بە و کۆڵ مەدە', 'ئارام بگرە', 'ورەت نەبەزێت'] },
-    'pull yourself together': { kurdish: 'خۆت کۆبکەرەوە', context: 'Control emotions', alternatives: ['ئاگات لە خۆت بێت', 'هێمن بەرەوە', 'هۆشت کۆبکەرەوە'] },
-    'call it a day': { kurdish: 'با کۆتایی پێ بهێنین', context: 'Finish work for today', alternatives: ['بۆ ئەمڕۆ بەسە', 'کارەکان کۆتایی پێبهێنین', 'بەسی بکەین'] },
-    'no big deal': { kurdish: 'شتێکی ئەوتۆ نییە', context: 'Not important', alternatives: ['کێشەیەکی گەورە نییە', 'گرنگ نییە', 'خەمی ناوێت'] },
-    'fair enough': { kurdish: 'قسەیەکی بەجێیە', context: 'Acceptable point', alternatives: ['قبووڵکراوە', 'پێم باشە', 'ڕاست دەکەیت'] },
-    'for what it is worth': { kurdish: 'ئەگەر سودی هەبێت', context: 'If helpful', alternatives: ['بە ڕای من', 'تەنها بۆ زانیاری', 'ئەگەر یارمەتیدەر بێت'] },
-    "for what it's worth": { kurdish: 'ئەگەر سودی هەبێت', context: 'If helpful', alternatives: ['بە ڕای من', 'تەنها بۆ زانیاری', 'ئەگەر یارمەتیدەر بێت'] },
-    'ring a bell': { kurdish: 'ئاشنا دیارە', context: 'Sounds familiar', alternatives: ['وەبیرم دێتەوە', 'ناسیاوە', 'ناوی ئاشنایە'] },
-    'hands down': { kurdish: 'بێگومان', context: 'Undoubtedly', alternatives: ['بە دڵنیاییەوە', 'بێ ڕکابەر', 'بێ چەندوچۆن', 'بە تەواوی'] },
-    'keep an eye on': { kurdish: 'ئاگاداری بە', context: 'Watch closely', alternatives: ['چاوێکی لێ بێت', 'چاودێری بکە', 'چاو لەسەر دانێ'] },
-    'read between the lines': { kurdish: 'لە مەبەستە شاراوەکە تێبگە', context: 'Hidden meaning', alternatives: ['لە نهێنییەکان تێبگە', 'قووڵتر بیربکەرەوە', 'وەردبە'] },
-    'think outside the box': { kurdish: 'جیاواز بیربکەرەوە', context: 'Creative thinking', alternatives: ['داهێنەرانە بیربکەرەوە', 'لە دەرەوەی چوارچێوە بیربکەرەوە'] },
-    'cost an arm and a leg': { kurdish: 'زۆر گرانە', context: 'Very expensive', alternatives: ['نرخێکی خەیاڵیی هەیە', 'بە پارەیەکی زۆرە'] },
-    'spill the beans': { kurdish: 'نهێنییەکە ئاشکرا بکە', context: 'Reveal secret', alternatives: ['ڕاستییەکان بدرکێنە', 'قسە بکە', 'ڕاستییەکە بڵێ'] },
-    'safe and sound': { kurdish: 'ساغ و سەلامەت', context: 'Unharmed', alternatives: ['بە سەلامەتی', 'بێ زیان', 'ساغ و وڵاغ'] },
-    'in a nutshell': { kurdish: 'بە کورتی', context: 'Briefly', alternatives: ['بە کورت و پوختی', 'پوختەکەی', 'پوختەی قسە'] },
-    'from scratch': { kurdish: 'لە سەرەتاوە', context: 'From beginning', alternatives: ['لە بنەڕەتەوە', 'لە سفرەوە', 'لە بنچینەوە'] },
-    'by all means': { kurdish: 'بێگومان', context: 'Certainly', alternatives: ['بە دڵنیاییەوە', 'بە هەموو شێوەیەک', 'دڵنیابە'] },
-    'point of view': { kurdish: 'دیدگا', context: 'Perspective', alternatives: ['بۆچوون', 'ڕوانگە', 'تێڕوانین', 'گۆشەنیگا'] },
-    'day in and day out': { kurdish: 'ڕۆژ لە دوای ڕۆژ', context: 'Continuously', alternatives: ['بە بەردەوامی', 'هەموو ڕۆژێک', 'بە ڕۆژ و شەو'] },
-    'time will tell': { kurdish: 'کات هەموو شتێک دەردەخات', context: 'Future will reveal', alternatives: ['ڕۆژگار دەیسەلمێنێت', 'پاشان دەردەکەوێت'] },
-    'figure out': { kurdish: 'تێبگە', context: 'Understand/solve', alternatives: ['چارەسەر بدۆزەرەوە', 'پێی بزانیت', 'سەری لێ دەربکەیت'] },
-    'come up with': { kurdish: 'بدۆزەرەوە', context: 'Propose/create', alternatives: ['پێشنیار بکە', 'بەرهەم بهێنە'] },
-    'call off': { kurdish: 'هەڵوەشاندنەوە', context: 'Cancel', alternatives: ['ڕاگرتن', 'بەتاڵکردنەوە'] },
-    'put off': { kurdish: 'دواخستن', context: 'Postpone', alternatives: ['وەپاشخستن', 'پاشخستن'] },
-    'look forward to': { kurdish: 'بەپەرۆشەوە چاوەڕێم', context: 'Eagerly anticipate', alternatives: ['بە تامەزرۆییەوە چاوەڕوانی دەکەم', 'چاوەڕوانم'] },
-    'bear in mind': { kurdish: 'لەبیرت بێت', context: 'Remember', alternatives: ['لەبەرچاوی بگرە', 'لە یادتبێت'] },
-    'take for granted': { kurdish: 'بە ئاسایی وەریگرە', context: 'Underestimate', alternatives: ['قەدری نەزانیت', 'بە کەم سەیریکردن'] },
-    'cross the line': { kurdish: 'سنوور بەزاندن', context: 'Go too far', alternatives: ['لە سنوور دەرچوون', 'پێشێلکردن'] },
-    'get out of hand': { kurdish: 'لە کۆنتڕۆڵ دەرچوون', context: 'Out of control', alternatives: ['لە دەست دەربچێت', 'ئاڵۆز بوون'] },
-    'get rid of': { kurdish: 'ڕزگاربوون لێی', context: 'Eliminate', alternatives: ['خۆ دەربازکردن', 'لە کۆڵکردنەوە', 'فڕێدان'] },
-    'hit the road': { kurdish: 'کەوتنە ڕێ', context: 'Depart', alternatives: ['بەڕێکەوتن', 'دەست بە گەشتکردن'] },
-    'under the weather': { kurdish: 'تەندروستیم باش نییە', context: 'Feeling unwell', alternatives: ['کەمێک ناڕەحەتم', 'هەست بە نەخۆشی دەکەم'] },
-    'bite the bullet': { kurdish: 'بەرگەی بگرە', context: 'Endure difficulty', alternatives: ['سەبر بگرە', 'قبووڵی بکە'] },
-    'face the music': { kurdish: 'ڕووبەڕووی لێکەوتەکان ببەرەوە', context: 'Accept consequences', alternatives: ['باجەکەی بدە', 'ئەنجامەکەی قبووڵ بکە'] },
-    'once in a blue moon': { kurdish: 'زۆر بە دەگمەن', context: 'Very rarely', alternatives: ['هەر لە کەونارا جارێک', 'جاروبارێکی کەم'] },
-    'see eye to eye': { kurdish: 'هاوڕابوون', context: 'Agree fully', alternatives: ['ڕێککەوتن', 'یەکهەڵوێست بوون'] },
-    'speak of the devil': { kurdish: 'ناوی هات و خۆی هات', context: 'Speaking of person', alternatives: ['هەر باسی تۆمان دەکرد'] },
-    'burn the midnight oil': { kurdish: 'شەونخوونی کردن', context: 'Work late', alternatives: ['تا درەنگ کارکردن'] },
-    'cut corners': { kurdish: 'کەمکردنەوەی کوالیتی', context: 'Rush work cheaply', alternatives: ['ڕێگەی کورت گرتنەبەر'] },
-    'on the fence': { kurdish: 'دوودڵ', context: 'Undecided', alternatives: ['بڕیارنەدراو', 'لە نێوان دوو بڕیاردا'] },
-    'pull someone leg': { kurdish: 'گاڵتەکردن لەگەڵ کەسێک', context: 'Tease someone', alternatives: ['ڕابواردن', 'فریودانی بە گاڵتە'] },
-    "pull someone's leg": { kurdish: 'گاڵتەکردن لەگەڵ کەسێک', context: 'Tease someone', alternatives: ['ڕابواردن', 'فریودانی بە گاڵتە'] },
-    'the elephant in the room': { kurdish: 'بابەتە گرنگە پشتگوێخراوەکە', context: 'Obvious problem', alternatives: ['کێشە سەرەکییە نەبینراوەکە'] },
-    'through thick and thin': { kurdish: 'لە خۆشی و لە ناخۆشیدا', context: 'In all circumstances', alternatives: ['لە هەموو بارودۆخێکدا'] },
-    'actions speak louder than words': { kurdish: 'کردار لە قسە بەهێزترە', context: 'Action over words', alternatives: ['کردار شەرتە نەک قسە'] },
-    'better safe than sorry': { kurdish: 'خۆپاراستن لە پەشیمانی باشترە', context: 'Caution is best', alternatives: ['وریا بە'] },
-    'easier said than done': { kurdish: 'قسەکردن لە کردار ئاسانترە', context: 'Hard to do', alternatives: ['کرداری قورسە'] },
-    'every cloud has a silver lining': { kurdish: 'لە هەموو ناخۆشییەکدا خێرێک هەیە', context: 'Silver lining', alternatives: ['هیوایەک هەیە'] },
-    'leave no stone unturned': { kurdish: 'هەموو هەوڵێک بدە', context: 'Search everywhere', alternatives: ['هەموو شوێنێک بگەڕێ'] },
-    'look before you leap': { kurdish: 'پێش هەنگاونان بیربکەرەوە', context: 'Think before acting', alternatives: ['بە ژیری مامەڵە بکە'] },
-    'no pain no gain': { kurdish: 'بێ ڕەنج کێشان بەرهەم نابێت', context: 'Effort brings results', alternatives: ['هەوڵدان پێویستە'] },
-    'practice makes perfect': { kurdish: 'ڕاهێنان دەبێتە هۆی لێهاتوویی', context: 'Practice makes skill', alternatives: ['بە مەشق دەگەیتە ئامانج'] },
-    'the early bird catches the worm': { kurdish: 'سەحەرخێز بەختەوەرە', context: 'Early starter wins', alternatives: ['زوو دەستپێکردن سەرکەوتنە'] },
-    'time is money': { kurdish: 'کات زێڕە', context: 'Time is valuable', alternatives: ['کات بەنرخە'] },
-    'back to square one': { kurdish: 'گەڕانەوە بۆ خاڵی سەرەتا', context: 'Start over', alternatives: ['دەستپێکردنەوە لە سەرەتاوە'] },
-    'burn bridges': { kurdish: 'پردەکانی پەیوەندی بپچڕێنە', context: 'Cut all ties', alternatives: ['ڕێگەی گەڕانەوە مەهێڵەرەوە'] },
-    'drive someone crazy': { kurdish: 'کەسێک شێت کردن', context: 'Infuriate', alternatives: ['لە هۆش خۆ بردن', 'بێزارکردنی توند'] },
-    'curiosity killed the cat': { kurdish: 'زۆرزانی زیانی هەیە', context: 'Excess curiosity', alternatives: ['لە هەموو شت مەکۆڵەرەوە'] },
-    'mind your own business': { kurdish: 'دەست لە کارمەوە مەدە', context: 'Stay out of it', alternatives: ['ئاگاداری کاری خۆت بە', 'سەری خۆت بە کارتەوە بێت'] },
-    'step by step': { kurdish: 'هەنگاو بە هەنگاو', context: 'Gradually', alternatives: ['کەم کەم', 'پلە بە پلە'] },
-    'as long as': { kurdish: 'مادام', context: 'Provided that', alternatives: ['تا ئەو کاتەی', 'ئەگەر'] },
-    'no matter what': { kurdish: 'چی ڕووبدات', context: 'In any case', alternatives: ['بە هەموو بارێکدا', 'بە هەر نرخێک بێت'] },
-    "it's up to you": { kurdish: 'بڕیارەکە لای تۆیە', context: 'Your choice', alternatives: ['تۆ بڕیار بدە', 'وەک خۆت دەتەوێت'] },
-    'it is up to you': { kurdish: 'بڕیارەکە لای تۆیە', context: 'Your choice', alternatives: ['تۆ بڕیار بدە', 'وەک خۆت دەتەوێت'] },
-    'make yourself at home': { kurdish: 'ماڵی خۆتە', context: 'Feel comfortable', alternatives: ['ئاسوودە بە', 'تەواو بە ئاسودەیی بە'] },
-    "for god's sake": { kurdish: 'لەبەر خاتری خوا', context: 'For goodness sake', alternatives: ['پێ خاتری خوا', 'لەپێناو خوادا'] },
-    'on my way': { kurdish: 'لە ڕێگام', context: 'Coming now', alternatives: ['بەڕێوەم', 'ئێستا دێم'] },
-    'give me a hand': { kurdish: 'یارمەتیم بدە', context: 'Help me', alternatives: ['دەستم بگرە', 'کەمێک هاوکاریم بکە'] },
-    'hit the hay': { kurdish: 'چوون بۆ خەوتن', context: 'Go to sleep', alternatives: ['خەوتن', 'پاڵکەوتن'] },
-    'out of order': { kurdish: 'لەکارکەوتووە', context: 'Not working', alternatives: ['خراپبووە', 'تێکچووە'] },
-    'back and forth': { kurdish: 'هاتووچۆ', context: 'Repeatedly', alternatives: ['پێش و پاش', 'بەردەوام هەڵبەز و دابەز'] },
-    'so be it': { kurdish: 'با وابێت', context: 'Let it be', alternatives: ['با ڕووبدات', 'باشە بەو شێوەیە'] },
-    'in the blink of an eye': { kurdish: 'لە چاوتروکانێکدا', context: 'Instantly', alternatives: ['بە خێرایی بەرق', 'زۆر بە پەلە'] },
-    'ubiquitous': { kurdish: 'لە هەموو شوێنێک بەربڵاو', context: 'Everywhere', alternatives: ['گشتگیر', 'هەمەلایەنە'] },
-    'ephemeral': { kurdish: 'تەمەن کورت و کاتی', context: 'Short-lived', alternatives: ['زووگوزەر', 'نەبڕاوە'] },
-    'resilience': { kurdish: 'خۆڕاگری', context: 'Toughness', alternatives: ['پشوودرێژی', 'توانای بەردەوامی'] },
-    'paradigm shift': { kurdish: 'گۆڕانکاری بنەڕەتی', context: 'Fundamental change', alternatives: ['وەرچەرخانی مێژوویی', 'سەرلەنوێ داڕشتنەوە'] },
-    'meticulous': { kurdish: 'زۆر بە دیقەت و وردبین', context: 'Detailed/careful', alternatives: ['وردکار', 'بە سەلیقە'] },
-    'quintessential': { kurdish: 'نموونەی باڵا', context: 'Perfect example', alternatives: ['پوختەی سەرەکی', 'بەرجەستەکەری تەواو'] },
-    'serendipity': { kurdish: 'ڕێکەوتی بەختەوەرانە', context: 'Lucky discovery', alternatives: ['دەستکەوتی چاوەڕواننەکراو', 'بەختی چاک'] },
-    'inevitable': { kurdish: 'حەتمی و چاوەڕوانکراو', context: 'Unavoidable', alternatives: ['خۆلێلادان مەحاڵ', 'ڕوودانی مسۆگەرە'] },
-    'ambiguous': { kurdish: 'ناڕوون و دوومانادار', context: 'Unclear', alternatives: ['تەمومژاوی', 'لێڵ'] },
-    'eloquent': { kurdish: 'ڕەوانبێژ و زمانپاراو', context: 'Well-spoken', alternatives: ['قسەزان', 'شیرین زمان'] },
-    'profound': { kurdish: 'قووڵ و پڕواتا', context: 'Deep meaning', alternatives: ['کاریگەر', 'بنەڕەتی'] },
-    'lucid': { kurdish: 'ڕوون و ئاشکرا', context: 'Clear/bright', alternatives: ['ڕۆشن', 'هۆشیار'] },
-    'pragmatic': { kurdish: 'واقیعبین و کردارەکی', context: 'Realistic/practical', alternatives: ['سوودخواز', 'پراکتیکی'] },
-    'superfluous': { kurdish: 'زیادە و ناپێویست', context: 'Unnecessary', alternatives: ['بێسوود', 'پێویست پێی نەکراو'] },
-
-    // Action, Thriller & Cinematic Dialogue Subtitle Expressions
-    'on the run': { kurdish: 'لە هەڵهاتندا', context: 'Action/Escape', alternatives: ['ڕاکردوو', 'لەژێر داواکارییدا'] },
-    'take cover': { kurdish: 'پەنا ببەرە', context: 'Tactical Warning', alternatives: ['خۆت بپۆشە', 'خۆت بشارەوە'] },
-    'watch your back': { kurdish: 'ئاگاداری پشت سەرت بە', context: 'Threat Warning', alternatives: ['وریا بە', 'ئاگات لە خۆت بێت'] },
-    'double cross': { kurdish: 'خەیانەتکردن', context: 'Treachery', alternatives: ['پشتکردنە هاوڕێ', 'فریودان'] },
-    'lock and load': { kurdish: 'چەکەکانتان ئامادە بکەن', context: 'Combat Ready', alternatives: ['ئامادەبن بۆ شەڕ', 'خۆتان کۆبکەنەوە'] },
-    'undercover': { kurdish: 'بە نهێنی', context: 'Spy/Police', alternatives: ['بە جلی سڤیلەوە', 'شانۆگەری نهێنی'] },
-    'code red': { kurdish: 'باری لەناکاوی سوور', context: 'Emergency', alternatives: ['خەتەری توند', 'مەترسیی ئاستی بەرز'] },
-    'keep your head down': { kurdish: 'سەرت نەوی بکە', context: 'Combat Caution', alternatives: ['خۆت بشارەوە', 'سەرت هەڵمەبرە'] },
-    "don't mess with me": { kurdish: 'دەست لە کارمەوە مەدە', context: 'Warning', alternatives: ['یاری بە ئاگری من مەکە', 'تێکەڵم مەبە'] },
-    "i got your back": { kurdish: 'پشتیوانیت دەکەم', context: 'Loyalty', alternatives: ['پشتت دەگرم', 'ئاگام لە تۆ دەبێت'] },
-    'make no mistake': { kurdish: 'هیچ گومانێک مەهێڵەرەوە', context: 'Certainty', alternatives: ['دڵنیابە', 'دڵنیا بەوەی'] },
-    'mind-boggling': { kurdish: 'سەرسوڕهێنەر', context: 'Amazement', alternatives: ['ئەقڵڕفێن', 'سەیر و سەمەرە'] },
-    'breathtaking': { kurdish: 'سەرنجڕاکێشی بێئەندازە', context: 'Awe', alternatives: ['دڵڕفێن', 'شاکار'] },
-    'flabbergasted': { kurdish: 'پڕ لە سەرسوڕمان', context: 'Shock', alternatives: ['سەرسامبوو', 'دەمتەقێن'] },
-    'relentless': { kurdish: 'بێبەزەییانە و نەپچڕاو', context: 'Persistence', alternatives: ['بێوەستان', 'توند'] },
-    'formidable': { kurdish: 'سەخت و بەهێز', context: 'Strength', alternatives: ['سامناک', 'بەهێز'] },
-  };
+  const ADVANCED_SUBTITLE_LEXICON = (typeof TranslatorDict !== 'undefined' && TranslatorDict.LEXICON)
+    ? TranslatorDict.LEXICON
+    : {
+        'fuck': { kurdish: 'نەفرەت', context: 'Expletive', alternatives: ['شەیتان', 'دۆزەخ', 'سەگباب'] },
+        'shut up': { kurdish: 'دەمت دابخە', context: 'Silence', alternatives: ['بێدەنگ بە', 'دەنگی خۆت ببڕە'] },
+        'never mind': { kurdish: 'کێشە نییە، لەبیری کە', context: "Don't worry", alternatives: ['گرنگ نییە', 'بێ خەم بە'] },
+        'get out of here': { kurdish: 'بڕۆ دەرەوە', context: 'Dismissal', alternatives: ['لەبەرچاوم ون بە', 'سەری خۆت هەڵگرە'] },
+        'make yourself at home': { kurdish: 'ماڵی خۆتە', context: 'Feel comfortable', alternatives: ['ئاسوودە بە', 'تەواو بە ئاسودەیی بە'] },
+      };
 
   /** Preprocess source text to improve translation accuracy for English to Kurdish Sorani. */
   function preprocessSource(text, srcLang, tgtLang) {
-    if (tgtLang !== 'ckb' || (srcLang !== 'en' && srcLang !== 'auto')) return text;
+    if (tgtLang !== 'ckb' || (srcLang !== 'en' && srcLang !== 'en-GB' && srcLang !== 'auto')) return text;
     let s = text;
 
     // Handle subtitle dialogue multi-speaker hyphens on a single line:
@@ -350,6 +190,38 @@ const Translator = (() => {
 
     // Expand gerund colloquialisms in subtitle dialogues (e.g., lookin' -> looking, runnin' -> running, doin' -> doing)
     s = s.replace(/\b([a-zA-Z]{2,})in['’](?=\s|[.,!?;:'"()[\]{}<>]|$)/gi, '$1ing');
+
+    // Expand British and international English colloquialisms, slang, and dialectal forms into clean expressions
+    s = s.replace(/\bbloody\s+hell\b/gi, 'oh goodness')
+         .replace(/\bbloody\b/gi, 'damn')
+         .replace(/\bbollocks\b/gi, 'nonsense')
+         .replace(/\bbugger\s+off\b/gi, 'go away')
+         .replace(/\bbugger\b/gi, 'damn')
+         .replace(/\bblimey\b/gi, 'my goodness')
+         .replace(/\bchuffed\b/gi, 'delighted')
+         .replace(/\bgutted\b/gi, 'devastated')
+         .replace(/\bdodgy\b/gi, 'suspicious')
+         .replace(/\bknackered\b/gi, 'exhausted')
+         .replace(/\bcheerio\b/gi, 'goodbye')
+         .replace(/\btaking\s+the\s+piss\b/gi, 'making fun')
+         .replace(/\bpiss\s+off\b/gi, 'go away')
+         .replace(/\bpissed\s+off\b/gi, 'angry')
+         .replace(/\binnit\b/gi, 'is it not')
+         .replace(/\bquid\b/gi, 'pounds')
+         .replace(/\bbloke\b|\bchap\b/gi, 'man')
+         .replace(/\blads?\b/gi, (m) => m.toLowerCase().endsWith('s') ? 'boys' : 'boy')
+         .replace(/\blasses?\b/gi, (m) => m.toLowerCase().endsWith('s') ? 'girls' : 'girl')
+         .replace(/\bcheers\s+mate\b/gi, 'thank you friend')
+         .replace(/\bcheers\b/gi, 'thank you')
+         .replace(/\bnot\s+my\s+cup\s+of\s+tea\b/gi, 'not something I like')
+         .replace(/\bbob['’]?s\s+your\s+uncle\b/gi, 'it is easily done')
+         .replace(/\bgive\s+(?:me|us)\s+a\s+bell\b/gi, 'call me')
+         .replace(/\bhave\s+a\s+word\b/gi, 'speak briefly')
+         .replace(/\bfull\s+of\s+beans\b/gi, 'full of energy')
+         .replace(/\bspanner\s+in\s+the\s+works\b/gi, 'unexpected problem')
+         .replace(/\ba\s+right\s+mess\b/gi, 'a complete disaster')
+         .replace(/\ball\s+to\s+cock\b/gi, 'completely ruined')
+         .replace(/\bchuffed\s+to\s+bits\b/gi, 'extremely happy');
 
     // Expand informal contractions and spoken dialogue slang into natural English phrases for accurate translation
     s = s.replace(/\bgonna\b/gi, 'going to')
@@ -362,7 +234,7 @@ const Translator = (() => {
          .replace(/\bkinda\b/gi, 'kind of')
          .replace(/\bsorta\b/gi, 'sort of')
          .replace(/\blotta\b/gi, 'lot of')
-         .replace(/\alot\b/gi, 'a lot')
+         .replace(/\balot\b/gi, 'a lot')
          .replace(/\binfront\b/gi, 'in front')
          .replace(/\basap\b/gi, 'as soon as possible')
          .replace(/\bfyi\b/gi, 'for your information')
@@ -445,7 +317,42 @@ const Translator = (() => {
          .replace(/\bmake\s+yourself\s+at\s+home\b/gi, 'feel comfortable')
          .replace(/\bmind\s+your\s+own\s+business\b/gi, 'do not interfere')
          .replace(/\bon\s+my\s+way\b/gi, 'coming now')
-         .replace(/\bgive\s+me\s+a\s+hand\b/gi, 'help me');
+         .replace(/\bgive\s+me\s+a\s+hand\b/gi, 'help me')
+         .replace(/\bget\s+out\s+of\s+here\b/gi, 'leave right now')
+          .replace(/\bget\s+the\s+hell\s+out\s+(?:of\s+here)?\b/gi, 'leave immediately')
+          .replace(/\bget\s+the\s+fuck\s+out\s+(?:of\s+here)?\b/gi, 'leave immediately')
+          .replace(/\bsuit\s+yourself\b/gi, 'do as you please')
+          .replace(/\bit\s+can['’]?t\s+be\s+helped\b|\bthere['’]?s\s+no\s+helping\s+it\b/gi, 'it cannot be avoided')
+          .replace(/\bleave\s+it\s+to\s+me\b/gi, 'leave this to me')
+          .replace(/\bdon['’]?t\s+get\s+cocky\b/gi, 'do not be arrogant')
+          .replace(/\bdon['’]?t\s+underestimate\s+me\b/gi, 'do not underestimate me')
+          .replace(/\bshow\s+me\s+what\s+you(?:['’]?ve)?\s+got\b/gi, 'show me your ability')
+          .replace(/\bgive\s+it\s+your\s+all\b/gi, 'try with all your strength')
+          .replace(/\b(?:i['’]?ve\s+)?got\s+your\s+back\b/gi, 'I will support you')
+          .replace(/\bnot\s+on\s+my\s+watch\b/gi, 'never while I am here')
+          .replace(/\bi\s+won['’]?t\s+let\s+you\s+down\b/gi, 'I will not disappoint you')
+          .replace(/\bdon['’]?t\s+let\s+me\s+down\b/gi, 'do not disappoint me')
+          .replace(/\bi['’]?ll\s+protect\s+you\b/gi, 'I will protect you')
+          .replace(/\bwhat\s+a\s+(?:pain|drag)\b/gi, 'how annoying')
+          .replace(/\bi\s+(?:have|got)\s+no\s+choice\b/gi, 'I have no other choice')
+          .replace(/\bit['’]?s\s+about\s+time\b/gi, 'finally it is time')
+          .replace(/\bstand\s+back\b|\bstep\s+back\b/gi, 'step backwards')
+          .replace(/\bdon['’]?t\s+be\s+ridiculous\b/gi, 'do not be silly')
+          .replace(/\bjust\s+in\s+time\b/gi, 'right on time')
+          .replace(/\bit['’]?s\s+not\s+over\s+yet\b/gi, 'it is not finished yet')
+          .replace(/\bhold\s+your\s+horses\b/gi, 'wait patiently')
+          .replace(/\bmark\s+my\s+words\b/gi, 'remember my words')
+          .replace(/\bdon['’]?t\s+get\s+me\s+wrong\b/gi, 'do not misunderstand me')
+          .replace(/\bit['’]?s\s+not\s+worth\s+it\b/gi, 'it is not worth it')
+          .replace(/\bsave\s+your\s+breath\b/gi, 'save your words')
+          .replace(/\bno\s+hard\s+feelings\b/gi, 'do not be upset')
+          .replace(/\bspill\s+the\s+beans\b/gi, 'reveal the truth')
+          .replace(/\bbreak\s+a\s+leg\b/gi, 'good luck')
+          .replace(/\bpiece\s+of\s+cake\b/gi, 'very easy')
+          .replace(/\bbite\s+the\s+bullet\b/gi, 'endure the hardship')
+          .replace(/\bunder\s+the\s+weather\b/gi, 'feeling unwell')
+          .replace(/\bout\s+of\s+my\s+way\b/gi, 'move out of my way')
+          .replace(/\bface\s+to\s+face\b/gi, 'directly face to face');
 
     return s;
   }
@@ -466,23 +373,28 @@ const Translator = (() => {
 
   /** Normalize Arabic characters to Kurdish Sorani alphabet & orthography conventions. */
   function normalizeSoraniAlphabet(str) {
+    if (!str) return '';
     let s = str.replace(/\u0643/g, 'ک')   // Arabic Kaf 'ك' -> Kurdish Keheh 'ک'
                .replace(/\u064A/g, 'ی')   // Arabic Yaa 'ي' -> Kurdish Yeh 'ی'
                .replace(/\u0649/g, 'ی')   // Arabic Alef Maksura 'ى' -> 'ی'
-               .replace(/\u0629/g, 'ە');  // Arabic Teh Marbuta 'ة' -> Kurdish Small E 'ە'
+               .replace(/\u0629/g, 'ە')   // Arabic Teh Marbuta 'ة' -> Kurdish Small E 'ە'
+               .replace(/[\u06BE\u06C1]/g, 'ه'); // Urdu/Arabic Heh variants -> 'ه'
 
     // Convert Arabic Heh 'ه' to Kurdish Small E 'ە' at word endings where appropriate (after consonants/non-vowels)
     s = s.replace(/([\u0600-\u06ff])ه(?=\s|$|[.,!?;:،؛؟])/g, (m, p) =>
-      (p !== 'ئ' && p !== 'ا' && p !== 'و' && p !== 'ۆ' && p !== 'ە' ? p + 'ە' : m)
+      (p !== 'ئ' && p !== 'ا' && p !== 'و' && p !== 'ۆ' && p !== 'ە' && p !== 'ێ' && p !== 'ڕ' ? p + 'ە' : m)
     );
 
-    // Sorani Kurdish Heavy R (ڕ) conversions for words starting with R or standard roots
+    // Fundamental Kurdish Sorani rule: All word-initial R letters are trilled Heavy R (ڕ)
+    s = s.replace(/(^|[\s،؛؟.\n(«"'\[{<])ر(?=[\u0600-\u06ff])/gu, '$1ڕ');
+
+    // Specific Kurdish words starting with / containing Heavy R (ڕ)
     s = s.replace(/(^|\s)رویشت(ن|م|ی|ین|ن|ووە)?(?=\s|$|[.,!?;:،؛؟])/g, '$1ڕۆیشت$2')
          .replace(/(^|\s)رۆیشت(ن|م|ی|ین|ن|ووە)?(?=\s|$|[.,!?;:،؛؟])/g, '$1ڕۆیشت$2')
          .replace(/(^|\s)رۆشت(ن|م|ی|ین|ن|ووە)?(?=\s|$|[.,!?;:،؛؟])/g, '$1ڕۆیشت$2')
          .replace(/(^|\s)رۆ(م|یت|ات|ین|ن)(?=\s|$|[.,!?;:،؛؟])/g, '$1ڕۆ$2')
          .replace(/(^|\s)راست(ە|ی|ەقینە|ەوخۆ|ەکان|کردنەوە|ییەکەی)?(?=\s|$|[.,!?;:،؛؟])/g, '$1ڕاست$2')
-         .replace(/(^|\s)رێگ(ە|ا|ای|اکە|ایەک|ەی)?(?=\s|$|[.,!?;:،؛؟])/g, '$1ڕێگ$2')
+         .replace(/(^|\s)رێگ(ە|ا|ای|اکە|ایەک|ەی|اکان)?(?=\s|$|[.,!?;:،؛؟])/g, '$1ڕێگ$2')
          .replace(/(^|\s)رۆژ(انە|گار|باش|نامە|ی|ەکان)?(?=\s|$|[.,!?;:،؛؟])/g, '$1ڕۆژ$2')
          .replace(/(^|\s)رەنگ(ە|ی|اوڕەنگ|ەکان)?(?=\s|$|[.,!?;:،؛؟])/g, '$1ڕەنگ$2')
          .replace(/(^|\s)رێز(لێنان|م|ت|تان|گرتن)?(?=\s|$|[.,!?;:،؛؟])/g, '$1ڕێز$2')
@@ -523,7 +435,13 @@ const Translator = (() => {
          .replace(/(^|\s)ریش(ەکە|م|ی)?(?=\s|$|[.,!?;:،؛؟])/g, '$1ڕیش$2')
          .replace(/(^|\s)ریشە(ی|کان)?(?=\s|$|[.,!?;:،؛؟])/g, '$1ڕیشە$2')
          .replace(/(^|\s)برۆ(ن|یت)?(?=\s|$|[.,!?;:،؛؟])/g, '$1بڕۆ$2')
-         .replace(/(^|\s)مەرۆ(ن)?(?=\s|$|[.,!?;:،؛؟])/g, '$1مەڕۆ$2');
+         .replace(/(^|\s)مەرۆ(ن)?(?=\s|$|[.,!?;:،؛؟])/g, '$1مەڕۆ$2')
+         .replace(/(^|\s)دەرۆ(م|یت|ات|ین|ن)?(?=\s|$|[.,!?;:،؛؟])/g, '$1دەڕۆ$2')
+         .replace(/(^|\s)دەروات(?=\s|$|[.,!?;:،؛؟])/g, '$1دەڕوات')
+         .replace(/(^|\s)نەروات(?=\s|$|[.,!?;:،؛؟])/g, '$1نەڕوات')
+         .replace(/(^|\s)نەرۆ(م|یت|ات|ین|ن)?(?=\s|$|[.,!?;:،؛؟])/g, '$1نەڕۆ$2')
+         .replace(/گۆرانکاری/g, 'گۆڕانکاری')
+         .replace(/سپاس/g, 'سوپاس');
 
     // Sorani Kurdish Velarized L (ڵ) corrections
     s = s.replace(/(^|\s)مال(ی|ەوە|مان|تان|یان|ەکەم|ەکان)?(?=\s|$|[.,!?;:،؛؟])/g, '$1ماڵ$2')
@@ -531,60 +449,83 @@ const Translator = (() => {
          .replace(/(^|\s)دەلێ(ت|م|ن|یت|ین)(?=\s|$|[.,!?;:،؛؟])/g, '$1دەڵێ$2')
          .replace(/(^|\s)بلێ(ن|م|یت|ین)?(?=\s|$|[.,!?;:،؛؟])/g, '$1بڵێ$2')
          .replace(/(^|\s)گول(م|ەکان|ی|زار)?(?=\s|$|[.,!?;:،؛؟])/g, '$1گوڵ$2')
-         .replace(/(^|\s)سال(ان|ی|ە|انە|ێک)?(?=\s|$|[.,!?;:،؛؟])/g, '$1ساڵ$2')
+         .replace(/(^|\s)سال(ان|ی|ە|انە|ێک|ەکان)?(?=\s|$|[.,!?;:،؛؟])/g, '$1ساڵ$2')
          .replace(/خۆشحال(ی|ییە| بووم|م)?/g, 'خۆشحاڵ$1')
-         .replace(/(^|\s)مندال(ان|ەکە|م|ی|بوون)?(?=\s|$|[.,!?;:،؛؟])/g, '$1منداڵ$2')
-         .replace(/(^|\s)سلاو(تان|ی)?(?=\s|$|[.,!?;:،؛؟])/g, '$1سڵاو$2')
+         .replace(/(^|\s)مندال(ان|ەکە|م|ی|بوون|ەکان)?(?=\s|$|[.,!?;:،؛؟])/g, '$1منداڵ$2')
+         .replace(/(^|\s)سلاو(تان|ی|ت)?(?=\s|$|[.,!?;:،؛؟])/g, '$1سڵاو$2')
          .replace(/(^|\s)گەلا(کان|ی)?(?=\s|$|[.,!?;:،؛؟])/g, '$1گەڵا$2')
-         .replace(/(^|\s)کەلەک(ەم|ی)?(?=\s|$|[.,!?;:،؛؟])/g, '$1کەڵەک$2')
-         .replace(/(^|\s)چۆل(ە|ی|کردن)?(?=\s|$|[.,!?;:،؛؟])/g, '$1چۆڵ$2')
-         .replace(/(^|\s)تەلە(ی|کان)?(?=\s|$|[.,!?;:،؛؟])/g, '$1تەڵە$2')
-         .replace(/(^|\s)خال(ی|م|ەکان)?(?=\s|$|[.,!?;:،؛؟])/g, '$1خاڵ$2')
-         .replace(/(^|\s)تال(ە|ی|تر)?(?=\s|$|[.,!?;:،؛؟])/g, '$1تاڵ$2')
+         .replace(/(^|\s)کەلەک(ەم|ی|ە)?(?=\s|$|[.,!?;:،؛؟])/g, '$1کەڵەک$2')
+         .replace(/(^|\s)چۆل(ە|ی|کردن|ەوانی)?(?=\s|$|[.,!?;:،؛؟])/g, '$1چۆڵ$2')
+         .replace(/(^|\s)تەلە(ی|کان|کە)?(?=\s|$|[.,!?;:،؛؟])/g, '$1تەڵە$2')
+         .replace(/(^|\s)خال(ی|م|ەکان|ۆ)?(?=\s|$|[.,!?;:،؛؟])/g, '$1خاڵ$2')
+         .replace(/(^|\s)تال(ە|ی|تر|ەکان)?(?=\s|$|[.,!?;:،؛؟])/g, '$1تاڵ$2')
          .replace(/(^|\s)پیالە(ی|یک|کان)?(?=\s|$|[.,!?;:،؛؟])/g, '$1پیاڵە$2')
-         .replace(/(^|\s)دل(م|ت|ی|خۆش|تەنگ|نیام|نیابە|نیا|سۆز|پاک)?(?=\s|$|[.,!?;:،؛؟])/g, '$1دڵ$2')
+         .replace(/(^|\s)دل(م|ت|ی|خۆش|تەنگ|نیام|نیابە|نیا|سۆز|پاک|داری)?(?=\s|$|[.,!?;:،؛؟])/g, '$1دڵ$2')
          .replace(/(^|\s)پۆلا(?=\s|$|[.,!?;:،؛؟])/g, '$1پۆڵا')
          .replace(/(^|\s)قولپ(?=\s|$|[.,!?;:،؛؟])/g, '$1قوڵپ')
          .replace(/(^|\s)کەلەشێر(?=\s|$|[.,!?;:،؛؟])/g, '$1کەڵەشێر')
          .replace(/(^|\s)کەلک(?=\s|$|[.,!?;:،؛؟])/g, '$1کەڵک')
-         .replace(/(^|\s)بالا(?=\s|$|[.,!?;:،؛؟])/g, '$1باڵا')
-         .replace(/(^|\s)قەلا(?=\s|$|[.,!?;:،؛؟])/g, '$1قەڵا')
+         .replace(/(^|\s)بالا(بەرز)?(?=\s|$|[.,!?;:،؛؟])/g, '$1باڵا$2')
+         .replace(/(^|\s)قەلا(کان|ی)?(?=\s|$|[.,!?;:،؛؟])/g, '$1قەڵا$2')
          .replace(/(^|\s)چەپلە(?=\s|$|[.,!?;:،؛؟])/g, '$1چەپڵە')
-         .replace(/(^|\s)کۆمەل(گا|ایەتی|ەکان|ی)?(?=\s|$|[.,!?;:،؛؟])/g, '$1کۆمەڵ$2')
+         .replace(/(^|\s)کۆمەل(گا|ایەتی|ەکان|ی|ە)?(?=\s|$|[.,!?;:،؛؟])/g, '$1کۆمەڵ$2')
          .replace(/(^|\s)ئالۆز(ی|تر)?(?=\s|$|[.,!?;:،؛؟])/g, '$1ئاڵۆز$2')
-         .replace(/(^|\s)هەلە(کان|ی)?(?=\s|$|[.,!?;:،؛؟])/g, '$1هەڵە$2')
-         .replace(/(^|\s)تێکەل(?=\s|$|[.,!?;:،؛؟])/g, '$1تێکەڵ')
+         .replace(/(^|\s)هەلە(کان|ی|یە)?(?=\s|$|[.,!?;:،؛؟])/g, '$1هەڵە$2')
+         .replace(/(^|\s)تێکەل(کردن|او)?(?=\s|$|[.,!?;:،؛؟])/g, '$1تێکەڵ$2')
          .replace(/(^|\s)گەلالە(?=\s|$|[.,!?;:،؛؟])/g, '$1گەڵاڵە')
          .replace(/(^|\s)کۆلان(ەکان|ی)?(?=\s|$|[.,!?;:،؛؟])/g, '$1کۆڵان$2')
-         .replace(/(^|\s)قوول(ی|تر)?(?=\s|$|[.,!?;:،؛؟])/g, '$1قووڵ$2')
-         .replace(/(^|\s)قول(ی|تر)?(?=\s|$|[.,!?;:،؛؟])/g, '$1قووڵ$2')
-         .replace(/گۆرانکاری/g, 'گۆڕانکاری')
-         .replace(/سپاس/g, 'سوپاس');
+         .replace(/(^|\s)قوول(ی|تر|ایی)?(?=\s|$|[.,!?;:،؛؟])/g, '$1قووڵ$2')
+         .replace(/(^|\s)قول(ی|تر|ایی)?(?=\s|$|[.,!?;:،؛؟])/g, '$1قووڵ$2')
+         .replace(/(^|\s)بالندە(کان|ی)?(?=\s|$|[.,!?;:،؛؟])/g, '$1باڵندە$2')
+         .replace(/(^|\s)ئالا(کان|ی)?(?=\s|$|[.,!?;:،؛؟])/g, '$1ئاڵا$2')
+         .replace(/(^|\s)خەلک(ی)?(?=\s|$|[.,!?;:،؛؟])/g, '$1خەڵک$2')
+         .replace(/(^|\s)خەلات(کردن|ەکان|ی)?(?=\s|$|[.,!?;:،؛؟])/g, '$1خەڵات$2')
+         .replace(/(^|\s)بەلگە(نامە|کان|ی)?(?=\s|$|[.,!?;:،؛؟])/g, '$1بەڵگە$2')
+         .replace(/(^|\s)بەلێن(دان|ەکان|ی)?(?=\s|$|[.,!?;:،؛؟])/g, '$1بەڵێن$2')
+         .replace(/(^|\s)شەپۆل(ەکان|ی)?(?=\s|$|[.,!?;:،؛؟])/g, '$1شەپۆڵ$2')
+         .replace(/(^|\s)خۆل(ەمێش|ی)?(?=\s|$|[.,!?;:،؛؟])/g, '$1خۆڵ$2')
+         .replace(/(^|\s)قەلەم(?=\s|$|[.,!?;:،؛؟])/g, '$1قەڵەم')
+         .replace(/(^|\s)کەلەگا(?=\s|$|[.,!?;:،؛؟])/g, '$1کەڵەگا')
+         .replace(/(^|\s)تۆپەل(?=\s|$|[.,!?;:،؛؟])/g, '$1تۆپەڵ')
+         .replace(/(^|\s)چقل(?=\s|$|[.,!?;:،؛؟])/g, '$1چقڵ')
+         .replace(/(^|\s)هەلبژاردن(?=\s|$|[.,!?;:،؛؟])/g, '$1هەڵبژاردن')
+         .replace(/(^|\s)هەلسان(?=\s|$|[.,!?;:،؛؟])/g, '$1هەڵسان')
+         .replace(/(^|\s)هەلگرتن(?=\s|$|[.,!?;:،؛؟])/g, '$1هەڵگرتن')
+         .replace(/(^|\s)هەلهاتن(?=\s|$|[.,!?;:،؛؟])/g, '$1هەڵهاتن')
+         .replace(/(^|\s)هەلمەت(?=\s|$|[.,!?;:،؛؟])/g, '$1هەڵمەت')
+         .replace(/(^|\s)هەلوێست(?=\s|$|[.,!?;:،؛؟])/g, '$1هەڵوێست')
+         .replace(/(^|\s)هەلکەوتوو(?=\s|$|[.,!?;:،؛؟])/g, '$1هەڵکەوتوو')
+         .replace(/(^|\s)هەلچوون(?=\s|$|[.,!?;:،؛؟])/g, '$1هەڵچوون')
+         .replace(/(^|\s)هەلسەنگاندن(?=\s|$|[.,!?;:،؛؟])/g, '$1هەڵسەنگاندن')
+         .replace(/(^|\s)هەلوەشاندنەوە(?=\s|$|[.,!?;:،؛؟])/g, '$1هەڵوەشاندنەوە');
 
     return s;
   }
 
   /** Rejoin split Sorani Kurdish verbal affixes & compound preverbs. */
   function rejoinVerbalAffixes(str) {
+    if (!str) return '';
     return str
-      .replace(/(^|\s)دە\s+(بێت|بم|بیت|بین|بن|زانم|زانی|زانێت|زانین|زانن|کات|کەم|کەیت|کەین|کەن|توانی|توانم|توانێت|توانین|توانن|چێت|چم|چیت|چین|چن|ڕۆم|رۆم|ڕۆیت|رۆیت|ڕوات|روات|ڕۆین|رۆین|ڕۆن|رۆن|ڵێت|ڵێم|ڵێیت|ڵێین|ڵێن|هێنێت|هێنم|هێنیت|هێنین|هێنن|یەوێت|خوات|خۆم|خۆین|خۆن|کراو|بینم|بینێت|بینین|بینن|وەستێت|گەڕێتەوە|نووسێت|نووسم|نووسین|دات|دەین|دەکان|بەن|بەین|دێت|دەبێتەوە|فرۆشێت|کڕێت|ژیم|ژیت|ژی|ژیین|ژین|مرێت|بیستێت|گرێت|بەستێت|گەین|کەویت|بارێت|گۆڕێت)(?=\s|$|[.,!?;:،؛؟])/g, '$1دە$2')
+      .replace(/(^|\s)دە\s+(بێت|بم|بیت|بین|بن|زانم|زانی|زانێت|زانین|زانن|کات|کەم|کەیت|کەین|کەن|توانی|توانم|توانێت|توانین|توانن|چێت|چم|چیت|چین|چن|ڕۆم|رۆم|ڕۆیت|رۆیت|ڕوات|روات|ڕۆین|رۆین|ڕۆن|رۆن|ڵێت|ڵێم|ڵێیت|ڵێین|ڵێن|هێنێت|هێنم|هێنیت|هێنین|هێنن|یەوێت|خوات|خۆم|خۆین|خۆن|کراو|بینم|بینێت|بینین|بینن|وەستێت|گەڕێتەوە|نووسێت|نووسم|نووسین|دات|دەین|دەکان|بەن|بەین|دێت|دەبێتەوە|فرۆشێت|کڕێت|ژیم|ژیت|ژی|ژیین|ژین|مرێت|بیستێت|گرێت|بەستێت|گەین|کەویت|بارێت|گۆڕێت|بەخشێت|شارێتەوە|ڕژێت|نێرێت|ناسێت|کوژێت|پارێزێت|سووتێت|تەقێت|ترسێت|فڕێت|پشکنێت|ڕوانێت)(?=\s|$|[.,!?;:،؛؟])/g, '$1دە$2')
       .replace(/(^|\s)ئە\s+(بێت|بم|بیت|بین|بن|زانم|زانی|زانێت|کات|کەم|کەیت|کەین|چێت|چم|چیت|چین|ڕۆم|ڕۆیت|ڕوات|ڕۆین|ڵێت|ڵێم|هێنێت|هێنم|یەوێت|خوات|خۆم|بینم|بینێت|دات|دێت)(?=\s|$|[.,!?;:،؛؟])/g, '$1ئە$2')
-      .replace(/(^|\s)نا\s+(زانم|زانی|زانێت|زانین|زانن|کات|کەم|کەیت|کەن|ناکەین|بێت|بم|بیت|بین|بن|کرێت|کرێن|توانی|توانم|توانێت|توانین|توانن|چێت|چم|چیت|چین|چن|ڵێم|ڵێت|ڵێن|گەڕێتەوە|بینم|بینێت|وێت|نامەوێت|ناوێت|خۆم|خوات|دات|نادەم|دەین|کەوم|کەوێت|ڕوات|روات|مرێت|بیستم|بیستێت|ڕۆم|ڕۆیت|ڕۆین|ڕۆن)(?=\s|$|[.,!?;:،؛؟])/g, '$1نا$2')
-      .replace(/(^|\s)نە\s+(بێت|کات|کرێت|بوو|بووم|بوویت|بووین|بوون|ڕۆیشت|رویشت|هات|هاتم|هاتیت|هاتین|هاتن|زانی|زانیم|زانیت|توانی|دیت|کرد|کردم|کردت|کردمان|چوو|چووم|چوویت|چووین|چوون|گەیی|گەیشت|دەبوو|بینرا|خورا|کوژرا|شکێنرا|خوێندەوە|فرۆشت)(?=\s|$|[.,!?;:،؛؟])/g, '$1نە$2')
-      .replace(/(^|\s)مە\s+(کە|ڕۆ|رۆ|کەیت|بۆوە|چۆ|چن|بڕۆ|برۆ|گەڕێ|بە|بن|کەن|ترسە|ترسن|گری|گرین|شکێنە|کوژە|خۆ|خۆن|دە|دەن|هێنە|نووسە|گرە|بڕە|خوێنەوە|بەخشە)(?=\s|$|[.,!?;:،؛؟])/g, '$1مە$2')
-      .replace(/(^|\s)بی\s+(کە|بە|بینە|گەیەنە|خۆ|نووسە|هێنە|بەخشە|پارێزە|کوژە|دە|خوێنەوە|شکێنە)(?=\s|$|[.,!?;:،؛؟])/g, '$1بی$2')
-      .replace(/(^|\s)تێ\s+(دەگەم|بگە|دەگەیت|دەگەن|دەگەین|پەڕی|پەڕین|ناگەم|پەڕیوە)(?=\s|$|[.,!?;:،؛؟])/g, '$1تێ$2')
+      .replace(/(^|\s)نا\s+(زانم|زانی|زانێت|زانین|زانن|کات|کەم|کەیت|کەن|ناکەین|بێت|بم|بیت|بین|بن|کرێت|کرێن|توانی|توانم|توانێت|توانین|توانن|چێت|چم|چیت|چین|چن|ڵێم|ڵێت|ڵێن|گەڕێتەوە|بینم|بینێت|وێت|نامەوێت|ناوێت|خۆم|خوات|دات|نادەم|دەین|کەوم|کەوێت|ڕوات|روات|مرێت|بیستم|بیستێت|ڕۆم|ڕۆیت|ڕۆین|ڕۆن|نووسم|فرۆشم|کڕم|گەم|گۆڕێت|ناسم|کوژم|پارێزم)(?=\s|$|[.,!?;:،؛؟])/g, '$1نا$2')
+      .replace(/(^|\s)نە\s+(بێت|کات|کرێت|بوو|بووم|بوویت|بووین|بوون|ڕۆیشت|رویشت|هات|هاتم|هاتیت|هاتین|هاتن|زانی|زانیم|زانیت|توانی|دیت|کرد|کردم|کردت|کردمان|چوو|چووم|چوویت|چووین|چوون|گەیی|گەیشت|دەبوو|بینرا|خورا|کوژرا|شکێنرا|خوێندەوە|فرۆشت|ناسرا|دۆزرایەوە)(?=\s|$|[.,!?;:،؛؟])/g, '$1نە$2')
+      .replace(/(^|\s)مە\s+(کە|ڕۆ|رۆ|کەیت|بۆوە|چۆ|چن|بڕۆ|برۆ|گەڕێ|بە|بن|کەن|ترسە|ترسن|گری|گرین|شکێنە|کوژە|خۆ|خۆن|دە|دەن|هێنە|نووسە|گرە|بڕە|خوێنەوە|بەخشە|شارەوە|دەستنیشانکە)(?=\s|$|[.,!?;:،؛؟])/g, '$1مە$2')
+      .replace(/(^|\s)بی\s+(کە|بە|بینە|گەیەنە|خۆ|نووسە|هێنە|بەخشە|پارێزە|کوژە|دە|خوێنەوە|شکێنە|دۆزەرەوە|پشکنە|گرە)(?=\s|$|[.,!?;:،؛؟])/g, '$1بی$2')
+      .replace(/(^|\s)تێ\s+(دەگەم|بگە|دەگەیت|دەگەن|دەگەین|پەڕی|پەڕین|ناگەم|پەڕیوە|گەیشتم|گەیشتین)(?=\s|$|[.,!?;:،؛؟])/g, '$1تێ$2')
       .replace(/(^|\s)ڕێ\s+(گرتن|دەگرێت|بگرە|ناگرێت|بگرن|کەوتن|کەوتین|کەوتنەوە|کەوتووە)(?=\s|$|[.,!?;:،؛؟])/g, '$1ڕێ$2')
-      .replace(/(^|\s)پێ\s+(دان|دەدات|دەڵێت|دەبەخشێت|بڵێ|بڵێن|بدە|نادەم|نادات|بەخشی|مبڵێ|یبڵێ|مانبڵێ|یانبڵێ)(?=\s|$|[.,!?;:،؛؟])/g, '$1پێ$2')
+      .replace(/(^|\s)پێ\s+(دان|دەدات|دەڵێت|دەبەخشێت|بڵێ|بڵێن|بدە|نادەم|نادات|بەخشی|مبڵێ|یبڵێ|مانبڵێ|یانبڵێ|موایە|مباشە|مخۆشە|تانخۆشە)(?=\s|$|[.,!?;:،؛؟])/g, '$1پێ$2')
       .replace(/(^|\s)وەر\s+(بگرە|گرتن|دەگرێت|ناگرێت|مەگرە|گیرا|گیراوە)(?=\s|$|[.,!?;:،؛؟])/g, '$1وەر$2')
-      .replace(/(^|\s)دەر\s+(کەوت|کەوتن|چوون|چوونی|بێنە|هێنانی|دەچێت|دەخات|دەکەوێت|کەوتووە)(?=\s|$|[.,!?;:،؛؟])/g, '$1دەر$2')
-      .replace(/(^|\s)دا\s+(نیشە|دەنیشێت|پۆشە|خستن|داخە|دابخە|گرتن|بەزین|بەزی|مەپۆشە)(?=\s|$|[.,!?;:،؛؟])/g, '$1دا$2')
-      .replace(/(^|\s)[هھ]ەڵ\s+(بگرە|ستە|دەستێت|گرتن|گرە|بژێرە|بڕژێ|کشان|واسە|مەگرە)(?=\s|$|[.,!?;:،؛؟])/g, '$1هەڵ$2')
+      .replace(/(^|\s)دەر\s+(کەوت|کەوتن|چوون|چوونی|بێنە|هێنانی|دەچێت|دەخات|دەکەوێت|کەوتووە|هێنان)(?=\s|$|[.,!?;:،؛؟])/g, '$1دەر$2')
+      .replace(/(^|\s)دا\s+(نیشە|دەنیشێت|پۆشە|خستن|داخە|دابخە|گرتن|بەزین|بەزی|مەپۆشە|نان)(?=\s|$|[.,!?;:،؛؟])/g, '$1دا$2')
+      .replace(/(^|\s)[هھ]ەڵ\s+(بگرە|ستە|دەستێت|گرتن|گرە|بژێرە|بڕژێ|کشان|واسە|مەگرە|سان|دڕین|سوڕان|قووڵین|مژین)(?=\s|$|[.,!?;:،؛؟])/g, '$1هەڵ$2')
       .replace(/(^|\s)دەست\s+(پێکرد|پێبکە|پێدەکات|پێکردن|پێ بگە|بەردار|نیشان|پێکە)(?=\s|$|[.,!?;:،؛؟])/g, '$1دەست$2')
+      .replace(/(^|\s)لێ\s+(پرسینەوە|کردنەوە|گەڕێ|دەگەڕێت|بدە|دایت|ستاندن|بوردن|دەبورێت)(?=\s|$|[.,!?;:،؛؟])/g, '$1لێ$2')
       .replace(/([\p{L}\u0600-\u06FF]+)\s+تر(?=\s|$|[.,!?;:،؛؟])/gu, '$1تر')
       .replace(/([\p{L}\u0600-\u06FF]+)\s+ترین(?=\s|$|[.,!?;:،؛؟])/gu, '$1ترین')
-      .replace(/\s+ەوە(?=\s|$|[.,!?;:،؛؟])/g, 'ەوە')
-      .replace(/\s+یش(?=\s|$|[.,!?;:،؛؟])/g, 'یش');
+      .replace(/([\p{L}\u0600-\u06FF]+)\s+ەوە(?=\s|$|[.,!?;:،؛؟])/gu, '$1ەوە')
+      .replace(/([\p{L}\u0600-\u06FF]+)\s+یش(?=\s|$|[.,!?;:،؛؟])/gu, '$1یش')
+      .replace(/([\p{L}\u0600-\u06FF]+)\s+(مان|تان|یان|ەکەم|ەکەت|ەکەی|ەکەمان|ەکەتان|ەکەیان|ەکان)(?=\s|$|[.,!?;:،؛؟])/gu, '$1$2');
   }
 
   /** Naturalize machine-translated subtitle dialogue for fluent Sorani Kurdish. */
@@ -596,6 +537,7 @@ const Translator = (() => {
       .replace(/ئۆ خوای من/g, 'ئەی خوایە')
       .replace(/خوای من/g, 'ئەی خوایە')
       .replace(/ئەی خوای گەورە/g, 'ئەی خوایە')
+      .replace(/ئۆهـ خوای من/g, 'ئەی خوایە')
       .replace(/سەیر بکە،/g, 'سەیرکە،')
       .replace(/سەیر بکە/g, 'سەیرکە')
       .replace(/من زۆر سوپاستان دەکەم/g, 'زۆر سوپاس')
@@ -662,6 +604,16 @@ const Translator = (() => {
       .replace(/بەخێر بێن/g, 'بەخێربێن')
       .replace(/دەستت خۆش بێت/g, 'دەستت خۆش')
       .replace(/خۆشحاڵ بووم بتبینم/g, 'خۆشحاڵ بووم بە بینینت')
+      .replace(/ڕۆژ باش/g, 'ڕۆژباش')
+      .replace(/شەو باش/g, 'شەوباش')
+      .replace(/بەیانی باش/g, 'بەیانیباش')
+      .replace(/ماڵ ئاوا/g, 'ماڵئاوا')
+      .replace(/سوپاس گوزارم/g, 'سوپاسگوزارم')
+      .replace(/لە دەست دان/g, 'لەدەستدان')
+      .replace(/لە بیر کردن/g, 'لەبیرکردن')
+      .replace(/لە یاد کردن/g, 'لەیادکردن')
+      .replace(/لە ناو بردن/g, 'لەناوبردن')
+      .replace(/لە خەو هەڵسان/g, 'لەخەوهەڵسان')
 
       // Drop redundant subjective pronouns in conversational Sorani Kurdish
       .replace(/(^|[\s،؛؟.\n])من نازانم(?=\s|$|[.,!?;:،؛؟])/g, '$1نازانم')
@@ -669,12 +621,15 @@ const Translator = (() => {
       .replace(/(^|[\s،؛؟.\n])من دەبێت(?=\s|$|[.,!?;:،؛؟])/g, '$1دەبێت')
       .replace(/(^|[\s،؛؟.\n])من دڵنیام(?=\s|$|[.,!?;:،؛؟])/g, '$1دڵنیام')
       .replace(/(^|[\s،؛؟.\n])من پێم وایە(?=\s|$|[.,!?;:،؛؟])/g, '$1پێم وایە')
+      .replace(/(^|[\s،؛؟.\n])من دەمەوێت(?=\s|$|[.,!?;:،؛؟])/g, '$1دەمەوێت')
       .replace(/(^|[\s،؛؟.\n])تۆ دەتوانیت(?=\s|$|[.,!?;:،؛؟])/g, '$1دەتوانیت')
+      .replace(/(^|[\s،؛؟.\n])ئێمە دەتوانین(?=\s|$|[.,!?;:،؛؟])/g, '$1دەتوانین')
 
       // Fix machine-translated word-for-word idioms into fluid Sorani dialogue
       .replace(/ئەوەیە بۆچی/g, 'بۆیە')
       .replace(/ئەوەیە چۆن/g, 'ئاوا')
-      .replace(/ئەوەیە کاتێک/g, 'کاتێک')
+      .replace(/ئەوەیە کاتێک/g, 'ئەو کاتەی')
+      .replace(/ئەوەیە لە کوێ/g, 'لەوێیە کە')
       .replace(/هیچ شتێک نییە/g, 'هیچ نییە')
       .replace(/چاوەڕێ بە/g, 'بۆستە')
       .replace(/هێمن بە/g, 'هێمن ببەوە')
@@ -685,7 +640,45 @@ const Translator = (() => {
       .replace(/پێ م/g, 'پێم')
       .replace(/لێ م/g, 'لێم')
       .replace(/تێ م/g, 'تێم')
-      .replace(/بۆ م/g, 'بۆم');
+      .replace(/بۆ م/g, 'بۆم')
+      .replace(/خۆت لە ماڵەوە بکە/g, 'ماڵی خۆتە')
+      .replace(/وەک ماڵی خۆت ڕەفتار بکە/g, 'وەک ماڵی خۆت تەماشای بکە')
+      .replace(/وەک ماڵی خۆت سەیر بکە/g, 'وەک ماڵی خۆت تەماشای بکە')
+      .replace(/پشوویەکم پێ بدە/g, 'دە لێم گەڕێ')
+      .replace(/لەسەر جەستەی مردووم/g, 'تەنها لەسەر تەرمەکەم')
+      .replace(/تۆ دەبێت گاڵتەم پێبکەیت/g, 'گاڵتەم لەگەڵ دەکەیت؟')
+      .replace(/تۆ دەبێت گاڵتە بکەیت/g, 'گاڵتەم لەگەڵ دەکەیت؟')
+      .replace(/هەرگیز لە پێش چاوم ڕوونادات/g, 'تا من لێرەبم مەحاڵە')
+      .replace(/لە پێش چاوی مندا نا/g, 'تا من لێرەبم مەحاڵە')
+      .replace(/چاوەڕێم بە/g, 'چاوەڕێم بکە')
+      .replace(/گوێت لە منە/g, 'گوێت لێمە')
+      .replace(/گوێت لە من نییە/g, 'گوێت لێم نییە')
+      .replace(/سەرت لە کڵاوی خۆت بێت/g, 'دەست لە کارمەوە مەدە')
+      .replace(/تەنها بۆ یەک سات/g, 'تەنها بۆ ساتێک')
+      .replace(/لە لایەن/g, 'لەلایەن')
+      .replace(/لە کاتێکدا/g, 'لەکاتێکدا')
+      .replace(/لە هەمان کاتدا/g, 'لەهەمان کاتدا')
+      .replace(/لە شوێنی/g, 'لەشوێنی')
+      .replace(/پشت بەستن/g, 'پشتبەستن')
+      .replace(/خۆ ڕاگرتن/g, 'خۆڕاگرتن')
+      .replace(/خۆ بەدەستەوەدان/g, 'خۆبەدەستەوەدان')
+      .replace(/سەر سووڕمان/g, 'سەرسوڕمان')
+      .replace(/دەست بەجێ/g, 'دەستبەجێ')
+      .replace(/جێ بەجێ/g, 'جێبەجێ')
+      .replace(/ڕێ پێ دان/g, 'ڕێپێدان')
+      .replace(/تێ پەڕین/g, 'تێپەڕین')
+      .replace(/ڕوو بەڕوو/g, 'ڕووبەڕوو')
+      .replace(/دوور کەوتنەوە/g, 'دوورکەوتنەوە')
+      .replace(/نزیک بوونەوە/g, 'نزیکبوونەوە')
+      .replace(/کۆ بوونەوە/g, 'کۆبوونەوە')
+      .replace(/بڵاو بوونەوە/g, 'بڵاوبوونەوە')
+      .replace(/بەردەوام بوون/g, 'بەردەوامبوون')
+      .replace(/سەر لێ شێواو/g, 'سەرلێشێواو')
+      .replace(/دڵ تەنگ/g, 'دڵتەنگ')
+      .replace(/دڵ خۆش/g, 'دڵخۆش')
+      .replace(/چاوەڕوان نەکراو/g, 'چاوەڕواننەکراو')
+      .replace(/جێگەی سەرنج/g, 'جێگای سەرنج')
+      .replace(/جێگەی شانازی/g, 'جێگای شانازی');
 
     return res;
   }
@@ -711,9 +704,13 @@ const Translator = (() => {
    */
   function getAdvancedAlternatives(englishText) {
     if (!englishText) return [];
+    if (typeof TranslatorDict !== 'undefined' && TranslatorDict.findMatches) {
+      return TranslatorDict.findMatches(englishText);
+    }
     const lower = englishText.toLowerCase();
     const found = [];
-    for (const [expr, data] of Object.entries(ADVANCED_SUBTITLE_LEXICON)) {
+    const lex = (typeof TranslatorDict !== 'undefined' && TranslatorDict.LEXICON) ? TranslatorDict.LEXICON : ADVANCED_SUBTITLE_LEXICON;
+    for (const [expr, data] of Object.entries(lex)) {
       if (lower.includes(expr)) {
         found.push({
           expression: expr,
@@ -1158,10 +1155,14 @@ const Translator = (() => {
 
   const CLIENTS = ['gtx', 'dict-chrome-ex', 'dict-chromeex', 'te'];
 
-  /** Translate one chunk, retrying with exponential backoff across hosts. */
-  async function translateChunk(text, srcLang, tgtLang, signal) {
+  /**
+   * Fetch from Google Translate web endpoints.
+   */
+  async function fetchGoogle(text, srcLang, tgtLang, signal, attempt = 0) {
+    const host = GOOGLE_ENDPOINTS[attempt % GOOGLE_ENDPOINTS.length];
+    const client = CLIENTS[attempt % CLIENTS.length];
     const params = new URLSearchParams({
-      client: 'gtx',
+      client,
       sl: srcLang,
       tl: tgtLang,
       dt: 't',
@@ -1169,68 +1170,132 @@ const Translator = (() => {
       oe: 'UTF-8',
       q: text,
     });
+    const scoped = scopedSignal(signal);
+    try {
+      let res = null;
+      if (text.length > 250) {
+        try {
+          res = await fetch(host, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8', 'Accept': 'application/json' },
+            body: params.toString(),
+            signal: scoped.signal,
+          });
+        } catch {
+          res = null;
+        }
+      }
+      if (!res || (!res.ok && res.status !== 429 && res.status !== 400 && res.status !== 403)) {
+        res = await fetch(`${host}?${params.toString()}`, { method: 'GET', headers: { 'Accept': 'application/json' }, signal: scoped.signal });
+      }
+      if (res.status === 429) {
+        const retryAfter = Number(res.headers.get('retry-after'));
+        const wait = Number.isFinite(retryAfter) && retryAfter > 0 ? retryAfter * 1000 : backoffMs(attempt);
+        const err = new Error(`HTTP 429 (throttled)`);
+        err.status = 429;
+        err.wait = wait;
+        throw err;
+      }
+      if (!res.ok) {
+        const e = new Error(`HTTP ${res.status}`);
+        e.hard = res.status >= 500;
+        throw e;
+      }
+      const data = await res.json();
+      if (Array.isArray(data) && Array.isArray(data[0])) {
+        const out = data[0].map((seg) => (Array.isArray(seg) ? seg[0] : '')).join('');
+        if (out) return out;
+      } else if (data && Array.isArray(data.sentences)) {
+        const out = data.sentences.map((s) => s.trans || '').join('');
+        if (out) return out;
+      }
+      throw new Error('Empty or unexpected response from Google');
+    } finally {
+      scoped.cleanup();
+    }
+  }
+
+  /**
+   * Fetch from Lingva Translate API (Privacy-friendly, decentralized Google Translate mirror).
+   */
+  async function fetchLingva(text, srcLang, tgtLang, signal, attempt = 0) {
+    const instance = LINGVA_INSTANCES[attempt % LINGVA_INSTANCES.length];
+    const from = srcLang === 'auto' ? 'auto' : srcLang;
+    const url = `${instance}/${encodeURIComponent(from)}/${encodeURIComponent(tgtLang)}/${encodeURIComponent(text)}`;
+    const scoped = scopedSignal(signal);
+    try {
+      const res = await fetch(url, { method: 'GET', headers: { 'Accept': 'application/json' }, signal: scoped.signal });
+      if (!res.ok) throw new Error(`Lingva instance HTTP ${res.status}`);
+      const data = await res.json();
+      if (data && data.translation) return data.translation;
+      throw new Error('Empty Lingva translation response');
+    } finally {
+      scoped.cleanup();
+    }
+  }
+
+  /**
+   * Fetch from MyMemory Translation API (Free tier, great for single phrases & lines).
+   */
+  async function fetchMyMemory(text, srcLang, tgtLang, signal) {
+    const langpair = `${srcLang === 'auto' ? 'en' : srcLang}|${tgtLang}`;
+    const params = new URLSearchParams({
+      q: text,
+      langpair,
+    });
+    const scoped = scopedSignal(signal);
+    try {
+      const res = await fetch(`${MYMEMORY_ENDPOINT}?${params.toString()}`, { method: 'GET', headers: { 'Accept': 'application/json' }, signal: scoped.signal });
+      if (!res.ok) throw new Error(`MyMemory HTTP ${res.status}`);
+      const data = await res.json();
+      if (data && data.responseData && data.responseData.translatedText) {
+        return data.responseData.translatedText;
+      }
+      throw new Error('Empty MyMemory translation response');
+    } finally {
+      scoped.cleanup();
+    }
+  }
+
+  /** Translate one chunk with multi-provider failover (Google -> Lingva -> MyMemory). */
+  async function translateChunk(text, srcLang, tgtLang, signal) {
     let lastErr;
 
     for (let attempt = 0; attempt < MAX_ATTEMPTS; attempt++) {
-      const host = ENDPOINTS[attempt % ENDPOINTS.length];
-      const client = CLIENTS[attempt % CLIENTS.length];
-      params.set('client', client);
-      const url = `${host}?${params.toString()}`;
-      const scoped = scopedSignal(signal);
+      throwIfAborted(signal);
       try {
-        let res = null;
-        // Try POST first for longer text payloads to avoid URL length issues
-        if (text.length > 300) {
+        // Strategy: Attempts 0-3 use Google endpoints with rotated IPs/clients;
+        // Attempt 4 tries Lingva instances;
+        // Attempt 5 tries MyMemory or backup Google
+        if (attempt < 4) {
           try {
-            res = await fetch(host, {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8', 'Accept': 'application/json' },
-              body: params.toString(),
-              signal: scoped.signal,
-            });
+            return await fetchGoogle(text, srcLang, tgtLang, signal, attempt);
+          } catch (googleErr) {
+            if (googleErr.status === 429 && googleErr.wait) {
+              await sleep(googleErr.wait, signal);
+            }
+            throw googleErr;
+          }
+        } else if (attempt === 4) {
+          try {
+            return await fetchLingva(text, srcLang, tgtLang, signal, attempt);
           } catch {
-            res = null;
+            return await fetchGoogle(text, srcLang, tgtLang, signal, attempt);
+          }
+        } else {
+          try {
+            return await fetchMyMemory(text, srcLang, tgtLang, signal);
+          } catch {
+            return await fetchGoogle(text, srcLang, tgtLang, signal, attempt);
           }
         }
-        if (!res || (!res.ok && res.status !== 429 && res.status !== 400 && res.status !== 403)) {
-          res = await fetch(url, { method: 'GET', headers: { 'Accept': 'application/json' }, signal: scoped.signal });
-        }
-
-        if (res.status === 429) {
-          // Throttled. Wait for the server's Retry-After (or a backoff) and
-          // keep trying — this is the common failure on datacenter IPs.
-          const retryAfter = Number(res.headers.get('retry-after'));
-          const wait = Number.isFinite(retryAfter) && retryAfter > 0 ? retryAfter * 1000 : backoffMs(attempt);
-          lastErr = new Error(`HTTP 429 (throttled), retrying in ${Math.round(wait / 1000)}s`);
-          await sleep(wait, signal);
-          continue;
-        }
-        if (!res.ok) { const e = new Error(`HTTP ${res.status}`); e.hard = res.status >= 500; throw e; }
-        const data = await res.json();
-        // Google returns data[0] as an array of [translation, original, ...],
-        // or an object { sentences: [{ trans: '...' }] } depending on client mode.
-        if (Array.isArray(data) && Array.isArray(data[0])) {
-          const out = data[0].map((seg) => (Array.isArray(seg) ? seg[0] : '')).join('');
-          if (out) return out;
-        } else if (data && Array.isArray(data.sentences)) {
-          const out = data.sentences.map((s) => s.trans || '').join('');
-          if (out) return out;
-        }
-        throw new Error('Empty or unexpected response');
       } catch (err) {
         if (signal && signal.aborted) throw err;
-        // A rejected fetch (offline) is a network hard failure, distinct from
-        // a Google "unexpected/empty response" which we simply retry.
         if (err instanceof TypeError) err.hard = true;
-        // A request aborted by our per-attempt timeout (any AbortError here is
-        // ours — a user cancel was rethrown above) means the socket stalled, so
-        // count it as a hard failure rather than reporting fake success.
         if (err && err.name === 'AbortError') err.hard = true;
-        if (!(err instanceof Error)) { err = new Error(String(err && err.message)); }
+        if (!(err instanceof Error)) err = new Error(String(err && err.message));
         lastErr = err;
         if (attempt < MAX_ATTEMPTS - 1) await sleep(backoffMs(attempt), signal);
-      } finally {
-        scoped.cleanup();
       }
     }
     throw lastErr;
@@ -1284,7 +1349,7 @@ const Translator = (() => {
   async function warmup() {
     const params = new URLSearchParams({ client: 'gtx', sl: 'en', tl: 'ckb', dt: 't', q: 'hi' });
     try {
-      await fetch(`${ENDPOINTS[0]}?${params.toString()}`, { method: 'GET', headers: { 'Accept': 'application/json' } });
+      await fetch(`${GOOGLE_ENDPOINTS[0]}?${params.toString()}`, { method: 'GET', headers: { 'Accept': 'application/json' } });
     } catch {}
   }
 

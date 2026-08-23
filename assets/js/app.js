@@ -115,10 +115,18 @@
 
   let currentUiLang = 'en';
 
+  function isUserFileLoaded() {
+    if (!file) return false;
+    if (typeof AppTour !== 'undefined' && AppTour.isDemoActive && AppTour.isDemoActive()) {
+      return false;
+    }
+    return true;
+  }
+
   function updateTourTriggerBtnState() {
     if (!els.tourTriggerBtn) return;
     const dict = dicts[currentUiLang] || dicts.en;
-    if (file && !isDemoLoaded) {
+    if (isUserFileLoaded()) {
       els.tourTriggerBtn.disabled = true;
       els.tourTriggerBtn.classList.add('disabled');
       els.tourTriggerBtn.title = dict.tourDisabledTitle || (currentUiLang === 'ckb' ? 'ڕێبەر بەردەست نییە کاتێک فایلەکەت بارکراوە' : 'Guide is disabled while your file is loaded');
@@ -132,6 +140,9 @@
   function applyLanguage(lang) {
     currentUiLang = lang === 'ckb' ? 'ckb' : 'en';
     store.set('app_ui_lang', currentUiLang);
+    if (typeof UI_I18N !== 'undefined' && UI_I18N.setLang) {
+      UI_I18N.setLang(currentUiLang);
+    }
     document.documentElement.lang = currentUiLang;
     document.documentElement.dir = currentUiLang === 'ckb' ? 'rtl' : 'ltr';
 
@@ -142,34 +153,37 @@
       if (ckbSpan) ckbSpan.classList.toggle('active', currentUiLang === 'ckb');
     }
 
-    const dict = dicts[currentUiLang];
-    if (!dict) return;
+    const dict = dicts[currentUiLang] || dicts.en;
+    if (dict) {
+      $$('[data-i18n]').forEach((el) => {
+        const key = el.dataset.i18n;
+        if (dict[key]) {
+          el.textContent = dict[key];
+        }
+      });
 
-    $$('[data-i18n]').forEach((el) => {
-      const key = el.dataset.i18n;
-      if (dict[key]) {
-        el.textContent = dict[key];
-      }
-    });
+      $$('[data-i18n-placeholder]').forEach((el) => {
+        const key = el.dataset.i18nPlaceholder;
+        if (dict[key]) {
+          el.placeholder = dict[key];
+        }
+      });
 
-    $$('[data-i18n-placeholder]').forEach((el) => {
-      const key = el.dataset.i18nPlaceholder;
-      if (dict[key]) {
-        el.placeholder = dict[key];
-      }
-    });
-
-    $$('[data-i18n-title]').forEach((el) => {
-      const key = el.dataset.i18nTitle;
-      if (dict[key]) {
-        el.title = dict[key];
-      }
-    });
+      $$('[data-i18n-title]').forEach((el) => {
+        const key = el.dataset.i18nTitle;
+        if (dict[key]) {
+          el.title = dict[key];
+        }
+      });
+    }
 
     updateTourTriggerBtnState();
 
-    if (typeof isTourOpen !== 'undefined' && isTourOpen) {
-      renderTourStep(currentTourStep);
+    if (typeof AppTour !== 'undefined' && AppTour.refresh) {
+      AppTour.refresh();
+    }
+    if (typeof AppQuality !== 'undefined' && AppQuality.runInspection) {
+      AppQuality.runInspection();
     }
   }
 
@@ -887,475 +901,31 @@
     if (els.fontSizeSel) els.fontSizeSel.value = val;
     if (els.fsFontSizeSel) els.fsFontSizeSel.value = val;
     SubtitlePlayer.setFontScale(val);
-    if (fsActive) fitFsText();
+    if (typeof AppFullscreen !== 'undefined' && AppFullscreen.isActive()) AppFullscreen.fitText();
   }
 
-  /** Shrink the fullscreen subtitle text until it fits the visible screen area without clipping. */
   function fitFsText() {
-    const screen = els.fsScreen;
-    if (!screen || !fsActive) return;
-    const textEls = screen.querySelectorAll('.fs-text');
-    if (!textEls.length) return;
-
-    const screenW = screen.clientWidth;
-    const screenH = screen.clientHeight;
-    if (!screenW || !screenH) return;
-
-    const scale = els.fsFontSizeSel ? (parseFloat(els.fsFontSizeSel.value) || 1) : 1;
-    const base = Math.round(Math.min(screenW * 0.055, screenH * 0.12));
-    let targetSize = Math.max(16, Math.round(base * scale));
-
-    const isEditorOpen = els.fsEditor && !els.fsEditor.classList.contains('hidden');
-    const maxH = isEditorOpen ? Math.max(50, screenH * 0.45) : Math.max(70, screenH * 0.75);
-
-    textEls.forEach((el) => {
-      el.style.fontSize = `${targetSize}px`;
-      let sz = targetSize;
-      while (sz > 14 && (el.offsetHeight > maxH || el.scrollHeight > maxH + 10)) {
-        sz -= 1;
-        el.style.fontSize = `${sz}px`;
-      }
-    });
-  }
-
-  function renderFsCues(screenEl, activeList) {
-    if (!screenEl) return;
-
-    let zoneTop = screenEl.querySelector('.fs-zone.pos-top');
-    let zoneMid = screenEl.querySelector('.fs-zone.pos-mid');
-    let zoneBottom = screenEl.querySelector('.fs-zone.pos-bottom');
-
-    if (!zoneTop) {
-      zoneTop = document.createElement('div');
-      zoneTop.className = 'fs-zone pos-top';
-      screenEl.appendChild(zoneTop);
-    }
-    if (!zoneMid) {
-      zoneMid = document.createElement('div');
-      zoneMid.className = 'fs-zone pos-mid';
-      screenEl.appendChild(zoneMid);
-    }
-    if (!zoneBottom) {
-      zoneBottom = document.createElement('div');
-      zoneBottom.className = 'fs-zone pos-bottom';
-      screenEl.appendChild(zoneBottom);
-    }
-
-    zoneTop.innerHTML = '';
-    zoneMid.innerHTML = '';
-    zoneBottom.innerHTML = '';
-
-    if (!activeList || !activeList.length) return;
-
-    activeList.forEach((c) => {
-      const raw = String(c.rawText || c.text || '');
-      const clean = String(c.text || '').replace(/\\N/g, '\n');
-      const lines = clean.split('\n');
-      const rawLines = raw.split(/\\N|\n/);
-
-      if (lines.length > 1 && (raw.includes('\\an') || raw.includes('\\a') || raw.includes('<top>'))) {
-        lines.forEach((line, i) => {
-          const stripped = line.replace(/<[^>]+>/g, '').replace(/\{[^}]*\}/g, '').trim();
-          if (!stripped) return;
-          const placement = getCuePlacement(c, rawLines[i] || rawLines[0] || '');
-          const span = document.createElement('span');
-          span.className = 'fs-text';
-          span.textContent = stripped;
-          span.setAttribute('dir', hasArabic(stripped) ? 'rtl' : 'ltr');
-          span.style.textAlign = placement.hAlign;
-
-          const targetZone = placement.vAlign === 'top' ? zoneTop : (placement.vAlign === 'mid' ? zoneMid : zoneBottom);
-          targetZone.appendChild(span);
-        });
-      } else {
-        const stripped = clean.replace(/<[^>]+>/g, '').replace(/\{[^}]*\}/g, '').trim();
-        if (stripped) {
-          const placement = getCuePlacement(c);
-          const span = document.createElement('span');
-          span.className = 'fs-text';
-          span.textContent = stripped;
-          span.setAttribute('dir', hasArabic(stripped) ? 'rtl' : 'ltr');
-          span.style.textAlign = placement.hAlign;
-
-          const targetZone = placement.vAlign === 'top' ? zoneTop : (placement.vAlign === 'mid' ? zoneMid : zoneBottom);
-          targetZone.appendChild(span);
-        }
-      }
-    });
+    if (typeof AppFullscreen !== 'undefined') AppFullscreen.fitText();
   }
 
   function updateFsScreen() {
-    const currentPos = typeof SubtitlePlayer !== 'undefined' ? SubtitlePlayer.position : 0;
-    const currentDuration = typeof SubtitlePlayer !== 'undefined' ? SubtitlePlayer.duration : 0;
-    let activeList = [];
-    if (typeof SubtitlePlayer !== 'undefined' && workCues && workCues.length) {
-      activeList = workCues.filter((c) => currentPos >= c.start && currentPos < c.end);
-    }
-    if (!activeList.length && activeIdx >= 0 && workCues && workCues[activeIdx]) {
-      activeList = [workCues[activeIdx]];
-    } else if (!activeList.length && workCues && workCues.length) {
-      let nearest = workCues[0];
-      for (let k = 0; k < workCues.length; k++) {
-        if (workCues[k].start <= currentPos) nearest = workCues[k];
-        else break;
-      }
-      if (nearest) activeList = [nearest];
-    }
-
-    const primaryCue = activeList[0] || (workCues ? workCues[0] : null);
-    if (primaryCue && workCues) {
-      const idx = workCues.indexOf(primaryCue);
-      if (idx >= 0) activeIdx = idx;
-    }
-
-    renderFsCues(els.fsScreen, activeList);
-
-    if (els.fsCueCount) {
-      els.fsCueCount.textContent = primaryCue && workCues ? `Cue ${primaryCue.index} / ${workCues.length}` : 'Cue 0 / 0';
-    }
-
-    const fmtMs = (ms) => {
-      const sec = Math.floor(ms / 1000);
-      const m = Math.floor(sec / 60);
-      const s = sec % 60;
-      return `${m}:${String(s).padStart(2, '0')}`;
-    };
-
-    const fsTimeDisplay = document.querySelector('#fsTimeDisplay');
-    if (fsTimeDisplay) {
-      fsTimeDisplay.textContent = `${fmtMs(currentPos)} / ${fmtMs(currentDuration)}`;
-    }
-
-    // Update Fullscreen Timeline Scrubber
-    const pct = currentDuration ? (currentPos / currentDuration) * 100 : 0;
-    if (els.fsTlFill) els.fsTlFill.style.width = `${pct}%`;
-    if (els.fsTlThumb) els.fsTlThumb.style.left = `${pct}%`;
-
-    if (els.fsPlayBtn) {
-      const isPlaying = typeof SubtitlePlayer !== 'undefined' && SubtitlePlayer.playing;
-      els.fsPlayBtn.innerHTML = isPlaying
-        ? '<svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>'
-        : '<svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>';
-      els.fsPlayBtn.setAttribute('aria-label', isPlaying ? 'Pause' : 'Play');
-    }
-    fitFsText();
+    if (typeof AppFullscreen !== 'undefined') AppFullscreen.updateScreen();
   }
 
   function syncFsEditor(i) {
-    if (i < 0 || !workCues || !workCues[i]) return;
-    fsCueIndex = i;
-    if (els.fsInput) {
-      els.fsInput.value = displayText(workCues[i].text);
-      els.fsInput.setAttribute('dir', dirFor(els.fsInput.value));
-      updateFsCharCount();
-    }
-  }
-
-  function updateFsCharCount() {
-    if (els.fsCharCount && els.fsInput) {
-      const len = els.fsInput.value.length;
-      els.fsCharCount.textContent = `${len} chars`;
-    }
-  }
-
-  let fsInitialText = '';
-
-  function openFsEditor() {
-    const i = activeIdx >= 0 ? activeIdx : 0;
-    if (i < 0 || !workCues || !workCues[i]) return;
-    syncFsEditor(i);
-    fsInitialText = els.fsInput ? els.fsInput.value : '';
-    if (els.fsEditor) els.fsEditor.classList.remove('hidden');
-    editWasPlaying = typeof SubtitlePlayer !== 'undefined' && SubtitlePlayer.playing;
-    if (typeof SubtitlePlayer !== 'undefined' && SubtitlePlayer.pause) SubtitlePlayer.pause();
-    if (els.fsInput) {
-      els.fsInput.focus();
-      updateFsCharCount();
-    }
-    fitFsText();
-  }
-
-  function closeFsEditor() {
-    if (fsCueIndex >= 0 && els.fsInput && els.fsInput.value !== fsInitialText) {
-      pushUndoState();
-    }
-    if (els.fsEditor) els.fsEditor.classList.add('hidden');
-    if (editWasPlaying && typeof SubtitlePlayer !== 'undefined' && SubtitlePlayer.play) SubtitlePlayer.play();
-    editWasPlaying = false;
-    fitFsText();
+    if (typeof AppFullscreen !== 'undefined') AppFullscreen.syncEditor(i);
   }
 
   function enterFs() {
-    if (!parsed || !workCues || !workCues.length) { toast('Load a subtitle file first.', true); return; }
-    fsActive = true;
-    if (els.fsEdit) els.fsEdit.classList.remove('hidden');
-    const pos = typeof SubtitlePlayer !== 'undefined' ? SubtitlePlayer.position : 0;
-    let i = workCues.findIndex((c) => pos >= c.start && pos < c.end);
-    if (i < 0) {
-      i = activeIdx >= 0 ? activeIdx : 0;
-      if (typeof SubtitlePlayer !== 'undefined' && SubtitlePlayer.seek && workCues[i]) {
-        SubtitlePlayer.seek(workCues[i].start);
-      }
-    } else {
-      activeIdx = i;
-    }
-    updateFsScreen();
-    requestAnimationFrame(() => fitFsText());
-    if (els.fsEdit && els.fsEdit.requestFullscreen) {
-      els.fsEdit.requestFullscreen().then(() => {
-        fitFsText();
-      }).catch(() => {});
-    }
+    if (typeof AppFullscreen !== 'undefined') AppFullscreen.enter();
   }
 
   function exitFs() {
-    fsActive = false;
-    if (els.fsEdit) els.fsEdit.classList.add('hidden');
-    closeFsEditor();
-    if (document.fullscreenElement || document.webkitFullscreenElement) {
-      document.exitFullscreen().catch(() => {});
-    }
-  }
-
-  function triggerGestureFeedback(type) {
-    const feedbackEl = type === 'rewind' ? els.fsRewindFeedback : els.fsForwardFeedback;
-    if (!feedbackEl) return;
-    feedbackEl.classList.remove('hidden');
-    feedbackEl.style.animation = 'none';
-    void feedbackEl.offsetWidth;
-    feedbackEl.style.animation = '';
-    setTimeout(() => {
-      if (feedbackEl) feedbackEl.classList.add('hidden');
-    }, 450);
-  }
-
-  function polishKurdishText(all = false) {
-    if (!workCues || !workCues.length) return;
-    if (typeof Translator === 'undefined' || !Translator.postprocessSorani) return;
-
-    if (all) {
-      workCues = workCues.map((cue) => ({
-        ...cue,
-        text: Translator.postprocessSorani(cue.text || '', { fixPunct: true })
-      }));
-      pushUndoState();
-      buildEditor();
-      if (typeof SubtitlePlayer !== 'undefined') SubtitlePlayer.updateText(workCues);
-      prepareDownload();
-      updateFsScreen();
-      toast(currentUiLang === 'ckb' ? 'هەموو دێڕەکان بە ستاندارد ڕێکخران!' : 'All lines polished with Kurdish Sorani typography!');
-    } else {
-      const idx = fsActive ? (fsCueIndex >= 0 ? fsCueIndex : activeIdx) : activeIdx;
-      if (idx >= 0 && workCues[idx]) {
-        const polished = Translator.postprocessSorani(workCues[idx].text || '', { fixPunct: true });
-        applyCueEdit(idx, polished);
-        if (els.fsInput) els.fsInput.value = polished;
-        updateFsScreen();
-        toast(currentUiLang === 'ckb' ? 'دێڕەکە ڕێکخرا!' : 'Line polished!');
-      }
-    }
+    if (typeof AppFullscreen !== 'undefined') AppFullscreen.exit();
   }
 
   function bindFs() {
-    if (els.fsToggleBtn) els.fsToggleBtn.addEventListener('click', () => (fsActive ? exitFs() : enterFs()));
-    if (els.fsClose) els.fsClose.addEventListener('click', exitFs);
-
-    // Gestures on Fullscreen Screen Stage
-    let lastTapTime = 0;
-    let lastTapX = 0;
-
-    if (els.fsScreen) {
-      els.fsScreen.addEventListener('pointerdown', (e) => {
-        if (e.target.closest('.fs-btn, button, select, input, textarea')) return;
-        const now = Date.now();
-        const rect = els.fsScreen.getBoundingClientRect();
-        const tapXRatio = (e.clientX - rect.left) / rect.width;
-
-        if (now - lastTapTime < 320 && Math.abs(e.clientX - lastTapX) < 80) {
-          // Double Tap Triggered
-          if (tapXRatio < 0.35) {
-            // Double Tap Left: Skip Back 5s
-            SubtitlePlayer.jump(-5000);
-            updateFsScreen();
-            triggerGestureFeedback('rewind');
-          } else if (tapXRatio > 0.65) {
-            // Double Tap Right: Skip Forward 5s
-            SubtitlePlayer.jump(5000);
-            updateFsScreen();
-            triggerGestureFeedback('forward');
-          } else {
-            // Double Tap Center: Toggle Play
-            SubtitlePlayer.toggle();
-            updateFsScreen();
-          }
-          lastTapTime = 0;
-        } else {
-          lastTapTime = now;
-          lastTapX = e.clientX;
-        }
-      });
-
-      els.fsScreen.addEventListener('click', (e) => {
-        if (e.target.closest('.fs-btn, button, select, input, textarea')) return;
-        // Single tap opens/focuses the quick edit drawer
-        setTimeout(() => {
-          if (Date.now() - lastTapTime >= 300) {
-            openFsEditor();
-          }
-        }, 320);
-      });
-    }
-
-    if (els.fsEditBtn) els.fsEditBtn.addEventListener('click', openFsEditor);
-    if (els.fsDoneBtn) els.fsDoneBtn.addEventListener('click', closeFsEditor);
-    if (els.fsPrevBtn) els.fsPrevBtn.addEventListener('click', () => { SubtitlePlayer.stepCue(-1); updateFsScreen(); });
-    if (els.fsNextBtn) els.fsNextBtn.addEventListener('click', () => { SubtitlePlayer.stepCue(1); updateFsScreen(); });
-    if (els.fsRestartBtn) els.fsRestartBtn.addEventListener('click', () => { SubtitlePlayer.seek(0); updateFsScreen(); });
-
-    if (els.fsPrevCueNavBtn) {
-      els.fsPrevCueNavBtn.addEventListener('click', () => {
-        if (fsCueIndex > 0) {
-          syncFsEditor(fsCueIndex - 1);
-          SubtitlePlayer.seek(workCues[fsCueIndex].start);
-          updateFsScreen();
-        }
-      });
-    }
-    if (els.fsNextCueNavBtn) {
-      els.fsNextCueNavBtn.addEventListener('click', () => {
-        if (workCues && fsCueIndex < workCues.length - 1) {
-          syncFsEditor(fsCueIndex + 1);
-          SubtitlePlayer.seek(workCues[fsCueIndex].start);
-          updateFsScreen();
-        }
-      });
-    }
-
-    if (els.fsPlayBtn) els.fsPlayBtn.addEventListener('click', () => { SubtitlePlayer.toggle(); updateFsScreen(); });
-    if (els.fsSkipBackBtn) {
-      els.fsSkipBackBtn.addEventListener('click', () => {
-        SubtitlePlayer.jump(-5000);
-        updateFsScreen();
-        triggerGestureFeedback('rewind');
-      });
-    }
-    if (els.fsSkipForwardBtn) {
-      els.fsSkipForwardBtn.addEventListener('click', () => {
-        SubtitlePlayer.jump(5000);
-        updateFsScreen();
-        triggerGestureFeedback('forward');
-      });
-    }
-    if (els.fsSpeedSel) {
-      els.fsSpeedSel.addEventListener('change', (e) => {
-        if (typeof SubtitlePlayer !== 'undefined' && els.speedSel) {
-          els.speedSel.value = e.target.value;
-          els.speedSel.dispatchEvent(new Event('change'));
-        }
-      });
-    }
-
-    if (els.fsUndoBtn) els.fsUndoBtn.addEventListener('click', performUndo);
-    if (els.fsRedoBtn) els.fsRedoBtn.addEventListener('click', performRedo);
-    if (els.fsEdUndoBtn) els.fsEdUndoBtn.addEventListener('click', performUndo);
-    if (els.fsEdRedoBtn) els.fsEdRedoBtn.addEventListener('click', performRedo);
-    if (els.fsEdPolishBtn) els.fsEdPolishBtn.addEventListener('click', () => polishKurdishText(false));
-
-    if (els.fsFontSizeSel) {
-      els.fsFontSizeSel.addEventListener('change', (e) => {
-        updateFontSize(e.target.value);
-      });
-    }
-
-    // Fullscreen Scrubber Timeline Interaction
-    const handleFsScrub = (e) => {
-      if (!els.fsTimeline) return;
-      const rect = els.fsTimeline.getBoundingClientRect();
-      const clampVal = (v, min, max) => Math.min(max, Math.max(min, v));
-      const ratio = clampVal((e.clientX - rect.left) / rect.width, 0, 1);
-      const targetMs = ratio * SubtitlePlayer.duration;
-      SubtitlePlayer.seek(targetMs);
-      updateFsScreen();
-    };
-
-    if (els.fsTimeline) {
-      els.fsTimeline.addEventListener('pointerdown', (e) => {
-        els.fsTimeline.setPointerCapture(e.pointerId);
-        if (SubtitlePlayer.playing) SubtitlePlayer.pause();
-        handleFsScrub(e);
-
-        const onFsPointerMove = (moveEvent) => handleFsScrub(moveEvent);
-        const onFsPointerUp = (upEvent) => {
-          els.fsTimeline.releasePointerCapture(upEvent.pointerId);
-          els.fsTimeline.removeEventListener('pointermove', onFsPointerMove);
-          els.fsTimeline.removeEventListener('pointerup', onFsPointerUp);
-        };
-        els.fsTimeline.addEventListener('pointermove', onFsPointerMove);
-        els.fsTimeline.addEventListener('pointerup', onFsPointerUp);
-      });
-
-      if (els.fsTlTooltip) {
-        els.fsTimeline.addEventListener('pointermove', (e) => {
-          if (!SubtitlePlayer.duration) return;
-          const rect = els.fsTimeline.getBoundingClientRect();
-          const clampVal = (v, min, max) => Math.min(max, Math.max(min, v));
-          const ratio = clampVal((e.clientX - rect.left) / rect.width, 0, 1);
-          const hoverMs = ratio * SubtitlePlayer.duration;
-          const sec = Math.floor(hoverMs / 1000);
-          const m = Math.floor(sec / 60);
-          const s = sec % 60;
-          els.fsTlTooltip.textContent = `${m}:${String(s).padStart(2, '0')}`;
-          els.fsTlTooltip.style.left = `${ratio * 100}%`;
-          els.fsTlTooltip.classList.remove('hidden');
-        });
-        els.fsTimeline.addEventListener('pointerleave', () => {
-          els.fsTlTooltip.classList.add('hidden');
-        });
-      }
-    }
-
-    if (els.fsInput) {
-      els.fsInput.addEventListener('input', () => {
-        if (fsCueIndex < 0 || !workCues || !workCues[fsCueIndex]) return;
-        applyCueEdit(fsCueIndex, els.fsInput.value);
-        updateFsCharCount();
-        updateFsScreen();
-      });
-
-      els.fsInput.addEventListener('keydown', (e) => {
-        if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
-          e.preventDefault();
-          closeFsEditor();
-        }
-      });
-    }
-
-    document.addEventListener('keydown', (e) => {
-      if (!fsActive) return;
-      if (e.key === 'Escape') {
-        document.activeElement === els.fsInput ? closeFsEditor() : exitFs();
-      }
-    });
-
-    if (typeof ResizeObserver !== 'undefined' && els.fsScreen) {
-      const fsRo = new ResizeObserver(() => {
-        if (fsActive) fitFsText();
-      });
-      fsRo.observe(els.fsScreen);
-    }
-
-    const onFullscreenChange = () => {
-      if (!document.fullscreenElement && !document.webkitFullscreenElement) {
-        if (fsActive) exitFs();
-      } else {
-        if (fsActive) {
-          requestAnimationFrame(() => fitFsText());
-          setTimeout(() => fitFsText(), 100);
-        }
-      }
-    };
-    document.addEventListener('fullscreenchange', onFullscreenChange);
-    document.addEventListener('webkitfullscreenchange', onFullscreenChange);
+    // Event listeners and touch gestures handled inside AppFullscreen module
   }
 
   // ---------- Tabs ----------
@@ -1442,13 +1012,15 @@
     catch { toast(currentUiLang === 'ckb' ? 'هیچ ژێرنووسێک نەدۆزرایەوە.' : 'Could not detect subtitle content.', true); return; }
     if (!parsedFile.cues.length) { toast(currentUiLang === 'ckb' ? 'هیچ دێڕێکی ژێرنووس نییە.' : 'No subtitles found in file.', true); return; }
 
-    if (isTourOpen) {
-      closeTour(false);
+    if (typeof AppTour !== 'undefined' && AppTour.isOpen && AppTour.isOpen()) {
+      AppTour.closeTour(false);
     }
 
     file = f;
     parsed = parsedFile;
-    isDemoLoaded = false;
+    if (typeof AppTour !== 'undefined' && AppTour.setDemoLoaded) {
+      AppTour.setDemoLoaded(false);
+    }
     resultText = null;
     if (resultUrl) { URL.revokeObjectURL(resultUrl); resultUrl = null; }
     els.fileName.textContent = f.name;
@@ -1721,409 +1293,25 @@
   }
 
   // ---------- Line Quality & Advanced Expression Inspector ----------
-  let currentQualityFilter = 'all';
-  let currentQualityQuery = '';
-  let lastQualityIssues = [];
 
   function openQualityModal() {
-    if (!els.qualityModalBackdrop) return;
-    currentQualityFilter = 'all';
-    currentQualityQuery = '';
-    if (els.qualitySearchInput) els.qualitySearchInput.value = '';
-    if (els.qualitySearchClear) els.qualitySearchClear.classList.add('hidden');
-    if (els.qualityCategoryTabs) {
-      els.qualityCategoryTabs.querySelectorAll('.quality-tab').forEach((tab) => {
-        tab.classList.toggle('active', tab.dataset.filter === 'all');
-      });
-    }
-    runQualityInspection();
-    els.qualityModalBackdrop.classList.remove('hidden');
+    if (typeof AppQuality !== 'undefined') AppQuality.openModal();
   }
 
   function closeQualityModal() {
-    if (els.qualityModalBackdrop) {
-      els.qualityModalBackdrop.classList.add('hidden');
-    }
+    if (typeof AppQuality !== 'undefined') AppQuality.closeModal();
   }
 
   function runQualityInspection() {
-    const cues = workCues || (parsed && parsed.cues) || [];
-    if (!cues.length) {
-      if (els.qualityScoreVal) els.qualityScoreVal.textContent = '100%';
-      if (els.qualityIssuesCount) els.qualityIssuesCount.textContent = '0';
-      if (els.qualityOverlapCount) els.qualityOverlapCount.textContent = '0';
-      if (els.qualityAdvancedCount) els.qualityAdvancedCount.textContent = '0';
-      if (els.qTabAllCount) els.qTabAllCount.textContent = '0';
-      if (els.qTabOrthoCount) els.qTabOrthoCount.textContent = '0';
-      if (els.qTabPrefixCount) els.qTabPrefixCount.textContent = '0';
-      if (els.qTabTimingCount) els.qTabTimingCount.textContent = '0';
-      if (els.qTabIdiomsCount) els.qTabIdiomsCount.textContent = '0';
-      if (els.qualityIssuesList) {
-        els.qualityIssuesList.innerHTML = `<div class="char-empty-msg" style="padding: 2.5rem 1rem; text-align: center; color: var(--text-muted);">
-          ${currentUiLang === 'ckb' ? 'هیچ فایلی ژێرنووس بارنەکراوە.' : 'No subtitles loaded yet. Upload a file to inspect line quality.'}
-        </div>`;
-      }
-      return;
-    }
-
-    let totalScore = 0;
-    const issuesFound = [];
-    let overlapCount = 0;
-    let advancedCount = 0;
-    let orthoCount = 0;
-    let prefixCount = 0;
-    let timingCount = 0;
-    let idiomsLineCount = 0;
-
-    // Check dialogue overlap
-    for (let i = 0; i < cues.length - 1; i++) {
-      if (cues[i].end > cues[i + 1].start) {
-        overlapCount++;
-      }
-    }
-
-    cues.forEach((cue, index) => {
-      const kurdText = cue.text || '';
-      const srcText = (liveSource && liveSource[index]) || (parsed && parsed.cues && parsed.cues[index] && parsed.cues[index].text) || kurdText;
-      const res = (typeof Translator !== 'undefined' && Translator.checkLineQuality)
-        ? Translator.checkLineQuality(srcText, kurdText)
-        : { score: 100, issues: [], issueDetails: [], suggestions: [] };
-      const advAlts = (typeof Translator !== 'undefined' && Translator.getAdvancedAlternatives)
-        ? Translator.getAdvancedAlternatives(srcText)
-        : [];
-
-      // Check if this cue has an overlap with next cue
-      const hasOverlap = index < cues.length - 1 && cue.end > cues[index + 1].start;
-      if (hasOverlap) {
-        res.issues.push(currentUiLang === 'ckb' ? 'تێکەڵبوونی کات لەگەڵ دێڕی دواتر (Overlap)' : 'Timing overlap with next line');
-        res.score = Math.max(10, res.score - 15);
-      }
-
-      // Determine categories for this line
-      const categories = new Set();
-      if (res.issueDetails && res.issueDetails.length > 0) {
-        res.issueDetails.forEach((d) => {
-          if (d.category) categories.add(d.category);
-        });
-      }
-      res.issues.forEach((iss) => {
-        if (/ڕێنووس|پیت|Arabic|letter|alphabet|glyph|tatweel|hamza/i.test(iss)) categories.add('orthography');
-        else if (/پێشگر|دیالۆگ|prefix|affix|verbal|dialogue/i.test(iss)) categories.add('prefix');
-        else if (/کات|overlap|duration|timing|length|درێژی/i.test(iss)) categories.add('timing');
-      });
-      if (hasOverlap) categories.add('timing');
-      if (advAlts.length > 0) {
-        categories.add('idioms');
-        advancedCount += advAlts.length;
-      }
-
-      totalScore += res.score;
-
-      const hasLineIssues = res.issues.length > 0 || advAlts.length > 0 || hasOverlap;
-      if (hasLineIssues) {
-        if (categories.has('orthography')) orthoCount++;
-        if (categories.has('prefix')) prefixCount++;
-        if (categories.has('timing')) timingCount++;
-        if (categories.has('idioms')) idiomsLineCount++;
-
-        issuesFound.push({
-          index: index + 1,
-          cueIndex: index,
-          start: cue.start,
-          end: cue.end,
-          srcText,
-          kurdText,
-          score: res.score,
-          issues: res.issues,
-          issueDetails: res.issueDetails || [],
-          categories: Array.from(categories),
-          suggestions: res.suggestions,
-          advancedAlternatives: advAlts,
-          hasOverlap: hasOverlap
-        });
-      }
-    });
-
-    const avgScore = Math.max(10, Math.min(100, Math.round(totalScore / Math.max(1, cues.length))));
-    if (els.qualityScoreVal) els.qualityScoreVal.textContent = `${avgScore}%`;
-    if (els.edQualityBadge) {
-      els.edQualityBadge.textContent = `${avgScore}%`;
-      els.edQualityBadge.classList.toggle('warning', avgScore < 85 && avgScore >= 60);
-      els.edQualityBadge.classList.toggle('alert', avgScore < 60);
-    }
-    if (els.qualityIssuesCount) els.qualityIssuesCount.textContent = String(issuesFound.length);
-    if (els.qualityOverlapCount) els.qualityOverlapCount.textContent = String(overlapCount);
-    if (els.qualityAdvancedCount) els.qualityAdvancedCount.textContent = String(advancedCount);
-
-    if (els.qTabAllCount) els.qTabAllCount.textContent = String(issuesFound.length);
-    if (els.qTabOrthoCount) els.qTabOrthoCount.textContent = String(orthoCount);
-    if (els.qTabPrefixCount) els.qTabPrefixCount.textContent = String(prefixCount);
-    if (els.qTabTimingCount) els.qTabTimingCount.textContent = String(timingCount);
-    if (els.qTabIdiomsCount) els.qTabIdiomsCount.textContent = String(idiomsLineCount);
-
-    lastQualityIssues = issuesFound;
-    renderQualityIssuesList(issuesFound);
-  }
-
-  function renderQualityIssuesList(issues) {
-    if (!els.qualityIssuesList) return;
-    els.qualityIssuesList.innerHTML = '';
-
-    const listToRender = issues || lastQualityIssues || [];
-
-    if (!listToRender.length) {
-      els.qualityIssuesList.innerHTML = `<div class="char-empty-msg" style="padding: 2.5rem 1rem; text-align: center; color: var(--text-muted);">
-        <div style="font-size: 2.5rem; margin-bottom: 0.5rem;">🎉</div>
-        <div style="font-weight: 600; font-size: 1.1rem; color: var(--text-primary); margin-bottom: 0.25rem;">
-          ${currentUiLang === 'ckb' ? 'هەموو دێڕەکان بێ کێشەن و ستانداردن!' : 'All Lines Look Great!'}
-        </div>
-        <div>${currentUiLang === 'ckb' ? 'هیچ کێشەیەکی ڕێزمانی، پیت، یان تێکەڵبوونی کات نەدۆزرایەوە.' : 'No punctuation anomalies, raw Arabic glyphs, or dialogue overlaps detected.'}</div>
-      </div>`;
-      return;
-    }
-
-    const query = (currentQualityQuery || '').trim().toLowerCase();
-    const filterCat = currentQualityFilter || 'all';
-
-    let visibleCount = 0;
-    const frag = document.createDocumentFragment();
-
-    listToRender.forEach((item) => {
-      // Category filter check
-      if (filterCat !== 'all') {
-        if (filterCat === 'orthography' && !item.categories.includes('orthography')) return;
-        if (filterCat === 'prefix' && !item.categories.includes('prefix')) return;
-        if (filterCat === 'timing' && !item.categories.includes('timing')) return;
-        if (filterCat === 'idioms' && !item.categories.includes('idioms')) return;
-      }
-
-      // Search query check
-      if (query) {
-        const textMatch = item.srcText.toLowerCase().includes(query) || item.kurdText.toLowerCase().includes(query);
-        const issueMatch = item.issues.some((iss) => iss.toLowerCase().includes(query));
-        const altMatch = (item.advancedAlternatives || []).some((alt) => alt.kurdish.toLowerCase().includes(query) || (alt.context && alt.context.toLowerCase().includes(query)));
-        if (!textMatch && !issueMatch && !altMatch) return;
-      }
-
-      visibleCount++;
-
-      const card = document.createElement('div');
-      card.className = 'quality-issue-card';
-      card.dataset.cueIndex = String(item.cueIndex);
-      card.dataset.categories = item.categories.join(' ');
-
-      const timeFmt = (typeof SubParser !== 'undefined') ? `${SubParser.fmtSRT(item.start)} ➔ ${SubParser.fmtSRT(item.end)}` : '';
-
-      let tagsHtml = item.issues.map((iss) => {
-        let tagClass = 'quality-issue-tag';
-        if (/overlap|timing|تێکەڵبوونی/i.test(iss)) tagClass += ' warning';
-        else if (/character|name|ناو/i.test(iss)) tagClass += ' info';
-        return `<span class="${tagClass}">${iss}</span>`;
-      }).join('');
-
-      if (item.advancedAlternatives && item.advancedAlternatives.length > 0) {
-        tagsHtml += `<span class="quality-issue-tag idiom">
-          ⚡ ${currentUiLang === 'ckb' ? 'دەستەواژەی پێشکەوتوو' : 'Advanced Expressions'}
-        </span>`;
-      }
-
-      let altsHtml = '';
-      if (item.advancedAlternatives && item.advancedAlternatives.length > 0) {
-        altsHtml = `
-          <div class="quality-alts-box" style="margin-top: 0.75rem; padding: 0.6rem 0.75rem; background: var(--surface-secondary, rgba(255,255,255,0.04)); border-radius: 8px; border: 1px dashed var(--border-color, rgba(255,255,255,0.15));">
-            <div style="font-size: 0.75rem; font-weight: 600; color: var(--text-muted, #94a3b8); margin-bottom: 0.4rem;">
-              💡 ${currentUiLang === 'ckb' ? 'پێشنیارە گونجاوەکانی کوردی (کلیک بکە بۆ جێبەجێکردن):' : 'Natural Kurdish alternatives (click to apply):'}
-            </div>
-            <div style="display: flex; flex-wrap: wrap; gap: 0.4rem;">
-              ${item.advancedAlternatives.map((alt) => `
-                <button type="button" class="alt-chip-btn" data-cue-index="${item.cueIndex}" data-rep="${alt.kurdish.replace(/"/g, '&quot;')}" style="font-size: 0.8rem; padding: 0.35rem 0.65rem; background: var(--bg-surface, #1e293b); border: 1px solid var(--accent-primary, #6366f1); border-radius: 6px; color: var(--accent-primary, #818cf8); cursor: pointer; display: inline-flex; align-items: center; gap: 0.35rem; transition: all 0.15s ease;">
-                  <span style="font-weight: bold;">+</span>
-                  <span dir="rtl" style="font-weight: 600; font-family: 'Noto Naskh Arabic', sans-serif;">${alt.kurdish}</span>
-                  ${alt.context ? `<span style="font-size: 0.7rem; opacity: 0.75;">(${alt.context})</span>` : ''}
-                </button>
-              `).join('')}
-            </div>
-          </div>
-        `;
-      }
-
-      card.innerHTML = `
-        <div class="quality-issue-head" style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.5rem;">
-          <div style="display: flex; align-items: center; gap: 0.5rem;">
-            <span style="font-weight: 700; font-size: 0.85rem; color: var(--accent-primary, #818cf8);">#${item.index}</span>
-            <span style="font-size: 0.75rem; font-family: monospace; color: var(--text-muted, #94a3b8);">${timeFmt}</span>
-          </div>
-          <div style="display: flex; gap: 0.4rem; align-items: center;">
-            <button type="button" class="quick-fix-row-btn btn-xs" data-cue-index="${item.cueIndex}" style="font-size: 0.75rem; padding: 0.3rem 0.6rem; background: var(--accent-primary, #6366f1); color: #fff; border: none; border-radius: 4px; cursor: pointer; font-weight: 600; transition: opacity 0.15s ease;">
-              ⚡ ${currentUiLang === 'ckb' ? 'چاکسازی خۆکار' : 'Auto Polish'}
-            </button>
-            <button type="button" class="goto-cue-btn btn-xs" data-cue-index="${item.cueIndex}" style="font-size: 0.75rem; padding: 0.3rem 0.6rem; background: var(--surface-secondary, rgba(255,255,255,0.06)); color: var(--text-primary, #f8fafc); border: 1px solid var(--border-color, rgba(255,255,255,0.12)); border-radius: 4px; cursor: pointer;">
-              ${currentUiLang === 'ckb' ? 'دەستکاری' : 'Edit'}
-            </button>
-          </div>
-        </div>
-        <div style="display: flex; flex-wrap: wrap; gap: 0.35rem; margin-bottom: 0.6rem;">
-          ${tagsHtml}
-        </div>
-        <div class="quality-texts" style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; font-size: 0.85rem;">
-          <div style="padding: 0.6rem; background: var(--surface-secondary, rgba(255,255,255,0.03)); border-radius: 6px; border: 1px solid var(--border-color, rgba(255,255,255,0.1)); color: var(--text-muted, #94a3b8); word-break: break-word;">
-            <div style="font-size: 0.7rem; font-weight: 700; text-transform: uppercase; margin-bottom: 0.25rem; letter-spacing: 0.5px;">Original</div>
-            <div style="line-height: 1.4;">${displayText(item.srcText)}</div>
-          </div>
-          <div style="padding: 0.6rem; background: var(--bg-surface, rgba(0,0,0,0.25)); border-radius: 6px; border: 1px solid var(--border-color, rgba(255,255,255,0.1)); word-break: break-word;" dir="rtl">
-            <div style="font-size: 0.7rem; font-weight: 700; text-transform: uppercase; margin-bottom: 0.25rem; color: var(--text-muted, #94a3b8); letter-spacing: 0.5px;" dir="ltr">Kurdish Sorani</div>
-            <div class="kurd-val-text" style="font-family: 'Noto Naskh Arabic', 'Vazirmatn', sans-serif; font-size: 14px; line-height: 1.5; color: var(--text-primary, #f8fafc);">${displayText(item.kurdText)}</div>
-          </div>
-        </div>
-        ${altsHtml}
-      `;
-
-      frag.appendChild(card);
-    });
-
-    if (visibleCount === 0) {
-      els.qualityIssuesList.innerHTML = `<div class="char-empty-msg" style="padding: 2.5rem 1rem; text-align: center; color: var(--text-muted);">
-        ${currentUiLang === 'ckb' ? 'هیچ ئەنجامێک نەدۆزرایەوە بۆ ئەم فلتەرە.' : 'No issues found matching current filter/search.'}
-      </div>`;
-      return;
-    }
-
-    els.qualityIssuesList.appendChild(frag);
-
-    // Bind event handlers inside list
-    els.qualityIssuesList.querySelectorAll('.alt-chip-btn').forEach((btn) => {
-      btn.addEventListener('click', () => {
-        const cIdx = parseInt(btn.dataset.cueIndex, 10);
-        const rep = btn.dataset.rep;
-        if (!isNaN(cIdx) && rep && workCues && workCues[cIdx]) {
-          applyCueEdit(cIdx, rep);
-          btn.style.background = 'var(--accent-primary, #6366f1)';
-          btn.style.color = '#fff';
-          btn.textContent = '✓ Applied';
-          setTimeout(() => runQualityInspection(), 250);
-        }
-      });
-    });
-
-    els.qualityIssuesList.querySelectorAll('.quick-fix-row-btn').forEach((btn) => {
-      btn.addEventListener('click', () => {
-        const cIdx = parseInt(btn.dataset.cueIndex, 10);
-        if (!isNaN(cIdx) && workCues && workCues[cIdx]) {
-          const kurdDigitsVal = els.kurdishDigitsToggle ? els.kurdishDigitsToggle.checked : false;
-          const polished = Translator.postprocessSorani(workCues[cIdx].text, {
-            kurdishDigits: kurdDigitsVal
-          });
-          applyCueEdit(cIdx, polished);
-          btn.textContent = '✓ Fixed';
-          btn.disabled = true;
-          setTimeout(() => runQualityInspection(), 250);
-        }
-      });
-    });
-
-    els.qualityIssuesList.querySelectorAll('.goto-cue-btn').forEach((btn) => {
-      btn.addEventListener('click', () => {
-        const cIdx = parseInt(btn.dataset.cueIndex, 10);
-        closeQualityModal();
-        switchTab('preview');
-        setTimeout(() => {
-          if (rowEls && rowEls[cIdx]) {
-            rowEls[cIdx].scrollIntoView({ behavior: 'smooth', block: 'center' });
-            const input = rowEls[cIdx].querySelector('.ed-input');
-            if (input) input.focus();
-          }
-        }, 150);
-      });
-    });
-  }
-
-  function filterQualityList() {
-    if (els.qualitySearchInput) {
-      currentQualityQuery = els.qualitySearchInput.value;
-      if (els.qualitySearchClear) {
-        els.qualitySearchClear.classList.toggle('hidden', !currentQualityQuery);
-      }
-    }
-    renderQualityIssuesList(lastQualityIssues);
+    if (typeof AppQuality !== 'undefined') AppQuality.runInspection();
   }
 
   function fixAllQuality() {
-    if (!workCues || !workCues.length) {
-      toast(currentUiLang === 'ckb' ? 'هیچ ژێرنووسێک نییە بۆ چاکسازی.' : 'No subtitles to polish.', true);
-      return;
-    }
-
-    const kurdDigitsVal = els.kurdishDigitsToggle ? els.kurdishDigitsToggle.checked : false;
-
-    // 1. Polish all Kurdish text
-    workCues = workCues.map((c) => {
-      const pol = Translator.postprocessSorani(c.text, {
-        kurdishDigits: kurdDigitsVal
-      });
-      return { ...c, text: pol };
-    });
-
-    if (baseCues) {
-      baseCues = baseCues.map((c) => {
-        const pol = Translator.postprocessSorani(c.text, {
-          kurdishDigits: kurdDigitsVal
-        });
-        return { ...c, text: pol };
-      });
-    }
-
-    // 2. Fix all dialogue overlaps
-    if (typeof SubParser !== 'undefined' && SubParser.fixOverlaps) {
-      workCues = SubParser.fixOverlaps(workCues, { mode: 'trim', minDurationMs: 600, gapMs: 20 });
-      if (baseCues) {
-        baseCues = SubParser.fixOverlaps(baseCues, { mode: 'trim', minDurationMs: 600, gapMs: 20 });
-      }
-    }
-
-    dirty = true;
-    updateStatus();
-    buildEditor();
-    if (typeof SubtitlePlayer !== 'undefined') {
-      SubtitlePlayer.load(workCues);
-    }
-    prepareDownload();
-    runQualityInspection();
-
-    const dict = dicts[currentUiLang] || dicts.en;
-    toast(
-      currentUiLang === 'ckb'
-        ? '🎉 هەموو دێڕەکان بە ستانداردی کوردی چاککران و کاتەکان ڕێکخران!'
-        : '🎉 Auto-polished all lines and resolved dialogue overlaps!'
-    );
+    if (typeof AppQuality !== 'undefined') AppQuality.fixAll();
   }
 
   function fixDialogueOverlapsNow() {
-    if (!workCues || !workCues.length) {
-      toast(currentUiLang === 'ckb' ? 'هیچ ژێرنووسێک بارنەکراوە.' : 'No subtitles loaded.', true);
-      return;
-    }
-
-    if (typeof SubParser !== 'undefined' && SubParser.fixOverlaps) {
-      workCues = SubParser.fixOverlaps(workCues, { mode: 'trim', minDurationMs: 600, gapMs: 20 });
-      if (baseCues) {
-        baseCues = SubParser.fixOverlaps(baseCues, { mode: 'trim', minDurationMs: 600, gapMs: 20 });
-      }
-    }
-
-    dirty = true;
-    updateStatus();
-    buildEditor();
-    if (typeof SubtitlePlayer !== 'undefined') {
-      SubtitlePlayer.load(workCues);
-    }
-    prepareDownload();
-    runQualityInspection();
-
-    toast(
-      currentUiLang === 'ckb'
-        ? '✓ کاتی ژێرنووسە تێکەڵبووەکان بە سەرکەوتوویی ڕێکخرانەوە!'
-        : '✓ Dialogue overlaps resolved and timed cleanly!'
-    );
+    if (typeof AppQuality !== 'undefined') AppQuality.fixOverlaps();
   }
 
   // ---------- Wire up ----------
@@ -2552,631 +1740,85 @@
     els.srcLang.addEventListener('change', () => store.set('srcLang', els.srcLang.value));
   }
 
-  // ---------- Welcome Tour System with Live Preview Demo ----------
-  let currentTourStep = 0;
-  let isTourOpen = false;
-  let isDemoLoaded = false;
-
-  const DEMO_CUES = [
-    { index: 1, start: 800, end: 4200, text: 'Welcome to Kurdish Subtitle Translator!\nبەخێربێن بۆ وەرگێڕی ژێرنووسی کوردی!' },
-    { index: 2, start: 4700, end: 8800, text: 'Translate SRT, VTT, ASS, SSA, SUB & SAMI to Kurdish Sorani.\nوەرگێڕانی هەموو جۆرەکانی ژێرنووس بۆ زمانی کوردی سۆرانی.' },
-    { index: 3, start: 9300, end: 13800, text: 'Live subtitle player synced with real-time playback.\nپێشاندەری ژێرنووس بە کاتی ڕاستەقینە و هاوکات لەگەڵ مۆڵەتەکان.' },
-    { index: 4, start: 14300, end: 19000, text: 'Type to edit cues live, search lines instantly, and download anytime!\nدەستکاری دەقەکان بکە بە ڕاستەوخۆ و بە ئاسانی پاشەکەوتی بکە!' }
-  ];
-
-  function loadDemoForTour() {
-    isDemoLoaded = true;
-    parsed = { format: 'srt', cues: DEMO_CUES.map((c) => ({ ...c })) };
-    file = { name: 'demo_movie_subtitles.srt', size: 1420 };
-    updateCues(DEMO_CUES);
-    showStep('done');
-  }
-
-  const TOUR_STEP_ICONS = [
-    `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="12" y1="18" x2="12" y2="12"></line><line x1="9" y1="15" x2="15" y2="15"></line></svg>`,
-    `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>`,
-    `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><polygon points="10 8 16 12 10 16 10 8"></polygon></svg>`,
-    `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>`,
-    `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path><polyline points="9 12 11 14 15 10"></polyline></svg>`
-  ];
-
-  const TOUR_STEPS = [
-    {
-      targetSel: '#dropzone',
-      titleKey: 'tourStep1Title',
-      textKey: 'tourStep1Text',
-      badge: '1 / 5',
-      showPrev: false,
-      nextKey: 'tourNext',
-      ensureTab: 'translate',
-      onEnter: () => {
-        showStep('upload');
-        switchTab('translate');
-      }
-    },
-    {
-      targetSel: '#stepSettings',
-      titleKey: 'tourStep2Title',
-      textKey: 'tourStep2Text',
-      badge: '2 / 5',
-      showPrev: true,
-      nextKey: 'tourNext',
-      ensureTab: 'translate',
-      onEnter: () => {
-        if (!parsed) {
-          parsed = { format: 'srt', cues: DEMO_CUES.map((c) => ({ ...c })) };
-          file = { name: 'demo_movie.srt', size: 1420 };
-          els.fileName.textContent = 'demo_movie.srt';
-          els.fileMeta.textContent = '4 lines • 1.4 KB • SRT';
-          updateCues(DEMO_CUES);
-        }
-        showStep('settings');
-        switchTab('translate');
-      }
-    },
-    {
-      targetSel: '.player-card',
-      titleKey: 'tourStep3Title',
-      textKey: 'tourStep3Text',
-      badge: '3 / 5',
-      showPrev: true,
-      nextKey: 'tourNext',
-      ensureTab: 'preview',
-      onEnter: () => {
-        loadDemoForTour();
-        SubtitlePlayer.seek(0);
-        SubtitlePlayer.play();
-      }
-    },
-    {
-      targetSel: '.editor-card',
-      titleKey: 'tourStep4Title',
-      textKey: 'tourStep4Text',
-      badge: '4 / 5',
-      showPrev: true,
-      nextKey: 'tourNext',
-      ensureTab: 'preview',
-      onEnter: () => {
-        if (!parsed) loadDemoForTour();
-        switchTab('preview');
-      }
-    },
-    {
-      targetSel: '#edQualityCheckBtn',
-      titleKey: 'tourStep5Title',
-      textKey: 'tourStep5Text',
-      badge: '5 / 5',
-      showPrev: true,
-      nextKey: 'tourDone',
-      ensureTab: 'preview',
-      onEnter: () => {
-        if (!parsed) loadDemoForTour();
-        switchTab('preview');
-      }
-    }
-  ];
-
-  function openTour(stepIndex = 0) {
-    if (file && !isDemoLoaded) {
-      // If user's own file is loaded, don't allow openTour
-      return;
-    }
-    if (!els.tourOverlay) return;
-    currentTourStep = stepIndex;
-    isTourOpen = true;
-    els.tourOverlay.classList.remove('hidden');
-    els.tourOverlay.setAttribute('aria-hidden', 'false');
-    renderTourStep(currentTourStep);
-    window.addEventListener('resize', handleTourReposition);
-    window.addEventListener('scroll', handleTourReposition, { passive: true });
-    window.addEventListener('keydown', handleTourKeydown);
-  }
-
-  function closeTour(markSeen = true) {
-    if (!els.tourOverlay) return;
-    isTourOpen = false;
-    els.tourOverlay.classList.add('hidden');
-    els.tourOverlay.setAttribute('aria-hidden', 'true');
-    window.removeEventListener('resize', handleTourReposition);
-    window.removeEventListener('scroll', handleTourReposition);
-    window.removeEventListener('keydown', handleTourKeydown);
-    if (markSeen) {
-      store.set('kurdish_tour_seen', '1');
-    }
-    
-    // Only reset the app state when closing the tour if the demo was loaded.
-    // If the user had their own file uploaded, we must keep it intact!
-    if (isDemoLoaded) {
-      file = null;
-      parsed = null;
-      isDemoLoaded = false;
-      baseCues = null;
-      workCues = null;
-      undoStack = [];
-      redoStack = [];
-      lastCommittedState = '';
-      dirty = false;
-      activeIdx = -1;
-
-      if (els.fileInput) els.fileInput.value = '';
-      if (els.fileName) els.fileName.textContent = '';
-      if (els.editorList) els.editorList.innerHTML = '';
-      buildEditor();
-
-      SubtitlePlayer.pause();
-      SubtitlePlayer.seek(0);
-      SubtitlePlayer.load([]); // Call load directly to avoid loadPreview enabling the tab
-      if (els.previewTab) els.previewTab.classList.add('disabled');
-
-      showStep('upload');
-      switchTab('translate');
-
-      resultText = null;
-      if (resultUrl) { URL.revokeObjectURL(resultUrl); resultUrl = null; }
-
-      updateUndoRedoUI();
-      checkEditsState();
-    }
-    updateTourTriggerBtnState();
-  }
-
-  function renderTourStep(index) {
-    if (index < 0 || index >= TOUR_STEPS.length) {
-      closeTour(true);
-      return;
-    }
-    currentTourStep = index;
-    const step = TOUR_STEPS[index];
-
-    if (step.ensureTab) {
-      if (step.ensureTab === 'preview' && !parsed) {
-        loadDemoForTour();
-      }
-      switchTab(step.ensureTab);
-    }
-
-    if (step.onEnter) {
-      step.onEnter();
-    }
-
-    const dict = dicts[currentUiLang] || dicts.en;
-    if (els.tourTitle) els.tourTitle.textContent = dict[step.titleKey] || '';
-    if (els.tourText) els.tourText.textContent = dict[step.textKey] || '';
-    if (els.tourStepBadge) els.tourStepBadge.textContent = step.badge;
-    
-    // Update icon badge
-    const iconBadge = $('#tourIconBadge');
-    if (iconBadge && TOUR_STEP_ICONS[index]) {
-      iconBadge.innerHTML = TOUR_STEP_ICONS[index];
-    }
-
-    // Update dots
-    const dots = $$('.tour-dot');
-    dots.forEach((dot, dIdx) => {
-      dot.classList.toggle('active', dIdx === index);
-    });
-
-    if (els.tourPrevBtn) {
-      els.tourPrevBtn.classList.toggle('hidden', !step.showPrev);
-      els.tourPrevBtn.textContent = dict.tourPrev || 'Back';
-    }
-    if (els.tourNextBtn) {
-      els.tourNextBtn.textContent = dict[step.nextKey] || (index === TOUR_STEPS.length - 1 ? 'Got it!' : 'Next');
-    }
-    if (els.tourSkipBtn) {
-      els.tourSkipBtn.textContent = dict.tourSkip || 'Skip tour';
-    }
-
-    setTimeout(() => {
-      positionTourElements(step.targetSel);
-    }, 70);
-  }
-
-  function positionTourElements(targetSel) {
-    const target = $(targetSel);
-    if (!target || !els.tourHighlight || !els.tourCard) return;
-
-    const rect = target.getBoundingClientRect();
-    const isOutOfView = rect.top < 60 || rect.bottom > (window.innerHeight - 60);
-    if (isOutOfView) {
-      target.scrollIntoView({ behavior: 'smooth', block: 'center' });
-      setTimeout(() => updateTourGeometry(target), 200);
-    } else {
-      updateTourGeometry(target);
-    }
-  }
-
-  function updateTourGeometry(target) {
-    if (!target || !els.tourHighlight || !els.tourCard) return;
-    const rect = target.getBoundingClientRect();
-    const pad = 6;
-    const isMobile = window.innerWidth <= 640;
-
-    els.tourHighlight.style.top = `${Math.max(0, rect.top - pad)}px`;
-    els.tourHighlight.style.left = `${Math.max(0, rect.left - pad)}px`;
-    els.tourHighlight.style.width = `${rect.width + pad * 2}px`;
-    els.tourHighlight.style.height = `${rect.height + pad * 2}px`;
-
-    if (!isMobile) {
-      const cardWidth = 360;
-      const cardHeight = els.tourCard.offsetHeight || 210;
-
-      let top = rect.bottom + 14;
-      let left = rect.left + (rect.width / 2) - (cardWidth / 2);
-
-      if (top + cardHeight > window.innerHeight - 16) {
-        top = Math.max(16, rect.top - cardHeight - 14);
-      }
-
-      left = Math.max(16, Math.min(window.innerWidth - cardWidth - 16, left));
-
-      els.tourCard.style.top = `${top}px`;
-      els.tourCard.style.left = `${left}px`;
-      els.tourCard.style.bottom = 'auto';
-      els.tourCard.style.right = 'auto';
-    }
-  }
-
-  function handleTourReposition() {
-    if (!isTourOpen) return;
-    const step = TOUR_STEPS[currentTourStep];
-    if (step) {
-      const target = $(step.targetSel);
-      if (target) updateTourGeometry(target);
-    }
-  }
-
-  function handleTourKeydown(e) {
-    if (!isTourOpen) return;
-    if (e.key === 'Escape') {
-      e.preventDefault();
-      closeTour(true);
-    } else if (e.key === 'ArrowRight' || e.key === 'Enter') {
-      if (currentTourStep < TOUR_STEPS.length - 1) {
-        renderTourStep(currentTourStep + 1);
-      } else {
-        closeTour(true);
-      }
-    } else if (e.key === 'ArrowLeft') {
-      if (currentTourStep > 0) {
-        renderTourStep(currentTourStep - 1);
-      }
-    }
-  }
-
-  function bindTour() {
-    if (els.tourTriggerBtn) {
-      els.tourTriggerBtn.addEventListener('click', () => {
-        openTour(0);
+  // ---------- Welcome Tour & PWA / Fullscreen / Quality Integration ----------
+  function initQuality() {
+    if (typeof AppQuality !== 'undefined') {
+      AppQuality.init({
+        getWorkCues: () => workCues || [],
+        getOriginalCues: () => (parsed && parsed.cues) || [],
+        applyQualityFixes: (updatedCues) => updateCues(updatedCues),
+        updateCues: (updatedCues) => updateCues(updatedCues),
       });
     }
-    if (els.tourCloseBtn) {
-      els.tourCloseBtn.addEventListener('click', () => closeTour(true));
-    }
-    if (els.tourSkipBtn) {
-      els.tourSkipBtn.addEventListener('click', () => closeTour(true));
-    }
-    if (els.tourBackdrop) {
-      els.tourBackdrop.addEventListener('click', () => closeTour(true));
-    }
-    if (els.tourPrevBtn) {
-      els.tourPrevBtn.addEventListener('click', () => {
-        if (currentTourStep > 0) {
-          renderTourStep(currentTourStep - 1);
-        }
+  }
+
+  function initFullscreen() {
+    if (typeof AppFullscreen !== 'undefined') {
+      AppFullscreen.init({
+        getWorkCues: () => workCues || [],
+        applyCueEdit: (idx, text) => applyCueEdit(idx, text),
+        updateFontSize: (val) => updateFontSize(val),
+        getFontSize: () => els.fontSizeSel ? els.fontSizeSel.value : '1',
+        undo: () => performUndo(),
+        redo: () => performRedo(),
       });
     }
-    if (els.tourNextBtn) {
-      els.tourNextBtn.addEventListener('click', () => {
-        if (currentTourStep < TOUR_STEPS.length - 1) {
-          renderTourStep(currentTourStep + 1);
-        } else {
-          closeTour(true);
-        }
-      });
-    }
-
-    // Direct dot navigation click
-    $$('.tour-dot').forEach((dot) => {
-      dot.addEventListener('click', (e) => {
-        const targetStep = parseInt(e.currentTarget.dataset.step, 10);
-        if (!isNaN(targetStep) && targetStep >= 0 && targetStep < TOUR_STEPS.length) {
-          renderTourStep(targetStep);
-        }
-      });
-    });
   }
 
-  let swRegistration = null;
-  let waitingWorker = null;
-  let isCheckingUpdate = false;
+  function initTour() {
+    if (typeof AppTour !== 'undefined') {
+      AppTour.init({
+        showStep,
+        switchTab,
+        isUserFileLoaded: () => isUserFileLoaded(),
+        hasParsedData: () => !!parsed,
+        loadDemoCues: (cues, filename) => {
+          parsed = { format: 'srt', cues: cues.map((c) => ({ ...c })) };
+          file = { name: filename || 'demo_movie_subtitles.srt', size: 1420 };
+          if (els.fileName) els.fileName.textContent = file.name;
+          if (els.fileMeta) els.fileMeta.textContent = '4 lines • 1.4 KB • SRT';
+          updateCues(cues);
+          showStep('done');
+        },
+        resetTourDemo: () => {
+          file = null;
+          parsed = null;
+          baseCues = null;
+          workCues = null;
+          undoStack = [];
+          redoStack = [];
+          lastCommittedState = '';
+          dirty = false;
+          activeIdx = -1;
 
-  function showUpdateAvailable(worker) {
-    if (worker) waitingWorker = worker;
-    if (els.updateBadgeDot) els.updateBadgeDot.classList.remove('hidden');
-    if (els.updateBanner) els.updateBanner.classList.remove('hidden');
-    if (els.refreshStatusTxt) {
-      const dict = dicts[currentUiLang] || dicts.en;
-      els.refreshStatusTxt.textContent = dict.updateAvailable || 'Update available!';
-      els.refreshStatusTxt.style.color = '#f43f5e';
-    }
-  }
+          if (els.fileInput) els.fileInput.value = '';
+          if (els.fileName) els.fileName.textContent = '';
+          if (els.editorList) els.editorList.innerHTML = '';
+          buildEditor();
 
-  function applySWUpdate() {
-    if (waitingWorker) {
-      waitingWorker.postMessage({ type: 'SKIP_WAITING' });
-    } else if (swRegistration && swRegistration.waiting) {
-      swRegistration.waiting.postMessage({ type: 'SKIP_WAITING' });
-    } else {
-      window.location.reload();
-    }
-  }
-
-  function performForceRefresh() {
-    const dict = dicts[currentUiLang] || dicts.en;
-    toast(dict.forceRefreshing || 'Purging cache & hard reloading…');
-
-    if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.getRegistrations().then((regs) => {
-        regs.forEach((r) => r.unregister());
-      }).catch(() => {});
-    }
-
-    if ('caches' in window) {
-      caches.keys().then((keys) => {
-        return Promise.all(keys.map((k) => caches.delete(k)));
-      }).catch(() => {});
-    }
-
-    try {
-      sessionStorage.clear();
-    } catch {}
-
-    setTimeout(() => {
-      const cleanUrl = new URL(window.location.href);
-      cleanUrl.searchParams.set('force_refresh', Date.now());
-      window.location.href = cleanUrl.toString();
-    }, 350);
-  }
-
-  function checkForAppUpdates(manual = false) {
-    if (isCheckingUpdate) return;
-    isCheckingUpdate = true;
-    const dict = dicts[currentUiLang] || dicts.en;
-
-    if (els.refreshBtn) els.refreshBtn.classList.add('spinning');
-    if (els.refreshStatusTxt) {
-      els.refreshStatusTxt.textContent = dict.checkingUpdate || 'Checking for updates…';
-      els.refreshStatusTxt.style.color = '';
-    }
-
-    let foundNewVersion = false;
-
-    if (swRegistration) {
-      swRegistration.update().catch(() => {});
-      if (swRegistration.waiting) {
-        foundNewVersion = true;
-        showUpdateAvailable(swRegistration.waiting);
-      }
-    }
-
-    // Secondary network check on sw.js to catch new deployments immediately
-    fetch('./sw.js?v=' + Date.now(), { cache: 'no-store' })
-      .then((res) => {
-        if (!res.ok) return null;
-        return res.text();
-      })
-      .then((swText) => {
-        if (swText) {
-          const match = swText.match(/CACHE\s*=\s*['"]([^'"]+)['"]/);
-          if (match && match[1]) {
-            const serverVer = match[1];
-            if (els.currentVerTag) {
-              const currentVer = els.currentVerTag.textContent.trim();
-              if (currentVer && currentVer !== serverVer && !serverVer.includes(currentVer)) {
-                foundNewVersion = true;
-                showUpdateAvailable();
-              }
-            }
+          if (typeof SubtitlePlayer !== 'undefined') {
+            SubtitlePlayer.pause();
+            SubtitlePlayer.seek(0);
+            SubtitlePlayer.load([]);
           }
+          if (els.previewTab) els.previewTab.classList.add('disabled');
+
+          showStep('upload');
+          switchTab('translate');
+
+          resultText = null;
+          if (resultUrl) { URL.revokeObjectURL(resultUrl); resultUrl = null; }
+
+          updateUndoRedoUI();
+          checkEditsState();
         }
-      })
-      .catch(() => {})
-      .finally(() => {
-        setTimeout(() => {
-          if (els.refreshBtn) els.refreshBtn.classList.remove('spinning');
-          isCheckingUpdate = false;
-          if (!foundNewVersion) {
-            if (els.refreshStatusTxt) {
-              els.refreshStatusTxt.textContent = dict.appUpToDate || 'App up to date';
-              els.refreshStatusTxt.style.color = '';
-            }
-            if (manual) {
-              toast(dict.appUpToDate || 'App is up to date!');
-            }
-          } else {
-            toast(dict.updateAvailable || 'A new update is available!');
-          }
-        }, 500);
       });
+    }
   }
 
-  function setupPWA() {
-    // 1. Service Worker Registration & Version Checker
-    if ('serviceWorker' in navigator) {
-      let refreshing = false;
-      navigator.serviceWorker.addEventListener('controllerchange', () => {
-        if (refreshing) return;
-        refreshing = true;
-        window.location.reload();
-      });
-
-      navigator.serviceWorker.register('./sw.js').then((reg) => {
-        swRegistration = reg;
-
-        if (reg.waiting) {
-          showUpdateAvailable(reg.waiting);
-        }
-
-        reg.addEventListener('updatefound', () => {
-          const newWorker = reg.installing;
-          if (newWorker) {
-            newWorker.addEventListener('statechange', () => {
-              if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
-                showUpdateAvailable(newWorker);
-              }
-            });
-          }
-        });
-
-        // Trigger an update check on startup
-        reg.update().catch(() => {});
-      }).catch((err) => {
-        console.warn('Service Worker registration failed:', err);
-      });
-
-      // Auto check version every time app comes into foreground or goes online
-      document.addEventListener('visibilitychange', () => {
-        if (!document.hidden) checkForAppUpdates(false);
-      });
-      window.addEventListener('online', () => checkForAppUpdates(false));
-    }
-
-    // 2. Refresh Menu & Update Banner Event Listeners
-    if (els.refreshBtn) {
-      els.refreshBtn.addEventListener('click', (e) => {
-        e.stopPropagation();
-        if (els.refreshDropdown) {
-          els.refreshDropdown.classList.toggle('hidden');
-          const isExpanded = !els.refreshDropdown.classList.contains('hidden');
-          els.refreshBtn.setAttribute('aria-expanded', isExpanded ? 'true' : 'false');
-        }
-      });
-    }
-
-    if (els.btnQuickRefresh) {
-      els.btnQuickRefresh.addEventListener('click', () => {
-        if (els.refreshDropdown) els.refreshDropdown.classList.add('hidden');
-        if (waitingWorker || (swRegistration && swRegistration.waiting)) {
-          applySWUpdate();
-        } else {
-          const dict = dicts[currentUiLang] || dicts.en;
-          toast(dict.refreshingApp || 'Refreshing application…');
-          setTimeout(() => window.location.reload(), 200);
-        }
-      });
-    }
-
-    if (els.btnForceRefresh) {
-      els.btnForceRefresh.addEventListener('click', () => {
-        if (els.refreshDropdown) els.refreshDropdown.classList.add('hidden');
-        performForceRefresh();
-      });
-    }
-
-    if (els.btnCheckUpdate) {
-      els.btnCheckUpdate.addEventListener('click', () => {
-        if (els.refreshDropdown) els.refreshDropdown.classList.add('hidden');
-        checkForAppUpdates(true);
-      });
-    }
-
-    if (els.bannerUpdateNowBtn) {
-      els.bannerUpdateNowBtn.addEventListener('click', () => {
-        applySWUpdate();
-      });
-    }
-
-    if (els.bannerForceRefreshBtn) {
-      els.bannerForceRefreshBtn.addEventListener('click', () => {
-        performForceRefresh();
-      });
-    }
-
-    if (els.bannerCloseBtn) {
-      els.bannerCloseBtn.addEventListener('click', () => {
-        if (els.updateBanner) els.updateBanner.classList.add('hidden');
-      });
-    }
-
-    // Close dropdown menu when clicking anywhere outside
-    document.addEventListener('click', (e) => {
-      if (els.refreshMenuWrap && !els.refreshMenuWrap.contains(e.target)) {
-        if (els.refreshDropdown) els.refreshDropdown.classList.add('hidden');
-        if (els.refreshBtn) els.refreshBtn.setAttribute('aria-expanded', 'false');
-      }
-    });
-
-    // Escape key closes dropdown menu
-    document.addEventListener('keydown', (e) => {
-      if (e.key === 'Escape') {
-        if (els.refreshDropdown && !els.refreshDropdown.classList.contains('hidden')) {
-          els.refreshDropdown.classList.add('hidden');
-          if (els.refreshBtn) els.refreshBtn.setAttribute('aria-expanded', 'false');
-        }
-      }
-    });
-
-    // 3. Install Prompt & App Installed Handler
-    let deferredInstall = null;
-    window.addEventListener('beforeinstallprompt', (e) => {
-      e.preventDefault();
-      deferredInstall = e;
-      if (els.installBtn) els.installBtn.hidden = false;
-    });
-
-    if (els.installBtn) {
-      els.installBtn.addEventListener('click', async () => {
-        if (!deferredInstall) return;
-        deferredInstall.prompt();
-        const { outcome } = await deferredInstall.userChoice;
-        if (outcome === 'accepted') {
-          toast(currentUiLang === 'ckb' ? 'سوپاس بۆ دابەزاندنی بەرنامەکە!' : 'Thank you for installing Kurdî Subtitles!');
-        }
-        deferredInstall = null;
-        els.installBtn.hidden = true;
-      });
-    }
-
-    window.addEventListener('appinstalled', () => {
-      deferredInstall = null;
-      if (els.installBtn) els.installBtn.hidden = true;
-      toast(currentUiLang === 'ckb' ? 'بەرنامەکە بەسەرکەوتوویی دابەزێنرا!' : 'App installed successfully!');
-    });
-
-    // 4. Web Share Target Handler (Receiving files shared directly from mobile/desktop folder/share menu)
-    if (window.location.search.includes('shared=1')) {
-      fetch('./shared-subtitle-data')
-        .then((res) => {
-          if (!res.ok) return null;
-          const headerFilename = res.headers.get('X-Shared-Filename');
-          const fileName = headerFilename ? decodeURIComponent(headerFilename) : 'shared_subtitle.srt';
-          return res.blob().then((blob) => new File([blob], fileName, { type: blob.type || 'text/plain' }));
-        })
-        .then((fileObj) => {
-          if (fileObj) {
-            const cleanUrl = window.location.pathname + window.location.hash;
-            window.history.replaceState({}, '', cleanUrl);
-            handleFile(fileObj);
-            toast(currentUiLang === 'ckb' ? 'فایلی هاوبەشکراو بەسەرکەوتوویی بارکرا!' : 'Shared file loaded successfully!');
-          }
-        })
-        .catch((err) => console.error('Error loading shared file:', err));
-    }
-
-    // 5. File Handling API (Opening subtitle files directly from OS/File Explorer)
-    if ('launchQueue' in window && 'files' in window.LaunchParams.prototype) {
-      window.launchQueue.setConsumer(async (launchParams) => {
-        if (!launchParams.files || !launchParams.files.length) return;
-        try {
-          const fileHandle = launchParams.files[0];
-          const fileData = await fileHandle.getFile();
-          handleFile(fileData);
-          toast(currentUiLang === 'ckb' ? 'فایلی کراوە بەسەرکەوتوویی بارکرا!' : 'Opened file loaded successfully!');
-        } catch (err) {
-          console.error('File Handling API error:', err);
-        }
-      });
+  function initPWA() {
+    if (typeof AppVersion !== 'undefined') {
+      AppVersion.init();
     }
   }
 
@@ -3194,12 +1836,14 @@
     bindDropzone();
     bindActions();
     bindFs();
-    bindTour();
+    initQuality();
+    initFullscreen();
+    initTour();
     if (typeof SubtitlePlayer !== 'undefined' && SubtitlePlayer.init) {
       SubtitlePlayer.init();
     }
 
-    setupPWA();
+    initPWA();
 
     // Warm the translation endpoint so the first real request isn't a cold one
     // (Google sometimes throttles the first hit and answers on a warm retry).
@@ -3226,15 +1870,6 @@
     applyLanguage(savedLang);
 
     buildEditor();
-
-    // Check first-time user and trigger tour gracefully
-    if (!store.get('kurdish_tour_seen')) {
-      setTimeout(() => {
-        if (!file && !isTourOpen) {
-          openTour(0);
-        }
-      }, 550);
-    }
 
     // Handle mobile orientation changes and window resizing for responsive editor rows
     let resizeTimer = null;
