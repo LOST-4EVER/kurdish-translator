@@ -1,144 +1,182 @@
-# 🎬 Kurdî Subtitle Translator | وەرگێڕی ژێرنووسی کوردی
+# 🎬 Kurdî Subtitle Translator | وەرگێڕی پێشکەوتووی ژێرنووسی کوردی
 
-[![Progressive Web App](https://img.shields.io/badge/PWA-Installable%20%26%20Offline-7c5cfc?style=flat-square&logo=pwa&logoColor=white)](https://LOST-4EVER.github.io/kurdish-translator/)
-[![Kurdish Sorani](https://img.shields.io/badge/Language-Kurdish%20Sorani%20(ckb)-fbbf24?style=flat-square)](https://LOST-4EVER.github.io/kurdish-translator/)
-[![100% Client-Side](https://img.shields.io/badge/Privacy-100%25%20In--Browser-a6f4c5?style=flat-square&logoColor=black)](https://LOST-4EVER.github.io/kurdish-translator/)
-[![GitHub Pages](https://img.shields.io/badge/Hosted%20on-GitHub%20Pages-blue?style=flat-square&logo=github)](https://LOST-4EVER.github.io/kurdish-translator/)
+[![Version v96](https://img.shields.io/badge/Version-v96-7c5cfc?style=flat-square&logo=github)](https://LOST-4EVER.github.io/kurdish-translator/)
+[![Progressive Web App](https://img.shields.io/badge/PWA-Installable%20%26%20Offline-0ea5e9?style=flat-square&logo=pwa&logoColor=white)](https://LOST-4EVER.github.io/kurdish-translator/)
+[![Target Kurdish Sorani](https://img.shields.io/badge/Target%20Language-Kurdish%20Sorani%20(ckb)-fbbf24?style=flat-square)](https://LOST-4EVER.github.io/kurdish-translator/)
+[![100% Client-Side](https://img.shields.io/badge/Privacy-100%25%20In--Browser-10b981?style=flat-square&logoColor=white)](https://LOST-4EVER.github.io/kurdish-translator/)
+[![Zero Build Step](https://img.shields.io/badge/Build-Zero%20Dependencies-ec4899?style=flat-square)](https://LOST-4EVER.github.io/kurdish-translator/)
+[![GitHub Pages](https://img.shields.io/badge/Deployment-GitHub%20Pages-6366f1?style=flat-square&logo=githubpages&logoColor=white)](https://LOST-4EVER.github.io/kurdish-translator/)
 
-Translate movie, anime, and TV series subtitles into **Kurdish Sorani (کوردیی ناوەندی - `ckb`)** right inside your browser. 100% client-side, completely private, installable on mobile and desktop, and works offline.
+A state-of-the-art, 100% client-side subtitle translation and fansubbing suite designed specifically for **Kurdish Sorani (کوردیی ناوەندی - `ckb`)**. Purpose-built for anime fansubbers, cinema translators, and video editors, it features an advanced Kurdish linguistic normalizer, an extensive anime & cartoon cultural lexicon, a real-time subtitle player, a two-way synchronized editor, and an automated Kurdish orthographic quality inspector.
 
-🔗 **Live App:** [https://LOST-4EVER.github.io/kurdish-translator/](https://LOST-4EVER.github.io/kurdish-translator/)
+🔗 **Live Web Application:** [https://LOST-4EVER.github.io/kurdish-translator/](https://LOST-4EVER.github.io/kurdish-translator/)
 
 ---
 
-## 🗂 Supported Subtitle Formats
+## 📑 Table of Contents
+1. [Supported Subtitle Formats & Encodings](#-supported-subtitle-formats--encodings)
+2. [Anime, Cartoon & Cinema Kurdish Intelligence](#-anime-cartoon--cinema-kurdish-intelligence)
+3. [Core Translation & Multi-API Failover Engine](#-core-translation--multi-api-failover-engine)
+4. [Real-Time Subtitle Player & Cinema Mode](#-real-time-subtitle-player--cinema-mode)
+5. [Live Subtitle Editor & Instant Search](#-live-subtitle-editor--instant-search)
+6. [Kurdish Quality Inspector & Auto-Repair](#-kurdish-quality-inspector--auto-repair)
+7. [Character Glossary & Speaker Manager](#-character-glossary--speaker-manager)
+8. [PWA Offline Engine & Diagnostics](#-pwa-offline-engine--diagnostics)
+9. [Architecture & Source Structure](#-architecture--source-structure)
+10. [Keyboard Shortcuts Cheat Sheet](#-keyboard-shortcuts-cheat-sheet)
+11. [Local Development & Deployment](#-local-development--deployment)
 
-| Format | Extension | Key Capabilities & Features |
+---
+
+## 🗂 Supported Subtitle Formats & Encodings
+
+The built-in parser (`SubParser`) decodes, cleans, preserves styling tags, and serializes subtitles with strict standard compliance:
+
+| Format | Extension | Specification & Preserved Features |
 |---|:---:|---|
-| **SubRip** | `.srt` | Standard timecodes (`hh:mm:ss,mmm`), HTML style tags (`<i>`, `<b>`, `<u>`, `<font>`) |
-| **WebVTT** | `.vtt` | Header & cue settings (`align:start position:0%`), 2- and 3-part timecodes (`mm:ss.mmm` & `hh:mm:ss.mmm`) |
-| **Advanced SubStation Alpha** | `.ass` | Full script headers, style definitions, override codes (`{\an8}`, `{\pos()}`, `{\c&H...&}`), `\N` linebreaks |
-| **SubStation Alpha** | `.ssa` | V4 styles, dialogue layers, timing codes, and format field preservation |
+| **SubRip** | `.srt` | Millisecond timecodes (`hh:mm:ss,mmm`), HTML styling tags (`<i>`, `<b>`, `<u>`, `<font>`), multi-line dialogue |
+| **WebVTT** | `.vtt` | Header & cue positioning settings (`align:start position:0%`), 2-part (`mm:ss.mmm`) and 3-part (`hh:mm:ss.mmm`) timestamps |
+| **Advanced SubStation Alpha** | `.ass` | Script headers, styles, override codes (`{\an8}`, `{\pos()}`, `{\c&H...&}`, `{\fad()}`, `{\blur}`), `\N` linebreaks |
+| **SubStation Alpha** | `.ssa` | V4 styles, dialogue layers, event metadata, and field order preservation |
 | **MicroDVD** | `.sub` | Frame-based timing with FPS headers (`{1}{1}23.976`), pipe `\|` linebreaks, control codes |
-| **SAMI** | `.smi` | `<SYNC Start=...>` blocks, multi-paragraph handling, HTML tag sanitization & entities |
-| **Plain Text** | `.txt` | Line-by-line transcript translation with automated cue pacing |
+| **SAMI** | `.smi` | `<SYNC Start=...>` timing blocks, multi-paragraph handling, HTML tag sanitization & entities |
+| **Plain Transcript** | `.txt` | Line-by-line transcript translation with automatic pacing and cue generation |
+
+### Encoding & Character Detection
+- **Automatic Byte Order Mark (BOM) Stripping:** Handles UTF-8 with BOM, UTF-16LE, and UTF-16BE seamlessly.
+- **Legacy Code Pages:** Automatically decodes Windows-1256 (Arabic/Kurdish), ISO-8859-1, and standard UTF-8 without mojibake.
 
 ---
 
-## ✨ Features & Highlights
+## 🎌 Anime, Cartoon & Cinema Kurdish Intelligence
 
-### 🚀 High-Speed Multi-API Batch Translation
-- **Multi-API Failover Architecture:** High-availability translation engine combining distributed Google Translate web endpoints, privacy-preserving Lingva Translate instances, and MyMemory API fallback with exponential backoff and jittered socket recovery.
-- **Intelligent Batching:** Groups subtitle lines into delimited batches for fast, high-throughput translations.
-- **Markup Protection:** Replaces HTML tags, ASS tags (`{\...}`), and MicroDVD codes with bracketed tokens before translation, restoring them intact afterward.
-- **Newline Sentinel Preservation:** Multiline subtitle cues are protected with literal sentinels so line breaks match the original timing.
-- **Failover & Self-Healing:** Merged or truncated responses automatically fallback to individual line translation with exponential backoff and alternate endpoint routing.
+The application includes an extensive Kurdish Sorani cinematic dialogue engine (`TranslatorDict`) with 250+ pre-mapped battle incantations, power systems, catchphrases, and cartoon dialogue lines:
 
-### ✍️ Kurdish Sorani Orthography, Anime & British English Localization Engine
-- **Cinema & Anime Dialogue Idiom Recognition:** Deep understanding of common movie, anime tropes, and dramatic colloquial expressions (*make yourself at home, get out of here, suit yourself, it cannot be helped, leave it to me, don't get cocky, don't underestimate me, show me what you got, give it your all, got your back, not on my watch, I won't let you down, what a pain/drag, hold your horses, mark my words*) mapped accurately to natural Sorani Kurdish dialogue rather than awkward literal calques.
-- **British English Idiom & Slang Mastery:** Specialized preprocessing and dictionary localization for British colloquialisms (*bloody hell, bollocks, bugger off, blimey, chuffed, gutted, dodgy, knackered, proper, cheers mate, taking the piss, not my cup of tea, sorted, bob's your uncle, give us a bell*).
-- **Accurate Kurdish Typography:** Converts punctuation to Arabic-script marks (`,` &rarr; `،`, `;` &rarr; `؛`, `?` &rarr; `؟`).
-- **Alphabet Normalization:** Normalizes Arabic Kaf (`ك` &rarr; `ک`), Yaa (`ي`/`ى` &rarr; `ی`), and Teh Marbuta (`ة` &rarr; `ە`).
-- **Heavy R (ڕ) & Velarized L (ڵ):** Context-aware Kurdish root and affix orthography corrections (e.g. `ڕۆژ`, `ڕاست`, `ماڵ`, `بەڵێ`, `خۆشحاڵ`, `منداڵ`, `سڵاو`).
-- **Verbal Prefix & Affix Rejoining:** Reconnects split preverbs and aspect markers (`دە-`, `نا-`, `نە-`, `مە-`, `هەڵ-`, `تێ-`, `پێ-`, `وەر-`, `دەر-`, `دا-`, `دەست-`).
-- **Colloquial Subtitle Slang Preprocessing:** Expands spoken idioms (*gonna, wanna, gotta, hold on a sec, what's up, never mind, fair enough*) into clear, translatable expressions.
-- **Kurdish Numbers Option (٠١٢٣):** Optional toggle to convert Western digits to Kurdish Eastern Arabic digits while protecting technical tags.
+### ⚡ Iconic Anime Worlds & Battle Cries
+- **Jujutsu Kaisen:** *Domain Expansion* (`فراوانکردنی دۆمەین`), *Unlimited Void* (`بۆشایی بێسنوور`), *Malevolent Shrine* (`مەزارگەی شەڕانگێزی`), *Hollow Purple* (`مۆری بەتاڵ`), *Black Flash* (`بریسکەی ڕەش`), *"Throughout heaven and earth, I alone am the honored one"*, *"Nah, I'd win"*, *"Stand proud, you are strong"*.
+- **One Piece:** *Gear 2/3/4/5* (`گێری پێنجەم - شێوەی ئازادی نیکا`), *Conqueror's / Armament / Observation Haki*, *"I'm gonna be king of the pirates"*, *"Nothing happened"*, *"I want to live!"*, *"People's dreams have no end"*.
+- **Attack on Titan (Shingeki no Kyojin):** *Tatakae* (`بجەنگە! شەڕ بکە!`), *Shinzou wo Sasageyo* (`دڵەکانتان ببەخشن بۆ ئازادی!`), *"This world is cruel but also very beautiful"*, *"I will keep moving forward until all my enemies are destroyed"*, *The Rumbling*.
+- **Naruto & Boruto:** *Rasengan* (`ڕاسێنگان`), *Chidori* (`چیدۆری`), *Amaterasu* (`ئاماتێراسو`), *Tsukuyomi / Infinite Tsukuyomi*, *Kamui*, *Susanoo*, *Shadow Clone Jutsu* (`کاگێ بونشین`), *Shinra Tensei / Almighty Push*, *Bansho Tenin*, *"Wake up to reality..."*, *"Those who break the rules are scum..."*.
+- **Demon Slayer (Kimetsu no Yaiba):** *Water / Sun / Flame / Moon Breathing*, *Hinokami Kagura* (`سەمای خوداوەندی ئاگر`), *Thunderclap and Flash*, *"Set your heart ablaze!"* (`دڵت بگەشێنەوە و گڕی تێبەرە!`).
+- **Dragon Ball:** *Ultra Instinct* (`غەریزەی باڵا`), *Ultra Ego*, *Super Saiyan Blue*, *Kamehameha*, *Spirit Bomb* (`گێنکی داما`), *Kaio-ken*, *Final Flash*, *"It's over 9000!"*.
+- **Bleach:** *Bankai* (`بانکای`), *Getsuga Tenshou*, *Mugetsu*, *Senbonzakura Kageyoshi*, *"Since when were you under the impression that I wasn't using Kyoka Suigetsu?"*.
+- **JoJo's Bizarre Adventure:** *Ora Ora Ora*, *Muda Muda Muda*, *Za Warudo (Time Stop)*, *Yare Yare Daze*, *Kono Dio Da*.
+- **Solo Leveling:** *Arise* (`هەستە سەرپێ! ڕابە`), *Shadow Monarch*, *System Alert*.
+- **Vinland Saga:** *"You have no enemies"*, *"A true warrior needs no sword"*.
+- **Hunter x Hunter, Death Note, Code Geass & Spy x Family:** *Bungee Gum*, *Godspeed*, *"I will become the god of the new world"*, *All Hail Lelouch*, *Waku Waku*, *Spirit Gun*.
 
-### 🎬 Real-Time Subtitle Player & Preview
-- **Video-Free Real-Time Preview:** Play subtitles synced to an accurate internal clock with 0.5× to 2× playback speed.
-- **Interactive Timeline:** Scannable cue markers, hover timecode tooltip, and smooth scrubbing.
-- **Font Scaling:** Dynamic subtitle sizing (`Small`, `Normal`, `Large`, `XL`) with responsive typography.
-- **Keyboard Navigation:**
-  - <kbd>Space</kbd> Play / Pause
-  - <kbd>&larr;</kbd> / <kbd>&rarr;</kbd> Seek &plusmn;5 seconds
-  - <kbd>&uarr;</kbd> / <kbd>&darr;</kbd> Jump to previous / next cue
-  - <kbd>Esc</kbd> Exit fullscreen preview
+### 🎨 Cartoon Worlds & Legendary Animated Lines
+- **Batman & DC Animated:** *"I am vengeance, I am the night, I am Batman!"*, *"Why do we fall? So we can learn to pick ourselves up"*, *"Riddle me this"*.
+- **Spider-Man & Marvel Cartoons:** *"With great power comes great responsibility"*, *"Flame on!"*, *"It's clobberin' time!"*, *"Avengers Assemble!"*.
+- **Ben 10:** *"It's Hero Time!"* (`کاتی پاڵەوانێتییە!`), *Omnitrix*, *Alien X*.
+- **Transformers:** *"Autobots, roll out!"*, *"Decepticons, attack!"*, *"One shall stand, one shall fall"*.
+- **SpongeBob SquarePants:** *"I'm ready!"*, *"Aye aye, Captain!"*, *"Who lives in a pineapple under the sea?"*.
+- **Looney Tunes:** *"What's up, Doc?"* (`چ باسە دکتۆر؟`), *"That's all, folks!"*, *"I tawt I taw a puddy tat"*.
+- **Scooby-Doo:** *Scooby-Dooby-Doo*, *Jinkies!* (`ئەی هاوار چۆن دەبێت!`), *Zoinks!*, *"And I would have gotten away with it too, if it weren't for you meddling kids"*.
+- **The Simpsons:** *D'oh!* (`ئاخ لەدەستم!`), *Eat my shorts!* (`دە بڕۆ و وازم لێبێنە!`), *Ay caramba!*.
+- **Avatar: The Last Airbender:** *Water, Earth, Fire, Air*, *Yip yip!*, *"There is no war in Ba Sing Se"*, *"My cabbages!"*.
+- **Pokémon:** *"Gotta catch 'em all!"*, *"Pikachu, I choose you!"*, *"Prepare for trouble, and make it double!"*.
+- **Disney & Pixar:** *Hakuna Matata*, *To infinity and beyond*, *Let it go*, *"You are a toy!"*.
 
-### 📝 Live Subtitle Editor & Search
-- **Live Two-Way Sync:** Typing in any cue updates the preview screen and refreshes download packages in real time.
-- **Instant Search:** Filter cues in real time by dialogue text, cue number, or timestamp.
-- **Full Undo / Redo History:** Multi-level history stack with keyboard shortcuts (<kbd>Ctrl</kbd>+<kbd>Z</kbd> / <kbd>Ctrl</kbd>+<kbd>Y</kbd> / <kbd>Cmd</kbd>+<kbd>Shift</kbd>+<kbd>Z</kbd>).
-- **Fullscreen Focus Mode:** Distraction-free playback and one-tap cue editing.
-- **Editor Toggles:** Show/hide timecodes, sync video position on click, and toggle "Save edits".
-
-### ⚙️ Export & Hardware Compatibility
-- **Format Conversion on Export:** Convert between SRT, WebVTT, and ASS/SSA upon download.
-- **UTF-8 BOM:** Optional `\uFEFF` byte order mark for Smart TVs, legacy players, and Windows media software.
-- **Windows CRLF Line Endings:** Optional `\r\n` line endings for hardware players.
-
-### 🎭 Smart Character Naming & Pronunciation System
-- **⚡ Automated Smart Recognition:** Scans subtitle files for speaker prefixes (e.g. `JOHN:`, `[MARY]`) and character mentions, automatically proposing proper Kurdish Sorani names and phonetic pronunciation guides.
-- **🗣️ Phonetic Pronunciation Cards:** Attach phonetic guides (e.g., `جۆن (Dzhon)`, `ئارثەر (Ar-ther)`) to preserve character identity across translations.
-- **🔄 Replace All in Subtitles:** Instantly replaces character names across all cues in the live editor, video player, and export files.
-- **🎯 Typo & Spelling Variation Protection:** Matches common spelling variations or typos (e.g., replacing `Jhon` or `Johnn` with `جۆن`).
-
-### 📱 Progressive Web App (PWA) & Native System Integration
-- **Direct File Share Target (`share_target`):** Share subtitle files directly from your mobile device or file manager share menu straight into the app.
-- **Native File Handler (`file_handlers`):** Double-click or open subtitle files (`.srt`, `.vtt`, `.ass`, `.ssa`, `.smi`, `.sub`, `.txt`) directly with Kurdî Subtitles on desktop and Android.
-- **Installable:** Add to home screen on Android, iOS, Windows, macOS, and Linux with custom shortcuts.
-- **Offline UI & Player:** Service worker caches app shell, fonts, icons, and player logic so you can edit and preview subtitles without an active internet connection.
+### 🖋️ Kurdish Sorani Linguistic Precision
+- **Speech Cut-off & Stutter Preservation:** Interrupted speech (*b-but*, *w-what*, *wh-*, *I-*) maps to Kurdish hyphenated connectors (`بـ-بەڵام`, `چـ-چی`, `مـ-من`, `بـ-بۆستە`).
+- **Heavy R (ڕ) & Velarized L (ڵ) Rules:** Automatic phonetic restitution (e.g. `ڕۆژ`, `ڕاست`, `ماڵ`, `بەڵێ`, `خۆشحاڵ`, `منداڵ`, `سڵاو`).
+- **Verbal Prefix Rejoining:** Auto-attaches separated prefixes (`دە-`, `نا-`, `نە-`, `مە-`, `هەڵ-`, `تێ-`, `پێ-`, `وەر-`, `دەر-`, `دا-`, `دەست-`).
+- **Punctuation & Digits:** Converts English punctuation to Sorani standards (`,` &rarr; `،`, `;` &rarr; `؛`, `?` &rarr; `؟`) and provides an optional toggle for Eastern Arabic digits (٠١٢٣).
 
 ---
 
-## 🛠️ Architecture & Source Code
+## ⚡ Core Translation & Multi-API Failover Engine
 
-Static, build-free modular architecture (vanilla ES6 JavaScript, HTML5, CSS3):
-
-```
-├── index.html              # Main application single-page layout
-├── manifest.json           # PWA metadata, standalone display & icons
-├── sw.js                   # Service worker cache strategy (offline app shell)
-├── metadata.json           # Application metadata
-├── AGENTS.md               # Architecture documentation & coding guidelines
-├── assets/
-│   ├── css/
-│   │   └── style.css       # Material 3 adaptive dark theme design system
-│   ├── icons/              # PWA icons (192, 512, maskable 512, apple-touch, SVG)
-│   └── js/
-│       ├── parser.js       # Subtitle parser & serializer (SRT, VTT, ASS, SSA, SUB, SMI, TXT)
-│       ├── translator.js   # Batch translation engine, rate-limit retry, Sorani normalizer
-│       ├── player.js       # Real-time subtitle preview player & timeline controller
-│       ├── i18n.js         # Kurdish Sorani (ckb) and English (en) localization dictionaries
-│       ├── toast.js        # Non-intrusive interactive notification system
-│       └── app.js          # Main UI controller, event delegation, history & PWA registration
-```
-
-### Script Execution Order
-Scripts load in classic lexical scope in this exact sequence:
-1. [`parser.js`](file:///home/lost/Desktop/app/assets/js/parser.js) &rarr; exposes `SubParser`
-2. [`translator.js`](file:///home/lost/Desktop/app/assets/js/translator.js) &rarr; exposes `Translator`
-3. [`i18n.js`](file:///home/lost/Desktop/app/assets/js/i18n.js) &rarr; exposes `UI_I18N`
-4. [`toast.js`](file:///home/lost/Desktop/app/assets/js/toast.js) &rarr; exposes `Toast`
-5. [`player.js`](file:///home/lost/Desktop/app/assets/js/player.js) &rarr; exposes `SubtitlePlayer`
-6. [`app.js`](file:///home/lost/Desktop/app/assets/js/app.js) &rarr; initializes the UI controller
+- **High-Speed Batch Architecture:** Bundles up to 40 subtitle cues per network chunk with literal sentinel line-break protection (`§§`) and non-printing delimiter markers (`\u0001`).
+- **Zero-Loss Sub-Batch Halving:** If an endpoint drops a delimiter, the engine dynamically halves the batch recursively until every cue is accurately restored.
+- **Failover Routing:** Seamless automatic fallback across Google Translate Web, secondary `/t` endpoints, Lingva instances, and MyMemory with jittered backoff.
+- **Tag & Markup Shielding:** Protects ASS styling overrides `{\...}` and HTML tags with opaque control tokens (`\u0002id\u0003`) during transmission.
 
 ---
 
-## 💻 Local Development & Testing
+## 🎬 Real-Time Subtitle Player & Cinema Mode
 
-No external dependencies, build step, or compilation required.
+- **Real-Time Playback Clock:** Real-time subtitle simulation without requiring a heavy local video file.
+- **Playback Speed Controller:** Adjustable speed from **0.5×** to **2.0×** with audio-tick synchronizer.
+- **Interactive Scannable Timeline:** Visual cue tick markers, hover timecode tooltip, and smooth seekbar scrubbing.
+- **Cinema Theater Fullscreen Mode:** Distraction-free full-screen environment for reviewing subtitles against black backdrops with large Arabic typography.
+
+---
+
+## 📝 Live Subtitle Editor & Instant Search
+
+- **Bi-Directional Synchronization:** Editing any cue immediately reflects on the live player screen and updates the output download payload.
+- **Real-Time Filter & Search:** Search across dialogue lines, cue indices, or timestamps with match counts and <kbd>Enter</kbd> / <kbd>Shift+Enter</kbd> navigation.
+- **Undo / Redo Stack:** Multi-step historical state management with standard shortcut support (<kbd>Ctrl+Z</kbd> / <kbd>Ctrl+Y</kbd>).
+
+---
+
+## 🔍 Kurdish Quality Inspector & Auto-Repair
+
+- **Comprehensive Rule-Based Audit:** Analyzes all subtitle lines for:
+  - Untranslated English fragments.
+  - Arabic letter relics (`ك`, `ي`, `ة`, decorative Tatweel).
+  - Robotic sentence starters (e.g. `ئایا`).
+  - Split compound verbs and preverbs.
+  - Sub-millisecond timing overlaps between consecutive cues.
+- **⚡ 1-Click Auto-Polish & Repair:** Automatically executes all orthographic, dialogue naturalization, and prefix corrections across all cues simultaneously.
+- **Overlap Auto-Fixer:** Automatically resolves timing collisions by trimming cue durations to maintain a clean 50ms inter-cue gap.
+
+---
+
+## 🎭 Character Glossary & Speaker Manager
+
+- **Auto-Speaker Extraction:** Automatically identifies dialogue speaker markers (e.g. `LUFFY:`, `[GOJO]`, `ZORO -`).
+- **Phonetic Pronunciation Tagging:** Attach customized Sorani spelling and phonetic pronunciation guides.
+- **1-Click Global Substitution:** Renames characters throughout the entire subtitle file, live player, and exports.
+
+---
+
+## 📱 PWA Offline Engine & Diagnostics
+
+- **Offline-First PWA:** Full offline usability powered by `sw.js` (pre-caching UI assets, fonts, icons, and player logic).
+- **Network Latency Monitor:** Tests real-time API ping speeds across multiple translation endpoints.
+- **Cache Management:** Fast in-app refresh, hard cache purge, and version update notifications.
+
+---
+
+## ⌨️ Keyboard Shortcuts Cheat Sheet
+
+| Shortcut | Action | Context |
+|---|---|---|
+| <kbd>Space</kbd> | Play / Pause Subtitle Player | Player / Preview |
+| <kbd>&larr;</kbd> / <kbd>&rarr;</kbd> | Seek &plusmn;5 Seconds | Player / Preview |
+| <kbd>&uarr;</kbd> / <kbd>&darr;</kbd> | Jump to Previous / Next Cue | Player / Preview |
+| <kbd>F</kbd> | Toggle Theater Fullscreen Mode | Player / Preview |
+| <kbd>Esc</kbd> | Exit Fullscreen / Close Modals | Global |
+| <kbd>Ctrl</kbd> + <kbd>Z</kbd> | Undo Last Subtitle Edit | Editor |
+| <kbd>Ctrl</kbd> + <kbd>Y</kbd> / <kbd>Cmd</kbd> + <kbd>Shift</kbd> + <kbd>Z</kbd> | Redo Last Subtitle Edit | Editor |
+| <kbd>Enter</kbd> | Next Search Result | Search Bar |
+| <kbd>Shift</kbd> + <kbd>Enter</kbd> | Previous Search Result | Search Bar |
+
+---
+
+## 💻 Local Development & Deployment
+
+The application is completely build-free, utilizing vanilla ES6 JavaScript modules with no bundlers or compilers.
 
 ```bash
 # Run local development server
-npm run dev
-# or: node server.js
+node server.js
+# or: npm run dev
 
 # Syntax check all JavaScript files
-npm run lint
+node --check assets/js/parser.js && node --check assets/js/translator-dict.js && node --check assets/js/translator.js && node --check assets/js/i18n.js && node --check assets/js/toast.js && node --check assets/js/player.js && node --check assets/js/app-version.js && node --check assets/js/app-tour.js && node --check assets/js/app-quality.js && node --check assets/js/app-fullscreen.js && node --check assets/js/app.js && node --check sw.js
 ```
 
----
-
-## 🌐 Deployment to GitHub Pages
-
-1. Push this repository to GitHub on branch `main`.
-2. In your GitHub repository: navigate to **Settings &rarr; Pages**.
-3. Under **Build and deployment &rarr; Source**, choose **Deploy from a branch**.
-4. Set branch to `main` and folder to `/ (root)`, then click **Save**.
-5. Your application is live at `https://<username>.github.io/<repository-name>/`.
+### GitHub Pages Deployment
+1. Push changes to the `main` branch.
+2. Under repository **Settings &rarr; Pages**, select **Deploy from a branch** (`main` / root).
+3. The app is immediately live at `https://<username>.github.io/<repository-name>/`.
 
 ---
 
-## 📄 License
+## 📄 License & Community
 
-Open-source project built for the Kurdish community and subtitling enthusiasts. Feel free to contribute and share!
+Open-source project dedicated to Kurdish anime fansubbers, cinema translators, and linguists. Contributions, word suggestions, and feature requests are welcome!

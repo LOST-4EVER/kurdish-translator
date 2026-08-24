@@ -113,6 +113,14 @@ const UI_I18N = {
     checkingUpdate: 'Checking for updates…',
     refreshingApp: 'Refreshing application…',
     forceRefreshing: 'Purging cache & hard reloading…',
+    whatsNew: "What's New in v96",
+    whatsNewSub: 'View latest improvements & features',
+    netOnline: 'Online & Synced',
+    netOffline: 'Offline (Cached Shell)',
+    apiPing: 'API Response',
+    lastChecked: 'Checked',
+    justNow: 'Just now',
+    closeChangelog: 'Close',
   },
   ckb: {
     brandSub: 'وەرگێڕی ژێرنووسی فیلم، ئەنیمی و زنجیرەکان',
@@ -225,6 +233,14 @@ const UI_I18N = {
     checkingUpdate: 'پشکنین بۆ وەشانی نوێ…',
     refreshingApp: 'لە نوێکردنەوەی بەرنامەکەدایە…',
     forceRefreshing: 'سڕینەوەی کاش و بارکردنەوەی تەواو…',
+    whatsNew: 'نوێکارییەکانی وەشانی ٩٦',
+    whatsNewSub: 'نوێترین تایبەتمەندی و چاکسازییەکان',
+    netOnline: 'هێڵ بەردەست و هاوکاتە',
+    netOffline: 'ئۆفلاین (کاشی ئامێر)',
+    apiPing: 'خێرایی وەڵامدانەوەی API',
+    lastChecked: 'پشکنرا',
+    justNow: 'کەمێک پێش ئێستا',
+    closeChangelog: 'داخستن',
   }
 };
 

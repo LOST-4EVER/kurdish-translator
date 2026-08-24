@@ -6,6 +6,6 @@
     "dev": "node server.js",
     "start": "node server.js",
     "build": "echo 'No build step required'",
-    "lint": "node --check assets/js/parser.js && node --check assets/js/translator.js && node --check assets/js/i18n.js && node --check assets/js/toast.js && node --check assets/js/player.js && node --check assets/js/app.js"
+    "lint": "node --check assets/js/parser.js && node --check assets/js/translator-dict.js && node --check assets/js/translator.js && node --check assets/js/i18n.js && node --check assets/js/toast.js && node --check assets/js/player.js && node --check assets/js/app-version.js && node --check assets/js/app-tour.js && node --check assets/js/app-quality.js && node --check assets/js/app-fullscreen.js && node --check assets/js/app.js && node --check sw.js"
   }
 }

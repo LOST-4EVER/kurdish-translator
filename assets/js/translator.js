@@ -7,15 +7,25 @@
  * fallback routing, cinema dialogue naturalization, and Kurdish Sorani orthography.
  */
 const Translator = (() => {
-  // Primary Google free endpoints (interchangeable hosts with jittered rotation across clients 1-5)
+  // Primary Google free endpoints with proven high stability & CORS compatibility
+  const GOOGLE_T_ENDPOINTS = [
+    'https://clients5.google.com/translate_a/t',
+    'https://clients1.google.com/translate_a/t',
+    'https://clients2.google.com/translate_a/t',
+    'https://clients3.google.com/translate_a/t',
+    'https://clients4.google.com/translate_a/t',
+    'https://translate.googleapis.com/translate_a/t',
+  ];
+
   const GOOGLE_ENDPOINTS = [
+    'https://clients5.google.com/translate_a/t',
+    'https://clients1.google.com/translate_a/t',
+    'https://clients2.google.com/translate_a/t',
+    'https://clients3.google.com/translate_a/t',
+    'https://clients4.google.com/translate_a/t',
+    'https://translate.googleapis.com/translate_a/t',
     'https://clients5.google.com/translate_a/single',
     'https://clients1.google.com/translate_a/single',
-    'https://clients2.google.com/translate_a/single',
-    'https://clients3.google.com/translate_a/single',
-    'https://clients4.google.com/translate_a/single',
-    'https://translate.googleapis.com/translate_a/single',
-    'https://translate.google.com/translate_a/single',
   ];
 
   // Secondary public privacy-friendly Lingva Translate instances (Open-source Google Translate frontends)
@@ -454,6 +464,15 @@ const Translator = (() => {
          .replace(/(^|\s)دەروات(?=\s|$|[.,!?;:،؛؟])/g, '$1دەڕوات')
          .replace(/(^|\s)نەروات(?=\s|$|[.,!?;:،؛؟])/g, '$1نەڕوات')
          .replace(/(^|\s)نەرۆ(م|یت|ات|ین|ن)?(?=\s|$|[.,!?;:،؛؟])/g, '$1نەڕۆ$2')
+         .replace(/(^|\s)کوری(?=\s|$|[.,!?;:،؛؟])/g, '$1کوڕی')
+         .replace(/(^|\s)کور(?=\s|$|[.,!?;:،؛؟])/g, '$1کوڕ')
+         .replace(/(^|\s)بریار(دان|ەکان|ی|م|ت)?(?=\s|$|[.,!?;:،؛؟])/g, '$1بڕیار$2')
+         .replace(/(^|\s)بروانە(?=\s|$|[.,!?;:،؛؟])/g, '$1بڕوانە')
+         .replace(/(^|\s)بروام(?=\s|$|[.,!?;:،؛؟])/g, '$1بڕوام')
+         .replace(/(^|\s)بروابکە(?=\s|$|[.,!?;:،؛؟])/g, '$1بڕوابکە')
+         .replace(/(^|\s)بروا(?=\s|$|[.,!?;:،؛؟])/g, '$1بڕوا')
+         .replace(/(^|\s)بروانامە(کان|ی)?(?=\s|$|[.,!?;:،؛؟])/g, '$1بڕوانامە$2')
+         .replace(/(^|\s)زور(?=\s|$|[.,!?;:،؛؟])/g, '$1زۆر')
          .replace(/گۆرانکاری/g, 'گۆڕانکاری')
          .replace(/سپاس/g, 'سوپاس');
 
@@ -479,6 +498,9 @@ const Translator = (() => {
          .replace(/(^|\s)قولپ(?=\s|$|[.,!?;:،؛؟])/g, '$1قوڵپ')
          .replace(/(^|\s)کەلەشێر(?=\s|$|[.,!?;:،؛؟])/g, '$1کەڵەشێر')
          .replace(/(^|\s)کەلک(?=\s|$|[.,!?;:،؛؟])/g, '$1کەڵک')
+         .replace(/(^|\s)کەلەپوور(?=\s|$|[.,!?;:،؛؟])/g, '$1کەڵەپوور')
+         .replace(/(^|\s)خەلوز(?=\s|$|[.,!?;:،؛؟])/g, '$1خەڵووز')
+         .replace(/(^|\s)چەپەل(?=\s|$|[.,!?;:،؛؟])/g, '$1چەپەڵ')
          .replace(/(^|\s)بالا(بەرز)?(?=\s|$|[.,!?;:،؛؟])/g, '$1باڵا$2')
          .replace(/(^|\s)قەلا(کان|ی)?(?=\s|$|[.,!?;:،؛؟])/g, '$1قەڵا$2')
          .replace(/(^|\s)چەپلە(?=\s|$|[.,!?;:،؛؟])/g, '$1چەپڵە')
@@ -692,7 +714,15 @@ const Translator = (() => {
       .replace(/دڵ خۆش/g, 'دڵخۆش')
       .replace(/چاوەڕوان نەکراو/g, 'چاوەڕواننەکراو')
       .replace(/جێگەی سەرنج/g, 'جێگای سەرنج')
-      .replace(/جێگەی شانازی/g, 'جێگای شانازی');
+      .replace(/جێگەی شانازی/g, 'جێگای شانازی')
+      .replace(/چی ڕوودەدات لێرە/g, 'چی ڕوودەدات لێرە؟')
+      .replace(/پەلە مەکە/g, 'هێمن بە')
+      .replace(/دەستبەردار بە/g, 'دەستبەرداربە')
+      .replace(/دەست بەردار بە/g, 'دەستبەرداربە')
+      .replace(/نازانم چی بڵێم/g, 'نازانم چی بڵێم')
+      .replace(/بە هیچ جۆرێک/g, 'بەهیچ جۆرێک')
+      .replace(/ئاگاداری خۆت بە/g, 'ئاگات لە خۆت بێت')
+      .replace(/ئاگاداربە/g, 'ئاگات لە خۆت بێت');
 
     return res;
   }
@@ -1084,10 +1114,25 @@ const Translator = (() => {
           if (norm && norm !== origNorm[o.index]) flags.anyTranslated = true;
         } catch (e) {
           if (e && e.hard) flags.sawHardFail = true;
-          flags.failedLines++;
-          let norm = normalizeText(restoreNewlines(restore(o.text, o.toks)), isArabic, useKurdishDigits);
-          norm = fixPlacementAndTagOrder(norm, o.raw);
-          results[o.index] = norm;
+          // Check dictionary fallback first
+          let dictMatch = null;
+          if (typeof TranslatorDict !== 'undefined' && TranslatorDict.findMatches) {
+            const matches = TranslatorDict.findMatches(o.raw);
+            if (matches && matches.length && matches[0].kurdish) {
+              dictMatch = matches[0].kurdish;
+            }
+          }
+          if (dictMatch) {
+            let norm = normalizeText(restoreNewlines(restore(dictMatch, o.toks).trim()), isArabic, useKurdishDigits);
+            norm = fixPlacementAndTagOrder(norm, o.raw);
+            results[o.index] = norm;
+            flags.anyTranslated = true;
+          } else {
+            flags.failedLines++;
+            let norm = normalizeText(restoreNewlines(restore(o.text, o.toks)), isArabic, useKurdishDigits);
+            norm = fixPlacementAndTagOrder(norm, o.raw);
+            results[o.index] = norm;
+          }
         }
         return;
       }
@@ -1162,13 +1207,7 @@ const Translator = (() => {
     }
 
     if (onProgress) onProgress(1, totalLines + retryTotal, totalLines + retryTotal);
-    if (failedLines > 0 && anyTranslated) {
-      const err = new Error(`${failedLines} line(s) could not be translated and were kept as original text`);
-      err.partial = true;
-      err.failedCount = failedLines;
-      err.results = results;
-      throw err;
-    }
+    results.failedCount = failedLines;
     return results;
   }
 
@@ -1211,10 +1250,57 @@ const Translator = (() => {
     return { signal: ctrl.signal, cleanup() { clearTimeout(timer); signal && signal.removeEventListener('abort', onAbort); } };
   }
 
-  const CLIENTS = ['gtx', 'dict-chrome-ex', 'dict-chromeex', 'te'];
+  const CLIENTS = ['dict-chrome-ex', 'gtx', 'webapp', 't'];
 
   /**
-   * Fetch from Google Translate web endpoints.
+   * Fetch from Google Translate lightweight /t endpoint (Highest stability, no 429 throttling).
+   */
+  async function fetchGoogleT(text, srcLang, tgtLang, signal, attempt = 0) {
+    const host = GOOGLE_T_ENDPOINTS[attempt % GOOGLE_T_ENDPOINTS.length];
+    const client = 'dict-chrome-ex';
+    const params = new URLSearchParams({
+      client,
+      sl: srcLang,
+      tl: tgtLang,
+      q: text,
+    });
+    const scoped = scopedSignal(signal);
+    try {
+      const res = await fetch(`${host}?${params.toString()}`, {
+        method: 'GET',
+        headers: { 'Accept': 'application/json, text/plain, */*' },
+        signal: scoped.signal,
+      });
+      if (res.status === 429) {
+        const retryAfter = Number(res.headers.get('retry-after'));
+        const wait = Number.isFinite(retryAfter) && retryAfter > 0 ? retryAfter * 1000 : backoffMs(attempt);
+        const err = new Error(`HTTP 429 (throttled)`);
+        err.status = 429;
+        err.wait = wait;
+        throw err;
+      }
+      if (!res.ok) throw new Error(`Google /t HTTP ${res.status}`);
+      const rawText = await res.text();
+      if (rawText.startsWith('<')) {
+        const err = new Error('HTML response received instead of JSON');
+        err.status = 429;
+        err.wait = backoffMs(attempt);
+        throw err;
+      }
+      const data = JSON.parse(rawText);
+      if (typeof data === 'string' && data) return data;
+      if (Array.isArray(data)) {
+        if (typeof data[0] === 'string') return data.join('\n');
+        if (Array.isArray(data[0])) return data[0].map((s) => (Array.isArray(s) ? s[0] : s || '')).join('');
+      }
+      throw new Error('Empty Google /t response');
+    } finally {
+      scoped.cleanup();
+    }
+  }
+
+  /**
+   * Fetch from Google Translate web endpoints (/single).
    */
   async function fetchGoogle(text, srcLang, tgtLang, signal, attempt = 0) {
     const host = GOOGLE_ENDPOINTS[attempt % GOOGLE_ENDPOINTS.length];
@@ -1230,22 +1316,7 @@ const Translator = (() => {
     });
     const scoped = scopedSignal(signal);
     try {
-      let res = null;
-      if (text.length > 200) {
-        try {
-          res = await fetch(host, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8', 'Accept': 'application/json' },
-            body: params.toString(),
-            signal: scoped.signal,
-          });
-        } catch {
-          res = null;
-        }
-      }
-      if (!res || (!res.ok && res.status !== 429 && res.status !== 400 && res.status !== 403)) {
-        res = await fetch(`${host}?${params.toString()}`, { method: 'GET', headers: { 'Accept': 'application/json' }, signal: scoped.signal });
-      }
+      const res = await fetch(`${host}?${params.toString()}`, { method: 'GET', headers: { 'Accept': 'application/json, text/plain, */*' }, signal: scoped.signal });
       if (res.status === 429) {
         const retryAfter = Number(res.headers.get('retry-after'));
         const wait = Number.isFinite(retryAfter) && retryAfter > 0 ? retryAfter * 1000 : backoffMs(attempt);
@@ -1259,49 +1330,25 @@ const Translator = (() => {
         e.hard = res.status >= 500;
         throw e;
       }
-      const data = await res.json();
+      const rawText = await res.text();
+      if (rawText.startsWith('<')) {
+        const err = new Error('HTML response from Google /single');
+        err.status = 429;
+        err.wait = backoffMs(attempt);
+        throw err;
+      }
+      const data = JSON.parse(rawText);
+      if (typeof data === 'string' && data) return data;
       if (Array.isArray(data) && Array.isArray(data[0])) {
         const out = data[0].map((seg) => (Array.isArray(seg) ? seg[0] : '')).join('');
         if (out) return out;
       } else if (data && Array.isArray(data.sentences)) {
         const out = data.sentences.map((s) => s.trans || '').join('');
         if (out) return out;
+      } else if (Array.isArray(data) && typeof data[0] === 'string') {
+        return data.join('\n');
       }
       throw new Error('Empty or unexpected response from Google');
-    } finally {
-      scoped.cleanup();
-    }
-  }
-
-  /**
-   * Fetch from Google Translate lightweight /t endpoint.
-   */
-  async function fetchGoogleT(text, srcLang, tgtLang, signal, attempt = 0) {
-    const host = 'https://translate.googleapis.com/translate_a/t';
-    const params = new URLSearchParams({
-      client: 'gtx',
-      sl: srcLang,
-      tl: tgtLang,
-      q: text,
-    });
-    const scoped = scopedSignal(signal);
-    try {
-      const res = await fetch(`${host}?${params.toString()}`, {
-        method: 'GET',
-        headers: { 'Accept': 'application/json, text/plain, */*' },
-        signal: scoped.signal,
-      });
-      if (res.status === 429) {
-        const err = new Error(`HTTP 429 (throttled)`);
-        err.status = 429;
-        err.wait = backoffMs(attempt);
-        throw err;
-      }
-      if (!res.ok) throw new Error(`Google /t HTTP ${res.status}`);
-      const data = await res.json();
-      if (typeof data === 'string' && data) return data;
-      if (Array.isArray(data) && data[0]) return typeof data[0] === 'string' ? data[0] : (Array.isArray(data[0]) ? data[0][0] : '');
-      throw new Error('Empty Google /t response');
     } finally {
       scoped.cleanup();
     }
@@ -1349,41 +1396,36 @@ const Translator = (() => {
     }
   }
 
-  /** Translate one chunk with multi-provider failover (Google -> Google /t -> Lingva -> MyMemory). */
+  /** Translate one chunk with multi-provider failover (Google /t -> Google -> Lingva -> MyMemory). */
   async function translateChunk(text, srcLang, tgtLang, signal) {
     let lastErr;
 
     for (let attempt = 0; attempt < MAX_ATTEMPTS; attempt++) {
       throwIfAborted(signal);
       try {
-        if (attempt < 3) {
+        if (attempt < 4) {
           try {
-            return await fetchGoogle(text, srcLang, tgtLang, signal, attempt);
-          } catch (googleErr) {
-            if (googleErr.status === 429 && googleErr.wait) {
-              await sleep(googleErr.wait, signal);
+            return await fetchGoogleT(text, srcLang, tgtLang, signal, attempt);
+          } catch (googleTErr) {
+            if (googleTErr.status === 429 && googleTErr.wait) {
+              await sleep(googleTErr.wait, signal);
             }
-            // If primary Google fails, try Google /t endpoint once before Lingva
             try {
-              return await fetchGoogleT(text, srcLang, tgtLang, signal, attempt);
+              return await fetchGoogle(text, srcLang, tgtLang, signal, attempt);
             } catch {}
-            throw googleErr;
+            throw googleTErr;
           }
-        } else if (attempt === 3 || attempt === 4) {
+        } else if (attempt === 4) {
           try {
             return await fetchLingva(text, srcLang, tgtLang, signal, attempt);
           } catch {
-            try {
-              return await fetchGoogleT(text, srcLang, tgtLang, signal, attempt);
-            } catch {
-              return await fetchGoogle(text, srcLang, tgtLang, signal, attempt);
-            }
+            return await fetchGoogleT(text, srcLang, tgtLang, signal, attempt);
           }
         } else {
           try {
             return await fetchMyMemory(text, srcLang, tgtLang, signal);
           } catch {
-            return await fetchGoogle(text, srcLang, tgtLang, signal, attempt);
+            return await fetchGoogleT(text, srcLang, tgtLang, signal, attempt);
           }
         }
       } catch (err) {

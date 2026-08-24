@@ -382,17 +382,134 @@ const TranslatorDict = (() => {
     'have a word': { kurdish: 'کەمێک قسەکردن', context: 'British Idiom', alternatives: ['دەستپێکردنی گفتوگۆ'] },
     'full of beans': { kurdish: 'پڕ لە وزە و چالاکی', context: 'British Idiom', alternatives: ['بە گوڕوتین', 'چالاک'] },
 
-    // Iconic Anime, Battle Lines, Catchphrases & Japanese Subtitle Tropes
+    // Iconic Anime, Battle Lines, Catchphrases, Worlds & Japanese Subtitle Tropes
     'omae wa mou shindeiru': { kurdish: 'تۆ هەر ئێستا مردوویت', context: 'Fist of the North Star / Iconic Anime', alternatives: ['لە ئێستاوە مردووی', 'کارت تەواوە'] },
     'you are already dead': { kurdish: 'تۆ هەر ئێستا مردوویت', context: 'Fist of the North Star / Anime Trope', alternatives: ['لە ئێستاوە مردووی', 'کارت تەواوە'] },
     "you're already dead": { kurdish: 'تۆ هەر ئێستا مردوویت', context: 'Fist of the North Star / Anime Trope', alternatives: ['لە ئێستاوە مردووی'] },
     'i will be the pirate king': { kurdish: 'دەبمە پاشای چەتەکانی دەریا!', context: 'One Piece / Luffy Catchphrase', alternatives: ['دەبم بە پاشای چەتەکان!', 'پاشای چەتەکانی دەریا دەبم'] },
     "i'm gonna be king of the pirates": { kurdish: 'دەبمە پاشای چەتەکانی دەریا!', context: 'One Piece / Luffy', alternatives: ['دەبم بە پاشای چەتەکان!'] },
     "i'm going to become the pirate king": { kurdish: 'دەبمە پاشای چەتەکانی دەریا!', context: 'One Piece / Luffy', alternatives: ['دەبم بە پاشای چەتەکان!'] },
+    'gear second': { kurdish: 'گێری دووەم!', context: 'One Piece / Luffy Gear 2', alternatives: ['گێڕی دووەم!'] },
+    'gear third': { kurdish: 'گێری سێیەم!', context: 'One Piece / Luffy Gear 3', alternatives: ['گێڕی سێیەم!'] },
+    'gear fourth': { kurdish: 'گێری چوارەم (باوند مان)!', context: 'One Piece / Luffy Gear 4', alternatives: ['گێڕی چوارەم!'] },
+    'gear fifth': { kurdish: 'گێری پێنجەم (شێوەی ئازادی نیکا)!', context: 'One Piece / Luffy Gear 5', alternatives: ['گێڕی پێنجەم!'] },
+    'nothing happened': { kurdish: 'هیچ شتێک ڕووینەدا...', context: 'One Piece / Zoro Iconic Line', alternatives: ['هیچ ڕووینەداوە'] },
+    'i want to live': { kurdish: 'دەمەوێت بژیم! منیش لەگەڵ خۆتان ببەن بۆ دەریا!', context: 'One Piece / Nico Robin Enies Lobby', alternatives: ['دەمەوێت بژیم!'] },
+    'conqueror haki': { kurdish: 'هاکی پاشایەتی (هاکی باڵادەست)', context: 'One Piece Power System', alternatives: ['هاکی شاهانە'] },
+    "conqueror's haki": { kurdish: 'هاکی پاشایەتی (هاکی باڵادەست)', context: 'One Piece Power System', alternatives: ['هاکی شاهانە'] },
+    'armament haki': { kurdish: 'هاکی چەکداری (ڕەقکردن)', context: 'One Piece Power System' },
+    'observation haki': { kurdish: 'هاکی تێڕوانین (هەستپێکردنی داهاتوو)', context: 'One Piece Power System' },
+    "people's dreams have no end": { kurdish: 'خەونی مرۆڤەکان هەرگیز کۆتایی نایەت!', context: 'One Piece / Blackbeard', alternatives: ['خەونی خەڵک کۆتایی نییە!'] },
+
+    // Jujutsu Kaisen & Modern Shonen
+    'domain expansion': { kurdish: 'فراوانکردنی دۆمەین (سنووری گۆڕەپان)!', context: 'Jujutsu Kaisen / Ryoiki Tenkai', alternatives: ['فراوانکردنی سنوور!'] },
+    'unlimited void': { kurdish: 'بۆشایی بێسنوور (موریۆکۆسۆ)!', context: 'Jujutsu Kaisen / Gojo Satoru Domain', alternatives: ['بۆشایی بێپایان!'] },
+    'malevolent shrine': { kurdish: 'مەزارگەی شەڕانگێزی (فوکاما میزوچی)!', context: 'Jujutsu Kaisen / Sukuna Domain', alternatives: ['پەرستگای شەڕانگێز!'] },
+    'hollow purple': { kurdish: 'مۆری بەتاڵ (کیۆکوشیکی موراساکی)!', context: 'Jujutsu Kaisen / Gojo Satoru', alternatives: ['تەکنیکی مۆری بەتاڵ!'] },
+    'black flash': { kurdish: 'بریسکەی ڕەش (کۆکووسێن)!', context: 'Jujutsu Kaisen / Itadori & Nanami', alternatives: ['پریشکی ڕەش!'] },
+    'throughout heaven and earth i alone am the honored one': { kurdish: 'لە سەرانسەری ئاسمان و زەویدا، تەنها من شایەنی ڕێزم!', context: 'Jujutsu Kaisen / Gojo Satoru Buddha Quote', alternatives: ['تەنها من بەڕێزم لە هەموو گەردووندا!'] },
+    "throughout the heavens and earth i alone am the honored one": { kurdish: 'لە سەرانسەری ئاسمان و زەویدا، تەنها من شایەنی ڕێزم!', context: 'Jujutsu Kaisen / Gojo Satoru' },
+    "nah i'd win": { kurdish: 'نا، بێگومان من دەبەمەوە!', context: 'Jujutsu Kaisen / Gojo Satoru Meme Line', alternatives: ['نا، من سەردەکەوم!'] },
+    "nah i would win": { kurdish: 'نا، بێگومان من دەبەمەوە!', context: 'Jujutsu Kaisen / Gojo Satoru' },
+    'stand proud you are strong': { kurdish: 'سەربەرز بە، تۆ زۆر بەهێز بوویت', context: 'Jujutsu Kaisen / Sukuna to Jogo', alternatives: ['شانازی بە خۆتەوە بکە، بەهێز بوویت'] },
+    'stand proud': { kurdish: 'سەربەرز بە و شانازی بکە', context: 'Anime / JoJo & JJK' },
+
+    // Naruto & Boruto Lore
+    'shinra tensei': { kurdish: 'پاڵنەری گەردوونی (شینرا تێنسێی)!', context: 'Naruto / Pain', alternatives: ['شینرا تێنسێی!', 'تەقینەوەی هێزی ڕاکێشان'] },
+    'almighty push': { kurdish: 'پاڵنەری گەردوونی (شینرا تێنسێی)!', context: 'Naruto / Pain', alternatives: ['هێزی مەزنی شینرا تێنسێی'] },
+    'universal pull': { kurdish: 'ڕاکێشانی گەردوونی (بانشۆ تێنین)!', context: 'Naruto / Pain' },
+    'bansho tenin': { kurdish: 'ڕاکێشانی گەردوونی (بانشۆ تێنین)!', context: 'Naruto / Pain' },
+    'chidori': { kurdish: 'چیدۆری (هەزار چۆلەکە)!', context: 'Naruto / Kakashi & Sasuke', alternatives: ['هەزار چۆلەکە!'] },
+    'rasengan': { kurdish: 'ڕاسێنگان (گێژاوی وزەی چاکرا)!', context: 'Naruto Uzumaki / Minato', alternatives: ['تۆپی ڕاسێنگان!'] },
+    'rasenshuriken': { kurdish: 'ڕاسێنشوریکێن (شوریکێنی با)!', context: 'Naruto Shippuden' },
+    'amaterasu': { kurdish: 'ئاماتێراسو (ئاگرە ڕەشە نەکوژاوەکە)!', context: 'Naruto / Itachi & Sasuke' },
+    'tsukuyomi': { kurdish: 'تسوکویۆمی (خەیاڵی مانگی بێپایان)!', context: 'Naruto / Itachi Uchiha' },
+    'infinite tsukuyomi': { kurdish: 'تسوکویۆمی بێکۆتا (خەیاڵی هەمیشەیی جیهان)!', context: 'Naruto / Madara' },
+    'kamui': { kurdish: 'کاموی (دەروازەی بۆشایی و کات)!', context: 'Naruto / Kakashi & Obito' },
+    'susanoo': { kurdish: 'سوزانۆ (قەڵغانی ڕۆحی جەنگاوەر)!', context: 'Naruto / Uchiha Clan' },
+    'shadow clone jutsu': { kurdish: 'جوتسۆی هاوشێوەکانی سێبەر (کاگێ بونشین)!', context: 'Naruto Uzumaki', alternatives: ['هاوشێوەکانی سێبەر!'] },
+    'kage bunshin no jutsu': { kurdish: 'جوتسۆی هاوشێوەکانی سێبەر!', context: 'Naruto Uzumaki' },
+    'wake up to reality': { kurdish: 'خەبەرت بێتەوە بۆ واقیع! لەم جیهانە نەفرەتییەدا هیچ شتێک وەک نەخشەی بۆ دەکێشرێت ناڕوات', context: 'Naruto / Madara Uchiha Iconic Monologue', alternatives: ['خەبەرت بێتەوە بۆ دنیای ڕاستی!'] },
+    'those who break the rules are scum': { kurdish: 'ئەوانەی یاسا دەشکێنن پیسن، بەڵام ئەوانەی پشت لە هاوڕێکانیان دەکەن لە پیسیش خراپترن', context: 'Naruto / Kakashi & Obito Moral Code', alternatives: ['پشتکردن لە هاوڕێیان لە یاساشکێنی خراپترە'] },
+    'do you want these clones to use susanoo or not': { kurdish: 'دەتەوێت ئەم هاوشێوانەم سوزانۆ بەکاربهێنن یان نا؟', context: 'Naruto Shippuden / Madara vs 5 Kage' },
+
+    // Attack on Titan (Shingeki no Kyojin)
+    'shinzou wo sasageyo': { kurdish: 'دڵەکانتان ببەخشن بۆ ئازادی!', context: 'Attack on Titan / Erwin Smith & Survey Corps', alternatives: ['گیانتان بەخت بکەن!'] },
+    'dedicate your hearts': { kurdish: 'دڵەکانتان ببەخشن بۆ ئازادی!', context: 'Attack on Titan / Survey Corps Anthem', alternatives: ['گیانتان فیدا بکەن!'] },
+    'if we kill all our enemies over there will we finally be free': { kurdish: 'ئەگەر هەموو دوژمنەکانی ئەولا لەناو بەرین، دواجار ئازاد دەبین؟', context: 'Attack on Titan / Eren at the Ocean' },
+    'i will keep moving forward until all my enemies are destroyed': { kurdish: 'هەر بەردەوام دەبم لە پێشڕەوی تا تەواوی دوژمنەکانم لەناودەچن!', context: 'Attack on Titan / Eren Yeager', alternatives: ['بەرەو پێش دەڕۆم تا هەموو دوژمنەکانم دەسڕمەوە!'] },
+    'this world is cruel but also very beautiful': { kurdish: 'ئەم جیهانە زۆر بێبەزەییە، بەڵام هاوکات زۆر جوانە', context: 'Attack on Titan / Mikasa Ackerman' },
+    'i am free': { kurdish: 'من ئازادم!', context: 'Attack on Titan / Eren Yeager' },
+    'the rumbling': { kurdish: 'هەڕەشەی هەڵکوتانی تایتانەکان (ڕەمبلینگ)', context: 'Attack on Titan' },
+
+    // Demon Slayer (Kimetsu no Yaiba)
+    'water breathing': { kurdish: 'هەناسەدانی ئاو', context: 'Demon Slayer / Tanjiro & Giyu' },
+    'sun breathing': { kurdish: 'هەناسەدانی خۆر (هینۆکامی کاگورا)', context: 'Demon Slayer / Tanjiro & Yoriichi' },
+    'hinokami kagura': { kurdish: 'سەمای خوداوەندی ئاگر (هینۆکامی کاگورا)!', context: 'Demon Slayer / Tanjiro Kamado' },
+    'thunder breathing first form thunderclap and flash': { kurdish: 'هەناسەدانی بروسکە، شێوازی یەکەم: هەورەبرووسکە و پریشک!', context: 'Demon Slayer / Zenitsu Agatsuma', alternatives: ['شێوازی یەکەم: پریشکی هەورەبرووسکە!'] },
+    'set your heart ablaze': { kurdish: 'دڵت بگەشێنەوە و گڕی تێبەرە!', context: 'Demon Slayer Mugen Train / Kyojuro Rengoku', alternatives: ['دڵت پڕ لە ئاگر و جۆش بکە!'] },
+    'total concentration breathing': { kurdish: 'هەناسەدانی تەواو چڕبوونەوە!', context: 'Demon Slayer Technique' },
+    'flame breathing': { kurdish: 'هەناسەدانی گڕ', context: 'Demon Slayer / Rengoku' },
+    'beast breathing': { kurdish: 'هەناسەدانی دڕندە', context: 'Demon Slayer / Inosuke' },
+    'moon breathing': { kurdish: 'هەناسەدانی مانگ', context: 'Demon Slayer / Kokushibo' },
+
+    // Dragon Ball & Super
+    'ultra instinct': { kurdish: 'غەریزەی باڵا (میگاتێ نۆ گۆکوی)!', context: 'Dragon Ball Super / Goku', alternatives: ['هۆشیاری باڵا!'] },
+    'ultra ego': { kurdish: 'لووتبەرزی باڵا (وەگاتا نۆ گۆکوی)!', context: 'Dragon Ball Super / Vegeta' },
+    'super saiyan': { kurdish: 'سوپەر سایان!', context: 'Dragon Ball Transformation' },
+    'super saiyan blue': { kurdish: 'سوپەر سایانی شین!', context: 'Dragon Ball Super' },
+    'spirit bomb': { kurdish: 'بۆمبی ڕۆحی (گێنکی داما)!', context: 'Dragon Ball / Goku Ultimate Move' },
+    'genki dama': { kurdish: 'بۆمبی ڕۆحی (گێنکی داما)!', context: 'Dragon Ball / Goku' },
+    'final flash': { kurdish: 'بریسکەی کۆتایی (فایناڵ فلاش)!', context: 'Dragon Ball Z / Vegeta' },
+    'kaio-ken': { kurdish: 'کایۆکێن!', context: 'Dragon Ball / Goku Multiplier' },
+    'kaioken': { kurdish: 'کایۆکێن!', context: 'Dragon Ball / Goku' },
+
+    // Bleach & Soul Society
+    'getsuga tenshou': { kurdish: 'گێتسوگا تێنشۆ (پەلاماری مانگی دڕندە)!', context: 'Bleach / Ichigo Kurosaki', alternatives: ['پەلاماری مانگ!'] },
+    'getsuga tensho': { kurdish: 'گێتسوگا تێنشۆ!', context: 'Bleach / Ichigo' },
+    'mugetsu': { kurdish: 'موگێتسو (شەوی بێمانگ / گێتسوگای کۆتایی)!', context: 'Bleach / Final Getsuga Tenshou' },
+    'bankai tensa zangetsu': { kurdish: 'بانکای، تێنسا زانگێتسو (مانگی زنجیرکراو)!', context: 'Bleach / Ichigo Bankai' },
+    'senbonzakura kageyoshi': { kurdish: 'سێنبۆنزاکورا کاگیۆشی (هەزاران گوڵی گێلاسی سێبەر)!', context: 'Bleach / Byakuya Kuchiki' },
+    'since when were you under the impression that i was not using kyoka suigetsu': { kurdish: 'لە کەیەوە لەژێر ئەو باوەڕەدایت کە من کیۆکا سویگێتسوم بەکارنەهێناوە؟', context: 'Bleach / Sosuke Aizen Iconic Trap' },
+    "since when were you under the impression that i wasn't using kyoka suigetsu": { kurdish: 'لە کەیەوە لەژێر ئەو باوەڕەدایت کە من کیۆکا سویگێتسوم بەکارنەهێناوە؟', context: 'Bleach / Sosuke Aizen' },
+
+    // JoJo's Bizarre Adventure
+    'ora ora ora': { kurdish: 'ئۆرا ئۆرا ئۆرا! (لێدانی یەکبەدوای یەک)', context: 'JoJo Stardust Crusaders / Jotaro Star Platinum', alternatives: ['ئۆرا ئۆرا!'] },
+    'muda muda muda': { kurdish: 'مودا مودا مودا! (بێسوودە، بێسوودە، بێسوودە!)', context: 'JoJo / Dio Brando & Giorno Giovanna', alternatives: ['بێ کەڵکە!'] },
+    'za warudo': { kurdish: 'زا وارودۆ! (وەستانی کات لە جیهاندا!)', context: 'JoJo / Dio Brando Time Stop', alternatives: ['جیهان، کات بوەستێنە!'] },
+    'the world stop time': { kurdish: 'جیهان، کات بوەستێنە!', context: 'JoJo / Dio Brando' },
+    'kono dio da': { kurdish: 'من بووم دیۆ!', context: 'JoJo Phantom Blood / Dio Brando Meme' },
+    'is that a jojo reference': { kurdish: 'ئایا ئەوە ئاماژەیە بۆ جۆجۆ؟', context: 'Anime Pop Culture' },
+
+    // Solo Leveling & Hunter Fantasy
+    'arise': { kurdish: 'هەستە سەرپێ! (ڕابە و ببە بە سێبەرم!)', context: 'Solo Leveling / Sung Jinwoo Shadow Extraction', alternatives: ['ڕابە لە مردن!'] },
+    'i am the shadow monarch': { kurdish: 'من پاشای سێبەرەکانم', context: 'Solo Leveling / Sung Jinwoo' },
+    'system alert': { kurdish: 'ئاگاداری لە سیستەمەوە', context: 'Solo Leveling / Manhwa UI' },
+
+    // Vinland Saga & Seinen Classics
+    'you have no enemies': { kurdish: 'تۆ هیچ دوژمنێکت نییە، کەس نییە لەم جیهانەدا شایەنی ئازاردان بێت', context: 'Vinland Saga / Thors to Thorfinn', alternatives: ['هیچ دوژمنێکت لە ژیاندا نییە'] },
+    'a true warrior needs no sword': { kurdish: 'جەنگاوەری ڕاستەقینە پێویستی بە شمشێر نییە', context: 'Vinland Saga / Thors' },
+    'i have no enemies': { kurdish: 'من هیچ دوژمنێکم نییە', context: 'Vinland Saga / Thorfinn S2' },
+
+    // Hunter x Hunter & Shonen Lore
+    'bungee gum has the properties of both rubber and gum': { kurdish: 'بانجی گەم تایبەتمەندی هەردوو لاستیک و بنێشتی هەیە', context: 'Hunter x Hunter / Hisoka Morow Iconic Line' },
+    'godspeed': { kurdish: 'خێرایی یەزدانی (کانمورو)!', context: 'Hunter x Hunter / Killua Zoldyck' },
+
+    // Death Note & Code Geass
+    'i will become the god of the new world': { kurdish: 'دەبمە خودای جیهانی نوێ!', context: 'Death Note / Light Yagami', alternatives: ['دەبم بە فەرمانڕەوای جیهانی نوێ!'] },
+    "i'll become the god of the new world": { kurdish: 'دەبمە خودای جیهانی نوێ!', context: 'Death Note / Light Yagami' },
+    'i am justice': { kurdish: 'من دادپەروەریم!', context: 'Death Note / L & Light' },
+    'all hail lelouch': { kurdish: 'شکۆمەندی و سەربەرزی بۆ لێلوش!', context: 'Code Geass / Lelouch vi Britannia' },
+    'i lelouch vi britannia command you': { kurdish: 'من، لێلوش ڤی بریتانیا، فەرمانت پێدەکەم!', context: 'Code Geass / Geass Command' },
+
+    // Spy x Family & Modern Fun
+    'waku waku': { kurdish: 'چەند بەجۆش و بەپەرۆشم!', context: 'Spy x Family / Anya Forger Excitement', alternatives: ['چەندە خۆشە!'] },
+    'elegance': { kurdish: 'ڕێکپۆشی و شکۆمەندی!', context: 'Spy x Family / Henderson' },
+
+    // Other Iconic Anime Tropes & Lines
+    'spirit gun': { kurdish: 'دەمانچەی ڕۆحی (ڕێیگان)!', context: 'Yu Yu Hakusho / Yusuke Urameshi' },
     'plus ultra': { kurdish: 'پڵەس ئۆڵترا! (بۆ سەرکەوتنی بێسنوور)', context: 'My Hero Academia / All Might', alternatives: ['هەمیشە بەرەو لوتکە!', 'تێپەڕاندنی هەموو سنوورەکان!'] },
     'bankai': { kurdish: 'بانکای (ڕزگارکردنی کۆتایی شمشێر)', context: 'Bleach / Ichigo Kurosaki', alternatives: ['بانکای!', 'هێزی کۆتایی شمشێر'] },
-    'shinra tensei': { kurdish: 'پاڵنەری گەردوونی (شینرا تێنسێی)!', context: 'Naruto / Pain', alternatives: ['شینرا تێنسێی!', 'تەقینەوەی هێزی ڕاکێشان'] },
-    'almighty push': { kurdish: 'پاڵنەری گەردوونی!', context: 'Naruto / Pain', alternatives: ['هێزی مەزنی شینرا تێنسێی'] },
     'kamehameha': { kurdish: 'کامێهامێها!', context: 'Dragon Ball / Goku', alternatives: ['شەپۆلی کامێهامێها!'] },
     "it's over 9000": { kurdish: 'لە ٩٠٠٠ زیاترە!', context: 'Dragon Ball Z / Vegeta', alternatives: ['ئاستی هێزەکەی لە سەرووی ٩٠٠٠یە!'] },
     'over 9000': { kurdish: 'لە ٩٠٠٠ زیاترە!', context: 'Dragon Ball Z / Vegeta' },
@@ -435,6 +552,56 @@ const TranslatorDict = (() => {
     "i'll surpass my limits": { kurdish: 'سنوورەکانی خۆم تێدەپەڕێنم!', context: 'Anime Power-Up' },
     'i have been waiting for this': { kurdish: 'مێژوویەکە چاوەڕێی ئەم ساتەم!', context: 'Anime Showdown', alternatives: ['لە مێژە چاوەڕێی ئەمەم!'] },
     "i've been waiting for this": { kurdish: 'مێژوویەکە چاوەڕێی ئەم ساتەم!', context: 'Anime Showdown' },
+
+    // Cartoon Worlds, Iconic Animated Catchphrases & Speeches
+    'i am vengeance i am the night i am batman': { kurdish: 'من تۆڵەم، من تاریکی شەوم، من باتمانم!', context: 'Batman The Animated Series / Iconic Catchphrase', alternatives: ['من تۆڵەسێنەرەوەم، من شەوم، من باتمانم!'] },
+    'i am vengeance': { kurdish: 'من تۆڵەم!', context: 'Batman / Dark Knight Catchphrase', alternatives: ['من تۆڵەسێنەرەوەم!'] },
+    'i am the night': { kurdish: 'من تاریکی شەوم!', context: 'Batman Catchphrase' },
+    'i am batman': { kurdish: 'من باتمانم!', context: 'DC Animation / Batman' },
+    'why do we fall': { kurdish: 'بۆچی دەکەوین؟ بۆ ئەوەی فێربین چۆن هەستینەوە سەر پێ', context: 'Batman / Thomas Wayne Philosophy' },
+    'riddle me this': { kurdish: 'وەڵامی ئەم مەتەڵەم بدەرەوە', context: 'DC Comics / The Riddler' },
+    'flame on': { kurdish: 'ئاگری تێبەردە! (فڵەیم ئۆن)', context: 'Fantastic Four / Human Torch', alternatives: ['گڕی تێبەردە!'] },
+    "it's clobberin time": { kurdish: 'کاتی تێهەڵدان و کونکردنە!', context: 'Fantastic Four / The Thing Battle Cry', alternatives: ['کاتی شەڕە!'] },
+    "it's morphin time": { kurdish: 'کاتی گۆڕینی شێوەیە! (مۆرفین تایم)', context: 'Power Rangers Transformation', alternatives: ['کاتی گۆڕانکارییە!'] },
+    'autobots roll out': { kurdish: 'ئۆتۆبۆتەکان، دەستپێبکەن و بەڕێبکەون!', context: 'Transformers / Optimus Prime Command', alternatives: ['ئۆتۆبۆتەکان، بەڕێبکەون!'] },
+    'decepticons attack': { kurdish: 'دیسێپتیکۆنەکان، هێرش ببەن!', context: 'Transformers / Megatron Command' },
+    'one shall stand one shall fall': { kurdish: 'یەکێکمان بەپێوە دەمێنێتەوە و ئەویتر دەڕوخێت', context: 'Transformers / Optimus Prime vs Megatron' },
+    "it's hero time": { kurdish: 'کاتی پاڵەوانێتییە!', context: 'Ben 10 / Omnitrix Activation', alternatives: ['کاتی دەستپێکی پاڵەوانە!'] },
+    'omnitrix': { kurdish: 'ئۆمنیتێکس (کاتژمێری پاڵەوانان)', context: 'Ben 10 Lore' },
+    'cowabunga': { kurdish: 'کاوابانگا! (هاواری خۆشی و سەرکەوتن)', context: 'Teenage Mutant Ninja Turtles Catchphrase' },
+    'turtle power': { kurdish: 'هێزی کیسەڵە نینجاکان!', context: 'TMNT Anthem' },
+    'wubba lubba dub dub': { kurdish: 'ووبـا لوبـا داب داب! (هاوار بۆ یارمەتی)', context: 'Rick and Morty / Rick Sanchez' },
+    'i turned myself into a pickle': { kurdish: 'خۆم گۆڕی بۆ خەیارشور، مۆرتی!', context: 'Rick and Morty / Pickle Rick' },
+    'scooby dooby doo': { kurdish: 'سکوبی دووبی دوو!', context: 'Scooby-Doo Catchphrase' },
+    'scooby-dooby-doo': { kurdish: 'سکوبی دووبی دوو!', context: 'Scooby-Doo Catchphrase' },
+    'jinkies': { kurdish: 'ئەی هاوار چۆن دەبێت! (جینکیز)', context: 'Scooby-Doo / Velma Catchphrase', alternatives: ['ئەی هاوار!'] },
+    'zoinks': { kurdish: 'خوایە گیان! (زۆینکز)', context: 'Scooby-Doo / Shaggy Catchphrase', alternatives: ['یاخوا گیان!'] },
+    'and i would have gotten away with it too if it were not for you meddling kids': { kurdish: 'ئەگەر بەهۆی دەستتێوەردانی ئێوەی منداڵەوە نەبووایە بە سەرکەوتوویی ڕزگارم دەبوو!', context: 'Scooby-Doo Villain Classic Ending' },
+    "and i would've gotten away with it too if it weren't for you meddling kids": { kurdish: 'ئەگەر بەهۆی دەستتێوەردانی ئێوەی منداڵەوە نەبووایە بە سەرکەوتوویی ڕزگارم دەبوو!', context: 'Scooby-Doo Villain Ending' },
+    "what's up doc": { kurdish: 'چ باسە دکتۆر؟', context: 'Looney Tunes / Bugs Bunny Catchphrase', alternatives: ['چ هەواڵ دکتۆر؟'] },
+    "that's all folks": { kurdish: 'هەر ئەوەندە بوو ئازیزان!', context: 'Looney Tunes Ending / Porky Pig', alternatives: ['کۆتایی هات هاوڕێیان!'] },
+    'i tawt i taw a puddy tat': { kurdish: 'پێموایە پشیلەیەکم بینی!', context: 'Looney Tunes / Tweety Bird' },
+    'eat my shorts': { kurdish: 'دە بڕۆ و وازم لێبێنە!', context: 'The Simpsons / Bart Simpson', alternatives: ['دە لێم گەڕێ!'] },
+    'ay caramba': { kurdish: 'ئەی هاوار!', context: 'The Simpsons / Bart Simpson' },
+    "d'oh": { kurdish: 'ئاخ لەدەستم (دۆو)!', context: 'The Simpsons / Homer Simpson Catchphrase' },
+    'doh': { kurdish: 'ئاخ لەدەستم!', context: 'The Simpsons / Homer Simpson' },
+    "i'm ready i'm ready": { kurdish: 'من ئامادەم! من ئامادەم!', context: 'SpongeBob SquarePants Catchphrase' },
+    "i'm ready": { kurdish: 'من ئامادەم!', context: 'SpongeBob SquarePants' },
+    'aye aye captain': { kurdish: 'بەڵێ فەرماندە (ئای ئای کاپتن)!', context: 'SpongeBob SquarePants Intro', alternatives: ['فەرمانتە کاپتن!'] },
+    'who lives in a pineapple under the sea': { kurdish: 'کێ لەناو ئەناناسێکدا لەژێر دەریادا دەژی؟', context: 'SpongeBob SquarePants Intro' },
+    'f is for friends who do stuff together': { kurdish: 'هاوڕێیەتی و پێکەوەبوون', context: 'SpongeBob F.U.N. Song' },
+    'water earth fire air': { kurdish: 'ئاو، زەوی، ئاگر، هەوا', context: 'Avatar The Last Airbender Intro' },
+    'yip yip': { kurdish: 'ییپ ییپ! (فڕینی ئەپا)', context: 'Avatar The Last Airbender / Aang to Appa' },
+    'there is no war in ba sing se': { kurdish: 'هیچ جەنگێک لە با سینگ سێ نییە', context: 'Avatar The Last Airbender Lore' },
+    'my cabbages': { kurdish: 'کەلەرمەکانم وێران بوون!', context: 'Avatar The Last Airbender Cabbage Merchant' },
+    'gotta catch em all': { kurdish: 'دەبێت هەموویان ڕاو بکەم!', context: 'Pokémon Franchise Slogan', alternatives: ['دەبێت هەموویان کۆبکەمەوە!'] },
+    "gotta catch 'em all": { kurdish: 'دەبێت هەموویان ڕاو بکەم!', context: 'Pokémon Franchise Slogan' },
+    'pikachu i choose you': { kurdish: 'پیکاچوو، تۆ هەڵدەبژێرم!', context: 'Pokémon / Ash Ketchum Battle Call' },
+    'prepare for trouble and make it double': { kurdish: 'خۆتان بۆ کێشە ئامادە بکەن، کێشەیەکی دووئەوەندە!', context: 'Pokémon / Team Rocket Motto' },
+    'hakuna matata': { kurdish: 'هاکونا ماتاتا (خەمت نەبێت بۆ ژیان)', context: 'The Lion King / Disney Classic', alternatives: ['خەمت نەبێت'] },
+    'let it go': { kurdish: 'واز لە ڕابردوو بێنە و ڕێگەی پێبدە بڕوات', context: 'Frozen / Disney Classic', alternatives: ['دەستبەرداری بە'] },
+    'you are a toy': { kurdish: 'تۆ یارییەکی! ناتوانیت بفڕیت!', context: 'Toy Story / Woody to Buzz' },
+    "you're a toy": { kurdish: 'تۆ یارییەکی!', context: 'Toy Story / Woody' },
     'get out of here': { kurdish: 'بڕۆ دەرەوە', context: 'Dismissal / Disbelief', alternatives: ['لەبەرچاوم ون بە', 'سەری خۆت هەڵگرە', 'مەحاڵە!'] },
     'get the hell out of here': { kurdish: 'زوو لێرە بڕۆ دەرەوە', context: 'Urgent Dismissal', alternatives: ['لەبەرچاوم ون بە', 'بە نەفرەت بیت بڕۆ'] },
     'get the fuck out of here': { kurdish: 'لەبەرچاوم ون بە', context: 'Hostile Dismissal', alternatives: ['سەری خۆت هەڵگرە', 'بڕۆ دەرەوە'] },
@@ -514,10 +681,12 @@ const TranslatorDict = (() => {
     'i see dead people': { kurdish: 'کەسانی مردوو دەبینم', context: 'The Sixth Sense / Cinema Icon' },
     'my precious': { kurdish: 'ئازیزەکەی من', context: 'Lord of the Rings / Fantasy Icon', alternatives: ['گەوهەرە خۆشەویستەکەم'] },
     'you shall not pass': { kurdish: 'تێپەڕبوونت مەحاڵە!', context: 'Lord of the Rings / Fantasy Icon', alternatives: ['ڕێگەت پێنادرێت تێپەڕ بپەڕیت'] },
-    'avengers assemble': { kurdish: 'تۆڵەسێنەران کۆببنەوە', context: 'Marvel / Action Icon' },
+    'avengers assemble': { kurdish: 'تۆڵەسێنەران کۆببنەوە!', context: 'Marvel / Action Icon' },
     'i am iron man': { kurdish: 'من ئایرۆن مانم', context: 'Marvel / Action Icon' },
     'i can do this all day': { kurdish: 'دەتوانم هەموو ڕۆژەکە بەردەوام بم', context: 'Captain America / Marvel', alternatives: ['تەواو نابم و بەردەوام دەبم'] },
     'with great power comes great responsibility': { kurdish: 'دەسەڵاتی گەورە بەرپرسیارێتی گەورەی لەگەڵدایە', context: 'Spider-Man / Cinema Icon' },
+    'friendly neighborhood spider-man': { kurdish: 'سپایدەرمانی دۆستی گەڕەکەکەتان', context: 'Spider-Man / Marvel' },
+    'spider-sense is tingling': { kurdish: 'هەستی جاڵجاڵۆکەییم دەلەرێتەوە!', context: 'Spider-Man / Marvel' },
     'wakanda forever': { kurdish: 'واکاندا بۆ هەتاهەتایە', context: 'Black Panther / Marvel' },
     'say hello to my little friend': { kurdish: 'سڵاو لە هاوڕێ بچووکەکەم بکە', context: 'Scarface / Action Icon' },
     'shaken not stirred': { kurdish: 'تەکێنراو نەک شڵەقێنراو', context: '007 / Cinema Icon' },
@@ -540,6 +709,66 @@ const TranslatorDict = (() => {
     'never surrender': { kurdish: 'هەرگیز خۆت بەدەستەوە مەدە', context: 'Action Heroic' },
     'against all odds': { kurdish: 'سەرەڕای هەموو ئاستەنگەکان', context: 'Cinema Drama' },
     'do or die': { kurdish: 'یان بردنەوە یان لەناوچوون', context: 'Action / Battle' },
+
+    // Additional Rich Anime Universes, Quotes & Speech Lines
+    'my soldiers rage my soldiers scream my soldiers fight': { kurdish: 'سەربازەکانم تووڕە دەبن! سەربازەکانم هاوار دەکەن! سەربازەکانم دەجەنگن!', context: 'Attack on Titan / Erwin Smith Charge Speech' },
+    'if you win you live if you lose you die': { kurdish: 'ئەگەر ببیەیتەوە دەژیت، ئەگەر بدۆڕێیت دەمریت، ئەگەر شەڕ نەکەیت ناتوانیت سەربکەویت!', context: 'Attack on Titan / Eren Yeager' },
+    'the world is a cruel place and yet so beautiful': { kurdish: 'ئەم جیهانە شوێنێکی بێبەزەییە بەڵام هێشتا زۆر جوانە', context: 'Attack on Titan / Mikasa Ackerman' },
+    'i am the hope of the universe': { kurdish: 'من هیوای گەردوونم! من پارێزەری بێتاوانەکانم!', context: 'Dragon Ball Z / Goku Super Saiyan Speech' },
+    'i am the prince of all saiyans': { kurdish: 'من شازادەی هەموو سایانەکانم!', context: 'Dragon Ball Z / Vegeta Pride' },
+    'special beam cannon': { kurdish: 'ماکۆسانپۆ (تۆپی تیشکی تایبەت)!', context: 'Dragon Ball Z / Piccolo' },
+    'dragon balls': { kurdish: 'تۆپەکانی ئەژدیها', context: 'Dragon Ball Lore' },
+    'chibaku tensei': { kurdish: 'چباکو تێنسێی (تەقینەوەی ڕاکێشانی زەوی و بەرد)!', context: 'Naruto Shippuden / Pain & Sasuke' },
+    'planetary devastation': { kurdish: 'تەقینەوەی هەسارەیی (چباکو تێنسێی)!', context: 'Naruto Shippuden / Pain' },
+    'edo tensei': { kurdish: 'ئێدۆ تێنسێی (زیندووکردنەوەی جیهانی مردووان)!', context: 'Naruto / Kabuto & Orochimaru' },
+    'reanimation jutsu': { kurdish: 'جوتسۆی زیندووکردنەوەی مردووان!', context: 'Naruto Lore' },
+    'sharingan': { kurdish: 'شارینگان (چاوی کۆپیکەر)!', context: 'Naruto / Uchiha Clan' },
+    'mangekyo sharingan': { kurdish: 'مانگێکۆ شارینگان (چاوی خەیاڵی تاریک)!', context: 'Naruto / Uchiha Clan' },
+    'rinnegan': { kurdish: 'ڕینێگان (چاوی خوداوەند)!', context: 'Naruto Lore' },
+    'byakugan': { kurdish: 'بیاکوگان (چاوی سپیی ڕوونبین)!', context: 'Naruto / Hyuga Clan' },
+    'sage mode': { kurdish: 'شێوازی حەکیم (سەیج مۆد)!', context: 'Naruto / Jiraiya & Naruto' },
+    'nine tails': { kurdish: 'نۆ کلکەکە (ڕێوی نۆ کلکی کوراما)', context: 'Naruto Lore' },
+    'kurama': { kurdish: 'کوراما (ڕێوی نۆ کلک)', context: 'Naruto' },
+    'hidden leaf village': { kurdish: 'گوندی کۆنۆها (گوندی گەڵای شاراوە)', context: 'Naruto Lore' },
+    'talk no jutsu': { kurdish: 'جوتسۆی قسەکردن و باوەڕپێهێنان!', context: 'Naruto Fan Lore' },
+    'santoryu': { kurdish: 'سانتۆریۆ (شێوازی سێ شمشێر)!', context: 'One Piece / Roronoa Zoro' },
+    'three sword style': { kurdish: 'شێوازی سێ شمشێرەکە!', context: 'One Piece / Zoro' },
+    'gomu gomu no pistol': { kurdish: 'دەمانچەی لاستیکی (گۆمو گۆمو نۆ پیستۆڵ)!', context: 'One Piece / Luffy' },
+    'gomu gomu no': { kurdish: 'گۆمو گۆمو نۆ!', context: 'One Piece / Luffy' },
+    'buster call': { kurdish: 'بانگەوازی لەناوبردنی باستەر کۆڵ!', context: 'One Piece / Navy' },
+    'will of d': { kurdish: 'ئیرادەی دی (هەڵگرانی نهێنی جیهان)', context: 'One Piece Lore' },
+    'yonko': { kurdish: 'یۆنکۆ (چوار ئیمپراتۆرەکەی دەریا)', context: 'One Piece Lore' },
+    'four emperors': { kurdish: 'چوار ئیمپراتۆرەکەی دەریا', context: 'One Piece Lore' },
+    'gorosei': { kurdish: 'گۆرۆسێی (پێنج داناکەی دەسەڵاتی جیهان)', context: 'One Piece Lore' },
+    'five elders': { kurdish: 'پێنج داناکەی جیهان', context: 'One Piece Lore' },
+    'my treasure is yours for the taking': { kurdish: 'گەنجینەکەم؟ ئەگەر دەتانەوێت بڕۆن بیدۆزنەوە، هەمووم لەوێ جێهێشتووە!', context: 'One Piece / Gol D. Roger Intro' },
+    'shikai': { kurdish: 'شیکای (ئاستی یەکەمی دەسەڵاتی شمشێر)', context: 'Bleach Lore' },
+    'soul society': { kurdish: 'سۆڵ سۆسایتی (جیهانی ڕۆحەکان)', context: 'Bleach Lore' },
+    'hueco mundo': { kurdish: 'هوێکۆ موندۆ (جیهانی هۆڵۆکان)', context: 'Bleach Lore' },
+    'espada': { kurdish: 'ئیسپادا (دە جەنگاوەرە باڵاکەی هۆڵۆ)', context: 'Bleach Lore' },
+    'gotei 13': { kurdish: 'سیانزە فەوجەکەی پارێزەرانی ڕۆح', context: 'Bleach Lore' },
+    'just as planned': { kurdish: 'هەروەک چۆن پلانم بۆ داڕشتبوو!', context: 'Death Note / Light Yagami Meme' },
+    'delete delete delete': { kurdish: 'سڕینەوە! سڕینەوە! سڕینەوە! (ساکوجۆ)', context: 'Death Note / Teru Mikami' },
+    'equivalent exchange': { kurdish: 'گۆڕینەوەی هاوتا (یاسای کیمیاگەری)', context: 'Fullmetal Alchemist Core Law' },
+    'human transmutation is taboo': { kurdish: 'گۆڕینی جەستەی مرۆڤ قەدەغەیە!', context: 'Fullmetal Alchemist' },
+    'philosopher stone': { kurdish: 'بەردی فەیلەسوفان (سەرچاوەی هێزی بێکۆتا)', context: 'Fullmetal Alchemist' },
+    "philosopher's stone": { kurdish: 'بەردی فەیلەسوفان', context: 'Fullmetal Alchemist' },
+    'fullmetal alchemist': { kurdish: 'کیمیایی ئاسنین (ئێدوارد ئێلریک)', context: 'Anime Title' },
+    'the only ones who should kill are those who are prepared to be killed': { kurdish: 'تەنها ئەوانە مافی کوشتنیان هەیە کە خۆیان ئامادەن بکوژرێن', context: 'Code Geass / Lelouch' },
+    'avatar state': { kurdish: 'باری ئەڤەتار (لوتکەی هێزی توخمەکان)!', context: 'Avatar The Last Airbender' },
+    'blood bending': { kurdish: 'کۆنتڕۆڵکردنی خوێن (بلەد بێندینگ)!', context: 'Avatar The Last Airbender' },
+    'metal bending': { kurdish: 'کۆنتڕۆڵکردنی ئاسن (مێتاڵ بێندینگ)!', context: 'Avatar The Last Airbender / Toph' },
+    'lightning redirection': { kurdish: 'ئاڕاستەکردنەوەی هەورەبرووسکە!', context: 'Avatar The Last Airbender / Iroh & Zuko' },
+    'flameo hotman': { kurdish: 'سڵاو پیاوی ئاگرین!', context: 'Avatar The Last Airbender / Aang' },
+    'more than meets the eye': { kurdish: 'زیاتر لەوەی بە چاو دەبینرێت!', context: 'Transformers Slogan' },
+    'secret formula': { kurdish: 'نهێنی دروستکردنی کڕابی پاتی', context: 'SpongeBob SquarePants' },
+    'krabby patty': { kurdish: 'بەرگری کڕابی پاتی', context: 'SpongeBob SquarePants' },
+    'bikini bottom': { kurdish: 'شاری بیکینی بۆتۆم', context: 'SpongeBob Lore' },
+    'four arms': { kurdish: 'چوار دەست (فۆر ئارمز)!', context: 'Ben 10 Alien' },
+    'heatblast': { kurdish: 'هیتبڵاست (گڕی بەتین)!', context: 'Ben 10 Alien' },
+    'xlr8': { kurdish: 'ئێکس ئێڵ ئاڕ هەشت (خێرای بەرق)!', context: 'Ben 10 Alien' },
+    'diamondhead': { kurdish: 'سەردایمۆند (دایمۆندهێد)!', context: 'Ben 10 Alien' },
+    'portal gun': { kurdish: 'دەمانچەی دەروازەیی بۆ جیهانەکان', context: 'Rick and Morty' },
   };
 
   /**
@@ -875,13 +1104,17 @@ const TranslatorDict = (() => {
     'dattebayo': 'باوەڕ بکە',
     'shannaro': 'یانزە بەڵێ',
     'jutsu': 'جوتسۆ',
+    'jutsus': 'جوتسۆکان',
     'chakra': 'چاکرا',
     'ki': 'کای',
     'nen': 'نین',
     'haki': 'هاکی',
     'titan': 'تایتان',
+    'titans': 'تایتانەکان',
     'ghoul': 'غوول',
+    'ghouls': 'غوولەکان',
     'saiyan': 'سایان',
+    'saiyans': 'سایانەکان',
     'nakama': 'هاوڕێی گیانی',
     'otaku': 'ئۆتاکۆ',
     'manga': 'مانگا',
@@ -889,6 +1122,41 @@ const TranslatorDict = (() => {
     'chibi': 'بچکۆلە',
     'senseis': 'مامۆستایان',
     'senpais': 'پێشەنگەکان',
+    'bankai': 'بانکای',
+    'rasengan': 'ڕاسێنگان',
+    'chidori': 'چیدۆری',
+    'amaterasu': 'ئاماتێراسو',
+    'tsukuyomi': 'تسوکویۆمی',
+    'kamui': 'کاموی',
+    'susanoo': 'سوزانۆ',
+    'omnitrix': 'ئۆمنیتێکس',
+    'autobot': 'ئۆتۆبۆت',
+    'autobots': 'ئۆتۆبۆتەکان',
+    'decepticon': 'دیسێپتیکۆن',
+    'decepticons': 'دیسێپتیکۆنەکان',
+    'pokemon': 'پۆکیمۆن',
+    'pikachu': 'پیکاچوو',
+    'shinobi': 'شینۆبی (نینجا)',
+    'ninja': 'نینجا',
+    'ninjas': 'نینجاکان',
+    'samurai': 'سامۆرای',
+    'samurais': 'سامۆرایەکان',
+    'shonen': 'شۆنێن',
+    'seinen': 'سێینێن',
+    'shojo': 'شۆجۆ',
+    'mecha': 'مێکا (ڕۆبۆتی زەبەلاح)',
+    'isekai': 'ئیسێکای (جیهانی تر)',
+    'waifu': 'وایفۆ',
+    'husbando': 'هاسباندۆ',
+    'tsundere': 'تسوندێرێ',
+    'yandere': 'یاندێرێ',
+    'kuudere': 'کودێرێ',
+    'dandere': 'داندێرێ',
+    'protagonist': 'پاڵەوانی سەرەکی',
+    'antagonist': 'دژەپاڵەوان',
+    'supervillain': 'خراپەکاری گەورە',
+    'superhero': 'سوپەر پاڵەوان',
+    'superheroes': 'سوپەر پاڵەوانەکان',
   };
 
   /**
@@ -926,83 +1194,82 @@ const TranslatorDict = (() => {
          .replace(/\b(?:j[-—–]+)+just\b/gi, 'تـ-تەنها')
          .replace(/\b(?:r[-—–]+)+really\b/gi, 'بـ-بەڕاست');
 
-    // Interrupted speech single-word cut-offs (e.g., "bu-" -> "بـ-", "wh-" -> "چـ-", "I-" -> "مـ-")
-    s = s.replace(/(^|[\s،؛؟.\n([{"'«])bu[-—–]+(?=[\s،؛؟.,!?:'")]|$)/gi, '$1بـ-')
-         .replace(/(^|[\s،؛؟.\n([{"'«])but[-—–]+(?=[\s،؛؟.,!?:'")]|$)/gi, '$1بەڵا-')
-         .replace(/(^|[\s،؛؟.\n([{"'«])wh[-—–]+(?=[\s،؛؟.,!?:'")]|$)/gi, '$1چـ-')
-         .replace(/(^|[\s،؛؟.\n([{"'«])wha[-—–]+(?=[\s،؛؟.,!?:'")]|$)/gi, '$1چی-')
+    // Interrupted speech single-word cut-offs (ordered by longer prefix first)
+    s = s.replace(/(^|[\s،؛؟.\n([{"'«])because[-—–]+(?=[\s،؛؟.,!?:'")]|$)/gi, '$1لەبـ-')
+         .replace(/(^|[\s،؛؟.\n([{"'«])bec[-—–]+(?=[\s،؛؟.,!?:'")]|$)/gi, '$1لەبـ-')
+         .replace(/(^|[\s،؛؟.\n([{"'«])impossible[-—–]+(?=[\s،؛؟.,!?:'")]|$)/gi, '$1مەحاڵە-')
+         .replace(/(^|[\s،؛؟.\n([{"'«])imp[-—–]+(?=[\s،؛؟.,!?:'")]|$)/gi, '$1مەحا-')
+         .replace(/(^|[\s،؛؟.\n([{"'«])always[-—–]+(?=[\s،؛؟.,!?:'")]|$)/gi, '$1هەمیـ-')
+         .replace(/(^|[\s،؛؟.\n([{"'«])alw[-—–]+(?=[\s،؛؟.,!?:'")]|$)/gi, '$1هەمیـ-')
+         .replace(/(^|[\s،؛؟.\n([{"'«])never[-—–]+(?=[\s،؛؟.,!?:'")]|$)/gi, '$1هەرگیـ-')
+         .replace(/(^|[\s،؛؟.\n([{"'«])nev[-—–]+(?=[\s،؛؟.,!?:'")]|$)/gi, '$1هەرگیـ-')
+         .replace(/(^|[\s،؛؟.\n([{"'«])really[-—–]+(?=[\s،؛؟.,!?:'")]|$)/gi, '$1بەڕاسـ-')
+         .replace(/(^|[\s،؛؟.\n([{"'«])rea[-—–]+(?=[\s،؛؟.,!?:'")]|$)/gi, '$1بەڕاسـ-')
+         .replace(/(^|[\s،؛؟.\n([{"'«])please[-—–]+(?=[\s،؛؟.,!?:'")]|$)/gi, '$1تکا-')
+         .replace(/(^|[\s،؛؟.\n([{"'«])ple[-—–]+(?=[\s،؛؟.,!?:'")]|$)/gi, '$1تکا-')
+         .replace(/(^|[\s،؛؟.\n([{"'«])pl[-—–]+(?=[\s،؛؟.,!?:'")]|$)/gi, '$1تـ-')
+         .replace(/(^|[\s،؛؟.\n([{"'«])sorry[-—–]+(?=[\s،؛؟.,!?:'")]|$)/gi, '$1ببوور-')
+         .replace(/(^|[\s،؛؟.\n([{"'«])sor[-—–]+(?=[\s،؛؟.,!?:'")]|$)/gi, '$1ببوور-')
+         .replace(/(^|[\s،؛؟.\n([{"'«])so[-—–]+(?=[\s،؛؟.,!?:'")]|$)/gi, '$1بـ-')
+         .replace(/(^|[\s،؛؟.\n([{"'«])listen[-—–]+(?=[\s،؛؟.,!?:'")]|$)/gi, '$1گوێبگـ-')
+         .replace(/(^|[\s،؛؟.\n([{"'«])lis[-—–]+(?=[\s،؛؟.,!?:'")]|$)/gi, '$1گوێبگـ-')
+         .replace(/(^|[\s،؛؟.\n([{"'«])look[-—–]+(?=[\s،؛؟.,!?:'")]|$)/gi, '$1سەیرکـ-')
+         .replace(/(^|[\s،؛؟.\n([{"'«])loo[-—–]+(?=[\s،؛؟.,!?:'")]|$)/gi, '$1سەیرکـ-')
+         .replace(/(^|[\s،؛؟.\n([{"'«])think[-—–]+(?=[\s،؛؟.,!?:'")]|$)/gi, '$1پێموابوو-')
+         .replace(/(^|[\s،؛؟.\n([{"'«])thi[-—–]+(?=[\s،؛؟.,!?:'")]|$)/gi, '$1پێموابوو-')
+         .replace(/(^|[\s،؛؟.\n([{"'«])just[-—–]+(?=[\s،؛؟.,!?:'")]|$)/gi, '$1تەنها-')
+         .replace(/(^|[\s،؛؟.\n([{"'«])jus[-—–]+(?=[\s،؛؟.,!?:'")]|$)/gi, '$1تەنها-')
+         .replace(/(^|[\s،؛؟.\n([{"'«])baka[-—–]+(?=[\s،؛؟.,!?:'")]|$)/gi, '$1گێژ-')
+         .replace(/(^|[\s،؛؟.\n([{"'«])bak[-—–]+(?=[\s،؛؟.,!?:'")]|$)/gi, '$1گێـ-')
+         .replace(/(^|[\s،؛؟.\n([{"'«])damn[-—–]+(?=[\s،؛؟.,!?:'")]|$)/gi, '$1نەفرەت-')
+         .replace(/(^|[\s،؛؟.\n([{"'«])dam[-—–]+(?=[\s،؛؟.,!?:'")]|$)/gi, '$1نەفـ-')
+         .replace(/(^|[\s،؛؟.\n([{"'«])know[-—–]+(?=[\s،؛؟.,!?:'")]|$)/gi, '$1نازانـ-')
+         .replace(/(^|[\s،؛؟.\n([{"'«])kno[-—–]+(?=[\s،؛؟.,!?:'")]|$)/gi, '$1نازانـ-')
+         .replace(/(^|[\s،؛؟.\n([{"'«])wait[-—–]+(?=[\s،؛؟.,!?:'")]|$)/gi, '$1بۆسـ-')
+         .replace(/(^|[\s،؛؟.\n([{"'«])wai[-—–]+(?=[\s،؛؟.,!?:'")]|$)/gi, '$1بۆسـ-')
+         .replace(/(^|[\s،؛؟.\n([{"'«])wa[-—–]+(?=[\s،؛؟.,!?:'")]|$)/gi, '$1بۆسـ-')
+         .replace(/(^|[\s،؛؟.\n([{"'«])stop[-—–]+(?=[\s،؛؟.,!?:'")]|$)/gi, '$1بوەسـ-')
+         .replace(/(^|[\s،؛؟.\n([{"'«])st[-—–]+(?=[\s،؛؟.,!?:'")]|$)/gi, '$1بوەسـ-')
+         .replace(/(^|[\s،؛؟.\n([{"'«])help[-—–]+(?=[\s،؛؟.,!?:'")]|$)/gi, '$1یارمەتـ-')
+         .replace(/(^|[\s،؛؟.\n([{"'«])hel[-—–]+(?=[\s،؛؟.,!?:'")]|$)/gi, '$1یارمەتـ-')
+         .replace(/(^|[\s،؛؟.\n([{"'«])tell[-—–]+(?=[\s،؛؟.,!?:'")]|$)/gi, '$1پێمبڵـ-')
+         .replace(/(^|[\s،؛؟.\n([{"'«])tel[-—–]+(?=[\s،؛؟.,!?:'")]|$)/gi, '$1پێمبڵـ-')
+         .replace(/(^|[\s،؛؟.\n([{"'«])come[-—–]+(?=[\s،؛؟.,!?:'")]|$)/gi, '$1وەر-')
+         .replace(/(^|[\s،؛؟.\n([{"'«])com[-—–]+(?=[\s،؛؟.,!?:'")]|$)/gi, '$1وەر-')
          .replace(/(^|[\s،؛؟.\n([{"'«])what[-—–]+(?=[\s،؛؟.,!?:'")]|$)/gi, '$1چی-')
+         .replace(/(^|[\s،؛؟.\n([{"'«])wha[-—–]+(?=[\s،؛؟.,!?:'")]|$)/gi, '$1چی-')
+         .replace(/(^|[\s،؛؟.\n([{"'«])wh[-—–]+(?=[\s،؛؟.,!?:'")]|$)/gi, '$1چـ-')
          .replace(/(^|[\s،؛؟.\n([{"'«])why[-—–]+(?=[\s،؛؟.,!?:'")]|$)/gi, '$1بۆ-')
-         .replace(/(^|[\s،؛؟.\n([{"'«])how[-—–]+(?=[\s،؛؟.,!?:'")]|$)/gi, '$1چۆ-')
          .replace(/(^|[\s،؛؟.\n([{"'«])who[-—–]+(?=[\s،؛؟.,!?:'")]|$)/gi, '$1کێ-')
          .replace(/(^|[\s،؛؟.\n([{"'«])where[-—–]+(?=[\s،؛؟.,!?:'")]|$)/gi, '$1لەکوێ-')
-         .replace(/(^|[\s،؛؟.\n([{"'«])when[-—–]+(?=[\s،؛؟.,!?:'")]|$)/gi, '$1کەی-')
-         .replace(/(^|[\s،؛؟.\n([{"'«])wa[-—–]+(?=[\s،؛؟.,!?:'")]|$)/gi, '$1بۆسـ-')
-         .replace(/(^|[\s،؛؟.\n([{"'«])wai[-—–]+(?=[\s،؛؟.,!?:'")]|$)/gi, '$1بۆسـ-')
-         .replace(/(^|[\s،؛؟.\n([{"'«])wait[-—–]+(?=[\s،؛؟.,!?:'")]|$)/gi, '$1بۆسـ-')
-         .replace(/(^|[\s،؛؟.\n([{"'«])st[-—–]+(?=[\s،؛؟.,!?:'")]|$)/gi, '$1بوەسـ-')
-         .replace(/(^|[\s،؛؟.\n([{"'«])stop[-—–]+(?=[\s،؛؟.,!?:'")]|$)/gi, '$1بوەسـ-')
-         .replace(/(^|[\s،؛؟.\n([{"'«])no[-—–]+(?=[\s،؛؟.,!?:'")]|$)/gi, '$1نـ-')
-         .replace(/(^|[\s،؛؟.\n([{"'«])ye[-—–]+(?=[\s،؛؟.,!?:'")]|$)/gi, '$1بـ-')
-         .replace(/(^|[\s،؛؟.\n([{"'«])yes[-—–]+(?=[\s،؛؟.,!?:'")]|$)/gi, '$1بەڵێ-')
-         .replace(/(^|[\s،؛؟.\n([{"'«])i[-—–]+(?=[\s،؛؟.,!?:'")]|$)/gi, '$1مـ-')
-         .replace(/(^|[\s،؛؟.\n([{"'«])yo[-—–]+(?=[\s،؛؟.,!?:'")]|$)/gi, '$1تـ-')
-         .replace(/(^|[\s،؛؟.\n([{"'«])you[-—–]+(?=[\s،؛؟.,!?:'")]|$)/gi, '$1تـ-')
-         .replace(/(^|[\s،؛؟.\n([{"'«])she[-—–]+(?=[\s،؛؟.,!?:'")]|$)/gi, '$1ئەو-')
-         .replace(/(^|[\s،؛؟.\n([{"'«])he[-—–]+(?=[\s،؛؟.,!?:'")]|$)/gi, '$1ئەو-')
-         .replace(/(^|[\s،؛؟.\n([{"'«])it[-—–]+(?=[\s،؛؟.,!?:'")]|$)/gi, '$1ئەوە-')
-         .replace(/(^|[\s،؛؟.\n([{"'«])th[-—–]+(?=[\s،؛؟.,!?:'")]|$)/gi, '$1ئە-')
-         .replace(/(^|[\s،؛؟.\n([{"'«])the[-—–]+(?=[\s،؛؟.,!?:'")]|$)/gi, '$1ئە-')
+         .replace(/(^|[\s.,؛؟.\n([{"'«])when[-—–]+(?=[\s،؛؟.,!?:'")]|$)/gi, '$1کەی-')
+         .replace(/(^|[\s،؛؟.\n([{"'«])how[-—–]+(?=[\s،؛؟.,!?:'")]|$)/gi, '$1چۆ-')
+         .replace(/(^|[\s،؛؟.\n([{"'«])but[-—–]+(?=[\s،؛؟.,!?:'")]|$)/gi, '$1بەڵا-')
+         .replace(/(^|[\s،؛؟.\n([{"'«])bu[-—–]+(?=[\s،؛؟.,!?:'")]|$)/gi, '$1بـ-')
          .replace(/(^|[\s،؛؟.\n([{"'«])they[-—–]+(?=[\s،؛؟.,!?:'")]|$)/gi, '$1ئەوان-')
          .replace(/(^|[\s،؛؟.\n([{"'«])this[-—–]+(?=[\s،؛؟.,!?:'")]|$)/gi, '$1ئەمە-')
          .replace(/(^|[\s،؛؟.\n([{"'«])that[-—–]+(?=[\s،؛؟.,!?:'")]|$)/gi, '$1ئەوە-')
-         .replace(/(^|[\s،؛؟.\n([{"'«])do[-—–]+(?=[\s،؛؟.,!?:'")]|$)/gi, '$1مـ-')
-         .replace(/(^|[\s،؛؟.\n([{"'«])don['’]?t[-—–]+(?=[\s،؛؟.,!?:'")]|$)/gi, '$1مەکە-')
-         .replace(/(^|[\s،؛؟.\n([{"'«])ca[-—–]+(?=[\s،؛؟.,!?:'")]|$)/gi, '$1نا-')
-         .replace(/(^|[\s،؛؟.\n([{"'«])can[-—–]+(?=[\s،؛؟.,!?:'")]|$)/gi, '$1دەتوانـ-')
+         .replace(/(^|[\s،؛؟.\n([{"'«])the[-—–]+(?=[\s،؛؟.,!?:'")]|$)/gi, '$1ئە-')
+         .replace(/(^|[\s،؛؟.\n([{"'«])th[-—–]+(?=[\s،؛؟.,!?:'")]|$)/gi, '$1ئە-')
+         .replace(/(^|[\s،؛؟.\n([{"'«])she[-—–]+(?=[\s،؛؟.,!?:'")]|$)/gi, '$1ئەو-')
+         .replace(/(^|[\s،؛؟.\n([{"'«])he[-—–]+(?=[\s،؛؟.,!?:'")]|$)/gi, '$1ئەو-')
+         .replace(/(^|[\s،؛؟.\n([{"'«])it[-—–]+(?=[\s،؛؟.,!?:'")]|$)/gi, '$1ئەوە-')
+         .replace(/(^|[\s،؛؟.\n([{"'«])you[-—–]+(?=[\s،؛؟.,!?:'")]|$)/gi, '$1تـ-')
+         .replace(/(^|[\s،؛؟.\n([{"'«])yo[-—–]+(?=[\s،؛؟.,!?:'")]|$)/gi, '$1تـ-')
+         .replace(/(^|[\s،؛؟.\n([{"'«])yes[-—–]+(?=[\s،؛؟.,!?:'")]|$)/gi, '$1بەڵێ-')
+         .replace(/(^|[\s،؛؟.\n([{"'«])ye[-—–]+(?=[\s،؛؟.,!?:'")]|$)/gi, '$1بـ-')
+         .replace(/(^|[\s،؛؟.\n([{"'«])no[-—–]+(?=[\s،؛؟.,!?:'")]|$)/gi, '$1نـ-')
+         .replace(/(^|[\s،؛؟.\n([{"'«])i[-—–]+(?=[\s،؛؟.,!?:'")]|$)/gi, '$1مـ-')
          .replace(/(^|[\s،؛؟.\n([{"'«])can['’]?t[-—–]+(?=[\s،؛؟.,!?:'")]|$)/gi, '$1ناتوانـ-')
-         .replace(/(^|[\s،؛؟.\n([{"'«])pl[-—–]+(?=[\s،؛؟.,!?:'")]|$)/gi, '$1تـ-')
-         .replace(/(^|[\s،؛؟.\n([{"'«])ple[-—–]+(?=[\s،؛؟.,!?:'")]|$)/gi, '$1تکا-')
-         .replace(/(^|[\s،؛؟.\n([{"'«])please[-—–]+(?=[\s،؛؟.,!?:'")]|$)/gi, '$1تکا-')
-         .replace(/(^|[\s،؛؟.\n([{"'«])so[-—–]+(?=[\s،؛؟.,!?:'")]|$)/gi, '$1بـ-')
-         .replace(/(^|[\s،؛؟.\n([{"'«])sor[-—–]+(?=[\s،؛؟.,!?:'")]|$)/gi, '$1ببوور-')
-         .replace(/(^|[\s،؛؟.\n([{"'«])sorry[-—–]+(?=[\s،؛؟.,!?:'")]|$)/gi, '$1ببوور-')
-         .replace(/(^|[\s،؛؟.\n([{"'«])he[-—–]+(?=[\s،؛؟.,!?:'")]|$)/gi, '$1یـ-')
-         .replace(/(^|[\s،؛؟.\n([{"'«])hel[-—–]+(?=[\s،؛؟.,!?:'")]|$)/gi, '$1یارمەتـ-')
-         .replace(/(^|[\s،؛؟.\n([{"'«])help[-—–]+(?=[\s،؛؟.,!?:'")]|$)/gi, '$1یارمەتـ-')
-         .replace(/(^|[\s،؛؟.\n([{"'«])loo[-—–]+(?=[\s،؛؟.,!?:'")]|$)/gi, '$1سەیرکـ-')
-         .replace(/(^|[\s،؛؟.\n([{"'«])look[-—–]+(?=[\s،؛؟.,!?:'")]|$)/gi, '$1سەیرکـ-')
-         .replace(/(^|[\s،؛؟.\n([{"'«])lis[-—–]+(?=[\s،؛؟.,!?:'")]|$)/gi, '$1گوێبگـ-')
-         .replace(/(^|[\s،؛؟.\n([{"'«])listen[-—–]+(?=[\s،؛؟.,!?:'")]|$)/gi, '$1گوێبگـ-')
-         .replace(/(^|[\s،؛؟.\n([{"'«])bec[-—–]+(?=[\s،؛؟.,!?:'")]|$)/gi, '$1لەبـ-')
-         .replace(/(^|[\s،؛؟.\n([{"'«])because[-—–]+(?=[\s،؛؟.,!?:'")]|$)/gi, '$1لەبـ-')
-         .replace(/(^|[\s،؛؟.\n([{"'«])nev[-—–]+(?=[\s،؛؟.,!?:'")]|$)/gi, '$1هەرگیـ-')
-         .replace(/(^|[\s،؛؟.\n([{"'«])never[-—–]+(?=[\s،؛؟.,!?:'")]|$)/gi, '$1هەرگیـ-')
-         .replace(/(^|[\s،؛؟.\n([{"'«])alw[-—–]+(?=[\s،؛؟.,!?:'")]|$)/gi, '$1هەمیـ-')
-         .replace(/(^|[\s،؛؟.\n([{"'«])always[-—–]+(?=[\s،؛؟.,!?:'")]|$)/gi, '$1هەمیـ-')
-         .replace(/(^|[\s،؛؟.\n([{"'«])imp[-—–]+(?=[\s،؛؟.,!?:'")]|$)/gi, '$1مەحا-')
-         .replace(/(^|[\s،؛؟.\n([{"'«])impossible[-—–]+(?=[\s،؛؟.,!?:'")]|$)/gi, '$1مەحاڵە-')
-         .replace(/(^|[\s،؛؟.\n([{"'«])bak[-—–]+(?=[\s،؛؟.,!?:'")]|$)/gi, '$1گێـ-')
-         .replace(/(^|[\s،؛؟.\n([{"'«])baka[-—–]+(?=[\s،؛؟.,!?:'")]|$)/gi, '$1گێژ-')
-         .replace(/(^|[\s،؛؟.\n([{"'«])dam[-—–]+(?=[\s،؛؟.,!?:'")]|$)/gi, '$1نەفـ-')
-         .replace(/(^|[\s،؛؟.\n([{"'«])damn[-—–]+(?=[\s،؛؟.,!?:'")]|$)/gi, '$1نەفرەت-')
-         .replace(/(^|[\s،؛؟.\n([{"'«])kno[-—–]+(?=[\s،؛؟.,!?:'")]|$)/gi, '$1نازانـ-')
-         .replace(/(^|[\s،؛؟.\n([{"'«])know[-—–]+(?=[\s،؛؟.,!?:'")]|$)/gi, '$1نازانـ-')
-         .replace(/(^|[\s،؛؟.\n([{"'«])thi[-—–]+(?=[\s،؛؟.,!?:'")]|$)/gi, '$1پێموابوو-')
-         .replace(/(^|[\s،؛؟.\n([{"'«])think[-—–]+(?=[\s،؛؟.,!?:'")]|$)/gi, '$1پێموابوو-')
-         .replace(/(^|[\s،؛؟.\n([{"'«])jus[-—–]+(?=[\s،؛؟.,!?:'")]|$)/gi, '$1تەنها-')
-         .replace(/(^|[\s،؛؟.\n([{"'«])just[-—–]+(?=[\s،؛؟.,!?:'")]|$)/gi, '$1تەنها-')
-         .replace(/(^|[\s،؛؟.\n([{"'«])rea[-—–]+(?=[\s،؛؟.,!?:'")]|$)/gi, '$1بەڕاسـ-')
-         .replace(/(^|[\s،؛؟.\n([{"'«])really[-—–]+(?=[\s،؛؟.,!?:'")]|$)/gi, '$1بەڕاسـ-')
+         .replace(/(^|[\s،؛؟.\n([{"'«])can[-—–]+(?=[\s،؛؟.,!?:'")]|$)/gi, '$1دەتوانـ-')
+         .replace(/(^|[\s،؛؟.\n([{"'«])ca[-—–]+(?=[\s،؛؟.,!?:'")]|$)/gi, '$1نا-')
+         .replace(/(^|[\s،؛؟.\n([{"'«])don['’]?t[-—–]+(?=[\s،؛؟.,!?:'")]|$)/gi, '$1مەکە-')
+         .replace(/(^|[\s،؛؟.\n([{"'«])do[-—–]+(?=[\s،؛؟.,!?:'")]|$)/gi, '$1مـ-')
          .replace(/(^|[\s،؛؟.\n([{"'«])run[-—–]+(?=[\s،؛؟.,!?:'")]|$)/gi, '$1ڕابکـ-')
          .replace(/(^|[\s،؛؟.\n([{"'«])kill[-—–]+(?=[\s،؛؟.,!?:'")]|$)/gi, '$1بکوژ-')
          .replace(/(^|[\s،؛؟.\n([{"'«])die[-—–]+(?=[\s،؛؟.,!?:'")]|$)/gi, '$1بمر-')
          .replace(/(^|[\s،؛؟.\n([{"'«])live[-—–]+(?=[\s،؛؟.,!?:'")]|$)/gi, '$1بژی-')
-         .replace(/(^|[\s،؛؟.\n([{"'«])com[-—–]+(?=[\s،؛؟.,!?:'")]|$)/gi, '$1وەر-')
-         .replace(/(^|[\s،؛؟.\n([{"'«])come[-—–]+(?=[\s،؛؟.,!?:'")]|$)/gi, '$1وەر-')
-         .replace(/(^|[\s،؛؟.\n([{"'«])go[-—–]+(?=[\s،؛؟.,!?:'")]|$)/gi, '$1بڕۆ-')
-         .replace(/(^|[\s،؛؟.\n([{"'«])tel[-—–]+(?=[\s،؛؟.,!?:'")]|$)/gi, '$1پێمبڵـ-')
-         .replace(/(^|[\s،؛؟.\n([{"'«])tell[-—–]+(?=[\s،؛؟.,!?:'")]|$)/gi, '$1پێمبڵـ-');
+         .replace(/(^|[\s،؛؟.\n([{"'«])go[-—–]+(?=[\s،؛؟.,!?:'")]|$)/gi, '$1بڕۆ-');
 
     // Kurdish cut-off words ending with hyphen (preserve clean attachment without disconnected spaces)
     s = s.replace(/([\u0600-\u06ff]+)\s+[-—–]+(?=\s|$|[.,!?;:،؛؟])/g, '$1-');

@@ -1053,12 +1053,27 @@
   <div class="refresh-menu-wrap bottom-floating" id="refreshMenuWrap">
     <div class="refresh-dropdown hidden" id="refreshDropdown" role="menu" aria-label="Refresh options">
       <div class="refresh-menu-header">
-        <span class="menu-ver-tag" id="currentVerTag">v96</span>
-        <span class="menu-status-txt" id="refreshStatusTxt" data-i18n="appUpToDate">App up to date</span>
+        <div class="header-status-badge">
+          <span class="live-dot online" id="refreshLiveDot" title="Network status"></span>
+          <span class="menu-ver-tag" id="currentVerTag">v96</span>
+        </div>
+        <div class="header-status-meta">
+          <span class="menu-status-txt" id="refreshStatusTxt" data-i18n="appUpToDate">App up to date</span>
+          <span class="menu-time-txt" id="refreshTimeTxt">Just now</span>
+        </div>
+      </div>
+      <div class="refresh-network-strip" id="refreshNetworkStrip">
+        <div class="network-metric">
+          <span class="metric-label" data-i18n="apiPing">API Response</span>
+          <span class="metric-val" id="apiLatencyVal">-- ms</span>
+        </div>
+        <div class="network-status-badge" id="networkStatusBadge">
+          <span class="badge-text" id="networkStatusText" data-i18n="netOnline">Online &amp; Synced</span>
+        </div>
       </div>
       <div class="refresh-menu-items">
         <button class="refresh-item" id="btnQuickRefresh" role="menuitem">
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <path d="M23 4v6h-6"></path>
             <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"></path>
           </svg>
@@ -1067,17 +1082,8 @@
             <span data-i18n="quickRefreshSub">Reload app &amp; check updates</span>
           </div>
         </button>
-        <button class="refresh-item force-item" id="btnForceRefresh" role="menuitem">
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"></path>
-          </svg>
-          <div class="item-text">
-            <strong data-i18n="forceRefresh">Force Refresh</strong>
-            <span data-i18n="forceRefreshSub">Purge cache &amp; hard reload</span>
-          </div>
-        </button>
         <button class="refresh-item" id="btnCheckUpdate" role="menuitem">
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <circle cx="12" cy="12" r="10"></circle>
             <path d="M12 8v4M12 16h.01"></path>
           </svg>
@@ -1086,14 +1092,51 @@
             <span data-i18n="checkUpdateSub">Scan server for new version</span>
           </div>
         </button>
+        <button class="refresh-item changelog-item" id="btnToggleChangelog" role="menuitem" aria-expanded="false">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+            <polyline points="14 2 14 8 20 8"></polyline>
+            <line x1="16" y1="13" x2="8" y2="13"></line>
+            <line x1="16" y1="17" x2="8" y2="17"></line>
+            <polyline points="10 9 9 9 8 9"></polyline>
+          </svg>
+          <div class="item-text">
+            <strong data-i18n="whatsNew">What's New in v96</strong>
+            <span data-i18n="whatsNewSub">View latest improvements</span>
+          </div>
+        </button>
+        <div class="changelog-panel hidden" id="changelogPanel">
+          <div class="changelog-badge-row">
+            <span class="changelog-ver">Release v96</span>
+            <span class="changelog-date">August 2026</span>
+          </div>
+          <ul class="changelog-list">
+            <li>⚡ <strong>Multi-API Failover:</strong> Recursive sub-batch halving &amp; secondary Google /t endpoint redundancy.</li>
+            <li>🎬 <strong>100+ Anime &amp; Action Tropes:</strong> Smart localization for battle shouts, vows, stutters, and slangs.</li>
+            <li>🗣️ <strong>Dialogue Cut-Offs:</strong> Natural Kurdish Sorani hyphen-connectors for stutters and interruptions.</li>
+            <li>🛡️ <strong>Kurdish Quality Inspector:</strong> 1-click automated typography and orthography repair.</li>
+            <li>🚀 <strong>Offline PWA Engine:</strong> Ultra-fast app shell caching and instant auto-update synchronization.</li>
+          </ul>
+        </div>
+        <button class="refresh-item force-item" id="btnForceRefresh" role="menuitem">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"></path>
+          </svg>
+          <div class="item-text">
+            <strong data-i18n="forceRefresh">Force Refresh &amp; Purge</strong>
+            <span data-i18n="forceRefreshSub">Purge cache &amp; hard reload</span>
+          </div>
+        </button>
       </div>
     </div>
     <button class="refresh-pill-btn" id="refreshBtn" data-i18n-title="refreshTitle" title="Refresh Application / نوێکردنەوە" aria-label="Refresh application" aria-haspopup="true" aria-expanded="false">
+      <div class="refresh-btn-glow"></div>
       <svg class="refresh-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
         <path d="M23 4v6h-6"></path>
         <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"></path>
       </svg>
       <span class="btn-lbl" data-i18n="refresh">Refresh</span>
+      <span class="refresh-pulse-ring"></span>
       <span class="update-badge-dot hidden" id="updateBadgeDot" title="New update available!"></span>
     </button>
   </div>

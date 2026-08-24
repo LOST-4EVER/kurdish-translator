@@ -1,12 +1,13 @@
 /**
- * app-version.js — PWA lifecycle, cache management, update detection, and refresh controls.
+ * app-version.js — PWA lifecycle, cache management, update detection, latency diagnostics, and refresh controls.
  * Exposes AppVersion as a global module.
  */
 const AppVersion = (() => {
-  const APP_VERSION = 'v95';
+  const APP_VERSION = 'v96';
   let isRefreshing = false;
   let hasShownUpdateNotice = false;
-  let updateBannerTimeout = null;
+  let lastCheckedTimestamp = Date.now();
+  let timeTickerInterval = null;
 
   function getElements() {
     return {
@@ -15,10 +16,17 @@ const AppVersion = (() => {
       refreshBtn: document.getElementById('refreshBtn'),
       refreshMenu: document.getElementById('refreshMenu') || document.getElementById('refreshDropdown'),
       refreshStatusTxt: document.getElementById('refreshStatusTxt'),
+      refreshTimeTxt: document.getElementById('refreshTimeTxt'),
+      refreshLiveDot: document.getElementById('refreshLiveDot'),
+      apiLatencyVal: document.getElementById('apiLatencyVal'),
+      networkStatusBadge: document.getElementById('networkStatusBadge'),
+      networkStatusText: document.getElementById('networkStatusText'),
       updateBadgeDot: document.getElementById('updateBadgeDot'),
       btnQuickRefresh: document.getElementById('btnQuickRefresh'),
       btnForceRefresh: document.getElementById('btnForceRefresh'),
       btnCheckUpdate: document.getElementById('btnCheckUpdate'),
+      btnToggleChangelog: document.getElementById('btnToggleChangelog'),
+      changelogPanel: document.getElementById('changelogPanel'),
       updateBanner: document.getElementById('updateBanner'),
       bannerVerTag: document.getElementById('bannerVerTag'),
       bannerRefreshBtn: document.getElementById('bannerRefreshBtn'),
@@ -42,8 +50,81 @@ const AppVersion = (() => {
     if (els.currentVerTag) els.currentVerTag.textContent = APP_VERSION;
     if (els.menuVerNum) els.menuVerNum.textContent = APP_VERSION;
 
+    updateNetworkStatus();
+    window.addEventListener('online', updateNetworkStatus);
+    window.addEventListener('offline', updateNetworkStatus);
+
+    startTimeTicker();
+    measureLatency();
     registerSW();
     bindRefreshControls();
+  }
+
+  function startTimeTicker() {
+    if (timeTickerInterval) clearInterval(timeTickerInterval);
+    timeTickerInterval = setInterval(() => {
+      const els = getElements();
+      if (!els.refreshTimeTxt) return;
+      const sec = Math.floor((Date.now() - lastCheckedTimestamp) / 1000);
+      if (sec < 10) {
+        els.refreshTimeTxt.textContent = getI18nText('justNow', 'Just now');
+      } else if (sec < 60) {
+        els.refreshTimeTxt.textContent = `${sec}s ago`;
+      } else {
+        const min = Math.floor(sec / 60);
+        els.refreshTimeTxt.textContent = `${min}m ago`;
+      }
+    }, 5000);
+  }
+
+  function updateNetworkStatus() {
+    const els = getElements();
+    const isOnline = navigator.onLine;
+
+    if (els.refreshLiveDot) {
+      els.refreshLiveDot.className = 'live-dot ' + (isOnline ? 'online' : 'offline');
+    }
+    if (els.networkStatusText) {
+      els.networkStatusText.textContent = isOnline
+        ? getI18nText('netOnline', 'Online & Synced')
+        : getI18nText('netOffline', 'Offline (Cached Shell)');
+    }
+    if (els.networkStatusBadge) {
+      els.networkStatusBadge.style.color = isOnline ? '#34d399' : '#94a3b8';
+    }
+  }
+
+  /**
+   * Measure latency to Google Translate endpoint or fallback.
+   */
+  async function measureLatency() {
+    const els = getElements();
+    if (!navigator.onLine) {
+      if (els.apiLatencyVal) els.apiLatencyVal.textContent = 'Offline';
+      return;
+    }
+
+    const t0 = performance.now();
+    try {
+      const ctrl = new AbortController();
+      const tid = setTimeout(() => ctrl.abort(), 4000);
+      const res = await fetch('https://translate.googleapis.com/translate_a/single?client=gtx&sl=en&tl=ckb&dt=t&q=hi', {
+        method: 'GET',
+        cache: 'no-store',
+        signal: ctrl.signal,
+      });
+      clearTimeout(tid);
+      const elapsed = Math.round(performance.now() - t0);
+      if (els.apiLatencyVal) {
+        els.apiLatencyVal.textContent = `${elapsed} ms`;
+        els.apiLatencyVal.style.color = elapsed < 350 ? '#34d399' : (elapsed < 800 ? '#fbbf24' : '#fb7185');
+      }
+    } catch {
+      if (els.apiLatencyVal) {
+        els.apiLatencyVal.textContent = 'Ready (PWA)';
+        els.apiLatencyVal.style.color = '#38bdf8';
+      }
+    }
   }
 
   /**
@@ -81,6 +162,7 @@ const AppVersion = (() => {
           // Check on window focus and periodically
           window.addEventListener('focus', () => {
             reg.update().catch(() => {});
+            measureLatency();
           });
 
           setInterval(() => {
@@ -98,14 +180,15 @@ const AppVersion = (() => {
    */
   function showUpdateAvailable(reg, newVerStr) {
     const els = getElements();
-    const verDisplay = newVerStr || 'v92+';
+    const verDisplay = newVerStr || 'v96+';
 
     if (els.updateBadgeDot) els.updateBadgeDot.classList.remove('hidden');
+    if (els.refreshBtn) els.refreshBtn.classList.add('has-update');
     if (els.bannerVerTag) els.bannerVerTag.textContent = verDisplay;
 
     if (els.refreshStatusTxt) {
       els.refreshStatusTxt.textContent = `${getI18nText('newVersionAvailable', 'New version available')} (${verDisplay})`;
-      els.refreshStatusTxt.style.color = 'var(--accent-glow, #3b82f6)';
+      els.refreshStatusTxt.style.color = '#f43f5e';
     }
 
     if (els.updateBanner && !hasShownUpdateNotice) {
@@ -119,6 +202,13 @@ const AppVersion = (() => {
    */
   async function checkForAppUpdates(manual = false) {
     const els = getElements();
+    lastCheckedTimestamp = Date.now();
+    if (els.refreshTimeTxt) els.refreshTimeTxt.textContent = getI18nText('justNow', 'Just now');
+
+    if (els.refreshLiveDot) {
+      els.refreshLiveDot.className = 'live-dot checking';
+    }
+
     if (manual) {
       if (typeof Toast !== 'undefined') {
         Toast.show(getI18nText('checkingForUpdates', 'Checking for updates...'), 'info', 2000);
@@ -127,6 +217,8 @@ const AppVersion = (() => {
         els.refreshStatusTxt.textContent = getI18nText('checkingForUpdates', 'Checking for updates...');
       }
     }
+
+    measureLatency();
 
     try {
       if ('serviceWorker' in navigator) {
@@ -160,6 +252,10 @@ const AppVersion = (() => {
         }
       }
 
+      if (els.refreshLiveDot) {
+        els.refreshLiveDot.className = 'live-dot ' + (navigator.onLine ? 'online' : 'offline');
+      }
+
       if (foundNew) {
         showUpdateAvailable(null, serverVer);
         if (manual && typeof Toast !== 'undefined') {
@@ -175,6 +271,9 @@ const AppVersion = (() => {
         }
       }
     } catch (e) {
+      if (els.refreshLiveDot) {
+        els.refreshLiveDot.className = 'live-dot ' + (navigator.onLine ? 'online' : 'offline');
+      }
       if (manual && typeof Toast !== 'undefined') {
         Toast.show(getI18nText('checkFailed', 'Update check failed. Working offline?'), 'warning', 3000);
       }
@@ -254,6 +353,7 @@ const AppVersion = (() => {
         } else {
           els.refreshMenu.classList.remove('hidden');
           els.refreshBtn.setAttribute('aria-expanded', 'true');
+          measureLatency();
         }
       });
 
@@ -283,8 +383,20 @@ const AppVersion = (() => {
 
     if (els.btnCheckUpdate) {
       els.btnCheckUpdate.addEventListener('click', () => {
-        if (els.refreshMenu) els.refreshMenu.classList.add('hidden');
         checkForAppUpdates(true);
+      });
+    }
+
+    if (els.btnToggleChangelog && els.changelogPanel) {
+      els.btnToggleChangelog.addEventListener('click', () => {
+        const isClosed = els.changelogPanel.classList.contains('hidden');
+        if (isClosed) {
+          els.changelogPanel.classList.remove('hidden');
+          els.btnToggleChangelog.setAttribute('aria-expanded', 'true');
+        } else {
+          els.changelogPanel.classList.add('hidden');
+          els.btnToggleChangelog.setAttribute('aria-expanded', 'false');
+        }
       });
     }
 
