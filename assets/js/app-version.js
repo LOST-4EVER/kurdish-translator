@@ -3,7 +3,7 @@
  * Exposes AppVersion as a global module.
  */
 const AppVersion = (() => {
-  const APP_VERSION = 'v93';
+  const APP_VERSION = 'v95';
   let isRefreshing = false;
   let hasShownUpdateNotice = false;
   let updateBannerTimeout = null;

@@ -30,9 +30,9 @@ const Translator = (() => {
   const MYMEMORY_ENDPOINT = 'https://api.mymemory.translated.net/get';
 
   // Keep requests modest to avoid timeouts on mobile networks.
-  const BATCH_LINES = 35;
-  const MAX_CHARS_PER_REQUEST = 2500;
-  const DELAY_MS = 250;         // polite spacing between batches
+  const BATCH_LINES = 25;
+  const MAX_CHARS_PER_REQUEST = 1600;
+  const DELAY_MS = 160;         // polite spacing between batches
   const MAX_ATTEMPTS = 6;       // retries across providers
   const REQUEST_TIMEOUT_MS = 25000; // hang-up guard so a stalled socket retries
 
@@ -353,6 +353,20 @@ const Translator = (() => {
           .replace(/\bunder\s+the\s+weather\b/gi, 'feeling unwell')
           .replace(/\bout\s+of\s+my\s+way\b/gi, 'move out of my way')
           .replace(/\bface\s+to\s+face\b/gi, 'directly face to face');
+
+    // Handle character speech interruptions, cut-offs (e.g. "bu-", "wh-", "I-") and stutters (e.g. "b-but", "w-wait")
+    s = s.replace(/\bb[-—–]but\b/gi, 'but')
+         .replace(/\bw[-—–]what\b/gi, 'what')
+         .replace(/\bw[-—–]wait\b/gi, 'wait')
+         .replace(/\bn[-—–]no\b/gi, 'no')
+         .replace(/\by[-—–]yes\b/gi, 'yes')
+         .replace(/\bi[-—–]i\b/gi, 'I')
+         .replace(/\bw[-—–]why\b/gi, 'why')
+         .replace(/\bh[-—–]how\b/gi, 'how')
+         .replace(/\by[-—–]you\b/gi, 'you')
+         .replace(/\bs[-—–]sorry\b/gi, 'sorry')
+         .replace(/\bp[-—–]please\b/gi, 'please')
+         .replace(/\bh[-—–]help\b/gi, 'help');
 
     return s;
   }
@@ -696,6 +710,9 @@ const Translator = (() => {
     if (!str.trim()) return '';
     let res = normalizeText(str, true, !!options.kurdishDigits);
     res = naturalizeDialogue(res);
+    if (typeof TranslatorDict !== 'undefined' && TranslatorDict.cleanUntranslatedEnglish) {
+      res = TranslatorDict.cleanUntranslatedEnglish(res);
+    }
     return res;
   }
 
@@ -757,9 +774,9 @@ const Translator = (() => {
     let penalties = 0;
 
     // 1. Check for untranslated Latin / English words
-    const latinWords = text.match(/\b[a-zA-Z]{3,}\b/g);
+    const latinWords = text.match(/\b[a-zA-Z]{2,}\b/g);
     if (latinWords && !text.includes('{\\')) {
-      const filtered = latinWords.filter((w) => !/^(WEBVTT|NOTE|STYLE|ASS|SSA|pos|an\d|fs|fn)$/i.test(w));
+      const filtered = latinWords.filter((w) => !/^(WEBVTT|NOTE|STYLE|ASS|SSA|pos|an\d|fs|fn|c|b|i|u|s|k|kf|ko|q|r)$/i.test(w));
       if (filtered.length > 0) {
         const msg = `وشەی وەرنەگێڕدراو یان ئینگلیزی: "${filtered.slice(0, 3).join(', ')}"`;
         issues.push(msg);
@@ -770,18 +787,19 @@ const Translator = (() => {
           severity: 'error',
           title: 'وشەی ئینگلیزی وەرنەگێڕدراو',
           description: msg,
-          fixAvailable: false,
+          fixAvailable: true,
         });
         penalties += Math.min(30, filtered.length * 15);
       }
     }
 
-    // 2. Check for Arabic letter relics (Kaf ك, Yaa ي, Teh Marbuta ة, Tatweel ـ)
+    // 2. Check for Arabic letter relics (Kaf ك, Yaa ي, Teh Marbuta ة, decorative Tatweel ـ)
     const arabicRelics = [];
     if (/[\u0643]/.test(text)) arabicRelics.push('ك');
     if (/[\u064A\u0649]/.test(text)) arabicRelics.push('ي/ى');
     if (/[\u0629]/.test(text)) arabicRelics.push('ة');
-    if (/[\u0640]/.test(text)) arabicRelics.push('ـ');
+    // Flag Tatweel only if not used as a speech cut-off / stutter connector (e.g. بـ-)
+    if (/\u0640(?![-—–])/.test(text)) arabicRelics.push('ـ');
 
     if (arabicRelics.length > 0) {
       const msg = `پیتە عەرەبییەکان لە جێگەی پیتی کوردی بەکارهاتوون (${arabicRelics.join('، ')})`;
@@ -905,6 +923,10 @@ const Translator = (() => {
     let improved = normalizeSoraniAlphabet(text);
     improved = rejoinVerbalAffixes(improved);
     improved = naturalizeDialogue(improved);
+    if (typeof TranslatorDict !== 'undefined') {
+      if (TranslatorDict.handleSpeechCutoffs) improved = TranslatorDict.handleSpeechCutoffs(improved);
+      if (TranslatorDict.cleanUntranslatedEnglish) improved = TranslatorDict.cleanUntranslatedEnglish(improved);
+    }
     improved = normalizeText(improved, true, false);
     improved = fixPlacementAndTagOrder(improved, origLine);
 
@@ -929,6 +951,7 @@ const Translator = (() => {
    *  - convert Arabic characters to Kurdish equivalents (Kaf, Yaa, Teh Marbuta, Heh)
    *  - join split Sorani verbal prefixes/affixes
    *  - naturalize subtitle conversational dialogue
+   *  - clean up leftover untranslated English words and handle speech cut-offs
    *  - use Arabic script marks: comma "،", semicolon "؛", question "؟"
    */
   function normalizeText(text, isArabic, useKurdishDigits = false) {
@@ -955,6 +978,12 @@ const Translator = (() => {
 
       // Naturalize dialogue
       t = naturalizeDialogue(t);
+
+      // Speech interruptions & English cleanup
+      if (typeof TranslatorDict !== 'undefined') {
+        if (TranslatorDict.handleSpeechCutoffs) t = TranslatorDict.handleSpeechCutoffs(t);
+        if (TranslatorDict.cleanUntranslatedEnglish) t = TranslatorDict.cleanUntranslatedEnglish(t);
+      }
 
       // Kurdish Punctuation (preserve HTML/ASS tags & bracket tokens)
       t = t.replace(/(<[^>]*>|\{[^}]*\}|\[\s*T\s*[\d\u0660-\u0669\u06f0-\u06f9]+\s*\])|([,;?])/gi, (m, tag, punct) => {
@@ -1028,48 +1057,77 @@ const Translator = (() => {
     // never jumps backwards when verification begins.
     const mainFraction = opts.accuracy ? 0.9 : 1.0;
 
-    for (let b = 0; b < batches.length; b++) {
-      const batch = batches[b];
-      throwIfAborted(signal);
-      const query = batch.map((o) => o.text).join(`\n${BATCH_SEP}\n`);
+    const flags = { anyTranslated: false, sawHardFail: false, failedLines: 0 };
 
+    // Helper: translate a sub-batch recursively, halving on merged/failed batches
+    async function processBatch(subBatch) {
+      throwIfAborted(signal);
+      if (!subBatch || !subBatch.length) return;
+
+      // Fast-path: if the sub-batch contains only non-verbal items (no Unicode letters), pass through directly
+      const hasLetters = subBatch.some((o) => /\p{L}/u.test(o.text));
+      if (!hasLetters) {
+        for (const o of subBatch) {
+          let norm = normalizeText(restoreNewlines(restore(o.text, o.toks)), isArabic, useKurdishDigits);
+          norm = fixPlacementAndTagOrder(norm, o.raw);
+          results[o.index] = norm;
+        }
+        return;
+      }
+
+      if (subBatch.length === 1) {
+        const o = subBatch[0];
+        try {
+          let norm = normalizeText(restoreNewlines(restore(await translateChunk(o.text, srcLang, tgtLang, signal), o.toks).trim()), isArabic, useKurdishDigits);
+          norm = fixPlacementAndTagOrder(norm, o.raw);
+          results[o.index] = norm;
+          if (norm && norm !== origNorm[o.index]) flags.anyTranslated = true;
+        } catch (e) {
+          if (e && e.hard) flags.sawHardFail = true;
+          flags.failedLines++;
+          let norm = normalizeText(restoreNewlines(restore(o.text, o.toks)), isArabic, useKurdishDigits);
+          norm = fixPlacementAndTagOrder(norm, o.raw);
+          results[o.index] = norm;
+        }
+        return;
+      }
+
+      // Try batch translation
+      const query = subBatch.map((o) => o.text).join(`\n${BATCH_SEP}\n`);
       try {
         const translated = await translateChunk(query, srcLang, tgtLang, signal);
-        // Google sometimes drops the marker lines. If the response doesn't line
-        // up exactly, re-translate one line at a time rather than dropping text.
         const parts = splitBatch(translated);
-        if (parts.length !== batch.length) throw new Error('merged batch');
+        if (parts.length !== subBatch.length) throw new Error('merged batch');
         parts.forEach((part, k) => {
-          let norm = normalizeText(restoreNewlines(restore(part, batch[k].toks).trim()), isArabic, useKurdishDigits);
-          norm = fixPlacementAndTagOrder(norm, batch[k].raw);
-          results[batch[k].index] = norm;
-          if (norm && norm !== origNorm[batch[k].index]) anyTranslated = true;
+          let norm = normalizeText(restoreNewlines(restore(part, subBatch[k].toks).trim()), isArabic, useKurdishDigits);
+          norm = fixPlacementAndTagOrder(norm, subBatch[k].raw);
+          results[subBatch[k].index] = norm;
+          if (norm && norm !== origNorm[subBatch[k].index]) flags.anyTranslated = true;
         });
       } catch (err) {
         if (signal && signal.aborted) throw err;
-        // Batch failed — fall back to one request per line.
-        for (const o of batch) {
-          throwIfAborted(signal);
-          try {
-            let norm = normalizeText(restoreNewlines(restore(await translateChunk(o.text, srcLang, tgtLang, signal), o.toks).trim()), isArabic, useKurdishDigits);
-            norm = fixPlacementAndTagOrder(norm, o.raw);
-            results[o.index] = norm;
-            if (norm && norm !== origNorm[o.index]) anyTranslated = true;
-          } catch (e) {
-            if (e && e.hard) sawHardFail = true;
-            failedLines++;
-            let norm = normalizeText(restoreNewlines(restore(o.text, o.toks)), isArabic, useKurdishDigits);
-            norm = fixPlacementAndTagOrder(norm, o.raw);
-            results[o.index] = norm;
-          }
-        }
+        // Batch failed or merged — split in half and resolve sub-batches recursively
+        const mid = Math.floor(subBatch.length / 2);
+        await processBatch(subBatch.slice(0, mid));
+        await processBatch(subBatch.slice(mid));
       }
+    }
+
+    for (let b = 0; b < batches.length; b++) {
+      const batch = batches[b];
+      throwIfAborted(signal);
+
+      await processBatch(batch);
 
       doneLines += batch.length;
       if (opts.onBatch) opts.onBatch(results, doneLines, totalLines); // feed the live preview
       if (onProgress) onProgress(mainFraction * (b + 1) / total, doneLines, totalLines);
       if (b < batches.length - 1) await sleep(DELAY_MS, signal);
     }
+
+    anyTranslated = flags.anyTranslated;
+    sawHardFail = flags.sawHardFail;
+    failedLines = flags.failedLines;
 
     // If the network/API was unreachable for every line, don't hand back the
     // original text as if it were a successful translation.
@@ -1173,7 +1231,7 @@ const Translator = (() => {
     const scoped = scopedSignal(signal);
     try {
       let res = null;
-      if (text.length > 250) {
+      if (text.length > 200) {
         try {
           res = await fetch(host, {
             method: 'POST',
@@ -1210,6 +1268,40 @@ const Translator = (() => {
         if (out) return out;
       }
       throw new Error('Empty or unexpected response from Google');
+    } finally {
+      scoped.cleanup();
+    }
+  }
+
+  /**
+   * Fetch from Google Translate lightweight /t endpoint.
+   */
+  async function fetchGoogleT(text, srcLang, tgtLang, signal, attempt = 0) {
+    const host = 'https://translate.googleapis.com/translate_a/t';
+    const params = new URLSearchParams({
+      client: 'gtx',
+      sl: srcLang,
+      tl: tgtLang,
+      q: text,
+    });
+    const scoped = scopedSignal(signal);
+    try {
+      const res = await fetch(`${host}?${params.toString()}`, {
+        method: 'GET',
+        headers: { 'Accept': 'application/json, text/plain, */*' },
+        signal: scoped.signal,
+      });
+      if (res.status === 429) {
+        const err = new Error(`HTTP 429 (throttled)`);
+        err.status = 429;
+        err.wait = backoffMs(attempt);
+        throw err;
+      }
+      if (!res.ok) throw new Error(`Google /t HTTP ${res.status}`);
+      const data = await res.json();
+      if (typeof data === 'string' && data) return data;
+      if (Array.isArray(data) && data[0]) return typeof data[0] === 'string' ? data[0] : (Array.isArray(data[0]) ? data[0][0] : '');
+      throw new Error('Empty Google /t response');
     } finally {
       scoped.cleanup();
     }
@@ -1257,30 +1349,35 @@ const Translator = (() => {
     }
   }
 
-  /** Translate one chunk with multi-provider failover (Google -> Lingva -> MyMemory). */
+  /** Translate one chunk with multi-provider failover (Google -> Google /t -> Lingva -> MyMemory). */
   async function translateChunk(text, srcLang, tgtLang, signal) {
     let lastErr;
 
     for (let attempt = 0; attempt < MAX_ATTEMPTS; attempt++) {
       throwIfAborted(signal);
       try {
-        // Strategy: Attempts 0-3 use Google endpoints with rotated IPs/clients;
-        // Attempt 4 tries Lingva instances;
-        // Attempt 5 tries MyMemory or backup Google
-        if (attempt < 4) {
+        if (attempt < 3) {
           try {
             return await fetchGoogle(text, srcLang, tgtLang, signal, attempt);
           } catch (googleErr) {
             if (googleErr.status === 429 && googleErr.wait) {
               await sleep(googleErr.wait, signal);
             }
+            // If primary Google fails, try Google /t endpoint once before Lingva
+            try {
+              return await fetchGoogleT(text, srcLang, tgtLang, signal, attempt);
+            } catch {}
             throw googleErr;
           }
-        } else if (attempt === 4) {
+        } else if (attempt === 3 || attempt === 4) {
           try {
             return await fetchLingva(text, srcLang, tgtLang, signal, attempt);
           } catch {
-            return await fetchGoogle(text, srcLang, tgtLang, signal, attempt);
+            try {
+              return await fetchGoogleT(text, srcLang, tgtLang, signal, attempt);
+            } catch {
+              return await fetchGoogle(text, srcLang, tgtLang, signal, attempt);
+            }
           }
         } else {
           try {

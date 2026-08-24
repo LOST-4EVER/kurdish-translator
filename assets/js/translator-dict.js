@@ -47,6 +47,125 @@ const TranslatorDict = (() => {
     'you must be kidding': { kurdish: 'گاڵتەم لەگەڵ دەکەیت؟', context: 'Incredulity', alternatives: ['ڕاست ناکەیت؟', 'باوڕ ناکەم'] },
     'no offense': { kurdish: 'بێ ڕێزی نەبێت', context: 'Politeness', alternatives: ['مەبەستم بێڕێزی نییە', 'خۆت بێزار مەکە'] },
     'none of your business': { kurdish: 'پەیوەندی بە تۆوە نییە', context: 'Privacy', alternatives: ['کاری تۆ نییە', 'سەری خۆت بە کارتەوە بێت'] },
+    // Action, Conflict, Cinematic Stakes & Everyday Dialogue
+    'are you insane': { kurdish: 'شێت بوویت؟', context: 'Shock / Confrontation', alternatives: ['عەقڵت لەدەستداوە؟', 'هۆشت لەسەر خۆتە؟'] },
+    'are you crazy': { kurdish: 'شێت بوویت؟', context: 'Shock / Confrontation', alternatives: ['هۆشت لەدەستداوە؟', 'تۆ لە هۆش خۆتی؟'] },
+    'are you out of your mind': { kurdish: 'عەقڵت لەدەستداوە؟', context: 'Disbelief / Anger', alternatives: ['تۆ شێت بوویت؟', 'لە هۆش خۆت دەرچوویت؟'] },
+    'calm down': { kurdish: 'هێمن بەرەوە', context: 'De-escalation', alternatives: ['ئارام بەرەوە', 'خۆت هێور بکەرەوە', 'پەلە مەکە'] },
+    'keep calm': { kurdish: 'ئارام بە', context: 'De-escalation', alternatives: ['هێمن بە', 'خۆت کۆنتڕۆڵ بکە'] },
+    'get a grip': { kurdish: 'خۆت کۆبکەرەوە', context: 'Urgent control', alternatives: ['هۆشت بێنەرەوە سەر خۆت', 'ئارام بگرە'] },
+    'listen to me': { kurdish: 'گوێم لێ بگرە', context: 'Command / Appeal', alternatives: ['گوێ بگرە بۆ من', 'سەرنجت لای قسەم بێت'] },
+    'look at me': { kurdish: 'سەیرم بکە', context: 'Command / Drama', alternatives: ['ڕووت لە من بێت', 'تەماشام بکە'] },
+    'look into my eyes': { kurdish: 'سەیری ناو چاوم بکە', context: 'Dramatic Appeal', alternatives: ['ڕاستەوخۆ تەماشام بکە'] },
+    'trust me': { kurdish: 'متمانەم پێ بکە', context: 'Reassurance', alternatives: ['باوەڕم پێ بکە', 'پشتم پێ ببەستە'] },
+    'i promise': { kurdish: 'بەڵێن دەدەم', context: 'Pledge', alternatives: ['پەیمان بێت', 'پەیمانت پێ دەدەم'] },
+    'i promise you': { kurdish: 'بەڵێنت پێ دەدەم', context: 'Pledge', alternatives: ['پەیمانم پێتدابێت', 'دڵنیابە لە قسەم'] },
+    'you have my word': { kurdish: 'بەڵێنت پێ دەدەم', context: 'Formal Pledge', alternatives: ['پەیمانی پیاوانەیە', 'قسەی من قسەیە'] },
+    'i give you my word': { kurdish: 'پەیمانت پێ دەدەم', context: 'Formal Pledge', alternatives: ['بەڵێنت پێ دەدەم', 'قسەی من بەهێزە'] },
+    'no way': { kurdish: 'مەحاڵە!', context: 'Disbelief / Denial', alternatives: ['ڕێی تێناچێت!', 'بە هیچ جۆرێک نا!'] },
+    'no way in hell': { kurdish: 'بە هیچ جۆرێک مەحاڵە', context: 'Strong Denial', alternatives: ['هەرگیز و بە هیچ شێوەیەک نا!'] },
+    'not a chance': { kurdish: 'هیچ دەرفەتێک نییە', context: 'Refusal / Impossibility', alternatives: ['مەحاڵە', 'بە خەویش نایبینیت'] },
+    'in your dreams': { kurdish: 'مەگەر لە خەودا بیبینیت', context: 'Dismissal', alternatives: ['لە خەیاڵتدا', 'مەحاڵە بۆت'] },
+    'dream on': { kurdish: 'لە خەیاڵتدا بمێنەرەوە', context: 'Mockery / Dismissal', alternatives: ['خەوی پێوە ببینە'] },
+    'let me go': { kurdish: 'بەرم بدە', context: 'Plea / Struggle', alternatives: ['دەستم لێ هەڵگرە', 'لێم گەڕێ با بڕۆم'] },
+    'leave me alone': { kurdish: 'لێم گەڕێ بە تەنیا', context: 'Dismissal / Pain', alternatives: ['تەنیا بمکەرەوە', 'دەست لە کارم وەرمەدە'] },
+    'wake up': { kurdish: 'خەبەرت بێتەوە', context: 'Urgent Alert', alternatives: ['بەئاگا وەرەوە', 'هۆشیار بە'] },
+    'get up': { kurdish: 'هەستە سەرپێ', context: 'Encouragement / Action', alternatives: ['هەستە', 'بەپێوە بوەستە'] },
+    'stand up': { kurdish: 'هەستە سەرپێ', context: 'Command', alternatives: ['بوەستە بەپێوە'] },
+    'don\'t look': { kurdish: 'سەیر مەکە', context: 'Warning / Fear', alternatives: ['تەماشا مەکە', 'چاوەکانت دابخە'] },
+    'shut up': { kurdish: 'دەمت داخە', context: 'Aggression / Silencing', alternatives: ['بێدەنگ بە', 'قسە مەکە'] },
+    'shut your mouth': { kurdish: 'دەمت دابخە', context: 'Hostile Command', alternatives: ['بێدەنگ بە', 'قسە مەبڕە'] },
+    'keep quiet': { kurdish: 'بێدەنگ بە', context: 'Caution', alternatives: ['دەنگ مەکە', 'هێمن بە'] },
+    'what happened': { kurdish: 'چی ڕوویدا؟', context: 'Query', alternatives: ['چی بووە؟', 'چ ڕووداوێک ڕوویدا؟'] },
+    'what is happening': { kurdish: 'چی ڕوودەدات؟', context: 'Urgent Query', alternatives: ['ئەمە چییە دەگوزەرێت؟', 'چی ڕوویداوە؟'] },
+    "what's happening": { kurdish: 'چی ڕوودەدات؟', context: 'Urgent Query', alternatives: ['ئەمە چییە دەگوزەرێت؟'] },
+    'who are you': { kurdish: 'تۆ کێیت؟', context: 'Identity Query', alternatives: ['خۆت بناسێنە', 'تۆ کێیت لێرە؟'] },
+    'where are we': { kurdish: 'ئێمە لەکوێین؟', context: 'Location Query', alternatives: ['ئەم شوێنە کوێیە؟'] },
+    'how is this possible': { kurdish: 'چۆن شتی وا دەبێت؟', context: 'Astonishment', alternatives: ['چۆن ڕوودانی مومکینە؟', 'ئەمە چۆن دەکرێت؟'] },
+    'this cannot be happening': { kurdish: 'مەحاڵە شتی وا ڕووبدات!', context: 'Denial / Shock', alternatives: ['باوەڕناکەم ئەمە ڕووبدات!', 'ئەمە ڕاست نییە!'] },
+    "this can't be happening": { kurdish: 'مەحاڵە شتی وا ڕووبدات!', context: 'Denial / Shock', alternatives: ['باوەڕ ناکەم شتی وا بێت!'] },
+    'we have no time to lose': { kurdish: 'هیچ کاتێکمان بۆ لەدەستدان نییە', context: 'Urgency', alternatives: ['کاتمان زۆر تەنگە', 'دەبێت خێراکەین'] },
+    'there is no time': { kurdish: 'کات نەماوە', context: 'Urgency', alternatives: ['کاتمان بەدەستەوە نییە', 'زووکەن'] },
+    'stay out of this': { kurdish: 'تۆ دەستت لەمەدا نەبێت', context: 'Warning / Boundary', alternatives: ['خۆت تێکەڵ بەمە مەکە', 'دەست لە کارم وەرمەدە'] },
+    'it is a matter of life and death': { kurdish: 'مەسەلەی مەرگ و ژیانە', context: 'Critical Stakes', alternatives: ['بابەتەکە ژیان و مردنە'] },
+    "it's a matter of life and death": { kurdish: 'مەسەلەی مەرگ و ژیانە', context: 'Critical Stakes', alternatives: ['کێشەی ژیان و مەرگە'] },
+    'you have my respect': { kurdish: 'ڕێزم بۆت هەیە', context: 'Respect', alternatives: ['شایستەی ڕێزی', 'ڕێزت لێ دەنێم'] },
+    'i owe you one': { kurdish: 'قەرزاری تۆم', context: 'Gratitude', alternatives: ['چاکەی تۆم لەبیر ناچێت', 'قەرزارت بووم'] },
+    'i owe you my life': { kurdish: 'قەرزاری ژیانمی', context: 'Deep Gratitude', alternatives: ['ژیانم بە تۆ بەستراوەتەوە', 'تۆ منت ڕزگارکرد'] },
+    'don\'t make me do this': { kurdish: 'ناچارم مەکە ئەمە بکەم', context: 'Hesitation / Threat', alternatives: ['مەمخەرە دۆخێکەوە ئەمە بکەم'] },
+    'do not make me do this': { kurdish: 'ناچارم مەکە ئەمە بکەم', context: 'Hesitation', alternatives: ['ناچارم مەکە'] },
+    'running out of time': { kurdish: 'کات تەواو دەبێت', context: 'Countdown / Stakes', alternatives: ['کات بەرەو کۆتایی دەچێت', 'کاتی کەم ماوە'] },
+    'it is now or never': { kurdish: 'یان ئێستا یان هەرگیز', context: 'Decisive Moment', alternatives: ['دەرفەت تەنها ئێستایە', 'ئەمڕۆ دەرفەتی کۆتاییە'] },
+    "it's now or never": { kurdish: 'یان ئێستا یان هەرگیز', context: 'Decisive Moment', alternatives: ['دەرفەت تەنها ئێستایە'] },
+    'keep moving forward': { kurdish: 'بەرەو پێشەوە بەردەوام بە', context: 'AoT / Eren / Resolve', alternatives: ['هەر بەرەو پێش بچۆ', 'کۆڵ مەدە'] },
+    'never betray my friends': { kurdish: 'هەرگیز خیانەت لە هاوڕێکانم ناکەم', context: 'Loyalty / Anime Trope', alternatives: ['پشت لە هاوڕێکانم ناکەم'] },
+    'there is no escape': { kurdish: 'هیچ دەربازبوونێک نییە', context: 'Trap / Villain Trope', alternatives: ['ڕێگەی هەڵاتن نییە', 'گەمارۆ دراویت'] },
+    'prepare yourself': { kurdish: 'خۆت ئامادە بکە', context: 'Battle Warning', alternatives: ['خۆت بۆ شەڕ ئامادە بکە', 'وریا بە'] },
+    'cannot hide from me': { kurdish: 'ناتوانیت خۆت لە من بشاریتەوە', context: 'Villain / Stalker Trope', alternatives: ['خۆشاردنەوە بێسوودە'] },
+    'justice will prevail': { kurdish: 'دادپەروەری سەردەکەوێت', context: 'Heroic Statement', alternatives: ['حەق بەسەر باتڵدا سەردەکەوێت'] },
+    'i will avenge you': { kurdish: 'تۆڵەت دەکەمەوە', context: 'Vengeance / Drama', alternatives: ['تۆڵەی خوێنت دەستێنمەوە'] },
+    "i'll avenge you": { kurdish: 'تۆڵەت دەکەمەوە', context: 'Vengeance' },
+    'don\'t push your luck': { kurdish: 'بەختی خۆت تاقی مەکەرەوە', context: 'Warning', alternatives: ['سنووری خۆت مەبەزێنە', 'زیاد لە پێویست باوەڕت بە بەخت نەبێت'] },
+    'follow my lead': { kurdish: 'شوێنم بکەوە', context: 'Tactical Command', alternatives: ['وەک من بکە', 'پێڕەوی من بکە'] },
+    'stick to the plan': { kurdish: 'پابەندی پلانەکە بن', context: 'Tactical Command', alternatives: ['لە پلانەکە لامەدەن', 'بەپێی نەخشەکە بڕۆن'] },
+    'we did it': { kurdish: 'سەرکەوتین!', context: 'Celebration / Victory', alternatives: ['کارەکەمان ئەنجامدا!', 'تەواومان کرد!'] },
+    'it is too late': { kurdish: 'زۆر درەنگە', context: 'Regret / Doom', alternatives: ['کاتی بەسەرچوو', 'هەموو شت تەواو بوو'] },
+    "it's too late": { kurdish: 'زۆر درەنگە', context: 'Regret / Doom', alternatives: ['کاتی بەسەرچوو'] },
+    'i am your ally': { kurdish: 'من هاوپەیمانتم', context: 'Alliance', alternatives: ['هاوڕێ و پشتیوانتم'] },
+    "i'm your ally": { kurdish: 'من هاوپەیمانتم', context: 'Alliance' },
+    'i will destroy you': { kurdish: 'لەناوت دەبەم!', context: 'Villain / Battle Threat', alternatives: ['تێکت دەشکێنم!', 'وێرانت دەکەم!'] },
+    "i'll destroy you": { kurdish: 'لەناوت دەبەم!', context: 'Battle Threat', alternatives: ['تێکت دەشکێنم!'] },
+    'take cover': { kurdish: 'پەنا بگرن!', context: 'Combat / Explosion Warning', alternatives: ['خۆتان بشارنەوە!', 'سەنگەر بگرن!'] },
+    'fire at will': { kurdish: 'بە ئارەزووی خۆتان تەقە بکەن!', context: 'Military Command', alternatives: ['دەست بکەن بە تەقەکردن!'] },
+    'hold your fire': { kurdish: 'تەقە ڕاگرن!', context: 'Military Command', alternatives: ['تەقەمەکەن!', 'دەست لە چەک هەڵگرن!'] },
+    'it is an ambush': { kurdish: 'ئەمە بۆسەیە!', context: 'Combat / Trap', alternatives: ['کەوتینە بۆسەوە!'] },
+    "it's an ambush": { kurdish: 'ئەمە بۆسەیە!', context: 'Combat / Trap', alternatives: ['کەوتینە بۆسەوە!'] },
+    'we are surrounded': { kurdish: 'گەمارۆ دراوین!', context: 'Combat Alarm', alternatives: ['دەورە دراوین لە هەموو لایەکەوە!'] },
+    "we're surrounded": { kurdish: 'گەمارۆ دراوین!', context: 'Combat Alarm', alternatives: ['دەورە دراوین!'] },
+    'call for backup': { kurdish: 'داوای هێزی پشتیوانی بکەن', context: 'Police / Action', alternatives: ['داوای یارمەتی فریاگوزاری بکەن'] },
+    'reinforcements are coming': { kurdish: 'هێزی پشتیوانی لە ڕێگایە', context: 'Action / Hope', alternatives: ['یارمەتی نزیکە'] },
+    'cover me': { kurdish: 'پەنام بدە! (پشتم بگرە لە تەقەکردندا)', context: 'Action Tactical', alternatives: ['تەقە بکە تا دەڕۆم', 'بەرگریم لێ بکە'] },
+    'watch out': { kurdish: 'وریا بە!', context: 'Danger Warning', alternatives: ['ئاگاداربە!', 'خۆت بپارێزە!'] },
+    'look out': { kurdish: 'ئاگاداربە!', context: 'Danger Warning', alternatives: ['وریا بە!', 'پەنا بگرە!'] },
+    'heads up': { kurdish: 'ئاگاداربە!', context: 'Warning', alternatives: ['سەرنجت بدە!', 'وریا بن!'] },
+    'incoming': { kurdish: 'موشەک / مەترسی لە ڕێگایە!', context: 'Danger Alert', alternatives: ['خۆتان لادەن!', 'بەربوونەوە لە ڕێگایە!'] },
+    'stay with me': { kurdish: 'لەگەڵمدا بمێنەرەوە', context: 'Emotional / Medical Emergency', alternatives: ['چاوەکانت دامەخە', 'کۆڵ مەدە لە ژیان'] },
+    "don't die on me": { kurdish: 'مەمرە لێم!', context: 'Desperation / Cinema Trope', alternatives: ['بژی و کۆڵ مەدە!', 'چاوەکانت دامەخە!'] },
+    "i won't let you die": { kurdish: 'ناهێڵم بمریت!', context: 'Heroic Devotion', alternatives: ['دەتبەم بۆ سەلامەتی!', 'ڕزگارت دەکەم!'] },
+    'rest in peace': { kurdish: 'ڕۆحت شاد بێت', context: 'Eulogy / Condolence', alternatives: ['بە ئارامی بنوو', 'خوات لەگەڵ بێت'] },
+    'may you rest in peace': { kurdish: 'ڕۆحت شاد و ئارام بێت', context: 'Eulogy', alternatives: ['خوات لەگەڵ بێت'] },
+    'it is an honor': { kurdish: 'شەرەفێکی گەورەیە', context: 'Formal Respect', alternatives: ['شانازییە بۆ من'] },
+    "it's an honor": { kurdish: 'شەرەفێکی گەورەیە', context: 'Formal Respect', alternatives: ['شانازییە بۆ من'] },
+    'till we meet again': { kurdish: 'تا دیداری داهاتوو', context: 'Farewell', alternatives: ['تا دووبارە دەتبینمەوە', 'بەخێر بچیت'] },
+    'farewell': { kurdish: 'ماڵئاوا بۆ هەمیشە', context: 'Formal / Tragic Farewell', alternatives: ['خوات لەگەڵ', 'سەفەرت خێر'] },
+    'see you around': { kurdish: 'دواتر دەتبینمەوە', context: 'Casual Goodbye', alternatives: ['تا دیداری تر', 'کاتت شاد'] },
+    'catch you later': { kurdish: 'دواتر قسە دەکەینەوە', context: 'Casual Goodbye', alternatives: ['دواتر یەک دەبینینەوە'] },
+    'take care of yourself': { kurdish: 'ئاگاداری خۆت بە', context: 'Affectionate Farewell', alternatives: ['خۆت بپارێزە', 'ئاگات لە خۆت بێت'] },
+    'welcome back': { kurdish: 'بەخێربێیتەوە', context: 'Greeting', alternatives: ['بەخێرهاتنەوەت پیرۆز بێت', 'چاوەکانت ڕووناک'] },
+    'welcome home': { kurdish: 'بەخێربێیتەوە بۆ ماڵەوە', context: 'Heartfelt Greeting', alternatives: ['ماڵت ڕووناک کردەوە'] },
+    'long time no see': { kurdish: 'مێژوویەکە نەمدیویت', context: 'Greeting', alternatives: ['لە مێژە یەکمان نەدیوە', 'کۆنە دیدار'] },
+    "what's up": { kurdish: 'چ هەواڵ؟', context: 'Casual Greeting', alternatives: ['چ باسە؟', 'هەواڵت چۆنە؟'] },
+    'how is it going': { kurdish: 'کاروبارت چۆن دەڕوات؟', context: 'Casual Greeting', alternatives: ['بارودۆخت چۆنە؟', 'دەگوزەرێت؟'] },
+    "how's it going": { kurdish: 'بارودۆخت چۆن دەڕوات؟', context: 'Casual Greeting', alternatives: ['کارەکان چۆنن؟'] },
+    'what brings you here': { kurdish: 'خێرە هاتووی بۆ ئێرە؟', context: 'Encounter Query', alternatives: ['چی هێناویەتی بۆ ئێرە؟'] },
+    'glad to see you': { kurdish: 'دڵخۆشم بە بینینت', context: 'Warm Greeting', alternatives: ['خۆشحاڵم بە چاوپێکەوتنت'] },
+    'nice to meet you': { kurdish: 'خۆشحاڵم بە ناسینت', context: 'Greeting', alternatives: ['شەرەفمەند بووم بە ناسینت'] },
+    'my pleasure': { kurdish: 'شایەنی نییە / بە خۆشحاڵییەوە', context: 'Polite Response', alternatives: ['جێی شانازییە بۆ من', 'بە سەرچاو'] },
+    'don\'t mention it': { kurdish: 'شایەنی باس نییە', context: 'Polite Response', alternatives: ['سوپاس ناوێت', 'شتێکی وا نەبووە'] },
+    'pardon me': { kurdish: 'ببوورە لە من', context: 'Polite Request', alternatives: ['لێم ببورە', 'داوای لێبوردن دەکەم'] },
+    'excuse me': { kurdish: 'ببوورە', context: 'Polite Interruption', alternatives: ['ڕێگەم بدە', 'دەکرێت بپرسم'] },
+    'my bad': { kurdish: 'هەڵەی من بوو', context: 'Casual Apology', alternatives: ['کەمتەرخەمی لە من بوو', 'ببوورە'] },
+    'i apologize': { kurdish: 'داوای لێبوردن دەکەم', context: 'Formal Apology', alternatives: ['ببوورە', 'داوای لێخۆشبوون دەکەم'] },
+    'no problem': { kurdish: 'هیچ کێشە نییە', context: 'Reassurance', alternatives: ['خەمی ناوێت', 'ئاساییە'] },
+    'no worries': { kurdish: 'خەمت نەبێت', context: 'Reassurance', alternatives: ['کێشە نییە', 'دڵگران مەبە'] },
+    'sounds good': { kurdish: 'پێشنیارێکی باشە', context: 'Agreement', alternatives: ['پێم باشە', 'ڕێکەوتین'] },
+    'sounds like a plan': { kurdish: 'پلانێکی نایابە', context: 'Enthusiastic Agreement', alternatives: ['پێشنیارێکی زۆر باشە', 'با بەو جۆرە بێت'] },
+    'count me in': { kurdish: 'ناوی منیش بنووسە (لەگەڵتانم)', context: 'Participation', alternatives: ['منیش بەشدارم', 'من لەگەڵتانم'] },
+    'count me out': { kurdish: 'من لەگەڵتان نیم', context: 'Refusal', alternatives: ['من بەشدار نابم', 'لەمەدا مەمژمێرن'] },
+    'deal with it': { kurdish: 'ڕابێ لەگەڵیدا', context: 'Dismissive Advice', alternatives: ['چارەسەری بکە بۆ خۆت', 'قبووڵی بکە'] },
+    'hands off': { kurdish: 'دەستت لابدە!', context: 'Defensive Command', alternatives: ['دەستی لێ مەدە!', 'دەستبەردار بە!'] },
+    'freeze': { kurdish: 'لە شوێنی خۆت مەجوڵێ!', context: 'Police / Action Command', alternatives: ['بوەستە و نەجوڵێیت!', 'دەستەکانت بەرزکەرەوە!'] },
+    'on your knees': { kurdish: 'لەسەر چۆک دابنیشە!', context: 'Action / Hostile Command', alternatives: ['چۆک دابدە!'] },
     'over my dead body': { kurdish: 'مەحاڵە تا زیندوم', context: 'Defiance', alternatives: ['لەسەر جەستەی من ڕوودەدات', 'هەرگیز نا'] },
     "I don't give a damn": { kurdish: 'گرنگی پێ نادەم', context: 'Indifference', alternatives: ['تەنانەت باکشم نییە', 'باکم بەوە نییە'] },
     "I don't care": { kurdish: 'گرنگی پێ نادەم', context: 'Indifference', alternatives: ['خەمم نییە', 'باکم نییە'] },
@@ -163,6 +282,54 @@ const TranslatorDict = (() => {
     'pragmatic': { kurdish: 'واقیعبین و کردارەکی', context: 'Realistic/practical', alternatives: ['سوودخواز', 'پراکتیکی'] },
     'superfluous': { kurdish: 'زیادە و ناپێویست', context: 'Unnecessary', alternatives: ['بێسوود', 'پێویست پێی نەکراو'] },
 
+    // Philosophical, Existential & Rich World Concepts
+    'zeitgeist': { kurdish: 'ڕۆحی سەردەم', context: 'Spirit of the Age', alternatives: ['کەشوهەوای قۆناغ', 'هزری زاڵی سەردەم'] },
+    'weltanschauung': { kurdish: 'جیهانبینی', context: 'Worldview', alternatives: ['تێڕوانین بۆ گەردوون', 'گۆشەنیگای ژیان'] },
+    'existential': { kurdish: 'بوونی و چارەنووسساز', context: 'Existence / Survival', alternatives: ['پەیوەست بە بوون', 'بنەڕەتی'] },
+    'existential crisis': { kurdish: 'قەیرانی بوونگەری', context: 'Identity / Meaning Crisis', alternatives: ['قەیرانی مانا و ناسنامە', 'سەرلێشێواوی دەروونی'] },
+    'catharsis': { kurdish: 'داماڵین و ئارامبوونەوەی دەروونی', context: 'Emotional Release', alternatives: ['پاکبوونەوەی هەست', 'دەربڕینی ئازار'] },
+    'hubris': { kurdish: 'لووتبەرزی و لەخۆباییبوونی وێرانکەر', context: 'Fatal Pride', alternatives: ['فیز و کەلەڕەقی', 'خۆبەگەورەزانی'] },
+    'sublime': { kurdish: 'شاکار و بێوێنە', context: 'Awe-inspiring Beauty', alternatives: ['شکۆدار', 'بەرز و پیرۆز', 'سەرنجڕاکێشی بێسنوور'] },
+    'epiphany': { kurdish: 'تێگەیشتنی کتوپڕ و ڕووناکبوونەوە', context: 'Sudden Realization', alternatives: ['وەحی و ئیلهام', 'دۆزینەوەی حەقیقەت'] },
+    'transcendent': { kurdish: 'سەرووی سنووری ماددە و تێگەیشتن', context: 'Beyond Normal Limits', alternatives: ['باڵا و مەزن', 'سەرووسروشتی'] },
+    'ethereal': { kurdish: 'ناسکی ئاسمانی و ڕۆحانی', context: 'Heavenly / Delicate', alternatives: ['تەمومژاوی ناسک', 'ڕۆحانی'] },
+    'oblivion': { kurdish: 'فەوتان و لەبیرچوونەوەی تەواو', context: 'Complete Forgetfulness / Extinction', alternatives: ['نەمان', 'ناوچوون', 'تاریکی بێبن'] },
+    'nihilism': { kurdish: 'پووچگەری و بێمانایی بوون', context: 'Meaninglessness of Life', alternatives: ['ڕەتکردنەوەی بەهاکان', 'نیهیلیزم'] },
+    'stoicism': { kurdish: 'پشوودرێژی و خۆڕاگریی ساردی فەلسەفی', context: 'Endurance Without Emotion', alternatives: ['بێدەنگی بەرامبەر ئازار', 'دانبەخۆداگرتن'] },
+    'introspection': { kurdish: 'خۆڕوانین و قووڵبوونەوە لە دەروون', context: 'Self-examination', alternatives: ['لێکۆڵینەوە لە ناخی خۆ', 'خۆهەڵسەنگاندن'] },
+    'nostalgia': { kurdish: 'حەسرەتی ڕابردوو و یادی کۆن', context: 'Longing for the Past', alternatives: ['تامەزرۆیی کاتی پێشوو', 'دڵتەنگی بۆ وڵات و ڕابردوو'] },
+    'melancholy': { kurdish: 'دڵتەنگییەکی قووڵی هێمن', context: 'Poetic Sadness', alternatives: ['خەمۆکی ئارام', 'ماتەمی'] },
+    'solitude': { kurdish: 'تەنیاییەکی ئارام و پڕبەها', context: 'Peaceful Aloneness', alternatives: ['دوورەپەرێزی سوودبەخش', 'گۆشەگیری ئارام'] },
+    'labyrinth': { kurdish: 'تۆڕی ئاڵۆز و ڕێگەی سەرلێشێوێنەر', context: 'Maze / Complex Mystery', alternatives: ['تەڵەی پێچاوپێچ', 'ئاڵۆزکاو'] },
+    'eternity': { kurdish: 'هەتاهەتایی و بێپایانی', context: 'Infinite Time', alternatives: ['نەمری', 'تەمەنی بێسنوور'] },
+    'uncanny': { kurdish: 'ترسناک و نامۆ بە شێوەیەکی نادیار', context: 'Strange & Mysterious', alternatives: ['سەرسوڕهێنەری سامناک', 'نائاسایی'] },
+    'duality': { kurdish: 'دووانەیی و دووفاقی', context: 'Twofold Nature', alternatives: ['دووڕوویی سروشت', 'دژایەتی ناوخۆیی'] },
+    'metamorphosis': { kurdish: 'وەرچەرخان و گۆڕانی بنەڕەتی', context: 'Transformation', alternatives: ['گۆڕانی شێوە و جەستە', 'نوێبوونەوە'] },
+    'paradox': { kurdish: 'دژبێژی و پارادۆکس', context: 'Contradiction', alternatives: ['ناکۆکی دیاریکراو', 'شتێکی دژبەیەک بەڵام ڕاست'] },
+    'consciousness': { kurdish: 'هۆشیاری و ئاگاداری', context: 'Awareness', alternatives: ['تێگەیشتنی زیندوو', 'هەستی هۆش'] },
+    'subconscious': { kurdish: 'ناهۆشیار و ناخی دەروون', context: 'Below Conscious Mind', alternatives: ['ژێرهۆش', 'دەرکی پەنهان'] },
+    'redemption': { kurdish: 'کەفارەت و ڕزگاربوون لە گوناھ', context: 'Spiritual Rescue', alternatives: ['قەرەبووی هەڵە', 'بەدەستهێنانەوەی شەرەف'] },
+    'reckoning': { kurdish: 'کاتی لێپرسینەوە و باجدان', context: 'Time of Judgment', alternatives: ['ڕۆژی دادگاییکردن', 'حیسابکردنەوە'] },
+    'apocalypse': { kurdish: 'کۆتایی جیهان و وێرانی گەورە', context: 'World Destruction', alternatives: ['ڕۆژی قیامەت', 'مەحشەر'] },
+    'genesis': { kurdish: 'سەرەتا و سەرچاوەی دروستبوون', context: 'Beginning / Creation', alternatives: ['دەستپێکی ژیان', 'خولقاندن'] },
+    'dystopia': { kurdish: 'کۆمەڵگەی تاریک و ستەمکار', context: 'Oppressive Future', alternatives: ['جیهانی وێرانکراو', 'دۆزەخی سەر زەوی'] },
+    'utopia': { kurdish: 'شاری نموونەیی و بەهەشتی خەیاڵی', context: 'Perfect World', alternatives: ['کۆمەڵگەی بێکەمۆکوڕی', 'ئارامگەی ئاواتەکان'] },
+    'anomaly': { kurdish: 'دیاردەی نائاسایی و نامۆ', context: 'Irregularity', alternatives: ['شاز و جیاواز', 'تێکچوونی ڕێسا'] },
+    'singularity': { kurdish: 'خاڵی بێوێنە و تاکانەیی ڕەها', context: 'Gravitational/Tech Event', alternatives: ['تەقینەوەی هۆش', 'چەقی بێکۆتایی'] },
+    'abyss': { kurdish: 'تەمتومانی قوڵ و تاریکی بێبن', context: 'Bottomless Chasm', alternatives: ['قووڵایی دۆزەخ', 'کەلێنی بێسەروبن'] },
+    'vortex': { kurdish: 'گێژاو و سووڕانی بەهێز', context: 'Whirlpool / Energy Core', alternatives: ['باداو', 'گێژەڵووکەی ڕاکێشەر'] },
+    'entropy': { kurdish: 'شێواوی و تێکچوونی سیستەم', context: 'Disorder / Decay', alternatives: ['پاشاگەردانی سروشتی', 'ڕووخان'] },
+    'catalyst': { kurdish: 'هۆکاری خێراکەر و بزوێنەر', context: 'Trigger / Accelerator', alternatives: ['دەستپێکەری گۆڕانکاری', 'سەرچاوەی پریشک'] },
+    'nexus': { kurdish: 'خاڵی بەستنەوە و چەقی بەیەکگەیشتن', context: 'Central Connection', alternatives: ['تەونی سەرەکی', 'چەقی پەیوەندییەکان'] },
+    'threshold': { kurdish: 'بەردەرکە و سنووری دەستپێک', context: 'Boundary / Gateway', alternatives: ['ئاستی دەستپێکردن', 'لێواری گۆڕان'] },
+    'hegemony': { kurdish: 'دەسەڵاتی ڕەها و باڵادەستی', context: 'Dominance', alternatives: ['هەژموون', 'کۆنتڕۆڵی سەروەر'] },
+    'anarchy': { kurdish: 'پاشاگەردانی و بێسەروپەری', context: 'Lawlessness', alternatives: ['نەمانی یاسا', 'ئاژاوە'] },
+    'stalemate': { kurdish: 'بنبەست و چەقبەستوویی شەڕ', context: 'Deadlock', alternatives: ['ڕاوەستانی بێئەنجام', 'یەکسانبوونی مەترسیدار'] },
+    'monologue': { kurdish: 'تاکبێژی', context: 'Solo Speech', alternatives: ['قسەکردن لەگەڵ خۆدا', 'دەنگدانەوەی ناخ'] },
+    'protagonist': { kurdish: 'پاڵەوانی سەرەکی', context: 'Lead Character', alternatives: ['کارەکتەری سەرەکی', 'پێشەنگی چیرۆک'] },
+    'antagonist': { kurdish: 'نەیار و دژبەری سەرەکی', context: 'Opposing Force', alternatives: ['دوژمنی پاڵەوان', 'خراپەکاری سەرەکی'] },
+    'nemesis': { kurdish: 'دوژمنی سەرسەخت و تۆڵەسێنەر', context: 'Archnemesis', alternatives: ['ڕکابەری لەناوبەر', 'سزای حەتمی'] },
+
     // Action, Thriller & Cinematic Dialogue Subtitle Expressions
     'on the run': { kurdish: 'لە هەڵهاتندا', context: 'Action/Escape', alternatives: ['ڕاکردوو', 'لەژێر داواکارییدا'] },
     'take cover': { kurdish: 'پەنا ببەرە', context: 'Tactical Warning', alternatives: ['خۆت بپۆشە', 'خۆت بشارەوە'] },
@@ -215,7 +382,59 @@ const TranslatorDict = (() => {
     'have a word': { kurdish: 'کەمێک قسەکردن', context: 'British Idiom', alternatives: ['دەستپێکردنی گفتوگۆ'] },
     'full of beans': { kurdish: 'پڕ لە وزە و چالاکی', context: 'British Idiom', alternatives: ['بە گوڕوتین', 'چالاک'] },
 
-    // Iconic Anime, Movie, and Dramatic Dialogue Idioms
+    // Iconic Anime, Battle Lines, Catchphrases & Japanese Subtitle Tropes
+    'omae wa mou shindeiru': { kurdish: 'تۆ هەر ئێستا مردوویت', context: 'Fist of the North Star / Iconic Anime', alternatives: ['لە ئێستاوە مردووی', 'کارت تەواوە'] },
+    'you are already dead': { kurdish: 'تۆ هەر ئێستا مردوویت', context: 'Fist of the North Star / Anime Trope', alternatives: ['لە ئێستاوە مردووی', 'کارت تەواوە'] },
+    "you're already dead": { kurdish: 'تۆ هەر ئێستا مردوویت', context: 'Fist of the North Star / Anime Trope', alternatives: ['لە ئێستاوە مردووی'] },
+    'i will be the pirate king': { kurdish: 'دەبمە پاشای چەتەکانی دەریا!', context: 'One Piece / Luffy Catchphrase', alternatives: ['دەبم بە پاشای چەتەکان!', 'پاشای چەتەکانی دەریا دەبم'] },
+    "i'm gonna be king of the pirates": { kurdish: 'دەبمە پاشای چەتەکانی دەریا!', context: 'One Piece / Luffy', alternatives: ['دەبم بە پاشای چەتەکان!'] },
+    "i'm going to become the pirate king": { kurdish: 'دەبمە پاشای چەتەکانی دەریا!', context: 'One Piece / Luffy', alternatives: ['دەبم بە پاشای چەتەکان!'] },
+    'plus ultra': { kurdish: 'پڵەس ئۆڵترا! (بۆ سەرکەوتنی بێسنوور)', context: 'My Hero Academia / All Might', alternatives: ['هەمیشە بەرەو لوتکە!', 'تێپەڕاندنی هەموو سنوورەکان!'] },
+    'bankai': { kurdish: 'بانکای (ڕزگارکردنی کۆتایی شمشێر)', context: 'Bleach / Ichigo Kurosaki', alternatives: ['بانکای!', 'هێزی کۆتایی شمشێر'] },
+    'shinra tensei': { kurdish: 'پاڵنەری گەردوونی (شینرا تێنسێی)!', context: 'Naruto / Pain', alternatives: ['شینرا تێنسێی!', 'تەقینەوەی هێزی ڕاکێشان'] },
+    'almighty push': { kurdish: 'پاڵنەری گەردوونی!', context: 'Naruto / Pain', alternatives: ['هێزی مەزنی شینرا تێنسێی'] },
+    'kamehameha': { kurdish: 'کامێهامێها!', context: 'Dragon Ball / Goku', alternatives: ['شەپۆلی کامێهامێها!'] },
+    "it's over 9000": { kurdish: 'لە ٩٠٠٠ زیاترە!', context: 'Dragon Ball Z / Vegeta', alternatives: ['ئاستی هێزەکەی لە سەرووی ٩٠٠٠یە!'] },
+    'over 9000': { kurdish: 'لە ٩٠٠٠ زیاترە!', context: 'Dragon Ball Z / Vegeta' },
+    'yare yare daze': { kurdish: 'ئاخ لە دەستت... (چەند بێزارکەری)', context: 'JoJo Bizarre Adventure / Jotaro', alternatives: ['دە دەست هەڵگرە...', 'چەندە بێزارکەرە...'] },
+    'yare yare': { kurdish: 'ئاخ لە دەستت...', context: 'Anime Trope (Good Grief)', alternatives: ['دە دەست هەڵگرە...', 'کە بێزارکەری...'] },
+    'good grief': { kurdish: 'ئاخ لە دەستت...', context: 'Anime / Cinema Trope (Yare Yare)', alternatives: ['کە بێزارکەری...', 'دە دەست هەڵگرە...'] },
+    'give me a break': { kurdish: 'دە دەست هەڵگرە...', context: 'Anime / Cinema Trope', alternatives: ['لێم گەڕێ...', 'ئارامم پێ بدە...'] },
+    'if you do not fight you cannot win': { kurdish: 'ئەگەر شەڕ نەکەیت، ناتوانیت سەربکەویت', context: 'Attack on Titan / Eren', alternatives: ['بجەنگە بۆ ئەوەی ببیەیتەوە'] },
+    "if you don't fight you can't win": { kurdish: 'ئەگەر شەڕ نەکەیت، ناتوانیت سەربکەویت', context: 'Attack on Titan / Eren', alternatives: ['بجەنگە بۆ ئەوەی ببیەیتەوە'] },
+    'tatakae': { kurdish: 'بجەنگە! شەڕ بکە!', context: 'Attack on Titan / Eren Yeager', alternatives: ['شەڕ بکە!', 'کۆڵ مەدە و بجەنگە!'] },
+    'fight fight': { kurdish: 'بجەنگە! شەڕ بکە!', context: 'Anime Battle Cry' },
+    'a lesson without pain is meaningless': { kurdish: 'وانەیەک بێ ئازار هیچ مانایەکی نییە', context: 'Fullmetal Alchemist / Edward', alternatives: ['فێربوون بێ چەشتنی ئازار ناکرێت'] },
+    'in the name of the moon i will punish you': { kurdish: 'بە ناوی مانگەوە سزات دەدەم!', context: 'Sailor Moon', alternatives: ['سزات بە ناوی مانگەوە بەسەردا دەسەپێنم!'] },
+    "in the name of the moon i'll punish you": { kurdish: 'بە ناوی مانگەوە سزات دەدەم!', context: 'Sailor Moon' },
+    'i will take a potato chip and eat it': { kurdish: 'چپسێک هەڵدەگرم و دەیخۆم!', context: 'Death Note / Light Yagami' },
+    "i'll take a potato chip and eat it": { kurdish: 'چپسێک هەڵدەگرم و دەیخۆم!', context: 'Death Note / Light Yagami' },
+    'do not believe in yourself believe in me': { kurdish: 'باوەڕت بە خۆت نەبێت، باوەڕت بە من هەبێت کە باوەڕم بە تۆیە!', context: 'Gurren Lagann / Kamina' },
+    "don't believe in yourself believe in me": { kurdish: 'باوەڕت بە خۆت نەبێت، باوەڕت بە من هەبێت کە باوەڕم بە تۆیە!', context: 'Gurren Lagann / Kamina' },
+    'the world shall know pain': { kurdish: 'جیهان دەبێت ئازار بناسێت!', context: 'Naruto / Pain', alternatives: ['جیهان فێری ئازار دەبێت!'] },
+    'know pain': { kurdish: 'ئازار بچێژە!', context: 'Naruto / Pain', alternatives: ['ئازار بناسە!'] },
+    'feel pain': { kurdish: 'ئازار بچێژە!', context: 'Naruto / Pain', alternatives: ['ئازار هەست پێ بکە!'] },
+    'this is my ninja way': { kurdish: 'ئەمە ڕێبازی نینجاییمە', context: 'Naruto Uzumaki', alternatives: ['ڕێگەی نینجایی من ئەمەیە'] },
+    'i will never give up': { kurdish: 'هەرگیز کۆڵ نادەم!', context: 'Shonen Anime Trope', alternatives: ['هەرگیز دەستبەردار نابم!', 'خۆم بەدەستەوە نادەم!'] },
+    "i'll never give up": { kurdish: 'هەرگیز کۆڵ نادەم!', context: 'Shonen Anime Trope', alternatives: ['هەرگیز دەستبەردار نابم!'] },
+    'i will never forgive you': { kurdish: 'هەرگیز لێت نابوورم!', context: 'Anime Drama / Rivalry', alternatives: ['هەرگیز لێت خۆش نابم!', 'چاوپۆشیت لێ ناکەم!'] },
+    "i'll never forgive you": { kurdish: 'هەرگیز لێت نابوورم!', context: 'Anime Drama', alternatives: ['هەرگیز لێت خۆش نابم!'] },
+    "you're wide open": { kurdish: 'بەرگریت لاوازە! (کەلێنت هەیە)', context: 'Anime Combat Trope', alternatives: ['ڕێگەت کراوەیە بۆ لێدان!', 'بەرگریت نەماوە!'] },
+    'you are wide open': { kurdish: 'بەرگریت لاوازە!', context: 'Anime Combat Trope', alternatives: ['کەلێنت هەیە!'] },
+    'too slow': { kurdish: 'زۆر خاویت!', context: 'Anime Combat Trope', alternatives: ['زۆر هێواشیت!', 'دەستت ناگات پێم!'] },
+    'is that all you got': { kurdish: 'هەر ئەوەندەت لەدەست دێت؟', context: 'Anime Challenge', alternatives: ['هەر ئەوە بوو هەموو هێزت؟', 'تەواوی تواناکەت ئەمە بوو؟'] },
+    "is that all you've got": { kurdish: 'هەر ئەوەندەت لەدەست دێت؟', context: 'Anime Challenge', alternatives: ['هەر ئەوە بوو هەموو هێزت؟'] },
+    'this is not even my final form': { kurdish: 'ئەمە هێشتا شێوەی کۆتاییم نییە', context: 'Dragon Ball / Anime Trope', alternatives: ['هێشتا نەگەیشتوومەتە هێزی کۆتایی'] },
+    "this isn't even my final form": { kurdish: 'ئەمە هێشتا شێوەی کۆتاییم نییە', context: 'Dragon Ball / Anime Trope' },
+    'as expected of you': { kurdish: 'هەر ئەوەت لێ چاوەڕوان دەکرا!', context: 'Anime Trope (Sasuga)', alternatives: ['هەر خۆتی و دەستت خۆش!', 'شایستەی تۆیە!'] },
+    'as expected': { kurdish: 'هەر وەک چاوەڕوان دەکرا', context: 'Anime Trope (Sasuga)', alternatives: ['هەر وەک پێشبینی دەکرا', 'هەر ئەوەمان لێ دەوەشایەوە'] },
+    'just who do you think i am': { kurdish: 'پێتوایە من کێم؟! (من کەم نیم)', context: 'Anime Defiance (Kamina)', alternatives: ['وا دەزانیت من کێم؟!'] },
+    'you are ten years too early': { kurdish: 'دە ساڵ زووە بۆت تا بمبەزێنیت!', context: 'Anime / Martial Arts Trope', alternatives: ['هێشتا ماوتە بمبەزێنیت!'] },
+    "you're ten years too early": { kurdish: 'دە ساڵ زووە بۆت تا بمبەزێنیت!', context: 'Anime Trope' },
+    'i will surpass my limits': { kurdish: 'سنوورەکانی خۆم تێدەپەڕێنم!', context: 'Anime Power-Up', alternatives: ['هەموو سنوورەکان دەبەزێنم!'] },
+    "i'll surpass my limits": { kurdish: 'سنوورەکانی خۆم تێدەپەڕێنم!', context: 'Anime Power-Up' },
+    'i have been waiting for this': { kurdish: 'مێژوویەکە چاوەڕێی ئەم ساتەم!', context: 'Anime Showdown', alternatives: ['لە مێژە چاوەڕێی ئەمەم!'] },
+    "i've been waiting for this": { kurdish: 'مێژوویەکە چاوەڕێی ئەم ساتەم!', context: 'Anime Showdown' },
     'get out of here': { kurdish: 'بڕۆ دەرەوە', context: 'Dismissal / Disbelief', alternatives: ['لەبەرچاوم ون بە', 'سەری خۆت هەڵگرە', 'مەحاڵە!'] },
     'get the hell out of here': { kurdish: 'زوو لێرە بڕۆ دەرەوە', context: 'Urgent Dismissal', alternatives: ['لەبەرچاوم ون بە', 'بە نەفرەت بیت بڕۆ'] },
     'get the fuck out of here': { kurdish: 'لەبەرچاوم ون بە', context: 'Hostile Dismissal', alternatives: ['سەری خۆت هەڵگرە', 'بڕۆ دەرەوە'] },
@@ -324,6 +543,506 @@ const TranslatorDict = (() => {
   };
 
   /**
+   * Leftover Untranslated English Subtitle Words -> Kurdish Sorani mappings.
+   * Cleans up untranslated Latin remnants left behind by machine translation.
+   */
+  const UNTRANSLATED_ENGLISH_MAP = {
+    // Interjections, greetings & conversational fillers
+    'okay': 'باشە',
+    'ok': 'باشە',
+    'hey': 'سڵاو',
+    'heya': 'سڵاو',
+    'hello': 'سڵاو',
+    'hi': 'سڵاو',
+    'bye': 'ماڵئاوا',
+    'goodbye': 'ماڵئاوا',
+    'yeah': 'بەڵێ',
+    'yep': 'بەڵێ',
+    'yup': 'بەڵێ',
+    'nope': 'نەخێر',
+    'nah': 'نەخێر',
+    'yes': 'بەڵێ',
+    'no': 'نەخێر',
+    'please': 'تکایە',
+    'pls': 'تکایە',
+    'plz': 'تکایە',
+    'sorry': 'ببوورە',
+    'thanks': 'سوپاس',
+    'thank': 'سوپاس',
+    'thx': 'سوپاس',
+    'welcome': 'بەخێربێیت',
+    'dude': 'کابرا',
+    'bro': 'برام',
+    'brother': 'برا',
+    'sister': 'خوشک',
+    'buddy': 'هاوڕێ',
+    'pal': 'هاوڕێ',
+    'mate': 'هاوڕێ',
+    'man': 'پیاو',
+    'guys': 'هاوڕێیان',
+    'sir': 'گەورەم',
+    'madam': 'خاتوونم',
+    'maam': 'خاتوونم',
+    'boss': 'سەرۆک',
+    'chief': 'سەرۆک',
+
+    // Titles, Ranks, Movie Roles
+    'captain': 'کاپتن',
+    'doctor': 'دکتۆر',
+    'doc': 'دکتۆر',
+    'detective': 'لێکۆڵەر',
+    'agent': 'بریکار',
+    'officer': 'ئەفسەر',
+    'commander': 'فەرماندە',
+    'general': 'ژەنەڕاڵ',
+    'colonel': 'عەقید',
+    'major': 'ڕائد',
+    'lieutenant': 'ملازم',
+    'sergeant': 'سەرپەل',
+    'soldier': 'سەرباز',
+    'police': 'پۆلیس',
+    'cop': 'پۆلیس',
+    'cops': 'پۆلیسەکان',
+    'sheriff': 'شەریف',
+    'president': 'سەرۆک کۆمار',
+    'minister': 'وەزیر',
+    'king': 'پاشا',
+    'queen': 'شاژن',
+    'prince': 'شازادە',
+    'princess': 'شازادە خاتوون',
+    'knight': 'سووارچاک',
+    'lord': 'گەورە',
+    'master': 'مامۆستا / گەورە',
+
+    // Tactical, Military, Sci-Fi & Action Terms
+    'target': 'ئامانج',
+    'targets': 'ئامانجەکان',
+    'mission': 'ئەرک',
+    'missions': 'ئەرکەکان',
+    'system': 'سیستەم',
+    'systems': 'سیستەمەکان',
+    'code': 'کۆد',
+    'base': 'بنکە',
+    'zone': 'ناوچە',
+    'level': 'ئاست',
+    'sector': 'کەرت',
+    'unit': 'یەکە',
+    'signal': 'ئاماژە',
+    'fire': 'تەقە',
+    'shoot': 'تەقە بکە',
+    'ceasefire': 'ئاگربەست',
+    'lock': 'قفڵ',
+    'load': 'پڕکردنەوە',
+    'cover': 'پەناگە',
+    'ambush': 'بۆسە',
+    'sniper': 'نیشانەشکێن',
+    'bomb': 'بۆمب',
+    'bullet': 'فیشەک',
+    'bullets': 'فیشەکەکان',
+    'gun': 'چەک',
+    'guns': 'چەکەکان',
+    'weapon': 'چەک',
+    'weapons': 'چەکەکان',
+    'shield': 'قەڵغان',
+    'sword': 'شمشێر',
+    'knife': 'چەقۆ',
+    'danger': 'مەترسی',
+    'warning': 'ئاگاداری',
+    'caution': 'وریا بن',
+    'emergency': 'باری لەناکاو',
+    'secure': 'پارێزراو',
+    'clear': 'پاک / پارێزراو',
+    'roger': 'تێگەیشتم',
+    'copy': 'تێگەیشتم',
+    'negative': 'نەخێر',
+    'affirmative': 'بەڵێ',
+    'mayday': 'فریاگوزاری',
+    'sos': 'هانابردن',
+    'over': 'تەواو',
+    'out': 'دەرەوە',
+
+    // Common Core Verbs & Actions in Dialogue
+    'wait': 'بۆستە',
+    'stop': 'بوەستە',
+    'run': 'ڕابکە',
+    'help': 'یارمەتی',
+    'look': 'سەیرکە',
+    'listen': 'گوێبگرە',
+    'watch': 'ئاگاداربە',
+    'come': 'وەرە',
+    'go': 'بڕۆ',
+    'leave': 'بڕۆ',
+    'stay': 'بمێنەرەوە',
+    'save': 'ڕزگار بکە',
+    'protect': 'بپارێزە',
+    'kill': 'بکوژە',
+    'die': 'بمرە',
+    'survive': 'ڕزگاربوون',
+    'escape': 'ڕاکردن / هەڵاتن',
+    'hide': 'خۆت بشارەوە',
+    'fight': 'شەڕ بکە',
+    'attack': 'هێرش بکە',
+    'defend': 'بەرگری بکە',
+    'win': 'بردنەوە',
+    'lose': 'دۆڕان',
+    'start': 'دەستپێبکە',
+    'finish': 'تەواو بکە',
+    'ready': 'ئامادە',
+
+    // Fantasy, Sci-Fi & Creatures
+    'monster': 'دڕندە',
+    'monsters': 'دڕندەکان',
+    'alien': 'بوونەوەری نامۆ',
+    'aliens': 'بوونەوەرە نامۆکان',
+    'demon': 'شەیتان',
+    'demons': 'شەیتانەکان',
+    'dragon': 'ئەژدیها',
+    'dragons': 'ئەژدیهاکان',
+    'ghost': 'ڕۆح / پەری',
+    'ghosts': 'ڕۆحەکان',
+    'vampire': 'خوێنمژ',
+    'zombie': 'زۆمبی',
+    'robot': 'ڕۆبۆت',
+    'cyborg': 'سایبۆرگ',
+    'magic': 'جادوو',
+    'power': 'هێز',
+    'energy': 'وزە',
+    'hero': 'پاڵەوان',
+    'villain': 'خراپەکار',
+    'champion': 'پاڵەوان',
+    'legend': 'ئەفسانە',
+
+    // Emotions, States & Adjectives
+    'alive': 'زیندوو',
+    'dead': 'مردوو',
+    'crazy': 'شێت',
+    'insane': 'شێت',
+    'mad': 'تووڕە / شێت',
+    'angry': 'تووڕە',
+    'happy': 'دڵخۆش',
+    'sad': 'دڵتەنگ',
+    'scared': 'ترساو',
+    'afraid': 'ترساو',
+    'brave': 'ئازا',
+    'strong': 'بەهێز',
+    'weak': 'لاواز',
+    'good': 'باش',
+    'bad': 'خراپ',
+    'evil': 'خراپەکار',
+    'pure': 'پاک',
+    'true': 'ڕاستەقینە',
+    'false': 'هەڵە / درۆ',
+    'real': 'ڕاستەقینە',
+    'fake': 'ساختە',
+    'easy': 'ئاسان',
+    'hard': 'سەخت',
+    'fast': 'خێرا',
+    'slow': 'هێواش',
+    'quiet': 'بێدەنگ',
+    'loud': 'دەنگبەرز',
+    'perfect': 'نایاب',
+    'great': 'نایاب',
+    'awesome': 'نایاب',
+    'cool': 'نایاب',
+    'fine': 'باش',
+    'sure': 'دڵنیام',
+    'maybe': 'لەوانەیە',
+    'never': 'هەرگیز',
+    'always': 'هەمیشە',
+    'now': 'ئێستا',
+    'later': 'دواتر',
+    'soon': 'بەمنزیکانە',
+    'today': 'ئەمڕۆ',
+    'tomorrow': 'بەیانی',
+    'yesterday': 'دوێنێ',
+    'here': 'لێرە',
+    'there': 'لەوێ',
+
+    // World & Elements
+    'world': 'جیهان',
+    'earth': 'زەوی',
+    'universe': 'گەردوون',
+    'galaxy': 'کاکێشان',
+    'star': 'ئەستێرە',
+    'stars': 'ئەستێرەکان',
+    'sun': 'خۆر',
+    'moon': 'مانگ',
+    'sky': 'ئاسمان',
+    'sea': 'دەریا',
+    'ocean': 'زەریا',
+    'fire': 'ئاگر',
+    'water': 'ئاو',
+    'air': 'هەوا',
+    'light': 'ڕووناکی',
+    'dark': 'تاریکی',
+    'darkness': 'تاریکی',
+    'shadow': 'سێبەر',
+    'shadows': 'سێبەرەکان',
+    'destiny': 'چارەنووس',
+    'fate': 'چارەنووس',
+    'dream': 'خەون',
+    'nightmare': 'مۆتەکە',
+    'memory': 'یادەوەری',
+    'memories': 'یادەوەرییەکان',
+    'truth': 'ڕاستی',
+    'secret': 'نهێنی',
+    'secrets': 'نهێنییەکان',
+    'promise': 'بەڵێن',
+    'soul': 'ڕۆح',
+    'heart': 'دڵ',
+    'mind': 'هۆش / ئەقڵ',
+    'blood': 'خوێن',
+    'love': 'خۆشەویستی',
+    'hate': 'ڕق',
+    'friend': 'هاوڕێ',
+    'friends': 'هاوڕێکان',
+    'enemy': 'دوژمن',
+    'enemies': 'دوژمنەکان',
+    'family': 'خێزان',
+    'father': 'باوک',
+    'dad': 'باوکە',
+    'mother': 'دایک',
+    'mom': 'دایکە',
+    'son': 'کوڕ',
+    'daughter': 'کچ',
+    'baby': 'ئازیزم / منداڵ',
+    'honey': 'ئازیزەکەم',
+    'darling': 'ئازیزەکەم',
+    'sweetheart': 'ئازیزەکەم',
+    'people': 'خەڵک',
+    'money': 'پارە',
+    'car': 'ئۆتۆمبێل',
+    'city': 'شار',
+    'house': 'ماڵ',
+    'home': 'ماڵ',
+    'room': 'ژوور',
+    'door': 'دەرگا',
+    'window': 'پەنجەرە',
+    'story': 'چیرۆک',
+    'game': 'یاری',
+    'movie': 'فیلم',
+    'film': 'فیلم',
+    'music': 'مۆسیقا',
+    'song': 'گۆرانی',
+    'voice': 'دەنگ',
+    'time': 'کات',
+    'space': 'بۆشایی',
+    'peace': 'ئاشتی',
+    'war': 'شەڕ',
+    'battle': 'جەنگ',
+    'victory': 'سەرکەوتن',
+    'defeat': 'شکست',
+
+    // Anime Specific Short Words, Honorifics & Battle Terms
+    'nani': 'چی؟',
+    'baka': 'گێژ',
+    'kuso': 'نەفرەت',
+    'kisama': 'تۆی بێشەرەف',
+    'temee': 'تۆی نەفرەتی',
+    'yamete': 'بوەستە / مەکە',
+    'tasukete': 'یارمەتیم بدەن',
+    'hayaku': 'زووکە / خێراکە',
+    'ike': 'بڕۆ / هێرش بکە',
+    'dame': 'نابێت / نەخێر',
+    'urusai': 'دەمت داخە',
+    'senpai': 'سینپای (پێشەنگ)',
+    'sensei': 'مامۆستا',
+    'kohai': 'هاوپۆلی بچووکتر',
+    'oniichan': 'برا گەورە',
+    'nii-san': 'برا گەورە',
+    'oneechan': 'خوشکە گەورە',
+    'oneesan': 'خوشکە گەورە',
+    'arigato': 'سوپاس',
+    'arigatou': 'سوپاس',
+    'gomen': 'ببوورە',
+    'gomenasai': 'ببوورە',
+    'daijoubu': 'خەمت نەبێت / باشم',
+    'ganbatte': 'کۆڵ مەدە / هەوڵ بدە',
+    'sugoi': 'سەرسوڕهێنەرە',
+    'kawaii': 'شیرین و جوان',
+    'kowai': 'ترسناکە',
+    'wakatta': 'تێگەیشتم',
+    'yatta': 'سەرکەوتین!',
+    'naruhodo': 'تێگەیشتم',
+    'souka': 'ئاوایە کەواتە',
+    'itadakimasu': 'سوپاس بۆ خواردنەکە',
+    'shinigami': 'شینیگامی (گیانکێش)',
+    'hokage': 'هۆکاگی',
+    'shinra': 'شینرا',
+    'tensei': 'تێنسێی',
+    'kamehameha': 'کامێهامێها',
+    'tatakae': 'بجەنگە',
+    'dattebayo': 'باوەڕ بکە',
+    'shannaro': 'یانزە بەڵێ',
+    'jutsu': 'جوتسۆ',
+    'chakra': 'چاکرا',
+    'ki': 'کای',
+    'nen': 'نین',
+    'haki': 'هاکی',
+    'titan': 'تایتان',
+    'ghoul': 'غوول',
+    'saiyan': 'سایان',
+    'nakama': 'هاوڕێی گیانی',
+    'otaku': 'ئۆتاکۆ',
+    'manga': 'مانگا',
+    'anime': 'ئەنیمێ',
+    'chibi': 'بچکۆلە',
+    'senseis': 'مامۆستایان',
+    'senpais': 'پێشەنگەکان',
+  };
+
+  /**
+   * Handle speech interruptions, cut-offs (e.g. `bu-`, `wh-`, `I-`), and stutters (`b-but`, `w-what`).
+   * Properly translates and preserves cut-off dialogue markers for Kurdish Sorani subtitles.
+   */
+  function handleSpeechCutoffs(text) {
+    if (!text || typeof text !== 'string') return text;
+    let s = text;
+
+    // Stutters & repeated stutters (e.g. "b-but", "b-b-but" -> "بـ-بەڵام", "w-what" -> "چـ-چی")
+    s = s.replace(/\b(?:b[-—–]+)+but\b/gi, 'بـ-بەڵام')
+         .replace(/\b(?:w[-—–]+)+what\b/gi, 'چـ-چی')
+         .replace(/\b(?:w[-—–]+)+wait\b/gi, 'بـ-بۆستە')
+         .replace(/\b(?:n[-—–]+)+no\b/gi, 'نـ-نەخێر')
+         .replace(/\b(?:y[-—–]+)+yes\b/gi, 'بـ-بەڵێ')
+         .replace(/\b(?:i[-—–]+)+i\b/gi, 'مـ-من')
+         .replace(/\b(?:w[-—–]+)+why\b/gi, 'بـ-بۆچی')
+         .replace(/\b(?:h[-—–]+)+how\b/gi, 'چـ-چۆن')
+         .replace(/\b(?:w[-—–]+)+who\b/gi, 'کـ-کێ')
+         .replace(/\b(?:w[-—–]+)+where\b/gi, 'لـ-لەکوێ')
+         .replace(/\b(?:w[-—–]+)+when\b/gi, 'کـ-کەی')
+         .replace(/\b(?:y[-—–]+)+you\b/gi, 'تـ-تۆ')
+         .replace(/\b(?:s[-—–]+)+sorry\b/gi, 'بـ-ببورە')
+         .replace(/\b(?:p[-—–]+)+please\b/gi, 'تـ-تکایە')
+         .replace(/\b(?:h[-—–]+)+help\b/gi, 'یـ-یارمەتی')
+         .replace(/\b(?:d[-—–]+)+don['’]?t\b/gi, 'مـ-مەکە')
+         .replace(/\b(?:c[-—–]+)+can['’]?t\b/gi, 'نـ-ناتوانم')
+         .replace(/\b(?:m[-—–]+)+maybe\b/gi, 'ڕـ-ڕەنگە')
+         .replace(/\b(?:t[-—–]+)+thank\b/gi, 'سـ-سوپاس')
+         .replace(/\b(?:l[-—–]+)+look\b/gi, 'سـ-سەیرکە')
+         .replace(/\b(?:l[-—–]+)+listen\b/gi, 'گـ-گوێبگرە')
+         .replace(/\b(?:k[-—–]+)+know\b/gi, 'دـ-دەزانم')
+         .replace(/\b(?:t[-—–]+)+think\b/gi, 'پـ-پێموابوو')
+         .replace(/\b(?:j[-—–]+)+just\b/gi, 'تـ-تەنها')
+         .replace(/\b(?:r[-—–]+)+really\b/gi, 'بـ-بەڕاست');
+
+    // Interrupted speech single-word cut-offs (e.g., "bu-" -> "بـ-", "wh-" -> "چـ-", "I-" -> "مـ-")
+    s = s.replace(/(^|[\s،؛؟.\n([{"'«])bu[-—–]+(?=[\s،؛؟.,!?:'")]|$)/gi, '$1بـ-')
+         .replace(/(^|[\s،؛؟.\n([{"'«])but[-—–]+(?=[\s،؛؟.,!?:'")]|$)/gi, '$1بەڵا-')
+         .replace(/(^|[\s،؛؟.\n([{"'«])wh[-—–]+(?=[\s،؛؟.,!?:'")]|$)/gi, '$1چـ-')
+         .replace(/(^|[\s،؛؟.\n([{"'«])wha[-—–]+(?=[\s،؛؟.,!?:'")]|$)/gi, '$1چی-')
+         .replace(/(^|[\s،؛؟.\n([{"'«])what[-—–]+(?=[\s،؛؟.,!?:'")]|$)/gi, '$1چی-')
+         .replace(/(^|[\s،؛؟.\n([{"'«])why[-—–]+(?=[\s،؛؟.,!?:'")]|$)/gi, '$1بۆ-')
+         .replace(/(^|[\s،؛؟.\n([{"'«])how[-—–]+(?=[\s،؛؟.,!?:'")]|$)/gi, '$1چۆ-')
+         .replace(/(^|[\s،؛؟.\n([{"'«])who[-—–]+(?=[\s،؛؟.,!?:'")]|$)/gi, '$1کێ-')
+         .replace(/(^|[\s،؛؟.\n([{"'«])where[-—–]+(?=[\s،؛؟.,!?:'")]|$)/gi, '$1لەکوێ-')
+         .replace(/(^|[\s،؛؟.\n([{"'«])when[-—–]+(?=[\s،؛؟.,!?:'")]|$)/gi, '$1کەی-')
+         .replace(/(^|[\s،؛؟.\n([{"'«])wa[-—–]+(?=[\s،؛؟.,!?:'")]|$)/gi, '$1بۆسـ-')
+         .replace(/(^|[\s،؛؟.\n([{"'«])wai[-—–]+(?=[\s،؛؟.,!?:'")]|$)/gi, '$1بۆسـ-')
+         .replace(/(^|[\s،؛؟.\n([{"'«])wait[-—–]+(?=[\s،؛؟.,!?:'")]|$)/gi, '$1بۆسـ-')
+         .replace(/(^|[\s،؛؟.\n([{"'«])st[-—–]+(?=[\s،؛؟.,!?:'")]|$)/gi, '$1بوەسـ-')
+         .replace(/(^|[\s،؛؟.\n([{"'«])stop[-—–]+(?=[\s،؛؟.,!?:'")]|$)/gi, '$1بوەسـ-')
+         .replace(/(^|[\s،؛؟.\n([{"'«])no[-—–]+(?=[\s،؛؟.,!?:'")]|$)/gi, '$1نـ-')
+         .replace(/(^|[\s،؛؟.\n([{"'«])ye[-—–]+(?=[\s،؛؟.,!?:'")]|$)/gi, '$1بـ-')
+         .replace(/(^|[\s،؛؟.\n([{"'«])yes[-—–]+(?=[\s،؛؟.,!?:'")]|$)/gi, '$1بەڵێ-')
+         .replace(/(^|[\s،؛؟.\n([{"'«])i[-—–]+(?=[\s،؛؟.,!?:'")]|$)/gi, '$1مـ-')
+         .replace(/(^|[\s،؛؟.\n([{"'«])yo[-—–]+(?=[\s،؛؟.,!?:'")]|$)/gi, '$1تـ-')
+         .replace(/(^|[\s،؛؟.\n([{"'«])you[-—–]+(?=[\s،؛؟.,!?:'")]|$)/gi, '$1تـ-')
+         .replace(/(^|[\s،؛؟.\n([{"'«])she[-—–]+(?=[\s،؛؟.,!?:'")]|$)/gi, '$1ئەو-')
+         .replace(/(^|[\s،؛؟.\n([{"'«])he[-—–]+(?=[\s،؛؟.,!?:'")]|$)/gi, '$1ئەو-')
+         .replace(/(^|[\s،؛؟.\n([{"'«])it[-—–]+(?=[\s،؛؟.,!?:'")]|$)/gi, '$1ئەوە-')
+         .replace(/(^|[\s،؛؟.\n([{"'«])th[-—–]+(?=[\s،؛؟.,!?:'")]|$)/gi, '$1ئە-')
+         .replace(/(^|[\s،؛؟.\n([{"'«])the[-—–]+(?=[\s،؛؟.,!?:'")]|$)/gi, '$1ئە-')
+         .replace(/(^|[\s،؛؟.\n([{"'«])they[-—–]+(?=[\s،؛؟.,!?:'")]|$)/gi, '$1ئەوان-')
+         .replace(/(^|[\s،؛؟.\n([{"'«])this[-—–]+(?=[\s،؛؟.,!?:'")]|$)/gi, '$1ئەمە-')
+         .replace(/(^|[\s،؛؟.\n([{"'«])that[-—–]+(?=[\s،؛؟.,!?:'")]|$)/gi, '$1ئەوە-')
+         .replace(/(^|[\s،؛؟.\n([{"'«])do[-—–]+(?=[\s،؛؟.,!?:'")]|$)/gi, '$1مـ-')
+         .replace(/(^|[\s،؛؟.\n([{"'«])don['’]?t[-—–]+(?=[\s،؛؟.,!?:'")]|$)/gi, '$1مەکە-')
+         .replace(/(^|[\s،؛؟.\n([{"'«])ca[-—–]+(?=[\s،؛؟.,!?:'")]|$)/gi, '$1نا-')
+         .replace(/(^|[\s،؛؟.\n([{"'«])can[-—–]+(?=[\s،؛؟.,!?:'")]|$)/gi, '$1دەتوانـ-')
+         .replace(/(^|[\s،؛؟.\n([{"'«])can['’]?t[-—–]+(?=[\s،؛؟.,!?:'")]|$)/gi, '$1ناتوانـ-')
+         .replace(/(^|[\s،؛؟.\n([{"'«])pl[-—–]+(?=[\s،؛؟.,!?:'")]|$)/gi, '$1تـ-')
+         .replace(/(^|[\s،؛؟.\n([{"'«])ple[-—–]+(?=[\s،؛؟.,!?:'")]|$)/gi, '$1تکا-')
+         .replace(/(^|[\s،؛؟.\n([{"'«])please[-—–]+(?=[\s،؛؟.,!?:'")]|$)/gi, '$1تکا-')
+         .replace(/(^|[\s،؛؟.\n([{"'«])so[-—–]+(?=[\s،؛؟.,!?:'")]|$)/gi, '$1بـ-')
+         .replace(/(^|[\s،؛؟.\n([{"'«])sor[-—–]+(?=[\s،؛؟.,!?:'")]|$)/gi, '$1ببوور-')
+         .replace(/(^|[\s،؛؟.\n([{"'«])sorry[-—–]+(?=[\s،؛؟.,!?:'")]|$)/gi, '$1ببوور-')
+         .replace(/(^|[\s،؛؟.\n([{"'«])he[-—–]+(?=[\s،؛؟.,!?:'")]|$)/gi, '$1یـ-')
+         .replace(/(^|[\s،؛؟.\n([{"'«])hel[-—–]+(?=[\s،؛؟.,!?:'")]|$)/gi, '$1یارمەتـ-')
+         .replace(/(^|[\s،؛؟.\n([{"'«])help[-—–]+(?=[\s،؛؟.,!?:'")]|$)/gi, '$1یارمەتـ-')
+         .replace(/(^|[\s،؛؟.\n([{"'«])loo[-—–]+(?=[\s،؛؟.,!?:'")]|$)/gi, '$1سەیرکـ-')
+         .replace(/(^|[\s،؛؟.\n([{"'«])look[-—–]+(?=[\s،؛؟.,!?:'")]|$)/gi, '$1سەیرکـ-')
+         .replace(/(^|[\s،؛؟.\n([{"'«])lis[-—–]+(?=[\s،؛؟.,!?:'")]|$)/gi, '$1گوێبگـ-')
+         .replace(/(^|[\s،؛؟.\n([{"'«])listen[-—–]+(?=[\s،؛؟.,!?:'")]|$)/gi, '$1گوێبگـ-')
+         .replace(/(^|[\s،؛؟.\n([{"'«])bec[-—–]+(?=[\s،؛؟.,!?:'")]|$)/gi, '$1لەبـ-')
+         .replace(/(^|[\s،؛؟.\n([{"'«])because[-—–]+(?=[\s،؛؟.,!?:'")]|$)/gi, '$1لەبـ-')
+         .replace(/(^|[\s،؛؟.\n([{"'«])nev[-—–]+(?=[\s،؛؟.,!?:'")]|$)/gi, '$1هەرگیـ-')
+         .replace(/(^|[\s،؛؟.\n([{"'«])never[-—–]+(?=[\s،؛؟.,!?:'")]|$)/gi, '$1هەرگیـ-')
+         .replace(/(^|[\s،؛؟.\n([{"'«])alw[-—–]+(?=[\s،؛؟.,!?:'")]|$)/gi, '$1هەمیـ-')
+         .replace(/(^|[\s،؛؟.\n([{"'«])always[-—–]+(?=[\s،؛؟.,!?:'")]|$)/gi, '$1هەمیـ-')
+         .replace(/(^|[\s،؛؟.\n([{"'«])imp[-—–]+(?=[\s،؛؟.,!?:'")]|$)/gi, '$1مەحا-')
+         .replace(/(^|[\s،؛؟.\n([{"'«])impossible[-—–]+(?=[\s،؛؟.,!?:'")]|$)/gi, '$1مەحاڵە-')
+         .replace(/(^|[\s،؛؟.\n([{"'«])bak[-—–]+(?=[\s،؛؟.,!?:'")]|$)/gi, '$1گێـ-')
+         .replace(/(^|[\s،؛؟.\n([{"'«])baka[-—–]+(?=[\s،؛؟.,!?:'")]|$)/gi, '$1گێژ-')
+         .replace(/(^|[\s،؛؟.\n([{"'«])dam[-—–]+(?=[\s،؛؟.,!?:'")]|$)/gi, '$1نەفـ-')
+         .replace(/(^|[\s،؛؟.\n([{"'«])damn[-—–]+(?=[\s،؛؟.,!?:'")]|$)/gi, '$1نەفرەت-')
+         .replace(/(^|[\s،؛؟.\n([{"'«])kno[-—–]+(?=[\s،؛؟.,!?:'")]|$)/gi, '$1نازانـ-')
+         .replace(/(^|[\s،؛؟.\n([{"'«])know[-—–]+(?=[\s،؛؟.,!?:'")]|$)/gi, '$1نازانـ-')
+         .replace(/(^|[\s،؛؟.\n([{"'«])thi[-—–]+(?=[\s،؛؟.,!?:'")]|$)/gi, '$1پێموابوو-')
+         .replace(/(^|[\s،؛؟.\n([{"'«])think[-—–]+(?=[\s،؛؟.,!?:'")]|$)/gi, '$1پێموابوو-')
+         .replace(/(^|[\s،؛؟.\n([{"'«])jus[-—–]+(?=[\s،؛؟.,!?:'")]|$)/gi, '$1تەنها-')
+         .replace(/(^|[\s،؛؟.\n([{"'«])just[-—–]+(?=[\s،؛؟.,!?:'")]|$)/gi, '$1تەنها-')
+         .replace(/(^|[\s،؛؟.\n([{"'«])rea[-—–]+(?=[\s،؛؟.,!?:'")]|$)/gi, '$1بەڕاسـ-')
+         .replace(/(^|[\s،؛؟.\n([{"'«])really[-—–]+(?=[\s،؛؟.,!?:'")]|$)/gi, '$1بەڕاسـ-')
+         .replace(/(^|[\s،؛؟.\n([{"'«])run[-—–]+(?=[\s،؛؟.,!?:'")]|$)/gi, '$1ڕابکـ-')
+         .replace(/(^|[\s،؛؟.\n([{"'«])kill[-—–]+(?=[\s،؛؟.,!?:'")]|$)/gi, '$1بکوژ-')
+         .replace(/(^|[\s،؛؟.\n([{"'«])die[-—–]+(?=[\s،؛؟.,!?:'")]|$)/gi, '$1بمر-')
+         .replace(/(^|[\s،؛؟.\n([{"'«])live[-—–]+(?=[\s،؛؟.,!?:'")]|$)/gi, '$1بژی-')
+         .replace(/(^|[\s،؛؟.\n([{"'«])com[-—–]+(?=[\s،؛؟.,!?:'")]|$)/gi, '$1وەر-')
+         .replace(/(^|[\s،؛؟.\n([{"'«])come[-—–]+(?=[\s،؛؟.,!?:'")]|$)/gi, '$1وەر-')
+         .replace(/(^|[\s،؛؟.\n([{"'«])go[-—–]+(?=[\s،؛؟.,!?:'")]|$)/gi, '$1بڕۆ-')
+         .replace(/(^|[\s،؛؟.\n([{"'«])tel[-—–]+(?=[\s،؛؟.,!?:'")]|$)/gi, '$1پێمبڵـ-')
+         .replace(/(^|[\s،؛؟.\n([{"'«])tell[-—–]+(?=[\s،؛؟.,!?:'")]|$)/gi, '$1پێمبڵـ-');
+
+    // Kurdish cut-off words ending with hyphen (preserve clean attachment without disconnected spaces)
+    s = s.replace(/([\u0600-\u06ff]+)\s+[-—–]+(?=\s|$|[.,!?;:،؛؟])/g, '$1-');
+
+    return s;
+  }
+
+  /**
+   * Replace leftover English words in translated Kurdish text with their natural Kurdish equivalents.
+   * Carefully protects HTML tags (`<...>`), ASS style override tags (`{...}`), and bracket tokens.
+   */
+  function cleanUntranslatedEnglish(text) {
+    if (!text || typeof text !== 'string') return text;
+    let s = text;
+
+    // Apply speech cut-offs & stutter translation
+    s = handleSpeechCutoffs(s);
+
+    // Replace untranslated English words, preserving tags and code brackets
+    s = s.replace(/(<[^>]*>|\{[^}]*\}|\[\s*T\s*[\d\u0660-\u0669\u06f0-\u06f9]+\s*\])|(\b[a-zA-Z]{2,}\b)/gi, (m, tag, word) => {
+      if (tag) return tag;
+      if (!word) return m;
+      const lower = word.toLowerCase();
+
+      // Technical tags / format keywords to keep
+      if (/^(webvtt|note|style|ass|ssa|pos|an\d|fs|fn|c|b|i|u|s|k|kf|ko|q|r)$/i.test(word)) {
+        return word;
+      }
+
+      if (UNTRANSLATED_ENGLISH_MAP[lower]) {
+        return UNTRANSLATED_ENGLISH_MAP[lower];
+      }
+
+      return word;
+    });
+
+    return s;
+  }
+
+  /**
    * Enhanced Cinema Idiom & Expression Matching.
    * Matches idioms with flexible punctuation, contraction handling, and orders longer phrases first.
    */
@@ -355,6 +1074,9 @@ const TranslatorDict = (() => {
 
   return {
     LEXICON: ADVANCED_SUBTITLE_LEXICON,
+    UNTRANSLATED_MAP: UNTRANSLATED_ENGLISH_MAP,
+    handleSpeechCutoffs,
+    cleanUntranslatedEnglish,
     findMatches,
   };
 })();
@@ -362,3 +1084,4 @@ const TranslatorDict = (() => {
 if (typeof module !== 'undefined' && module.exports) {
   module.exports = TranslatorDict;
 }
+
