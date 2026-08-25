@@ -228,23 +228,27 @@ const SubtitlePlayer = (() => {
   /** Find all cues active at pos (supports simultaneous dialogue across speakers/positions). */
   function cuesAt(pos) {
     if (!cues.length) return [];
-    // Binary search for first cue candidate where end > pos
-    let lo = 0, hi = cues.length - 1, startIdx = cues.length;
+    // Binary search for the rightmost cue whose start time is <= pos
+    let lo = 0, hi = cues.length - 1, last = -1;
     while (lo <= hi) {
       const mid = (lo + hi) >> 1;
-      if (cues[mid].end > pos) {
-        startIdx = mid;
-        hi = mid - 1;
-      } else {
+      if (cues[mid].start <= pos) {
+        last = mid;
         lo = mid + 1;
+      } else {
+        hi = mid - 1;
       }
     }
+    if (last < 0) return [];
     const active = [];
-    for (let i = startIdx; i < cues.length; i++) {
+    // Scan backwards from `last` to find all cues that haven't ended yet
+    for (let i = last; i >= 0; i--) {
       const c = cues[i];
-      if (c.start > pos) break; // Cues are sorted by start time
       if (pos >= c.start && pos < c.end) {
-        active.push(c);
+        active.unshift(c);
+      } else if (pos - c.start > 120000) {
+        // Cues are sorted by start time; subtitles rarely exceed 2 minutes
+        break;
       }
     }
     return active;

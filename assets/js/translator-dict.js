@@ -1309,30 +1309,41 @@ const TranslatorDict = (() => {
     return s;
   }
 
+  // Pre-compiled and sorted lexicon entries for O(1) initialization during line quality checks
+  const PRECOMPILED_LEXICON_MATCHERS = Object.entries(ADVANCED_SUBTITLE_LEXICON)
+    .sort((a, b) => b[0].length - a[0].length)
+    .map(([expr, info]) => {
+      const cleanExpr = expr.toLowerCase().replace(/['’]/g, "'");
+      const escaped = cleanExpr.replace(/[.*+?^${}()|[\]\\]/g, '\\$&').replace(/'/g, "['’]?");
+      const regex = new RegExp('(?:^|\\s|[,.!?;:"()\\[\\]{}<>])' + escaped + '(?:$|\\s|[,.!?;:"()\\[\\]{}<>])', 'i');
+      return {
+        expr,
+        kurdish: info.kurdish,
+        primary: info.kurdish,
+        context: info.context || expr,
+        alternatives: info.alternatives || [],
+        regex,
+      };
+    });
+
   /**
    * Enhanced Cinema Idiom & Expression Matching.
-   * Matches idioms with flexible punctuation, contraction handling, and orders longer phrases first.
+   * Matches idioms with flexible punctuation, contraction handling, and pre-compiled regexes.
    */
   function findMatches(text) {
     if (!text || typeof text !== 'string') return [];
     const cleanText = text.toLowerCase().replace(/['’]/g, "'").replace(/\s+/g, ' ');
     const matches = [];
 
-    // Sort lexicon entries by key length descending so longer, more specific quotes match first
-    const entries = Object.entries(ADVANCED_SUBTITLE_LEXICON);
-    entries.sort((a, b) => b[0].length - a[0].length);
-
-    for (const [expr, info] of entries) {
-      const cleanExpr = expr.toLowerCase().replace(/['’]/g, "'");
-      const escaped = cleanExpr.replace(/[.*+?^${}()|[\]\\]/g, '\\$&').replace(/'/g, "['’]?");
-      const regex = new RegExp('(?:^|\\s|[,.!?;:"()\\[\\]{}<>])' + escaped + '(?:$|\\s|[,.!?;:"()\\[\\]{}<>])', 'i');
-      if (regex.test(cleanText)) {
+    for (let i = 0; i < PRECOMPILED_LEXICON_MATCHERS.length; i++) {
+      const item = PRECOMPILED_LEXICON_MATCHERS[i];
+      if (item.regex.test(cleanText)) {
         matches.push({
-          expression: expr,
-          kurdish: info.kurdish,
-          primary: info.kurdish,
-          context: info.context || expr,
-          alternatives: info.alternatives || []
+          expression: item.expr,
+          kurdish: item.kurdish,
+          primary: item.primary,
+          context: item.context,
+          alternatives: item.alternatives,
         });
       }
     }

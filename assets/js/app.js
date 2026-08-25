@@ -1388,52 +1388,6 @@
       });
     }
 
-    // Quality Inspection modal bindings
-    if (els.edQualityCheckBtn) els.edQualityCheckBtn.addEventListener('click', openQualityModal);
-    if (els.closeQualityModalBtn) els.closeQualityModalBtn.addEventListener('click', closeQualityModal);
-    if (els.doneQualityModalBtn) els.doneQualityModalBtn.addEventListener('click', closeQualityModal);
-    if (els.fixAllQualityBtn) els.fixAllQualityBtn.addEventListener('click', fixAllQuality);
-    if (els.fixOverlapsNowBtn) els.fixOverlapsNowBtn.addEventListener('click', fixDialogueOverlapsNow);
-
-    if (els.qualityCategoryTabs) {
-      els.qualityCategoryTabs.querySelectorAll('.quality-tab').forEach((tab) => {
-        tab.addEventListener('click', () => {
-          els.qualityCategoryTabs.querySelectorAll('.quality-tab').forEach((t) => t.classList.remove('active'));
-          tab.classList.add('active');
-          currentQualityFilter = tab.dataset.filter || 'all';
-          renderQualityIssuesList(lastQualityIssues);
-        });
-      });
-    }
-
-    if (els.qualitySearchInput) {
-      els.qualitySearchInput.addEventListener('input', () => {
-        filterQualityList();
-      });
-    }
-
-    if (els.qualitySearchClear) {
-      els.qualitySearchClear.addEventListener('click', () => {
-        if (els.qualitySearchInput) {
-          els.qualitySearchInput.value = '';
-          els.qualitySearchInput.focus();
-        }
-        filterQualityList();
-      });
-    }
-
-    if (els.qualityModalBackdrop) {
-      els.qualityModalBackdrop.addEventListener('click', (e) => {
-        if (e.target === els.qualityModalBackdrop) closeQualityModal();
-      });
-    }
-
-    window.addEventListener('keydown', (e) => {
-      if (e.key === 'Escape' && els.qualityModalBackdrop && !els.qualityModalBackdrop.classList.contains('hidden')) {
-        closeQualityModal();
-      }
-    });
-
     const closeAdvModal = () => {
       if (els.advModalBackdrop) els.advModalBackdrop.classList.add('hidden');
     };
