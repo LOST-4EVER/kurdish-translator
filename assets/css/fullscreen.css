@@ -197,9 +197,12 @@
 .fs-text[dir="rtl"] {
   direction: rtl;
   unicode-bidi: isolate;
-  line-height: 1.68;
-  font-family: "Noto Sans Arabic", "Noto Naskh Arabic", "Vazirmatn", "Segoe UI", "Tahoma", sans-serif;
-  letter-spacing: 0.01em;
+  line-height: 1.7;
+  font-family: var(--font-subtitle);
+  letter-spacing: 0.015em;
+  font-feature-settings: "cv01", "ss01";
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
 }
 
 /* Gesture Feedback Animation Pop */

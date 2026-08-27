@@ -374,10 +374,14 @@ Title: Kurdish Subtitles
 ScriptType: v4.00+
 WrapStyle: 0
 ScaledBorderAndShadow: yes
+PlayResX: 1920
+PlayResY: 1080
 
 [V4+ Styles]
 Format: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, Bold, Italic, Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding
-Style: Default,Arial,20,&H00FFFFFF,&H000000FF,&H00000000,&H00000000,0,0,0,0,100,100,0,0,1,2,2,2,10,10,10,1
+Style: Default,Noto Naskh Arabic,48,&H00FFFFFF,&H000000FF,&H00000000,&H80000000,-1,0,0,0,100,100,0,0,1,3.5,2,2,40,40,35,178
+Style: Top,Noto Naskh Arabic,44,&H00FFFFFF,&H000000FF,&H00000000,&H80000000,-1,0,0,0,100,100,0,0,1,3.5,2,8,40,40,35,178
+Style: Sign,Noto Sans Arabic,40,&H00E0D4FF,&H000000FF,&H00000000,&H80000000,-1,0,0,0,100,100,0,0,1,3.0,1.5,5,30,30,25,178
 
 [Events]`;
 
@@ -385,10 +389,13 @@ Style: Default,Arial,20,&H00FFFFFF,&H000000FF,&H00000000,&H00000000,0,0,0,0,100,
 Title: Kurdish Subtitles
 ScriptType: v4.00
 WrapStyle: 0
+PlayResX: 1920
+PlayResY: 1080
 
 [V4 Styles]
 Format: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, TertiaryColour, BackColour, Bold, Italic, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, AlphaLevel, Encoding
-Style: Default,Arial,20,16777215,65535,0,0,0,0,1,2,2,2,10,10,10,0,1
+Style: Default,Noto Naskh Arabic,48,16777215,65535,0,0,-1,0,1,3.5,2,2,40,40,35,0,178
+Style: Top,Noto Naskh Arabic,44,16777215,65535,0,0,-1,0,1,3.5,2,8,40,40,35,0,178
 
 [Events]`;
 
@@ -408,7 +415,11 @@ Style: Default,Arial,20,16777215,65535,0,0,0,0,1,2,2,2,10,10,10,0,1
         .replace(/\{\\i1\}/gi, '<i>').replace(/\{\\i0\}/gi, '</i>')
         .replace(/\{\\b1\}/gi, '<b>').replace(/\{\\b0\}/gi, '</b>')
         .replace(/\{\\u1\}/gi, '<u>').replace(/\{\\u0\}/gi, '</u>');
-      // Strip remaining ASS control override tags (e.g. {\pos(...)}, {\an8}, {\c&H...&})
+      // Convert ASS colors {\c&HBBGGRR&} or {\1c&HBBGGRR&} to <font color="#RRGGBB">
+      res = res.replace(/\{\\(?:c|1c)&H([0-9a-fA-F]{2})([0-9a-fA-F]{2})([0-9a-fA-F]{2})&\}/gi, (m, b, g, r) => {
+        return `<font color="#${r}${g}${b}">`;
+      });
+      // Strip remaining ASS control override tags (e.g. {\pos(...)}, {\an8}, {\fad(...)})
       res = res.replace(/\{[^{}]*\}/g, '');
     }
     return res.trim();
@@ -428,7 +439,11 @@ Style: Default,Arial,20,16777215,65535,0,0,0,0,1,2,2,2,10,10,10,0,1
     switch (fmt) {
       case 'vtt':
         return 'WEBVTT\n\n' + cueList.map((c) => {
-          const s = c.settings ? ' ' + c.settings : '';
+          let s = c.settings ? ' ' + c.settings : '';
+          const raw = String(c.rawText || c.text || '');
+          if (!s && (/\{\\an[789]\}/i.test(raw) || /\{\\a[567]\}/i.test(raw) || /<top>/i.test(raw))) {
+            s = ' line:10% position:50% align:center';
+          }
           return `${fmtVTT(c.start)} --> ${fmtVTT(c.end)}${s}\n${normalizeTextForStandard(c.text)}`;
         }).join('\n\n') + '\n';
       case 'srt':
@@ -472,6 +487,15 @@ Style: Default,Arial,20,16777215,65535,0,0,0,0,1,2,2,2,10,10,10,0,1
       const baseHeader = isSsa ? DEFAULT_SSA_HEADER : DEFAULT_ASS_HEADER;
       header = `${baseHeader}\n${fmtLine}`;
     } else {
+      // Ensure Kurdish font encoding (178) is set on existing Styles in header if default/standard font used
+      cleanHeader = cleanHeader.map((line) => {
+        if (/^\s*Style\s*:/i.test(line)) {
+          // If style specifies Western encoding (1 or 0), upgrade to 178 (Arabic/Kurdish)
+          return line.replace(/,(?:0|1)$/, ',178');
+        }
+        return line;
+      });
+
       // Place exactly one Format line, right after [Events] (replacing any old one).
       const before = cleanHeader.slice(0, evIdx + 1);
       const after = cleanHeader.slice(evIdx + 1).filter((l) => !/^\s*Format\s*:/i.test(l));
@@ -494,6 +518,20 @@ Style: Default,Arial,20,16777215,65535,0,0,0,0,1,2,2,2,10,10,10,0,1
 
   function escapeXml(text) {
     return text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  }
+
+  /** Extract vertical placement zone: 'top', 'mid', 'bottom' */
+  function getPlacementZone(cue) {
+    if (!cue) return 'bottom';
+    const raw = String(cue.rawText || cue.text || '');
+    const settings = String(cue.settings || '');
+    if (/\{\\an[789]\}/i.test(raw) || /\{\\a[567]\}/i.test(raw) || /<top>/i.test(raw) || /line:(?:0|1|2|3|4|5|10|15|20)%/i.test(settings)) {
+      return 'top';
+    }
+    if (/\{\\an[456]\}/i.test(raw) || /\{\\a[9]|\\a1[01]\}/i.test(raw) || /<mid>/i.test(raw) || /line:(?:40|45|50|55|60)%/i.test(settings)) {
+      return 'mid';
+    }
+    return 'bottom';
   }
 
   /**
@@ -525,8 +563,12 @@ Style: Default,Arial,20,16777215,65535,0,0,0,0,1,2,2,2,10,10,10,0,1
       const next = sorted[i + 1] ? { ...sorted[i + 1] } : null;
 
       if (next) {
+        const curZone = getPlacementZone(cur);
+        const nextZone = getPlacementZone(next);
+        const diffScreenZones = curZone !== nextZone;
+
         // Case 1: Identical start time (e.g. 2 speakers starting at the same time across 2 separate cues)
-        if (cur.start === next.start && mode === 'merge') {
+        if (cur.start === next.start && mode === 'merge' && !diffScreenZones) {
           // Merge text into a multi-line dual-speaker cue: "- Line1\n- Line2"
           const t1 = (cur.text || '').trim();
           const t2 = (next.text || '').trim();
@@ -540,7 +582,8 @@ Style: Default,Arial,20,16777215,65535,0,0,0,0,1,2,2,2,10,10,10,0,1
         }
 
         // Case 2: Temporal overlap (cur.end > next.start)
-        if (cur.end > next.start) {
+        // If cues occupy different screen zones (e.g. top sign and bottom dialogue), allow simultaneous display!
+        if (cur.end > next.start && !diffScreenZones) {
           const maxAllowedEnd = Math.max(cur.start + minDur, next.start - gap);
           if (cur.end > maxAllowedEnd) {
             cur.end = maxAllowedEnd;

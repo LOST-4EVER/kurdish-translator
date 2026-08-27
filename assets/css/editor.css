@@ -509,8 +509,9 @@
 }
 .ed-input[dir="rtl"] {
   text-align: right;
-  font-family: "Noto Sans Arabic", "Noto Naskh Arabic", "Vazirmatn", "Segoe UI", "Tahoma", sans-serif;
+  font-family: var(--font-kurdish);
   letter-spacing: 0.01em;
+  line-height: 1.6;
 }
 
 .ed-empty { padding: 32px; text-align: center; color: var(--md-sys-color-on-surface-variant); font-size: 13.5px; }

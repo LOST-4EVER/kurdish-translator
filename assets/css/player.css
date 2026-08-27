@@ -73,8 +73,8 @@
   font-weight: 600;
   color: #ffffff;
   text-align: center;
-  line-height: 1.45;
-  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.95), 0 0 12px rgba(0, 0, 0, 0.8), 0 4px 18px rgba(0, 0, 0, 0.9);
+  line-height: 1.5;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.98), 0 0 12px rgba(0, 0, 0, 0.9), 0 4px 18px rgba(0, 0, 0, 0.95);
   max-width: 94%;
   word-wrap: break-word;
   overflow-wrap: anywhere;
@@ -85,11 +85,11 @@
   max-height: 100%;
   overflow: hidden;
   text-overflow: ellipsis;
-  padding: 4px 12px;
-  border-radius: 6px;
-  background: rgba(0, 0, 0, 0.35);
-  backdrop-filter: blur(2px);
-  -webkit-backdrop-filter: blur(2px);
+  padding: 4px 14px;
+  border-radius: 8px;
+  background: rgba(0, 0, 0, 0.42);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
 }
 
 .screen-text:empty {
@@ -108,9 +108,12 @@
 .screen-text[dir="rtl"] {
   direction: rtl;
   unicode-bidi: isolate;
-  line-height: 1.65;
-  font-family: "Noto Sans Arabic", "Noto Naskh Arabic", "Vazirmatn", "Segoe UI", "Tahoma", sans-serif;
-  letter-spacing: 0.01em;
+  line-height: 1.7;
+  font-family: var(--font-subtitle);
+  letter-spacing: 0.015em;
+  font-feature-settings: "cv01", "ss01";
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
 }
 
 /* Empty Placeholder in Player */
