@@ -6,7 +6,7 @@
  * (Google's endpoint), so offline mode lets you load files and use the
  * preview player, but translating requires a connection.
  */
-const CACHE = 'kurdish-translator-v99';
+const CACHE = 'kurdish-translator-v101';
 const SHARED_CACHE = 'kurdish-shared-file';
 
 const ASSETS = [
@@ -132,13 +132,20 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // Navigations: serve the app shell from cache, fall back to network, then to
-  // the cached shell so offline reloads still render the UI.
+  // Navigations: try network first to get latest version when online, fall back
+  // to cached app shell when offline.
   if (event.request.mode === 'navigate') {
     event.respondWith(
-      caches.match(event.request).then((cached) =>
-        cached || fetch(event.request).catch(() => caches.match('./'))
-      )
+      fetch(event.request)
+        .then((response) => {
+          if (response && response.ok) {
+            const clone = response.clone();
+            caches.open(CACHE).then((cache) => cache.put(event.request, clone));
+            return response;
+          }
+          return caches.match(event.request).then((cached) => cached || caches.match('./'));
+        })
+        .catch(() => caches.match(event.request).then((cached) => cached || caches.match('./')))
     );
     return;
   }

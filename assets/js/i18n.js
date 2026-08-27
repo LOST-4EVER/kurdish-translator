@@ -113,7 +113,7 @@ const UI_I18N = {
     checkingUpdate: 'Checking for updates…',
     refreshingApp: 'Refreshing application…',
     forceRefreshing: 'Purging cache & hard reloading…',
-    whatsNew: "What's New in v97",
+    whatsNew: "What's New in v101",
     whatsNewSub: 'View latest improvements & features',
     netOnline: 'Online & Synced',
     netOffline: 'Offline (Cached Shell)',

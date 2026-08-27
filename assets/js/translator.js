@@ -39,9 +39,9 @@ const Translator = (() => {
   // MyMemory Translation API endpoint
   const MYMEMORY_ENDPOINT = 'https://api.mymemory.translated.net/get';
 
-  // Keep requests modest to avoid timeouts on mobile networks.
-  const BATCH_LINES = 25;
-  const MAX_CHARS_PER_REQUEST = 1600;
+  // Keep requests modest to avoid timeouts on mobile networks and URL parameter overflow.
+  const BATCH_LINES = 20;
+  const MAX_CHARS_PER_REQUEST = 1200;
   const DELAY_MS = 160;         // polite spacing between batches
   const MAX_ATTEMPTS = 6;       // retries across providers
   const REQUEST_TIMEOUT_MS = 25000; // hang-up guard so a stalled socket retries
@@ -201,7 +201,39 @@ const Translator = (() => {
     // Expand gerund colloquialisms in subtitle dialogues (e.g., lookin' -> looking, runnin' -> running, doin' -> doing)
     s = s.replace(/\b([a-zA-Z]{2,})in['’](?=\s|[.,!?;:'"()[\]{}<>]|$)/gi, '$1ing');
 
-    // Expand informal contractions and spoken dialogue slang into standard forms for accurate MT translation
+    // Expand British and international English colloquialisms, slang, and dialectal forms into clean expressions
+    s = s.replace(/\bbloody\s+hell\b/gi, 'oh goodness')
+         .replace(/\bbloody\b/gi, 'damn')
+         .replace(/\bbollocks\b/gi, 'nonsense')
+         .replace(/\bbugger\s+off\b/gi, 'go away')
+         .replace(/\bbugger\b/gi, 'damn')
+         .replace(/\bblimey\b/gi, 'my goodness')
+         .replace(/\bchuffed\b/gi, 'delighted')
+         .replace(/\bgutted\b/gi, 'devastated')
+         .replace(/\bdodgy\b/gi, 'suspicious')
+         .replace(/\bknackered\b/gi, 'exhausted')
+         .replace(/\bcheerio\b/gi, 'goodbye')
+         .replace(/\btaking\s+the\s+piss\b/gi, 'making fun')
+         .replace(/\bpiss\s+off\b/gi, 'go away')
+         .replace(/\bpissed\s+off\b/gi, 'angry')
+         .replace(/\binnit\b/gi, 'is it not')
+         .replace(/\bquid\b/gi, 'pounds')
+         .replace(/\bbloke\b|\bchap\b/gi, 'man')
+         .replace(/\blads?\b/gi, (m) => m.toLowerCase().endsWith('s') ? 'boys' : 'boy')
+         .replace(/\blasses?\b/gi, (m) => m.toLowerCase().endsWith('s') ? 'girls' : 'girl')
+         .replace(/\bcheers\s+mate\b/gi, 'thank you friend')
+         .replace(/\bcheers\b/gi, 'thank you')
+         .replace(/\bnot\s+my\s+cup\s+of\s+tea\b/gi, 'not something I like')
+         .replace(/\bbob['’]?s\s+your\s+uncle\b/gi, 'it is easily done')
+         .replace(/\bgive\s+(?:me|us)\s+a\s+bell\b/gi, 'call me')
+         .replace(/\bhave\s+a\s+word\b/gi, 'speak briefly')
+         .replace(/\bfull\s+of\s+beans\b/gi, 'full of energy')
+         .replace(/\bspanner\s+in\s+the\s+works\b/gi, 'unexpected problem')
+         .replace(/\ba\s+right\s+mess\b/gi, 'a complete disaster')
+         .replace(/\ball\s+to\s+cock\b/gi, 'completely ruined')
+         .replace(/\bchuffed\s+to\s+bits\b/gi, 'extremely happy');
+
+    // Expand informal contractions and spoken dialogue slang into natural English phrases for accurate translation
     s = s.replace(/\bgonna\b/gi, 'going to')
          .replace(/\bwanna\b/gi, 'want to')
          .replace(/\bgotta\b/gi, 'have to')
@@ -213,9 +245,19 @@ const Translator = (() => {
          .replace(/\bsorta\b/gi, 'sort of')
          .replace(/\blotta\b/gi, 'lot of')
          .replace(/\balot\b/gi, 'a lot')
+         .replace(/\binfront\b/gi, 'in front')
+         .replace(/\basap\b/gi, 'as soon as possible')
+         .replace(/\bfyi\b/gi, 'for your information')
+         .replace(/\bbtw\b/gi, 'by the way')
+         .replace(/\btbh\b/gi, 'to be honest')
+         .replace(/\bimo\b/gi, 'in my opinion')
+         .replace(/\bimho\b/gi, 'in my humble opinion')
+         .replace(/\baka\b/gi, 'also known as')
          .replace(/\bdunno\b/gi, 'do not know')
          .replace(/\bi['’]?mma\b/gi, 'I am going to')
          .replace(/\bain['’]?t\b/gi, 'is not')
+         .replace(/\bwhatcha\b/gi, 'what are you')
+         .replace(/\bgotcha\b/gi, 'I understand')
          .replace(/\bgimme\b/gi, 'give me')
          .replace(/\blemme\b/gi, 'let me')
          .replace(/\boutta\b/gi, 'out of')
@@ -236,13 +278,108 @@ const Translator = (() => {
          .replace(/(^|\s)['’]em(?=\s|[.,!?;:'"()[\]{}<>]|$)/gi, '$1them')
          .replace(/(^|\s)['’]bout(?=\s|[.,!?;:'"()[\]{}<>]|$)/gi, '$1about')
          .replace(/(^|\s)['’]round(?=\s|[.,!?;:'"()[\]{}<>]|$)/gi, '$1around')
-         .replace(/\basap\b/gi, 'as soon as possible')
-         .replace(/\bfyi\b/gi, 'for your information')
-         .replace(/\bbtw\b/gi, 'by the way')
-         .replace(/\btbh\b/gi, 'to be honest')
-         .replace(/\bimo\b/gi, 'in my opinion');
+         .replace(/\byeah\b|\byep\b|\byup\b/gi, 'yes')
+         .replace(/\bnope\b|\bnah\b/gi, 'no')
+         .replace(/\bwhat['’]?s\s+up\b|\bwassup\b|\bsup\b/gi, 'hello, how are you')
+         .replace(/\bno\s+way\b/gi, 'that is impossible')
+         .replace(/\bnever\s+mind\b/gi, 'do not worry')
+         .replace(/\bhang\s+on\b|\bhold\s+on\b/gi, 'wait a moment')
+         .replace(/\bshut\s+up\b/gi, 'be quiet')
+         .replace(/\blook\s+out\b|\bwatch\s+out\b/gi, 'be careful')
+         .replace(/\btake\s+care\b/gi, 'stay safe')
+         .replace(/\bsee\s+ya\b|\bsee\s+you\b/gi, 'see you later')
+         .replace(/\bhurry\s+up\b/gi, 'hurry')
+         .replace(/\bcalm\s+down\b/gi, 'relax')
+         .replace(/\bof\s+course\b/gi, 'certainly')
+         .replace(/\bby\s+the\s+way\b/gi, 'incidentally')
+         .replace(/\bgood\s+luck\b/gi, 'best wishes')
+         .replace(/\boh\s+my\s+god\b|\bmy\s+god\b|\bomg\b/gi, 'oh God')
+         .replace(/\bwhat\s+the\s+hell\b|\bwhat\s+the\s+heck\b/gi, 'what is happening')
+         .replace(/\bare\s+you\s+kidding(\s+me)?\b/gi, 'are you joking')
+         .replace(/\bare\s+you\s+sure\b/gi, 'are you certain')
+         .replace(/\bthank\s+goodness\b|\bthank\s+god\b/gi, 'thank God')
+         .replace(/\bgosh\b/gi, 'oh')
+         .replace(/\bi['’]?m\s+outta\s+here\b/gi, 'I am leaving now')
+         .replace(/\bno\s+biggie\b/gi, 'it is not important')
+         .replace(/\bfor\s+real\b/gi, 'seriously')
+         .replace(/\bfair\s+enough\b/gi, 'that is acceptable')
+         .replace(/\blong\s+time\s+no\s+see\b/gi, 'it has been a long time')
+         .replace(/\bmy\s+bad\b/gi, 'my mistake')
+         .replace(/\bcatch\s+you\s+later\b/gi, 'see you later')
+         .replace(/\bkeep\s+in\s+touch\b/gi, 'stay in contact')
+         .replace(/\bwhat['’]?s\s+going\s+on\b/gi, 'what is happening')
+         .replace(/\bare\s+you\s+insane\b/gi, 'are you crazy')
+         .replace(/\bhow\s+come\b/gi, 'why')
+         .replace(/\bso\s+far\s+so\s+good\b/gi, 'everything is going well')
+         .replace(/\bmake\s+up\s+your\s+mind\b/gi, 'decide')
+         .replace(/\bcount\s+me\s+in\b/gi, 'I will join')
+         .replace(/\bnever\s+heard\s+of\s+it\b/gi, 'I do not know it')
+         .replace(/\bgive\s+it\s+a\s+shot\b/gi, 'try it')
+         .replace(/\bbeat\s+it\b/gi, 'go away')
+         .replace(/\bkeep\s+it\s+up\b/gi, 'continue')
+         .replace(/\bas\s+far\s+as\s+i\s+know\b/gi, 'as far as I know')
+         .replace(/\bby\s+all\s+means\b/gi, 'certainly')
+         .replace(/\bi\s+have\s+no\s+idea\b/gi, 'I do not know')
+         .replace(/\bno\s+problem\b/gi, 'no problem')
+         .replace(/\byou\s+are\s+welcome\b/gi, 'you are welcome')
+         .replace(/\bdon['’]?t\s+worry\b/gi, 'do not worry')
+         .replace(/\btake\s+it\s+easy\b/gi, 'relax')
+         .replace(/\bmake\s+yourself\s+at\s+home\b/gi, 'feel comfortable')
+         .replace(/\bmind\s+your\s+own\s+business\b/gi, 'do not interfere')
+         .replace(/\bon\s+my\s+way\b/gi, 'coming now')
+         .replace(/\bgive\s+me\s+a\s+hand\b/gi, 'help me')
+         .replace(/\bget\s+out\s+of\s+here\b/gi, 'leave right now')
+          .replace(/\bget\s+the\s+hell\s+out\s+(?:of\s+here)?\b/gi, 'leave immediately')
+          .replace(/\bget\s+the\s+fuck\s+out\s+(?:of\s+here)?\b/gi, 'leave immediately')
+          .replace(/\bsuit\s+yourself\b/gi, 'do as you please')
+          .replace(/\bit\s+can['’]?t\s+be\s+helped\b|\bthere['’]?s\s+no\s+helping\s+it\b/gi, 'it cannot be avoided')
+          .replace(/\bleave\s+it\s+to\s+me\b/gi, 'leave this to me')
+          .replace(/\bdon['’]?t\s+get\s+cocky\b/gi, 'do not be arrogant')
+          .replace(/\bdon['’]?t\s+underestimate\s+me\b/gi, 'do not underestimate me')
+          .replace(/\bshow\s+me\s+what\s+you(?:['’]?ve)?\s+got\b/gi, 'show me your ability')
+          .replace(/\bgive\s+it\s+your\s+all\b/gi, 'try with all your strength')
+          .replace(/\b(?:i['’]?ve\s+)?got\s+your\s+back\b/gi, 'I will support you')
+          .replace(/\bnot\s+on\s+my\s+watch\b/gi, 'never while I am here')
+          .replace(/\bi\s+won['’]?t\s+let\s+you\s+down\b/gi, 'I will not disappoint you')
+          .replace(/\bdon['’]?t\s+let\s+me\s+down\b/gi, 'do not disappoint me')
+          .replace(/\bi['’]?ll\s+protect\s+you\b/gi, 'I will protect you')
+          .replace(/\bwhat\s+a\s+(?:pain|drag)\b/gi, 'how annoying')
+          .replace(/\bi\s+(?:have|got)\s+no\s+choice\b/gi, 'I have no other choice')
+          .replace(/\bit['’]?s\s+about\s+time\b/gi, 'finally it is time')
+          .replace(/\bstand\s+back\b|\bstep\s+back\b/gi, 'step backwards')
+          .replace(/\bdon['’]?t\s+be\s+ridiculous\b/gi, 'do not be silly')
+          .replace(/\bjust\s+in\s+time\b/gi, 'right on time')
+          .replace(/\bit['’]?s\s+not\s+over\s+yet\b/gi, 'it is not finished yet')
+          .replace(/\bhold\s+your\s+horses\b/gi, 'wait patiently')
+          .replace(/\bmark\s+my\s+words\b/gi, 'remember my words')
+          .replace(/\bdon['’]?t\s+get\s+me\s+wrong\b/gi, 'do not misunderstand me')
+          .replace(/\bit['’]?s\s+not\s+worth\s+it\b/gi, 'it is not worth it')
+          .replace(/\bsave\s+your\s+breath\b/gi, 'save your words')
+          .replace(/\bno\s+hard\s+feelings\b/gi, 'do not be upset')
+          .replace(/\bspill\s+the\s+beans\b/gi, 'reveal the truth')
+          .replace(/\bbreak\s+a\s+leg\b/gi, 'good luck')
+          .replace(/\bpiece\s+of\s+cake\b/gi, 'very easy')
+          .replace(/\bbite\s+the\s+bullet\b/gi, 'endure the hardship')
+          .replace(/\bunder\s+the\s+weather\b/gi, 'feeling unwell')
+          .replace(/\bout\s+of\s+my\s+way\b/gi, 'move out of my way')
+          .replace(/\bface\s+to\s+face\b/gi, 'directly face to face')
 
-    // Handle character speech stutters (e.g. "b-but", "w-wait") cleanly for MT
+          // Anime & cinematic dialogue tropes
+          .replace(/\bi\s+will\s+never\s+forgive\s+you\b/gi, 'I will never forgive you')
+          .replace(/\byou['’]?re\s+wide\s+open\b/gi, 'you have no defense')
+          .replace(/\bis\s+that\s+all\s+you(?:['’]?ve)?\s+got\b/gi, 'is that all your power')
+          .replace(/\bi\s+won['’]?t\s+give\s+up\b/gi, 'I will never surrender')
+          .replace(/\bprepare\s+to\s+die\b/gi, 'prepare for your death')
+          .replace(/\bthis\s+is\s+the\s+end\s+for\s+you\b/gi, 'this is your end')
+          .replace(/\bwhat\s+are\s+you\s+planning\b/gi, 'what is your plan')
+          .replace(/\bhow\s+dare\s+you\b/gi, 'how do you dare')
+          .replace(/\bshow\s+no\s+mercy\b/gi, 'show no mercy')
+          .replace(/\bwhat\s+in\s+the\s+world\b/gi, 'what on earth')
+          .replace(/\bbelieve\s+in\s+yourself\b/gi, 'trust in yourself')
+          .replace(/\bi\s+swear\s+it\b/gi, 'I promise you')
+          .replace(/\bi\s+swear\s+to\s+god\b/gi, 'I swear to God');
+
+    // Handle character speech interruptions, cut-offs (e.g. "bu-", "wh-", "I-") and stutters (e.g. "b-but", "w-wait")
     s = s.replace(/\bb[-—–]but\b/gi, 'but')
          .replace(/\bw[-—–]what\b/gi, 'what')
          .replace(/\bw[-—–]wait\b/gi, 'wait')
@@ -517,7 +654,7 @@ const Translator = (() => {
     return { signal: ctrl.signal, cleanup() { clearTimeout(timer); signal && signal.removeEventListener('abort', onAbort); } };
   }
 
-  const CLIENTS = ['dict-chrome-ex', 'gtx', 'webapp', 't'];
+  const CLIENTS = ['dict-chrome-ex', 'tw-ob', 'it', 'at', 'gtrans'];
 
   /**
    * Fetch from Google Translate lightweight /t endpoint (Highest stability, no 429 throttling).
@@ -533,25 +670,11 @@ const Translator = (() => {
     });
     const scoped = scopedSignal(signal);
     try {
-      let res;
-      // Use GET for small requests, POST for large requests or retry attempts
-      if (text.length < 900 && attempt === 0) {
-        res = await fetch(`${host}?${params.toString()}`, {
-          method: 'GET',
-          headers: { 'Accept': 'application/json, text/plain, */*' },
-          signal: scoped.signal,
-        });
-      } else {
-        res = await fetch(host, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/x-www-form-urlencoded;charset=utf-8',
-            'Accept': 'application/json, text/plain, */*',
-          },
-          body: params.toString(),
-          signal: scoped.signal,
-        });
-      }
+      const res = await fetch(`${host}?${params.toString()}`, {
+        method: 'GET',
+        headers: { 'Accept': 'application/json, text/plain, */*' },
+        signal: scoped.signal,
+      });
 
       if (res.status === 429) {
         const retryAfter = Number(res.headers.get('retry-after'));
@@ -570,15 +693,36 @@ const Translator = (() => {
         throw err;
       }
       const data = JSON.parse(rawText);
-      if (typeof data === 'string' && data) return decodeHtmlEntities(data);
-      if (Array.isArray(data)) {
-        if (typeof data[0] === 'string') return decodeHtmlEntities(data.join('\n'));
-        if (Array.isArray(data[0])) return decodeHtmlEntities(data[0].map((s) => (Array.isArray(s) ? s[0] : s || '')).join(''));
-      }
+      const parsed = parseGoogleResponse(data);
+      if (parsed) return parsed;
       throw new Error('Empty Google /t response');
     } finally {
       scoped.cleanup();
     }
+  }
+
+  function parseGoogleResponse(data) {
+    if (!data) return '';
+    if (typeof data === 'string') return decodeHtmlEntities(data);
+    if (Array.isArray(data)) {
+      if (typeof data[0] === 'string') {
+        return decodeHtmlEntities(data[0]);
+      }
+      if (Array.isArray(data[0])) {
+        if (typeof data[0][0] === 'string') {
+          return decodeHtmlEntities(data[0][0]);
+        }
+        if (Array.isArray(data[0][0])) {
+          const text = data[0].map((seg) => (Array.isArray(seg) && typeof seg[0] === 'string' ? seg[0] : '')).join('');
+          if (text) return decodeHtmlEntities(text);
+        }
+      }
+    }
+    if (data && Array.isArray(data.sentences)) {
+      const text = data.sentences.map((s) => s.trans || '').join('');
+      if (text) return decodeHtmlEntities(text);
+    }
+    return '';
   }
 
   function decodeHtmlEntities(str) {
@@ -599,7 +743,7 @@ const Translator = (() => {
    */
   async function fetchGoogle(text, srcLang, tgtLang, signal, attempt = 0) {
     const host = GOOGLE_ENDPOINTS[attempt % GOOGLE_ENDPOINTS.length];
-    const client = CLIENTS[attempt % CLIENTS.length];
+    const client = CLIENTS[attempt % CLIENTS.length] || 'dict-chrome-ex';
     const params = new URLSearchParams({
       client,
       sl: srcLang,
@@ -611,17 +755,7 @@ const Translator = (() => {
     });
     const scoped = scopedSignal(signal);
     try {
-      let res;
-      if (text.length < 900 && attempt === 0) {
-        res = await fetch(`${host}?${params.toString()}`, { method: 'GET', headers: { 'Accept': 'application/json, text/plain, */*' }, signal: scoped.signal });
-      } else {
-        res = await fetch(host, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/x-www-form-urlencoded;charset=utf-8', 'Accept': 'application/json, text/plain, */*' },
-          body: params.toString(),
-          signal: scoped.signal,
-        });
-      }
+      const res = await fetch(`${host}?${params.toString()}`, { method: 'GET', headers: { 'Accept': 'application/json, text/plain, */*' }, signal: scoped.signal });
       if (res.status === 429) {
         const retryAfter = Number(res.headers.get('retry-after'));
         const wait = Number.isFinite(retryAfter) && retryAfter > 0 ? retryAfter * 1000 : backoffMs(attempt);
@@ -643,16 +777,8 @@ const Translator = (() => {
         throw err;
       }
       const data = JSON.parse(rawText);
-      if (typeof data === 'string' && data) return decodeHtmlEntities(data);
-      if (Array.isArray(data) && Array.isArray(data[0])) {
-        const out = data[0].map((seg) => (Array.isArray(seg) ? seg[0] : '')).join('');
-        if (out) return decodeHtmlEntities(out);
-      } else if (data && Array.isArray(data.sentences)) {
-        const out = data.sentences.map((s) => s.trans || '').join('');
-        if (out) return decodeHtmlEntities(out);
-      } else if (Array.isArray(data) && typeof data[0] === 'string') {
-        return decodeHtmlEntities(data.join('\n'));
-      }
+      const parsed = parseGoogleResponse(data);
+      if (parsed) return parsed;
       throw new Error('Empty or unexpected response from Google');
     } finally {
       scoped.cleanup();
@@ -791,7 +917,7 @@ const Translator = (() => {
    *  hit and answers on a warm one; firing a tiny request at page load moves
    *  that cold start off the critical path. Failures here are ignored. */
   async function warmup() {
-    const params = new URLSearchParams({ client: 'gtx', sl: 'en', tl: 'ckb', dt: 't', q: 'hi' });
+    const params = new URLSearchParams({ client: 'dict-chrome-ex', sl: 'en', tl: 'ckb', q: 'hi' });
     try {
       await fetch(`${GOOGLE_ENDPOINTS[0]}?${params.toString()}`, { method: 'GET', headers: { 'Accept': 'application/json' } });
     } catch {}
