@@ -32,14 +32,17 @@ Deployed to GitHub Pages from the `main` branch
 
 ## Architecture & wiring
 
-- Scripts load in this exact order in `index.html`: `parser.js` → `translator.js`
-  → `i18n.js` → `toast.js` → `player.js` → `app.js`. They expose globals
-  (`SubParser`, `Translator`, `UI_I18N`, `Toast`, `SubtitlePlayer`) via top-level
-  `const` in the shared classic-script lexical scope — they do **not** attach to
-  `window`. Do not reorder the scripts; `app.js` calls `SubtitlePlayer.init()` on
-  load.
-- `parser.js` / `translator.js` each end with a `module.exports` guard so they
-  work both as classic scripts and via `require()` in Node.
+- Scripts load in this exact order in `index.html`: `parser.js` → `translator-dict.js`
+  → `translator-orthography.js` → `translator.js` → `i18n.js` → `toast.js` →
+  `player.js` → `app-version.js` → `app-tour.js` → `app-quality.js` →
+  `app-fullscreen.js` → `app.js`. They expose globals (`SubParser`, `TranslatorDict`,
+  `TranslatorOrthography`, `Translator`, `UI_I18N`, `Toast`, `SubtitlePlayer`,
+  `AppVersion`, `AppTour`, `AppQuality`, `AppFullscreen`) via top-level `const` in
+  the shared classic-script lexical scope — they do **not** attach to `window`.
+  Do not reorder the scripts; `app.js` initializes all modules on load.
+- `parser.js`, `translator-dict.js`, `translator-orthography.js`, and `translator.js`
+  each end with a `module.exports` guard so they work both as classic scripts and
+  via `require()` in Node.
 - Flow: drop file → `app.js` decodes + parses → **shows the settings step first**
   with translation options (source language, include original, double-check
   accuracy, drop empty lines) → user clicks "Translate to Kurdish" →
@@ -47,6 +50,17 @@ Deployed to GitHub Pages from the `main` branch
   **translated** cues after a run, reverts to original on new file / "Translate
   another". All options (source lang, include original, accuracy, drop empty)
   persist via `localStorage`.
+- **Pre-translation Expansion & Slang Mapping**: `translator.js` utilizes
+  a data-driven regex matcher (`COLLOQUIAL_MAP`, `CONTRACTIONS_MAP`, `SLANG_MAP`)
+  compiled with word-boundary awareness to expand spoken English contractions and
+  idioms before sending them to Google Translate, ensuring natural Sorani Kurdish
+  translations without phrase distortion.
+- **Lexicon & Subtitle Tropes**: `translator-dict.js` houses `ADVANCED_SUBTITLE_LEXICON`
+  and `UNTRANSLATED_ENGLISH_MAP` for anime tropes, cartoon catchphrases, and spoken
+  dialogue idioms.
+- **Orthography & Naturalization**: `translator-orthography.js` handles Sorani
+  punctuation, character normalization, prefix attachment (`دە-`, `نا-`, `نە-`),
+  and dialogue naturalization (`naturalizeDialogue`).
 - **Preview editor**: the preview tab has a live subtitle editor (`app.js`
   `buildEditor`). Each cue is an auto-growing textarea; typing updates the cue
   on the player screen instantly (`SubtitlePlayer.updateText`) and a debounced

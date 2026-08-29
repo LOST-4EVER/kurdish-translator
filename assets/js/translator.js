@@ -26,6 +26,8 @@ const Translator = (() => {
     'https://translate.googleapis.com/translate_a/t',
     'https://clients5.google.com/translate_a/single',
     'https://clients1.google.com/translate_a/single',
+    'https://clients2.google.com/translate_a/single',
+    'https://translate.googleapis.com/translate_a/single',
   ];
 
   // Secondary public privacy-friendly Lingva Translate instances (Open-source Google Translate frontends)
@@ -41,10 +43,10 @@ const Translator = (() => {
 
   // Keep requests modest to avoid timeouts on mobile networks and URL parameter overflow.
   const BATCH_LINES = 20;
-  const MAX_CHARS_PER_REQUEST = 1200;
-  const DELAY_MS = 160;         // polite spacing between batches
+  const MAX_CHARS_PER_REQUEST = 1600;
+  const DELAY_MS = 120;         // polite spacing between batches
   const MAX_ATTEMPTS = 6;       // retries across providers
-  const REQUEST_TIMEOUT_MS = 25000; // hang-up guard so a stalled socket retries
+  const REQUEST_TIMEOUT_MS = 8000; // fast 8-second failover guard so stalled sockets switch mirrors quickly
 
   // Sentinel protecting internal line breaks inside a cue so cue boundaries
   // stay unambiguous after translation. Contains no regex metacharacters and
@@ -654,27 +656,43 @@ const Translator = (() => {
     return { signal: ctrl.signal, cleanup() { clearTimeout(timer); signal && signal.removeEventListener('abort', onAbort); } };
   }
 
-  const CLIENTS = ['dict-chrome-ex', 'tw-ob', 'it', 'at', 'gtrans'];
+  const CLIENTS = ['gtx', 'dict-chrome-ex', 'tw-ob', 't'];
 
   /**
-   * Fetch from Google Translate lightweight /t endpoint (Highest stability, no 429 throttling).
+   * Fetch from Google Translate lightweight /t endpoint (Highest stability, supports POST & GET).
    */
   async function fetchGoogleT(text, srcLang, tgtLang, signal, attempt = 0) {
     const host = GOOGLE_T_ENDPOINTS[attempt % GOOGLE_T_ENDPOINTS.length];
-    const client = CLIENTS[attempt % CLIENTS.length] || 'dict-chrome-ex';
+    const client = CLIENTS[attempt % CLIENTS.length] || 'gtx';
     const params = new URLSearchParams({
       client,
       sl: srcLang,
       tl: tgtLang,
-      q: text,
     });
     const scoped = scopedSignal(signal);
     try {
-      const res = await fetch(`${host}?${params.toString()}`, {
-        method: 'GET',
-        headers: { 'Accept': 'application/json, text/plain, */*' },
-        signal: scoped.signal,
-      });
+      // Primary method: POST with form-encoded body to avoid URL length limits
+      let res;
+      try {
+        res = await fetch(`${host}?${params.toString()}`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/x-www-form-urlencoded;charset=utf-8',
+            'Accept': 'application/json, text/plain, */*'
+          },
+          body: new URLSearchParams({ q: text }).toString(),
+          signal: scoped.signal,
+        });
+      } catch (postErr) {
+        if (scoped.signal.aborted) throw postErr;
+        // Fall back to GET if POST network fetch fails
+        params.set('q', text);
+        res = await fetch(`${host}?${params.toString()}`, {
+          method: 'GET',
+          headers: { 'Accept': 'application/json, text/plain, */*' },
+          signal: scoped.signal,
+        });
+      }
 
       if (res.status === 429) {
         const retryAfter = Number(res.headers.get('retry-after'));
@@ -739,23 +757,45 @@ const Translator = (() => {
   }
 
   /**
-   * Fetch from Google Translate web endpoints (/single).
+   * Fetch from Google Translate web endpoints (/single) with POST & GET support.
    */
   async function fetchGoogle(text, srcLang, tgtLang, signal, attempt = 0) {
     const host = GOOGLE_ENDPOINTS[attempt % GOOGLE_ENDPOINTS.length];
-    const client = CLIENTS[attempt % CLIENTS.length] || 'dict-chrome-ex';
+    const client = CLIENTS[attempt % CLIENTS.length] || 'gtx';
+    const isSingle = host.includes('/single');
     const params = new URLSearchParams({
       client,
       sl: srcLang,
       tl: tgtLang,
-      dt: 't',
-      ie: 'UTF-8',
-      oe: 'UTF-8',
-      q: text,
     });
+    if (isSingle) {
+      params.set('dt', 't');
+      params.set('ie', 'UTF-8');
+      params.set('oe', 'UTF-8');
+    }
     const scoped = scopedSignal(signal);
     try {
-      const res = await fetch(`${host}?${params.toString()}`, { method: 'GET', headers: { 'Accept': 'application/json, text/plain, */*' }, signal: scoped.signal });
+      let res;
+      try {
+        res = await fetch(`${host}?${params.toString()}`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/x-www-form-urlencoded;charset=utf-8',
+            'Accept': 'application/json, text/plain, */*'
+          },
+          body: new URLSearchParams({ q: text }).toString(),
+          signal: scoped.signal,
+        });
+      } catch (postErr) {
+        if (scoped.signal.aborted) throw postErr;
+        params.set('q', text);
+        res = await fetch(`${host}?${params.toString()}`, {
+          method: 'GET',
+          headers: { 'Accept': 'application/json, text/plain, */*' },
+          signal: scoped.signal
+        });
+      }
+
       if (res.status === 429) {
         const retryAfter = Number(res.headers.get('retry-after'));
         const wait = Number.isFinite(retryAfter) && retryAfter > 0 ? retryAfter * 1000 : backoffMs(attempt);
@@ -827,7 +867,7 @@ const Translator = (() => {
     }
   }
 
-  /** Translate one chunk with multi-provider failover (Google /t -> Google -> Lingva -> MyMemory). */
+  /** Translate one chunk with resilient multi-provider failover (Google /t -> Google /single -> Lingva -> MyMemory). */
   async function translateChunk(text, srcLang, tgtLang, signal) {
     let lastErr;
 
@@ -839,7 +879,7 @@ const Translator = (() => {
             return await fetchGoogleT(text, srcLang, tgtLang, signal, attempt);
           } catch (googleTErr) {
             if (googleTErr.status === 429 && googleTErr.wait) {
-              await sleep(googleTErr.wait, signal);
+              await sleep(Math.min(googleTErr.wait, 3000), signal);
             }
             try {
               return await fetchGoogle(text, srcLang, tgtLang, signal, attempt);
@@ -848,15 +888,23 @@ const Translator = (() => {
           }
         } else if (attempt === 4) {
           try {
-            return await fetchLingva(text, srcLang, tgtLang, signal, attempt);
+            return await fetchGoogle(text, srcLang, tgtLang, signal, attempt);
           } catch {
-            return await fetchGoogleT(text, srcLang, tgtLang, signal, attempt);
+            try {
+              return await fetchLingva(text, srcLang, tgtLang, signal, attempt);
+            } catch {
+              return await fetchGoogleT(text, srcLang, tgtLang, signal, attempt + 1);
+            }
           }
         } else {
           try {
-            return await fetchMyMemory(text, srcLang, tgtLang, signal);
-          } catch {
             return await fetchGoogleT(text, srcLang, tgtLang, signal, attempt);
+          } catch {
+            try {
+              return await fetchMyMemory(text, srcLang, tgtLang, signal);
+            } catch {
+              return await fetchGoogle(text, srcLang, tgtLang, signal, attempt + 1);
+            }
           }
         }
       } catch (err) {
@@ -871,9 +919,9 @@ const Translator = (() => {
     throw lastErr;
   }
 
-  // Jittered exponential backoff that keeps growing so we survive sustained 429s.
+  // Jittered exponential backoff that keeps growing politely
   function backoffMs(attempt) {
-    return Math.min(900 * 2 ** attempt + Math.random() * 500, 9000);
+    return Math.min(300 * 2 ** attempt + Math.random() * 300, 3000);
   }
 
   /**

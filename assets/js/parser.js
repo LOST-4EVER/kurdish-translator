@@ -374,14 +374,17 @@ Title: Kurdish Subtitles
 ScriptType: v4.00+
 WrapStyle: 0
 ScaledBorderAndShadow: yes
+YCbCr Matrix: None
 PlayResX: 1920
 PlayResY: 1080
 
 [V4+ Styles]
 Format: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, Bold, Italic, Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding
-Style: Default,Noto Naskh Arabic,48,&H00FFFFFF,&H000000FF,&H00000000,&H80000000,-1,0,0,0,100,100,0,0,1,3.5,2,2,40,40,35,178
-Style: Top,Noto Naskh Arabic,44,&H00FFFFFF,&H000000FF,&H00000000,&H80000000,-1,0,0,0,100,100,0,0,1,3.5,2,8,40,40,35,178
-Style: Sign,Noto Sans Arabic,40,&H00E0D4FF,&H000000FF,&H00000000,&H80000000,-1,0,0,0,100,100,0,0,1,3.0,1.5,5,30,30,25,178
+Style: Default,Noto Naskh Arabic,48,&H00FFFFFF,&H000000FF,&H00000000,&H80000000,-1,0,0,0,100,100,0,0,1,3.2,1.8,2,40,40,35,178
+Style: Top,Noto Naskh Arabic,44,&H00FFFFFF,&H000000FF,&H00000000,&H80000000,-1,0,0,0,100,100,0,0,1,3.2,1.8,8,40,40,35,178
+Style: Sign,Noto Sans Arabic,40,&H00E0D4FF,&H000000FF,&H00000000,&H80000000,-1,0,0,0,100,100,0,0,1,2.8,1.2,5,30,30,25,178
+Style: Narration,Noto Naskh Arabic,44,&H00EFEFEF,&H000000FF,&H00000000,&H80000000,0,-1,0,0,100,100,0,0,1,3.0,1.5,2,40,40,35,178
+Style: Italics,Noto Naskh Arabic,46,&H00FFFFFF,&H000000FF,&H00000000,&H80000000,-1,-1,0,0,100,100,0,0,1,3.2,1.8,2,40,40,35,178
 
 [Events]`;
 
@@ -394,8 +397,8 @@ PlayResY: 1080
 
 [V4 Styles]
 Format: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, TertiaryColour, BackColour, Bold, Italic, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, AlphaLevel, Encoding
-Style: Default,Noto Naskh Arabic,48,16777215,65535,0,0,-1,0,1,3.5,2,2,40,40,35,0,178
-Style: Top,Noto Naskh Arabic,44,16777215,65535,0,0,-1,0,1,3.5,2,8,40,40,35,0,178
+Style: Default,Noto Naskh Arabic,48,16777215,65535,0,0,-1,0,1,3.2,1.8,2,40,40,35,0,178
+Style: Top,Noto Naskh Arabic,44,16777215,65535,0,0,-1,0,1,3.2,1.8,8,40,40,35,0,178
 
 [Events]`;
 
