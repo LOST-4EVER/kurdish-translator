@@ -323,7 +323,7 @@ const AppQuality = (() => {
       btn.addEventListener('click', () => {
         const cIdx = parseInt(btn.dataset.cueIndex, 10);
         const rep = btn.dataset.rep;
-        if (!isNaN(cIdx) && rep && appBridge) {
+        if (!isNaN(cIdx) && rep && appBridge && typeof appBridge.applyCueEdit === 'function') {
           appBridge.applyCueEdit(cIdx, rep);
           btn.style.background = 'var(--accent-primary, #6366f1)';
           btn.style.color = '#fff';
@@ -337,13 +337,15 @@ const AppQuality = (() => {
       btn.addEventListener('click', () => {
         const cIdx = parseInt(btn.dataset.cueIndex, 10);
         if (!isNaN(cIdx) && appBridge) {
-          const cues = appBridge.getWorkCues();
+          const cues = typeof appBridge.getWorkCues === 'function' ? appBridge.getWorkCues() : [];
           if (cues && cues[cIdx]) {
             const kurdDigitsVal = els.kurdishDigitsToggle ? els.kurdishDigitsToggle.checked : false;
             const polished = (typeof Translator !== 'undefined' && Translator.postprocessSorani)
               ? Translator.postprocessSorani(cues[cIdx].text, { kurdishDigits: kurdDigitsVal })
               : cues[cIdx].text;
-            appBridge.applyCueEdit(cIdx, polished);
+            if (typeof appBridge.applyCueEdit === 'function') {
+              appBridge.applyCueEdit(cIdx, polished);
+            }
             btn.textContent = '✓ Fixed';
             btn.disabled = true;
             setTimeout(() => runQualityInspection(), 250);
@@ -356,7 +358,7 @@ const AppQuality = (() => {
       btn.addEventListener('click', () => {
         const cIdx = parseInt(btn.dataset.cueIndex, 10);
         closeQualityModal();
-        if (appBridge) {
+        if (appBridge && typeof appBridge.scrollToCue === 'function') {
           appBridge.scrollToCue(cIdx);
         }
       });
@@ -374,9 +376,20 @@ const AppQuality = (() => {
     renderQualityIssuesList(lastQualityIssues);
   }
 
+  function applyCuesToBridge(updatedCues) {
+    if (!appBridge) return;
+    if (typeof appBridge.setWorkCues === 'function') {
+      appBridge.setWorkCues(updatedCues);
+    } else if (typeof appBridge.updateCues === 'function') {
+      appBridge.updateCues(updatedCues);
+    } else if (typeof appBridge.applyQualityFixes === 'function') {
+      appBridge.applyQualityFixes(updatedCues);
+    }
+  }
+
   function fixAllQuality() {
     if (!appBridge) return;
-    const cues = appBridge.getWorkCues();
+    const cues = typeof appBridge.getWorkCues === 'function' ? appBridge.getWorkCues() : [];
     const els = getElements();
     const isCkb = getUiLang() === 'ckb';
 
@@ -403,7 +416,7 @@ const AppQuality = (() => {
       finalCues = SubParser.fixOverlaps(finalCues, { mode: 'trim', minDurationMs: 600, gapMs: 20 });
     }
 
-    appBridge.setWorkCues(finalCues);
+    applyCuesToBridge(finalCues);
     runQualityInspection();
 
     if (typeof Toast !== 'undefined') {
@@ -419,7 +432,7 @@ const AppQuality = (() => {
 
   function fixDialogueOverlapsNow() {
     if (!appBridge) return;
-    const cues = appBridge.getWorkCues();
+    const cues = typeof appBridge.getWorkCues === 'function' ? appBridge.getWorkCues() : [];
     const isCkb = getUiLang() === 'ckb';
 
     if (!cues || !cues.length) {
@@ -431,7 +444,7 @@ const AppQuality = (() => {
 
     if (typeof SubParser !== 'undefined' && SubParser.fixOverlaps) {
       const fixed = SubParser.fixOverlaps(cues, { mode: 'trim', minDurationMs: 600, gapMs: 20 });
-      appBridge.setWorkCues(fixed);
+      applyCuesToBridge(fixed);
       runQualityInspection();
       if (typeof Toast !== 'undefined') {
         Toast.show(
