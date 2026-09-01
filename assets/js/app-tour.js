@@ -34,7 +34,9 @@ const AppTour = (() => {
       ensureTab: 'translate',
       onEnter: () => {
         if (appBridge) {
-          appBridge.showStep('upload');
+          if (!appBridge.isUserFileLoaded()) {
+            appBridge.showStep('upload');
+          }
           appBridge.switchTab('translate');
         }
       }
@@ -49,9 +51,11 @@ const AppTour = (() => {
       ensureTab: 'translate',
       onEnter: () => {
         if (appBridge) {
-          isDemoLoaded = true;
-          if (!appBridge.hasParsedData()) {
-            appBridge.loadDemoCues(DEMO_CUES, 'demo_movie.srt');
+          if (!appBridge.isUserFileLoaded()) {
+            isDemoLoaded = true;
+            if (!appBridge.hasParsedData()) {
+              appBridge.loadDemoCues(DEMO_CUES, 'demo_movie.srt');
+            }
           }
           appBridge.showStep('settings');
           appBridge.switchTab('translate');
@@ -68,8 +72,10 @@ const AppTour = (() => {
       ensureTab: 'preview',
       onEnter: () => {
         if (appBridge) {
-          isDemoLoaded = true;
-          appBridge.loadDemoCues(DEMO_CUES, 'demo_movie_subtitles.srt');
+          if (!appBridge.isUserFileLoaded()) {
+            isDemoLoaded = true;
+            appBridge.loadDemoCues(DEMO_CUES, 'demo_movie_subtitles.srt');
+          }
           appBridge.switchTab('preview');
           if (typeof SubtitlePlayer !== 'undefined') {
             SubtitlePlayer.seek(0);
@@ -88,8 +94,8 @@ const AppTour = (() => {
       ensureTab: 'preview',
       onEnter: () => {
         if (appBridge) {
-          isDemoLoaded = true;
-          if (!appBridge.hasParsedData()) {
+          if (!appBridge.isUserFileLoaded() && !appBridge.hasParsedData()) {
+            isDemoLoaded = true;
             appBridge.loadDemoCues(DEMO_CUES, 'demo_movie_subtitles.srt');
           }
           appBridge.switchTab('preview');
@@ -106,8 +112,8 @@ const AppTour = (() => {
       ensureTab: 'preview',
       onEnter: () => {
         if (appBridge) {
-          isDemoLoaded = true;
-          if (!appBridge.hasParsedData()) {
+          if (!appBridge.isUserFileLoaded() && !appBridge.hasParsedData()) {
+            isDemoLoaded = true;
             appBridge.loadDemoCues(DEMO_CUES, 'demo_movie_subtitles.srt');
           }
           appBridge.switchTab('preview');
@@ -160,9 +166,6 @@ const AppTour = (() => {
   }
 
   function openTour(stepIndex = 0) {
-    if (appBridge && appBridge.isUserFileLoaded() && !isDemoLoaded) {
-      return;
-    }
     const els = getElements();
     if (!els.tourOverlay) return;
 
@@ -195,13 +198,15 @@ const AppTour = (() => {
       } catch {}
     }
 
-    if (isDemoLoaded && appBridge) {
+    if (isDemoLoaded && appBridge && !appBridge.isUserFileLoaded()) {
       isDemoLoaded = false;
       if (appBridge.resetTourDemo) {
         appBridge.resetTourDemo();
       } else if (appBridge.resetDemo) {
         appBridge.resetDemo();
       }
+    } else {
+      isDemoLoaded = false;
     }
     updateTourTriggerBtnState();
   }
@@ -332,11 +337,10 @@ const AppTour = (() => {
 
   function updateTourTriggerBtnState() {
     const els = getElements();
-    if (els.tourTriggerBtn && appBridge) {
-      const isLoaded = appBridge.isUserFileLoaded();
-      els.tourTriggerBtn.disabled = isLoaded;
-      els.tourTriggerBtn.style.opacity = isLoaded ? '0.5' : '1';
-      els.tourTriggerBtn.style.pointerEvents = isLoaded ? 'none' : 'auto';
+    if (els.tourTriggerBtn) {
+      els.tourTriggerBtn.disabled = false;
+      els.tourTriggerBtn.style.opacity = '1';
+      els.tourTriggerBtn.style.pointerEvents = 'auto';
     }
   }
 

@@ -127,15 +127,11 @@
   function updateTourTriggerBtnState() {
     if (!els.tourTriggerBtn) return;
     const dict = dicts[currentUiLang] || dicts.en;
-    if (isUserFileLoaded()) {
-      els.tourTriggerBtn.disabled = true;
-      els.tourTriggerBtn.classList.add('disabled');
-      els.tourTriggerBtn.title = dict.tourDisabledTitle || (currentUiLang === 'ckb' ? 'ڕێبەر بەردەست نییە کاتێک فایلەکەت بارکراوە' : 'Guide is disabled while your file is loaded');
-    } else {
-      els.tourTriggerBtn.disabled = false;
-      els.tourTriggerBtn.classList.remove('disabled');
-      els.tourTriggerBtn.title = dict.tourGuide || (currentUiLang === 'ckb' ? 'ڕێبەری بەکارهێنان' : 'Welcome Tour');
-    }
+    els.tourTriggerBtn.disabled = false;
+    els.tourTriggerBtn.classList.remove('disabled');
+    els.tourTriggerBtn.style.opacity = '1';
+    els.tourTriggerBtn.style.pointerEvents = 'auto';
+    els.tourTriggerBtn.title = dict.tourGuide || (currentUiLang === 'ckb' ? 'ڕێبەری بەکارهێنان' : 'Welcome Tour & Guide');
   }
 
   function applyLanguage(lang) {

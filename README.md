@@ -1,13 +1,13 @@
 # 🎬 Kurdî Subtitle Translator | وەرگێڕی پێشکەوتووی ژێرنووسی کوردی
 
-[![Version v103](https://img.shields.io/badge/Version-v103-7c5cfc?style=flat-square&logo=github)](https://LOST-4EVER.github.io/kurdish-translator/)
+[![Version v106](https://img.shields.io/badge/Version-v106-7c5cfc?style=flat-square&logo=github)](https://LOST-4EVER.github.io/kurdish-translator/)
 [![Progressive Web App](https://img.shields.io/badge/PWA-Installable%20%26%20Offline-0ea5e9?style=flat-square&logo=pwa&logoColor=white)](https://LOST-4EVER.github.io/kurdish-translator/)
 [![Target Kurdish Sorani](https://img.shields.io/badge/Target%20Language-Kurdish%20Sorani%20(ckb)-fbbf24?style=flat-square)](https://LOST-4EVER.github.io/kurdish-translator/)
 [![100% Client-Side](https://img.shields.io/badge/Privacy-100%25%20In--Browser-10b981?style=flat-square&logoColor=white)](https://LOST-4EVER.github.io/kurdish-translator/)
 [![Zero Build Step](https://img.shields.io/badge/Build-Zero%20Dependencies-ec4899?style=flat-square)](https://LOST-4EVER.github.io/kurdish-translator/)
 [![GitHub Pages](https://img.shields.io/badge/Deployment-GitHub%20Pages-6366f1?style=flat-square&logo=githubpages&logoColor=white)](https://LOST-4EVER.github.io/kurdish-translator/)
 
-A state-of-the-art, 100% client-side subtitle translation and fansubbing suite designed specifically for **Kurdish Sorani (کوردیی ناوەندی - `ckb`)**. Purpose-built for anime fansubbers, cinema translators, and video editors, it features an advanced Kurdish linguistic normalizer, an extensive anime & cartoon cultural lexicon, a real-time subtitle player, a two-way synchronized editor, and an automated Kurdish orthographic quality inspector.
+A state-of-the-art, 100% client-side subtitle translation and fansubbing suite designed specifically for **Kurdish Sorani (کوردیی ناوەندی - `ckb`)**. Purpose-built for anime fansubbers, cinema translators, and video editors, it features an advanced Kurdish linguistic normalizer, an extensive anime, cartoon & tactical military cultural lexicon, a real-time subtitle player, a live synchronized editor, an interactive onboarding guide, and an automated Kurdish orthographic quality inspector.
 
 🔗 **Live Web Application:** [https://LOST-4EVER.github.io/kurdish-translator/](https://LOST-4EVER.github.io/kurdish-translator/)
 
@@ -15,16 +15,17 @@ A state-of-the-art, 100% client-side subtitle translation and fansubbing suite d
 
 ## 📑 Table of Contents
 1. [Supported Subtitle Formats & Encodings](#-supported-subtitle-formats--encodings)
-2. [Anime, Cartoon & Cinema Kurdish Intelligence](#-anime-cartoon--cinema-kurdish-intelligence)
+2. [Anime, Cartoon, Tactical & Cinema Kurdish Intelligence](#-anime-cartoon-tactical--cinema-kurdish-intelligence)
 3. [Core Translation & Multi-API Failover Engine](#-core-translation--multi-api-failover-engine)
 4. [Real-Time Subtitle Player & Cinema Mode](#-real-time-subtitle-player--cinema-mode)
 5. [Live Subtitle Editor & Instant Search](#-live-subtitle-editor--instant-search)
-6. [Kurdish Quality Inspector & Auto-Repair](#-kurdish-quality-inspector--auto-repair)
-7. [Character Glossary & Speaker Manager](#-character-glossary--speaker-manager)
-8. [PWA Offline Engine & Diagnostics](#-pwa-offline-engine--diagnostics)
-9. [Architecture & Source Structure](#-architecture--source-structure)
-10. [Keyboard Shortcuts Cheat Sheet](#-keyboard-shortcuts-cheat-sheet)
-11. [Local Development & Deployment](#-local-development--deployment)
+6. [Interactive Onboarding Guide & Live Tour](#-interactive-onboarding-guide--live-tour)
+7. [Kurdish Quality Inspector & Auto-Repair](#-kurdish-quality-inspector--auto-repair)
+8. [Character Glossary & Speaker Manager](#-character-glossary--speaker-manager)
+9. [PWA Offline Engine & Diagnostics](#-pwa-offline-engine--diagnostics)
+10. [Architecture & Source Structure](#-architecture--source-structure)
+11. [Keyboard Shortcuts Cheat Sheet](#-keyboard-shortcuts-cheat-sheet)
+12. [Local Development & Deployment](#-local-development--deployment)
 
 ---
 
@@ -48,9 +49,9 @@ The built-in parser (`SubParser`) decodes, cleans, preserves styling tags, and s
 
 ---
 
-## 🎌 Anime, Cartoon & Cinema Kurdish Intelligence
+## 🎌 Anime, Cartoon, Tactical & Cinema Kurdish Intelligence
 
-The application includes an extensive Kurdish Sorani cinematic dialogue engine (`TranslatorDict`) with 250+ pre-mapped battle incantations, power systems, catchphrases, and cartoon dialogue lines:
+The application includes an extensive Kurdish Sorani cinematic dialogue engine (`TranslatorDict`) with 1,000+ pre-mapped battle incantations, power systems, military/tactical commands, catchphrases, and spoken dialogue lines:
 
 ### ⚡ Iconic Anime Worlds & Battle Cries
 - **Jujutsu Kaisen:** *Domain Expansion* (`فراوانکردنی دۆمەین`), *Unlimited Void* (`بۆشایی بێسنوور`), *Malevolent Shrine* (`مەزارگەی شەڕانگێزی`), *Hollow Purple* (`مۆری بەتاڵ`), *Black Flash* (`بریسکەی ڕەش`), *"Throughout heaven and earth, I alone am the honored one"*, *"Nah, I'd win"*, *"Stand proud, you are strong"*.
@@ -64,6 +65,10 @@ The application includes an extensive Kurdish Sorani cinematic dialogue engine (
 - **Solo Leveling:** *Arise* (`هەستە سەرپێ! ڕابە`), *Shadow Monarch*, *System Alert*.
 - **Vinland Saga:** *"You have no enemies"*, *"A true warrior needs no sword"*.
 - **Hunter x Hunter, Death Note, Code Geass & Spy x Family:** *Bungee Gum*, *Godspeed*, *"I will become the god of the new world"*, *All Hail Lelouch*, *Waku Waku*, *Spirit Gun*.
+
+### 🎖️ Military, Tactical & Action Cinema Terminology
+- **Tactical Directives:** *Covering fire* (`تەقەی پارێزەری`), *Watch your six* (`ئاگات لە پشتەوەت بێت`), *Suppressing fire* (`تەقەی بێدەنگکەر`), *Hold the line* (`هێڵەکە بپارێزن و پاشەکشە مەکەن`), *Fall back* (`پاشەکشە بکەن`), *Tango down* (`نەیار لەپێ کەوت / ئامانج پێکرا`), *Breach and clear* (`شکاندن و پاککردنەوە`), *Clear!* (`شوێنەکە پارێزراوە`), *Hostage secured* (`بارمتە ڕزگارکرا`).
+- **Radio Comms & Brevity:** *Roger that* (`وەرگیرا / پەسەندکرا`), *Negative* (`نەخێر / ڕەتکرایەوە`), *Copy that* (`تێگەیشتم`), *Over and out* (`کۆتایی پەیوەندی`), *Mayday* (`بانگی فریاگوزاری بەپەلە`), *ETA* (`کاتی پێشبینیکراوی گەیشتن`), *Intel* (`زانیاری هەواڵگری`).
 
 ### 🎨 Cartoon Worlds & Legendary Animated Lines
 - **Batman & DC Animated:** *"I am vengeance, I am the night, I am Batman!"*, *"Why do we fall? So we can learn to pick ourselves up"*, *"Riddle me this"*.
@@ -109,6 +114,14 @@ The application includes an extensive Kurdish Sorani cinematic dialogue engine (
 - **Bi-Directional Synchronization:** Editing any cue immediately reflects on the live player screen and updates the output download payload.
 - **Real-Time Filter & Search:** Search across dialogue lines, cue indices, or timestamps with match counts and <kbd>Enter</kbd> / <kbd>Shift+Enter</kbd> navigation.
 - **Undo / Redo Stack:** Multi-step historical state management with standard shortcut support (<kbd>Ctrl+Z</kbd> / <kbd>Ctrl+Y</kbd>).
+
+---
+
+## 🧭 Interactive Onboarding Guide & Live Tour
+
+- **Step-by-Step Interactive Guide:** Walkthrough covering file uploads, translation settings, live previewing, in-line editing, and quality analysis.
+- **Dynamic Context Adaptation:** Works with sample demonstration cues for new users or seamlessly references active user files without data loss.
+- **Keyboard Navigation:** Navigate steps with <kbd>&larr;</kbd> and <kbd>&rarr;</kbd> arrow keys or dismiss with <kbd>Esc</kbd>.
 
 ---
 
@@ -167,7 +180,7 @@ node server.js
 # or: npm run dev
 
 # Syntax check all JavaScript files
-node --check assets/js/parser.js && node --check assets/js/translator-dict.js && node --check assets/js/translator.js && node --check assets/js/i18n.js && node --check assets/js/toast.js && node --check assets/js/player.js && node --check assets/js/app-version.js && node --check assets/js/app-tour.js && node --check assets/js/app-quality.js && node --check assets/js/app-fullscreen.js && node --check assets/js/app.js && node --check sw.js
+node --check assets/js/parser.js && node --check assets/js/translator-dict.js && node --check assets/js/translator-orthography.js && node --check assets/js/translator.js && node --check assets/js/i18n.js && node --check assets/js/toast.js && node --check assets/js/player.js && node --check assets/js/app-version.js && node --check assets/js/app-tour.js && node --check assets/js/app-quality.js && node --check assets/js/app-fullscreen.js && node --check assets/js/app.js && node --check sw.js
 ```
 
 ### GitHub Pages Deployment
@@ -180,3 +193,4 @@ node --check assets/js/parser.js && node --check assets/js/translator-dict.js &&
 ## 📄 License & Community
 
 Open-source project dedicated to Kurdish anime fansubbers, cinema translators, and linguists. Contributions, word suggestions, and feature requests are welcome!
+
