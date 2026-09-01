@@ -24,6 +24,27 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Verify JavaScript Syntax & Integrity
+        run: |
+          node --check assets/js/parser.js
+          node --check assets/js/translator-dict.js
+          node --check assets/js/translator-orthography.js
+          node --check assets/js/translator.js
+          node --check assets/js/i18n.js
+          node --check assets/js/toast.js
+          node --check assets/js/player.js
+          node --check assets/js/app-version.js
+          node --check assets/js/app-tour.js
+          node --check assets/js/app-quality.js
+          node --check assets/js/app-fullscreen.js
+          node --check assets/js/app.js
+          node --check sw.js
+
       - name: Configure Pages
         uses: actions/configure-pages@v5
 

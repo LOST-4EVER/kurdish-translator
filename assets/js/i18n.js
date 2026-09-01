@@ -125,6 +125,13 @@ const UI_I18N = {
     lastChecked: 'Checked',
     justNow: 'Just now',
     closeChangelog: 'Close',
+    iosInstallHint: 'Tap the Share icon and select "Add to Home Screen" to install.',
+    pwaInstallPrompt: 'You can install this app from your browser menu ("Add to Home Screen").',
+    installSuccess: 'App installed successfully!',
+    checkingForUpdates: 'Checking for updates…',
+    newVersionAvailable: 'New version available',
+    checkFailed: 'Update check failed. Working offline?',
+    clearingCache: 'Clearing cache & reloading…',
   },
   ckb: {
     brandSub: 'وەرگێڕی ژێرنووسی فیلم، ئەنیمی و زنجیرەکان',
@@ -249,6 +256,13 @@ const UI_I18N = {
     lastChecked: 'پشکنرا',
     justNow: 'کەمێک پێش ئێستا',
     closeChangelog: 'داخستن',
+    iosInstallHint: 'کرتە لەسەر دوگمەی Share بکە و پاشان "Add to Home Screen" هەڵبژێرە.',
+    pwaInstallPrompt: 'دەتوانیت بەرنامەکە لە مێنیوی وێبگەڕەکەتەوە دابەزێنیت ("Add to Home Screen").',
+    installSuccess: 'بەرنامەکە بە سەرکەوتوویی دابەزێنرا!',
+    checkingForUpdates: 'پشکنین بۆ وەشانی نوێ…',
+    newVersionAvailable: 'وەشانی نوێ بەردەستە',
+    checkFailed: 'پشکنین سەرکەوتوو نەبوو. هێڵ کاردەکات؟',
+    clearingCache: 'سڕینەوەی کاش و بارکردنەوەی بەرنامە…',
   }
 };
 

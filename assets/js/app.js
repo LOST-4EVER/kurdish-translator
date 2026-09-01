@@ -1863,10 +1863,55 @@
     }
   }
 
+  async function checkSharedSubtitle() {
+    const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.has('shared') || urlParams.has('share_target')) {
+      try {
+        const res = await fetch('./shared-subtitle-data');
+        if (res.ok) {
+          const blob = await res.blob();
+          const filename = decodeURIComponent(res.headers.get('X-Shared-Filename') || 'shared_subtitle.srt');
+          const sharedFile = new File([blob], filename, { type: blob.type || 'text/plain' });
+          handleFile(sharedFile);
+          if (typeof Toast !== 'undefined') {
+            Toast.show(currentUiLang === 'ckb' ? 'فایلی هاوبەشکراو بارکرا!' : 'Shared subtitle loaded!', 'success', 3500);
+          }
+        }
+      } catch (err) {
+        console.warn('Could not load shared subtitle:', err);
+      } finally {
+        const cleanUrl = window.location.origin + window.location.pathname;
+        window.history.replaceState({}, document.title, cleanUrl);
+      }
+    }
+  }
+
+  function initFileHandling() {
+    if ('launchQueue' in window && 'setConsumer' in window.launchQueue) {
+      window.launchQueue.setConsumer(async (launchParams) => {
+        if (!launchParams.files || !launchParams.files.length) return;
+        try {
+          const fileHandle = launchParams.files[0];
+          const fileObj = await fileHandle.getFile();
+          if (fileObj) {
+            handleFile(fileObj);
+            if (typeof Toast !== 'undefined') {
+              Toast.show(currentUiLang === 'ckb' ? `فایلی ${fileObj.name} بارکرا` : `Loaded ${fileObj.name}`, 'success', 3000);
+            }
+          }
+        } catch (e) {
+          console.warn('Launch handler error:', e);
+        }
+      });
+    }
+  }
+
   function initPWA() {
     if (typeof AppVersion !== 'undefined') {
       AppVersion.init();
     }
+    checkSharedSubtitle();
+    initFileHandling();
   }
 
   // ---------- Init ----------

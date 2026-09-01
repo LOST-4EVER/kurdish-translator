@@ -29,9 +29,10 @@ const AppVersion = (() => {
       changelogPanel: document.getElementById('changelogPanel'),
       updateBanner: document.getElementById('updateBanner'),
       bannerVerTag: document.getElementById('bannerVerTag'),
-      bannerRefreshBtn: document.getElementById('bannerRefreshBtn'),
+      bannerRefreshBtn: document.getElementById('bannerUpdateNowBtn') || document.getElementById('bannerRefreshBtn'),
       bannerForceRefreshBtn: document.getElementById('bannerForceRefreshBtn'),
-      bannerDismissBtn: document.getElementById('bannerDismissBtn'),
+      bannerDismissBtn: document.getElementById('bannerCloseBtn') || document.getElementById('bannerDismissBtn'),
+      installBtn: document.getElementById('installBtn'),
     };
   }
 
@@ -40,6 +41,69 @@ const AppVersion = (() => {
       return UI_I18N.getText(key) || fallback;
     }
     return fallback;
+  }
+
+  let deferredInstallPrompt = null;
+
+  /**
+   * Set up PWA installation listeners and prompt.
+   */
+  function initInstallPrompt() {
+    const installBtn = document.getElementById('installBtn');
+
+    window.addEventListener('beforeinstallprompt', (e) => {
+      e.preventDefault();
+      deferredInstallPrompt = e;
+      if (installBtn) {
+        installBtn.hidden = false;
+        installBtn.classList.remove('hidden');
+        installBtn.style.display = 'inline-flex';
+      }
+    });
+
+    if (installBtn) {
+      installBtn.addEventListener('click', async () => {
+        if (!deferredInstallPrompt) {
+          const isIos = /iphone|ipad|ipod/i.test(navigator.userAgent);
+          if (isIos) {
+            if (typeof Toast !== 'undefined') {
+              Toast.show(getI18nText('iosInstallHint', 'Tap Share and then "Add to Home Screen" to install.'), 'info', 5000);
+            }
+          } else {
+            if (typeof Toast !== 'undefined') {
+              Toast.show(getI18nText('pwaInstallPrompt', 'Install from browser menu (Add to Home Screen).'), 'info', 4000);
+            }
+          }
+          return;
+        }
+
+        deferredInstallPrompt.prompt();
+        try {
+          const { outcome } = await deferredInstallPrompt.userChoice;
+          if (outcome === 'accepted') {
+            installBtn.hidden = true;
+            installBtn.style.display = 'none';
+            deferredInstallPrompt = null;
+            if (typeof Toast !== 'undefined') {
+              Toast.show(getI18nText('installSuccess', 'App installed successfully!'), 'success', 3000);
+            }
+          }
+        } catch (err) {
+          console.warn('PWA install prompt error:', err);
+        }
+      });
+    }
+
+    window.addEventListener('appinstalled', () => {
+      deferredInstallPrompt = null;
+      if (installBtn) {
+        installBtn.hidden = true;
+        installBtn.style.display = 'none';
+      }
+      if (typeof Toast !== 'undefined') {
+        Toast.show(getI18nText('installSuccess', 'App installed successfully!'), 'success', 4000);
+      }
+    });
   }
 
   /**
@@ -57,6 +121,7 @@ const AppVersion = (() => {
     startTimeTicker();
     measureLatency();
     registerSW();
+    initInstallPrompt();
     bindRefreshControls();
   }
 
@@ -198,7 +263,36 @@ const AppVersion = (() => {
   }
 
   /**
-   * Scan sw.js for version changes and report status.
+   * Fetch the latest version published to GitHub Pages / repository.
+   */
+  async function fetchLatestGitHubVersion() {
+    if (!navigator.onLine) return null;
+    const endpoints = [
+      'https://lost-4ever.github.io/kurdish-translator/sw.js?_t=' + Date.now(),
+      'https://raw.githubusercontent.com/LOST-4EVER/kurdish-translator/main/sw.js?_t=' + Date.now()
+    ];
+
+    for (const url of endpoints) {
+      try {
+        const ctrl = new AbortController();
+        const tid = setTimeout(() => ctrl.abort(), 3500);
+        const res = await fetch(url, { cache: 'no-store', signal: ctrl.signal });
+        clearTimeout(tid);
+        if (!res.ok) continue;
+        const text = await res.text();
+        const match = text.match(/const\s+CACHE\s*=\s*['"](?:kurdish-translator-)?v?(\d+)['"]/i)
+          || text.match(/CACHE\s*=\s*['"]([^'"]+)['"]/);
+        if (match) {
+          const vNum = parseInt(match[1], 10);
+          return isNaN(vNum) ? match[1] : 'v' + vNum;
+        }
+      } catch {}
+    }
+    return null;
+  }
+
+  /**
+   * Scan sw.js and GitHub Pages for version changes and report status.
    */
   async function checkForAppUpdates(manual = false) {
     const els = getElements();
@@ -226,29 +320,49 @@ const AppVersion = (() => {
         if (reg) await reg.update();
       }
 
-      const res = await fetch('./sw.js?_t=' + Date.now(), { cache: 'no-store' });
-      if (!res.ok) throw new Error('Could not fetch sw.js');
-      const text = await res.text();
-
-      const match = text.match(/const\s+CACHE\s*=\s*['"]([^'"]+)['"]/);
       let foundNew = false;
       let serverVer = '';
 
-      if (match && match[1]) {
-        const cacheTag = match[1];
-        const vMatch = cacheTag.match(/v(\d+)/i);
-        const currMatch = APP_VERSION.match(/v(\d+)/i);
+      // 1. Check local Service Worker cache tag
+      try {
+        const res = await fetch('./sw.js?_t=' + Date.now(), { cache: 'no-store' });
+        if (res.ok) {
+          const text = await res.text();
+          const match = text.match(/const\s+CACHE\s*=\s*['"]([^'"]+)['"]/);
+          if (match && match[1]) {
+            const cacheTag = match[1];
+            const vMatch = cacheTag.match(/v(\d+)/i);
+            const currMatch = APP_VERSION.match(/v(\d+)/i);
 
-        if (vMatch && currMatch) {
-          const serverNum = parseInt(vMatch[1], 10);
-          const currNum = parseInt(currMatch[1], 10);
-          if (serverNum > currNum) {
-            foundNew = true;
-            serverVer = 'v' + serverNum;
+            if (vMatch && currMatch) {
+              const serverNum = parseInt(vMatch[1], 10);
+              const currNum = parseInt(currMatch[1], 10);
+              if (serverNum > currNum) {
+                foundNew = true;
+                serverVer = 'v' + serverNum;
+              }
+            } else if (!cacheTag.includes(APP_VERSION)) {
+              foundNew = true;
+              serverVer = cacheTag;
+            }
           }
-        } else if (!cacheTag.includes(APP_VERSION)) {
-          foundNew = true;
-          serverVer = cacheTag;
+        }
+      } catch {}
+
+      // 2. Also check remote GitHub Pages / upstream repository if online
+      if (!foundNew && navigator.onLine) {
+        const ghVer = await fetchLatestGitHubVersion();
+        if (ghVer) {
+          const ghMatch = ghVer.match(/v(\d+)/i);
+          const currMatch = APP_VERSION.match(/v(\d+)/i);
+          if (ghMatch && currMatch) {
+            const ghNum = parseInt(ghMatch[1], 10);
+            const currNum = parseInt(currMatch[1], 10);
+            if (ghNum > currNum) {
+              foundNew = true;
+              serverVer = ghVer;
+            }
+          }
         }
       }
 
@@ -423,6 +537,7 @@ const AppVersion = (() => {
     VERSION: APP_VERSION,
     init,
     checkForAppUpdates,
+    fetchLatestGitHubVersion,
     performQuickRefresh,
     performForceRefresh,
   };
