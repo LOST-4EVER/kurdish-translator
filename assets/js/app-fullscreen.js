@@ -46,7 +46,7 @@ const AppFullscreen = (() => {
   }
 
   function hasArabic(s) {
-    return /[\u0600-\u06ff]/.test(s || '');
+    return /[\u0600-\u06FF\u0750-\u077F\uFB50-\uFDFF\uFE70-\uFEFF]/.test(s || '');
   }
 
   function init(bridge) {

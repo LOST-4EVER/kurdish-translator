@@ -207,7 +207,7 @@
   let editorObserver = null;
   let copyTimer = null;
 
-  const hasArabic = (s) => /[\u0600-\u06FF\u0750-\u077F]/.test(s);
+  const hasArabic = (s) => /[\u0600-\u06FF\u0750-\u077F\uFB50-\uFDFF\uFE70-\uFEFF]/.test(s || '');
   // Safari iOS ignores the `download` attribute on blob: URLs; iPadOS
   // identifies itself as a Mac, so detect touch too.
   const isIOS = /iP(hone|ad|od)/.test(navigator.userAgent) ||

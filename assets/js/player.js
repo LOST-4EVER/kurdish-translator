@@ -6,7 +6,7 @@
 const SubtitlePlayer = (() => {
   const _ = (sel) => document.querySelector(sel);
   const clamp = (v, min, max) => Math.min(max, Math.max(min, v));
-  const hasArabic = (s) => /[\u0600-\u06FF\u0750-\u077F]/.test(s);
+  const hasArabic = (s) => /[\u0600-\u06FF\u0750-\u077F\uFB50-\uFDFF\uFE70-\uFEFF]/.test(s || '');
 
   let cues = [];
   let total = 0;        // ms duration

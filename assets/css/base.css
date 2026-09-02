@@ -227,6 +227,12 @@
 .footer p { font-size: 11.5px; color: var(--md-sys-color-outline); }
 
 /* ---------- RTL Support ---------- */
+html[dir="rtl"],
+body[dir="rtl"] {
+  font-family: var(--font-kurdish);
+  direction: rtl;
+  text-align: right;
+}
 [dir="rtl"] .brand { text-align: right; }
 [dir="rtl"] .settings-grid { text-align: right; }
 [dir="rtl"] .settings-options .switch-row { text-align: right; }
@@ -234,7 +240,20 @@
 [dir="rtl"] .done-card { text-align: right; }
 [dir="rtl"] .editor-title { text-align: right; }
 [dir="rtl"] .select-wrap::after { right: auto; left: 14px; }
-[dir="rtl"] select { padding: 11px 12px 11px 32px; }
+[dir="rtl"] select { padding: 11px 12px 11px 32px; text-align: right; }
+[dir="rtl"] input[type="text"],
+[dir="rtl"] input[type="search"],
+[dir="rtl"] textarea {
+  text-align: right;
+  direction: rtl;
+}
+[dir="rtl"] .toast-container { left: 50%; right: auto; transform: translateX(-50%); }
+[dir="rtl"] .adv-trigger-chevron { transform: rotate(180deg); }
+[dir="rtl"] .adv-trigger-btn:hover .adv-trigger-chevron { transform: translateX(-3px) rotate(180deg); }
+[dir="rtl"] .modal-close { left: 14px; right: auto; }
+[dir="rtl"] .refresh-dropdown { right: auto; left: 0; text-align: right; }
+[dir="rtl"] .ed-search-nav { flex-direction: row-reverse; }
+[dir="rtl"] .tour-btn-group { flex-direction: row-reverse; }
 
 /* ---------- Subtle UI Animations ---------- */
 .btn-primary.downloading {

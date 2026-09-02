@@ -475,16 +475,6 @@ const Translator = (() => {
    * @returns {Promise<string[]>} translated lines (same length)
    */
   async function translateLines(lines, srcLang, tgtLang, onProgress, signal, opts = {}) {
-    if (srcLang && typeof srcLang === 'object') {
-      const o = srcLang;
-      srcLang = o.srcLang || o.from || 'auto';
-      tgtLang = o.tgtLang || o.to || 'ckb';
-      onProgress = o.onProgress || onProgress;
-      signal = o.signal || signal;
-      opts = o;
-    }
-    srcLang = srcLang || 'auto';
-    tgtLang = tgtLang || 'ckb';
     const results = new Array(lines.length).fill('');
     const batches = buildBatches(lines, srcLang, tgtLang);
     const total = batches.length || 1;
@@ -1010,3 +1000,5 @@ const Translator = (() => {
 })();
 
 if (typeof module !== 'undefined' && module.exports) module.exports = Translator;
+
+module.exports._testFetch = translateChunk;
