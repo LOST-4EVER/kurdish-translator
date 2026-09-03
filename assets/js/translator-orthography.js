@@ -819,9 +819,10 @@ const TranslatorOrthography = (() => {
 
     // 8. Line length warning
     const lines = text.split('\n');
-    const tooLongLine = lines.find((l) => l.length > 42);
+    const tooLongLine = lines.find((l) => l.replace(/<[^>]*>|\{[^}]*\}/g, '').length > 40);
     if (tooLongLine) {
-      const msg = `درێژی دێڕ زۆرە (${tooLongLine.length} پیت) و خوێندنەوەی لەسەر شاشە گران دەکات`;
+      const charLen = tooLongLine.replace(/<[^>]*>|\{[^}]*\}/g, '').length;
+      const msg = `درێژی دێڕ زۆرە (${charLen} پیت) و خوێندنەوەی لەسەر شاشە گران دەکات`;
       issues.push(msg);
       suggestions.push('دێڕەکە بەسەر دوو دێڕدا دابەش بکە');
       issueDetails.push({
@@ -830,9 +831,31 @@ const TranslatorOrthography = (() => {
         severity: 'info',
         title: 'درێژیی دێڕی ژێرنووس',
         description: msg,
-        fixAvailable: false,
+        fixAvailable: true,
       });
       penalties += 5;
+    }
+
+    // 9. Reading Speed (CPS - Characters Per Second) Check
+    const durMs = typeof durationMs === 'number' && durationMs > 0 ? durationMs : 0;
+    if (durMs > 0) {
+      const durSec = durMs / 1000;
+      const plainLen = text.replace(/<[^>]*>|\{[^}]*\}/g, '').trim().length;
+      const cps = plainLen / durSec;
+      if (cps > 19) {
+        const msg = `خێرایی خوێندنەوە زۆر بەرزە (${cps.toFixed(1)} پیت لە چرکەیەکدا) - مەترسی نەخوێندنەوە لەسەر شاشە`;
+        issues.push(msg);
+        suggestions.push('کاتەکەی درێژبکەرەوە یان ڕستەکە کورتتر بکەرەوە');
+        issueDetails.push({
+          id: 'high_cps',
+          category: 'timing',
+          severity: 'warning',
+          title: 'خێرایی زۆری خوێندنەوە (CPS)',
+          description: msg,
+          fixAvailable: false,
+        });
+        penalties += 10;
+      }
     }
 
     // Alternatives check from Advanced Lexicon
@@ -861,6 +884,52 @@ const TranslatorOrthography = (() => {
     };
   }
 
+  /**
+   * Intelligently split an overly long single-line Kurdish subtitle into two balanced lines.
+   * Prioritizes splitting at Kurdish conjunctions (وە، کە، بەڵام، چونکە، بۆیە) or punctuation (،).
+   */
+  function splitLongKurdishLine(text, maxLineChars = 38) {
+    if (!text || typeof text !== 'string') return '';
+    if (text.includes('\n')) return text; // already multi-line
+    const cleanText = text.trim();
+    if (cleanText.length <= maxLineChars) return cleanText;
+
+    const words = cleanText.split(/\s+/);
+    if (words.length <= 2) return cleanText;
+
+    const midChar = Math.floor(cleanText.length / 2);
+    let bestIndex = -1;
+    let minDistance = Infinity;
+
+    let runningCharCount = 0;
+    for (let i = 0; i < words.length - 1; i++) {
+      runningCharCount += words[i].length + 1;
+      const nextWord = words[i + 1];
+      const distance = Math.abs(runningCharCount - midChar);
+
+      // Preferred break points
+      const hasComma = words[i].endsWith('،') || words[i].endsWith(',');
+      const isConjunction = /^(وە|کە|چونکە|بەڵام|بۆیە|لەبەرئەوەی|یان|تەنانەت|ئەگەر)$/.test(nextWord);
+
+      let weight = distance;
+      if (hasComma) weight -= 12;
+      if (isConjunction) weight -= 8;
+
+      if (weight < minDistance) {
+        minDistance = weight;
+        bestIndex = i;
+      }
+    }
+
+    if (bestIndex >= 0) {
+      const line1 = words.slice(0, bestIndex + 1).join(' ');
+      const line2 = words.slice(bestIndex + 1).join(' ');
+      return `${line1}\n${line2}`;
+    }
+
+    return cleanText;
+  }
+
   return {
     normalizeDigits,
     normalizeSoraniAlphabet,
@@ -872,6 +941,7 @@ const TranslatorOrthography = (() => {
     getAdvancedAlternatives,
     checkLineQuality,
     fixPlacementAndTagOrder,
+    splitLongKurdishLine,
   };
 })();
 

@@ -428,6 +428,23 @@ Style: Top,Noto Naskh Arabic,44,16777215,65535,0,0,-1,0,1,3.2,1.8,8,40,40,35,0,1
     return res.trim();
   }
 
+  function normalizeTextForASS(text) {
+    if (!text) return '';
+    let res = String(text)
+      .replace(/\r\n/g, '\n')
+      .replace(/\r/g, '\n');
+    // Convert HTML formatting to ASS tags
+    res = res
+      .replace(/<i>([\s\S]*?)<\/i>/gi, '{\\i1}$1{\\i0}')
+      .replace(/<b>([\s\S]*?)<\/b>/gi, '{\\b1}$1{\\b0}')
+      .replace(/<u>([\s\S]*?)<\/u>/gi, '{\\u1}$1{\\u0}')
+      .replace(/<font\s+color=["']#?([0-9a-fA-F]{2})([0-9a-fA-F]{2})([0-9a-fA-F]{2})["']>([\s\S]*?)<\/font>/gi, (m, r, g, b, inner) => {
+        return `{\\c&H${b}${g}${r}&}${inner}{\\c}`;
+      })
+      .replace(/<[^>]+>/g, ''); // strip any remaining non-supported HTML tags
+    return res.replace(/\n/g, '\\N');
+  }
+
   function serialize(parsedOrFormat, cues) {
     let parsed = parsedOrFormat;
     let cueList = cues;
@@ -440,8 +457,9 @@ Style: Top,Noto Naskh Arabic,44,16777215,65535,0,0,-1,0,1,3.2,1.8,8,40,40,35,0,1
     cueList = cueList || [];
     const fmt = (parsed.format || 'srt').toLowerCase();
     switch (fmt) {
-      case 'vtt':
-        return 'WEBVTT\n\n' + cueList.map((c) => {
+      case 'vtt': {
+        const header = 'WEBVTT\n\nSTYLE\n::cue {\n  font-family: \'Noto Naskh Arabic\', \'Vazirmatn\', \'Noto Sans Arabic\', \'Segoe UI\', Tahoma, sans-serif;\n  font-size: 100%;\n}\n\n';
+        const body = cueList.map((c) => {
           let s = c.settings ? ' ' + c.settings : '';
           const raw = String(c.rawText || c.text || '');
           if (!s && (/\{\\an[789]\}/i.test(raw) || /\{\\a[567]\}/i.test(raw) || /<top>/i.test(raw))) {
@@ -449,6 +467,8 @@ Style: Top,Noto Naskh Arabic,44,16777215,65535,0,0,-1,0,1,3.2,1.8,8,40,40,35,0,1
           }
           return `${fmtVTT(c.start)} --> ${fmtVTT(c.end)}${s}\n${normalizeTextForStandard(c.text)}`;
         }).join('\n\n') + '\n';
+        return header + body;
+      }
       case 'srt':
         return cueList.map((c, i) => `${i + 1}\n${fmtSRT(c.start)} --> ${fmtSRT(c.end)}\n${normalizeTextForStandard(c.text)}`).join('\n\n') + '\n';
       case 'ass':
@@ -490,11 +510,20 @@ Style: Top,Noto Naskh Arabic,44,16777215,65535,0,0,-1,0,1,3.2,1.8,8,40,40,35,0,1
       const baseHeader = isSsa ? DEFAULT_SSA_HEADER : DEFAULT_ASS_HEADER;
       header = `${baseHeader}\n${fmtLine}`;
     } else {
-      // Ensure Kurdish font encoding (178) is set on existing Styles in header if default/standard font used
+      // Ensure Kurdish font name and encoding (178) is set on existing Styles in header
+      const latinFonts = /\b(?:Arial|Calibri|Helvetica|Verdana|Tahoma|Times New Roman|Comic Sans MS|Trebuchet MS|Impact|Courier New|Consolas|Lucida Sans|Segoe UI|Roboto|Open Sans|Inter|Geist)\b/i;
       cleanHeader = cleanHeader.map((line) => {
         if (/^\s*Style\s*:/i.test(line)) {
-          // If style specifies Western encoding (1 or 0), upgrade to 178 (Arabic/Kurdish)
-          return line.replace(/,(?:0|1)$/, ',178');
+          let updated = line;
+          // Upgrade Latin-only fonts to Noto Naskh Arabic for proper Kurdish cursive rendering
+          if (latinFonts.test(updated) && !/Noto Naskh Arabic|Noto Sans Arabic|Vazirmatn|Unikurd/i.test(updated)) {
+            updated = updated.replace(latinFonts, 'Noto Naskh Arabic');
+          }
+          // If style specifies Western encoding (1 or 0) or misses 178, upgrade to 178 (Arabic/Kurdish charset)
+          if (/,(?:0|1)$/.test(updated)) {
+            updated = updated.replace(/,(?:0|1)$/, ',178');
+          }
+          return updated;
         }
         return line;
       });
@@ -512,8 +541,7 @@ Style: Top,Noto Naskh Arabic,44,16777215,65535,0,0,-1,0,1,3.2,1.8,8,40,40,35,0,1
       order.forEach((f) => { val[f] = (c.extra && c.extra[f]) ?? ASS_FALLBACKS[f.toLowerCase()] ?? ''; });
       val[keyOf('start')] = fmtASS(c.start);
       val[keyOf('end')] = fmtASS(c.end);
-      const cueNorm = (c.text || '').replace(/\r\n/g, '\n').replace(/\r/g, '\n').replace(/\\N/g, '\n');
-      val[keyOf('text')] = cueNorm.replace(/\n/g, '\\N');
+      val[keyOf('text')] = normalizeTextForASS(c.text);
       lines.push(`Dialogue: ${order.map((f) => val[f]).join(',')}`);
     }
     return lines.join('\n') + '\n';
@@ -620,7 +648,21 @@ Style: Top,Noto Naskh Arabic,44,16777215,65535,0,0,-1,0,1,3.2,1.8,8,40,40,35,0,1
     return result;
   }
 
-  return { parse, serialize, fmtSRT, fmtVTT, fmtASS, detect, toMs, splitMs, fixOverlaps };
+  /**
+   * Shift all cue timestamps forward (+) or backward (-) by deltaMs.
+   * Ensures start >= 0 and end > start.
+   */
+  function timeShiftCues(cues, deltaMs) {
+    if (!cues || !Array.isArray(cues) || !deltaMs) return cues;
+    return cues.map((c) => {
+      const start = Math.max(0, (c.start || 0) + deltaMs);
+      const minEnd = start + 200;
+      const end = Math.max(minEnd, (c.end || 0) + deltaMs);
+      return { ...c, start, end };
+    });
+  }
+
+  return { parse, serialize, fmtSRT, fmtVTT, fmtASS, detect, toMs, splitMs, fixOverlaps, timeShiftCues };
 })();
 
 if (typeof module !== 'undefined' && module.exports) module.exports = SubParser;
