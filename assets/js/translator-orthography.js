@@ -886,13 +886,20 @@ const TranslatorOrthography = (() => {
 
   /**
    * Intelligently split an overly long single-line Kurdish subtitle into two balanced lines.
-   * Prioritizes splitting at Kurdish conjunctions (وە، کە، بەڵام، چونکە، بۆیە) or punctuation (،).
+   * Handles multi-speaker dialogue hyphens, Kurdish conjunctions (وە، کە، بەڵام، چونکە، بۆیە، کاتێک),
+   * Kurdish commas (،), semicolons (؛), and question marks (؟) while preserving formatting tags.
    */
   function splitLongKurdishLine(text, maxLineChars = 38) {
     if (!text || typeof text !== 'string') return '';
     if (text.includes('\n')) return text; // already multi-line
     const cleanText = text.trim();
     if (cleanText.length <= maxLineChars) return cleanText;
+
+    // Check for multi-speaker hyphens: e.g. "- سڵاو لە هەمووان - چۆنیت براکەم؟"
+    const multiSpeakerMatch = cleanText.match(/^([-—–]\s*[^\n]+?)\s+([-—–]\s*[^\n]+)$/);
+    if (multiSpeakerMatch) {
+      return `${multiSpeakerMatch[1].trim()}\n${multiSpeakerMatch[2].trim()}`;
+    }
 
     const words = cleanText.split(/\s+/);
     if (words.length <= 2) return cleanText;
@@ -908,10 +915,12 @@ const TranslatorOrthography = (() => {
       const distance = Math.abs(runningCharCount - midChar);
 
       // Preferred break points
-      const hasComma = words[i].endsWith('،') || words[i].endsWith(',');
-      const isConjunction = /^(وە|کە|چونکە|بەڵام|بۆیە|لەبەرئەوەی|یان|تەنانەت|ئەگەر)$/.test(nextWord);
+      const hasComma = words[i].endsWith('،') || words[i].endsWith(',') || words[i].endsWith('؛') || words[i].endsWith(';');
+      const hasSpeakerDash = /^[-—–]/.test(nextWord);
+      const isConjunction = /^(وە|کە|چونکە|بەڵام|بۆیە|لەبەرئەوەی|یان|تەنانەت|ئەگەر|کاتێک|تاوەکو|ئاخۆ|لەگەڵ)$/.test(nextWord);
 
       let weight = distance;
+      if (hasSpeakerDash) weight -= 20;
       if (hasComma) weight -= 12;
       if (isConjunction) weight -= 8;
 

@@ -481,7 +481,7 @@ Style: Top,Noto Naskh Arabic,44,16777215,65535,0,0,-1,0,1,3.2,1.8,8,40,40,35,0,1
         return `{1}{1}${fps.toFixed(3)}\n${body}\n`;
       }
       case 'smi':
-        return '<SAMI>\n<HEAD><TITLE>Kurdish subtitles</TITLE></HEAD>\n<BODY>\n' +
+        return '<SAMI>\n<HEAD><TITLE>Kurdish Subtitles</TITLE>\n<STYLE TYPE="text/css">\n<!--\nP { font-family: \'Noto Naskh Arabic\', \'Vazirmatn\', \'Noto Sans Arabic\', sans-serif; font-size: 24pt; text-align: center; color: #FFFFFF; direction: rtl; }\n.KURD { Name: Kurdish; lang: ckb; SAMIType: CC; }\n-->\n</STYLE>\n</HEAD>\n<BODY>\n' +
           cueList.map((c) => `<SYNC Start=${c.start}><P class=KURD>${escapeXml(normalizeTextForStandard(c.text)).replace(/\n/g, '<br>')}</P></SYNC>`).join('\n') +
           '\n</BODY>\n</SAMI>\n';
       case 'txt':
