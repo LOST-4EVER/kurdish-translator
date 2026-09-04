@@ -60,6 +60,13 @@
       "description": "Open subtitle translator and drop a file",
       "url": "./",
       "icons": [{ "src": "assets/icons/icon-192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Live Player & Editor",
+      "short_name": "Editor",
+      "description": "Open live subtitle player and editor",
+      "url": "./#preview",
+      "icons": [{ "src": "assets/icons/icon-192.png", "sizes": "192x192" }]
     }
   ],
   "icons": [

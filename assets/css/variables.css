@@ -99,10 +99,10 @@
   --ease: var(--md-motion-easing-standard);
   --motion: var(--md-motion-duration-short);
 
-  /* Typography Stacks */
+  /* Typography Stacks & Enhanced Kurdish Fonts */
   --font-sans: "Inter", "Vazirmatn", "Noto Sans Arabic", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-  --font-kurdish: "Vazirmatn", "Noto Sans Arabic", "Noto Naskh Arabic", "Segoe UI", Tahoma, sans-serif;
-  --font-subtitle: "Noto Naskh Arabic", "Vazirmatn", "Noto Sans Arabic", -apple-system, sans-serif;
+  --font-kurdish: "Noto Naskh Arabic", "Vazirmatn", "Noto Sans Arabic", "Rabar", "Unikurd Web", "Rudaw", "Peshrow", "Segoe UI", Tahoma, sans-serif;
+  --font-subtitle: "Noto Naskh Arabic", "Vazirmatn", "Noto Sans Arabic", "Rabar", "Unikurd Web", "Rudaw", "Peshrow", -apple-system, sans-serif;
   --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
 }
 

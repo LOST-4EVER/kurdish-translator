@@ -325,51 +325,40 @@ select:focus { outline: none; border-color: var(--md-sys-color-primary); box-sha
   font-size: 13.5px;
 }
 
-/* ---------- Bottom Floating Refresh & Update Menu ---------- */
-.refresh-menu-wrap.bottom-floating {
-  position: fixed;
-  bottom: 22px;
-  right: 22px;
-  z-index: 990;
-  display: flex;
-  flex-direction: column;
-  align-items: flex-end;
-}
-
-[dir="rtl"] .refresh-menu-wrap.bottom-floating {
-  right: auto;
-  left: 22px;
-  align-items: flex-start;
+/* ---------- Topbar Header Refresh & Update Menu ---------- */
+.refresh-menu-wrap {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  flex-shrink: 0;
 }
 
 .refresh-pill-btn {
   display: inline-flex;
   align-items: center;
-  gap: 8px;
-  height: 42px;
-  padding: 0 16px;
-  background: var(--md-sys-color-surface-container-high);
+  gap: 6px;
+  height: 38px;
+  padding: 0 12px;
+  background: var(--md-sys-color-surface-container-low);
   border: 1px solid var(--md-sys-color-outline-variant);
-  border-radius: 9999px;
+  border-radius: var(--md-shape-corner-medium);
   color: var(--md-sys-color-on-surface);
   font-family: inherit;
-  font-size: 13px;
-  font-weight: 600;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45), 0 0 0 1px rgba(255, 255, 255, 0.08);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
+  font-size: 12px;
+  font-weight: 700;
   cursor: pointer;
-  transition: all 0.22s cubic-bezier(0.2, 0, 0, 1);
+  transition: all var(--motion) var(--ease);
   position: relative;
   user-select: none;
-  overflow: visible;
+  white-space: nowrap;
+  flex-shrink: 0;
 }
 
 .refresh-btn-glow {
   position: absolute;
   inset: -1px;
-  border-radius: 9999px;
-  background: linear-gradient(135deg, rgba(168, 85, 247, 0.4), rgba(56, 189, 248, 0.3), rgba(251, 191, 36, 0.3));
+  border-radius: var(--md-shape-corner-medium);
+  background: linear-gradient(135deg, rgba(168, 85, 247, 0.4), rgba(56, 189, 248, 0.3));
   opacity: 0;
   transition: opacity 0.3s ease;
   pointer-events: none;
@@ -382,15 +371,14 @@ select:focus { outline: none; border-color: var(--md-sys-color-primary); box-sha
 }
 
 .refresh-pill-btn:hover {
-  background: var(--md-sys-color-surface-container-highest);
-  border-color: rgba(168, 85, 247, 0.6);
+  background: var(--md-sys-color-surface-container-high);
+  border-color: var(--md-sys-color-primary);
   color: var(--md-sys-color-primary);
-  transform: translateY(-2px);
-  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.55), 0 0 18px rgba(168, 85, 247, 0.35);
+  transform: translateY(-1px);
 }
 
 .refresh-pill-btn:active {
-  transform: translateY(0) scale(0.97);
+  transform: scale(0.97);
 }
 
 .refresh-icon {
@@ -411,7 +399,7 @@ select:focus { outline: none; border-color: var(--md-sys-color-primary); box-sha
 .refresh-pulse-ring {
   position: absolute;
   inset: 0;
-  border-radius: 9999px;
+  border-radius: var(--md-shape-corner-medium);
   pointer-events: none;
 }
 
@@ -427,20 +415,20 @@ select:focus { outline: none; border-color: var(--md-sys-color-primary); box-sha
 
 .update-badge-dot {
   position: absolute;
-  top: 1px;
-  right: 1px;
-  width: 10px;
-  height: 10px;
+  top: -2px;
+  right: -2px;
+  width: 9px;
+  height: 9px;
   border-radius: 50%;
   background: #f43f5e;
   border: 2px solid var(--md-sys-color-surface-container-high);
-  box-shadow: 0 0 10px rgba(244, 63, 94, 0.95);
+  box-shadow: 0 0 8px rgba(244, 63, 94, 0.95);
   animation: pulseBadge 1.8s ease-in-out infinite;
 }
 
 [dir="rtl"] .update-badge-dot {
   right: auto;
-  left: 1px;
+  left: -2px;
 }
 
 @keyframes pulseBadge {
@@ -450,29 +438,30 @@ select:focus { outline: none; border-color: var(--md-sys-color-primary); box-sha
 
 .refresh-dropdown {
   position: absolute;
-  bottom: calc(100% + 12px);
+  top: calc(100% + 8px);
+  bottom: auto;
   right: 0;
   width: 290px;
   background: var(--md-sys-color-surface-container-high);
   border: 1px solid var(--md-sys-color-outline-variant);
   border-radius: var(--md-shape-corner-medium);
-  box-shadow: 0 20px 48px rgba(0, 0, 0, 0.65), 0 0 0 1px rgba(255, 255, 255, 0.09);
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.65), 0 0 0 1px rgba(255, 255, 255, 0.09);
   padding: 10px;
   z-index: 1010;
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
-  animation: dropdownPopUp 0.22s cubic-bezier(0.16, 1, 0.3, 1);
-  transform-origin: bottom right;
+  animation: dropdownDropDown 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+  transform-origin: top right;
 }
 
 [dir="rtl"] .refresh-dropdown {
   right: auto;
   left: 0;
-  transform-origin: bottom left;
+  transform-origin: top left;
 }
 
-@keyframes dropdownPopUp {
-  from { opacity: 0; transform: scale(0.92) translateY(10px); }
+@keyframes dropdownDropDown {
+  from { opacity: 0; transform: scale(0.92) translateY(-8px); }
   to { opacity: 1; transform: scale(1) translateY(0); }
 }
 

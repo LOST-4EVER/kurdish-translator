@@ -1,190 +1,102 @@
 /**
- * translator-orthography.js — Kurdish Sorani Orthography, NLP & Grammar Engine.
+ * translator-orthography.js — Advanced Kurdish Sorani & Kurmanji Orthography,
+ * NLP, Grammar Engine, and Subtitle Quality Inspector.
  *
- * Handles:
+ * Core Capabilities:
  *  - Arabic-to-Kurdish character normalization (ك/ي/ة/ه -> ک/ی/ە).
- *  - Kurdish Sorani trilled Heavy R (ڕ) rules and velarized Heavy L (ڵ) rules.
- *  - Rejoining split verbal prefixes (دە، نا، نە، مە، بی، تێ، ڕێ، پێ، وەر، دەر، دا، هەڵ، دەست، لێ).
- *  - Idiomatic naturalization of subtitle dialogue (eliminating mechanical machine-translation artifacts).
- *  - Dual-script numeral normalization (ASCII vs. Kurdish-Arabic digits).
- *  - Kurdish punctuation standards (، ؛ ؟).
- *  - Text search normalization (accent/diacritic insensitive matching).
- *  - Line-by-line subtitle quality grading and suggestions.
+ *  - Kurdish Sorani Heavy R (ڕ) rules and Velarized L (ڵ) rules.
+ *  - Verbal prefix attachment (دە، نا، نە، مە، بی، تێ، پێ، لێ، ڕێ، وەر، دەر، دا، هەڵ).
+ *  - Idiomatic naturalization of subtitle dialogue.
+ *  - Kurdish Arabic digits vs ASCII numeral converter (٠١٢٣).
+ *  - Standard Kurdish punctuation (، ؛ ؟ « »).
+ *  - Hawar Latin Kurdish (Kurmanji / CKB Latin) transliteration tools.
+ *  - Line-by-line subtitle reading speed (CPS) and quality inspector.
  */
 const TranslatorOrthography = (() => {
-  /**
-   * Reference the modularized Kurdish Subtitle Lexicon from TranslatorDict.
-   */
-  const ADVANCED_SUBTITLE_LEXICON = (typeof TranslatorDict !== 'undefined' && TranslatorDict.LEXICON)
-    ? TranslatorDict.LEXICON
-    : {
-        'fuck': { kurdish: 'نەفرەت', context: 'Expletive', alternatives: ['شەیتان', 'دۆزەخ', 'سەگباب'] },
-        'shut up': { kurdish: 'دەمت دابخە', context: 'Silence', alternatives: ['بێدەنگ بە', 'دەنگی خۆت ببڕە'] },
-        'never mind': { kurdish: 'کێشە نییە، لەبیری کە', context: "Don't worry", alternatives: ['گرنگ نییە', 'بێ خەم بە'] },
-        'get out of here': { kurdish: 'بڕۆ دەرەوە', context: 'Dismissal', alternatives: ['لەبەرچاوم ون بە', 'سەری خۆت هەڵگرە'] },
-        'make yourself at home': { kurdish: 'ماڵی خۆتە', context: 'Feel comfortable', alternatives: ['ئاسوودە بە', 'تەواو بە ئاسودەیی بە'] },
-      };
+  const getLexicon = () => {
+    if (typeof TranslatorDict !== 'undefined' && TranslatorDict.LEXICON) {
+      return TranslatorDict.LEXICON;
+    }
+    return {};
+  };
 
-  /** Normalize numbers based on preference, preserving HTML/ASS tags & bracket tokens intact. */
+  /** Normalize numbers, preserving HTML tags, ASS format codes, and tokens. */
   function normalizeDigits(str, useKurdishDigits) {
     if (!str) return '';
     if (!useKurdishDigits) {
-      return str.replace(/[\u0660-\u0669]/g, (d) => String(d.charCodeAt(0) - 0x0660))
-                .replace(/[\u06f0-\u06f9]/g, (d) => String(d.charCodeAt(0) - 0x06f0));
+      return str
+        .replace(/[\u0660-\u0669]/g, (d) => String(d.charCodeAt(0) - 0x0660))
+        .replace(/[\u06f0-\u06f9]/g, (d) => String(d.charCodeAt(0) - 0x06f0));
     }
-    // Only convert digits in plain text, skipping tags and tokens
     return str.replace(/(<[^>]*>|\{[^}]*\}|\[\s*T\s*[\d\u0660-\u0669\u06f0-\u06f9]+\s*\])|([0-9\u06f0-\u06f9]+)/gi, (m, tag, nums) => {
       if (tag) return tag;
-      return nums.replace(/[0-9]/g, (d) => String.fromCharCode(0x0660 + Number(d)))
-                 .replace(/[\u06f0-\u06f9]/g, (d) => String.fromCharCode(0x0660 + (d.charCodeAt(0) - 0x06f0)));
+      return nums
+        .replace(/[0-9]/g, (d) => String.fromCharCode(0x0660 + Number(d)))
+        .replace(/[\u06f0-\u06f9]/g, (d) => String.fromCharCode(0x0660 + (d.charCodeAt(0) - 0x06f0)));
     });
   }
 
-  /** Normalize Arabic characters to Kurdish Sorani alphabet & orthography conventions. */
+  // Stems for Sorani Kurdish Heavy R (ڕ)
+  const HEAVY_R_STEMS = [
+    'ویشت', 'ۆیشت', 'ۆشت', 'ۆ', 'است', 'ێگ', 'ۆژ', 'ەنگ', 'ێز', 'وون',
+    'ەش', 'وو', 'اپۆرت', 'اگەیاندن', 'اگەیەندراو', 'ێنمایی', 'ێژە', 'زگار',
+    'ازی', 'ێبوار', 'ابردوو', 'ێپێدان', 'ێباز', 'ەوت', 'ەها', 'ەتکردنەوە',
+    'ەوانە', 'ەوشت', 'ەخنە', 'وانین', 'اهێنان', 'اکردن', 'اگرتن', 'اکێشان',
+    'اوکردن', 'ێکخستن', 'ێکەوتن', 'ێسا', 'ۆح', 'ەوش', 'ێبەر', 'ەگ', 'ووت',
+    'ەق', 'ق', 'ژێم', 'اوەست', 'اکە', 'ێنووس', 'یش', 'یشە', 'ەنج', 'ێژن'
+  ];
+  const HEAVY_R_PREFIX_REGEX = new RegExp('(^|\\s)ر(' + HEAVY_R_STEMS.join('|') + ')(?=[\\u0600-\\u06ff]*)(?=\\s|$|[.,!?;:،؛؟])', 'g');
+
+  // Stems for Sorani Kurdish Velarized L (ڵ)
+  const VELARIZED_L_STEMS = [
+    ['مال', 'ماڵ'], ['بەلێ', 'بەڵێ'], ['دەلێ', 'دەڵێ'], ['بلێ', 'بڵێ'],
+    ['گول', 'گوڵ'], ['سال', 'ساڵ'], ['خۆشحال', 'خۆشحاڵ'], ['مندال', 'منداڵ'],
+    ['سلاو', 'سڵاو'], ['گەلا', 'گەڵا'], ['کەلەک', 'کەڵەک'], ['چۆل', 'چۆڵ'],
+    ['تەلە', 'تەڵە'], ['خال', 'خاڵ'], ['تال', 'تاڵ'], ['پیالە', 'پیاڵە'],
+    ['دل', 'دڵ'], ['پۆلا', 'پۆڵا'], ['قولپ', 'قوڵپ'], ['کەلەشێر', 'کەڵەشێر'],
+    ['مۆلەت', 'مۆڵەت'], ['قەلەباڵغ', 'قەڵەباڵغ'], ['خەلک', 'خەڵک'], ['گۆل', 'گۆڵ'],
+    ['هەل', 'هەڵ'], ['کەلەپووت', 'کەڵەپووت'], ['کەلەگا', 'کەڵەگا'], ['بەلام', 'بەڵام']
+  ];
+
+  /** Normalize Arabic characters into Kurdish Sorani alphabet & orthography. */
   function normalizeSoraniAlphabet(str) {
     if (!str) return '';
-    let s = str.replace(/\u0643/g, 'ک')   // Arabic Kaf 'ك' -> Kurdish Keheh 'ک'
-               .replace(/\u064A/g, 'ی')   // Arabic Yaa 'ي' -> Kurdish Yeh 'ی'
-               .replace(/\u0649/g, 'ی')   // Arabic Alef Maksura 'ى' -> 'ی'
-               .replace(/\u0629/g, 'ە')   // Arabic Teh Marbuta 'ة' -> Kurdish Small E 'ە'
-               .replace(/[\u06BE\u06C1]/g, 'ه'); // Urdu/Arabic Heh variants -> 'ه'
+    let s = str
+      .replace(/\u0643/g, 'ک')
+      .replace(/[\u064A\u0649]/g, 'ی')
+      .replace(/\u0629/g, 'ە')
+      .replace(/[\u06BE\u06C1]/g, 'ه');
 
-    // Convert Arabic Heh 'ه' to Kurdish Small E 'ە' at word endings where appropriate (after consonants/non-vowels)
+    // Arabic Heh 'ه' to Kurdish Small E 'ە' at word ends after non-vowels
     s = s.replace(/([\u0600-\u06ff])ه(?=\s|$|[.,!?;:،؛؟])/g, (m, p) =>
       (p !== 'ئ' && p !== 'ا' && p !== 'و' && p !== 'ۆ' && p !== 'ە' && p !== 'ێ' && p !== 'ڕ' ? p + 'ە' : m)
     );
 
-    // Fundamental Kurdish Sorani rule: All word-initial R letters are trilled Heavy R (ڕ)
+    // Initial R in Kurdish Sorani is universally trilled Heavy R (ڕ)
     s = s.replace(/(^|[\s،؛؟.\n(«"'\[{<])ر(?=[\u0600-\u06ff])/gu, '$1ڕ');
 
-    // Specific Kurdish words starting with / containing Heavy R (ڕ)
-    s = s.replace(/(^|\s)رویشت(ن|م|ی|ین|ن|ووە)?(?=\s|$|[.,!?;:،؛؟])/g, '$1ڕۆیشت$2')
-         .replace(/(^|\s)رۆیشت(ن|م|ی|ین|ن|ووە)?(?=\s|$|[.,!?;:،؛؟])/g, '$1ڕۆیشت$2')
-         .replace(/(^|\s)رۆشت(ن|م|ی|ین|ن|ووە)?(?=\s|$|[.,!?;:،؛؟])/g, '$1ڕۆیشت$2')
-         .replace(/(^|\s)رۆ(م|یت|ات|ین|ن)(?=\s|$|[.,!?;:،؛؟])/g, '$1ڕۆ$2')
-         .replace(/(^|\s)راست(ە|ی|ەقینە|ەوخۆ|ەکان|کردنەوە|ییەکەی|گۆ)?(?=\s|$|[.,!?;:،؛؟])/g, '$1ڕاست$2')
-         .replace(/(^|\s)رێگ(ە|ا|ای|اکە|ایەک|ەی|اکان|پێوان)?(?=\s|$|[.,!?;:،؛؟])/g, '$1ڕێگ$2')
-         .replace(/(^|\s)رۆژ(انە|گار|باش|نامە|ی|ەکان|ئاوایی|هەڵاتی)?(?=\s|$|[.,!?;:،؛؟])/g, '$1ڕۆژ$2')
-         .replace(/(^|\s)رەنگ(ە|ی|اوڕەنگ|ەکان)?(?=\s|$|[.,!?;:،؛؟])/g, '$1ڕەنگ$2')
-         .replace(/(^|\s)رێز(لێنان|م|ت|تان|گرتن)?(?=\s|$|[.,!?;:،؛؟])/g, '$1ڕێز$2')
-         .replace(/(^|\s)روون(کردنەوە|اک|اکی|ی|کردنەوەی)?(?=\s|$|[.,!?;:،؛؟])/g, '$1ڕوون$2')
-         .replace(/(^|\s)رەش(ی|بین|ەبا|ماڵ|ەکوژی|پۆش)?(?=\s|$|[.,!?;:،؛؟])/g, '$1ڕەش$2')
-         .replace(/(^|\s)روو(داو|دات|دەدات|ی|خسار|خاو|بەڕوو|داوەکان|بار)?(?=\s|$|[.,!?;:،؛؟])/g, '$1ڕوو$2')
-         .replace(/(^|\s)راپۆرت(ەکان|ی)?(?=\s|$|[.,!?;:،؛؟])/g, '$1ڕاپۆرت$2')
-         .replace(/(^|\s)راگەیاندن(ەکان|ی)?(?=\s|$|[.,!?;:،؛؟])/g, '$1ڕاگەیاندن$2')
-         .replace(/(^|\s)راگەیەندراو(?=\s|$|[.,!?;:،؛؟])/g, '$1ڕاگەیەندراو')
-         .replace(/(^|\s)رێنمایی(ەکان|ی)?(?=\s|$|[.,!?;:،؛؟])/g, '$1ڕێنمایی$2')
-         .replace(/(^|\s)رێژە(ی|یی)?(?=\s|$|[.,!?;:،؛؟])/g, '$1ڕێژە$2')
-         .replace(/(^|\s)رزگار(کردن|بوون|بووم)?(?=\s|$|[.,!?;:،؛؟])/g, '$1ڕزگار$2')
-         .replace(/(^|\s)رازی(بوون|م)?(?=\s|$|[.,!?;:،؛؟])/g, '$1ڕازی$2')
-         .replace(/(^|\s)رێبوار(ان|ی)?(?=\s|$|[.,!?;:،؛؟])/g, '$1ڕێبوار$2')
-         .replace(/(^|\s)رابردوو(ی|دا)?(?=\s|$|[.,!?;:،؛؟])/g, '$1ڕابردوو$2')
-         .replace(/(^|\s)رێپێدان(?=\s|$|[.,!?;:،؛؟])/g, '$1ڕێپێدان')
-         .replace(/(^|\s)رێباز(ی|ەکان)?(?=\s|$|[.,!?;:،؛؟])/g, '$1ڕێباز$2')
-         .replace(/(^|\s)رەوت(ی|ەکان)?(?=\s|$|[.,!?;:،؛؟])/g, '$1ڕەوت$2')
-         .replace(/(^|\s)رەها(یی)?(?=\s|$|[.,!?;:،؛؟])/g, '$1ڕەها$2')
-         .replace(/(^|\s)رەتکردنەوە(?=\s|$|[.,!?;:،؛؟])/g, '$1ڕەتکردنەوە')
-         .replace(/(^|\s)رەوانە(کردن|کرا)?(?=\s|$|[.,!?;:،؛؟])/g, '$1ڕەوانە$2')
-         .replace(/(^|\s)رەوشت(ی|ەکان)?(?=\s|$|[.,!?;:،؛؟])/g, '$1ڕەوشت$2')
-         .replace(/(^|\s)رەخنە(گرتن|یەکان|ی)?(?=\s|$|[.,!?;:،؛؟])/g, '$1ڕەخنە$2')
-         .replace(/(^|\s)روانین(ەکان|ی)?(?=\s|$|[.,!?;:،؛؟])/g, '$1ڕوانین$2')
-         .replace(/(^|\s)راهێنان(ەکان|ی)?(?=\s|$|[.,!?;:،؛؟])/g, '$1ڕاهێنان$2')
-         .replace(/(^|\s)راکردن(?=\s|$|[.,!?;:،؛؟])/g, '$1ڕاکردن')
-         .replace(/(^|\s)راگرتن(?=\s|$|[.,!?;:،؛؟])/g, '$1ڕاگرتن')
-         .replace(/(^|\s)راکێشان(?=\s|$|[.,!?;:،؛؟])/g, '$1ڕاکێشان')
-         .replace(/(^|\s)راوکردن(?=\s|$|[.,!?;:،؛؟])/g, '$1ڕاوکردن')
-         .replace(/(^|\s)رێکخستن(ەکان|ی)?(?=\s|$|[.,!?;:،؛؟])/g, '$1ڕێکخستن$2')
-         .replace(/(^|\s)رێکەوتن(نامە|ەکان|ی)?(?=\s|$|[.,!?;:،؛؟])/g, '$1ڕێکەوتن$2')
-         .replace(/(^|\s)رێسا(کان|ی)?(?=\s|$|[.,!?;:،؛؟])/g, '$1ڕێسا$2')
-         .replace(/(^|\s)رۆح(ی|مان|تان)?(?=\s|$|[.,!?;:،؛؟])/g, '$1ڕۆح$2')
-         .replace(/(^|\s)رەوش(ی|ەکان)?(?=\s|$|[.,!?;:،؛؟])/g, '$1ڕەوش$2')
-         .replace(/(^|\s)رێبەر(ی|یکردن|ان)?(?=\s|$|[.,!?;:،؛؟])/g, '$1ڕێبەر$2')
-         .replace(/(^|\s)رەگ(ی|ەکان|داکوتان)?(?=\s|$|[.,!?;:،؛؟])/g, '$1ڕەگ$2')
-         .replace(/(^|\s)رووت(ی|کراوە)?(?=\s|$|[.,!?;:،؛؟])/g, '$1ڕووت$2')
-         .replace(/(^|\s)رەق(ی|تر|ەکان)?(?=\s|$|[.,!?;:،؛؟])/g, '$1ڕەق$2')
-         .replace(/(^|\s)رق(م|ت|ی|لێبوونەوە)?(?=\s|$|[.,!?;:،؛؟])/g, '$1ڕق$2')
-         .replace(/(^|\s)رژێم(ی|ەکان)?(?=\s|$|[.,!?;:،؛؟])/g, '$1ڕژێم$2')
-         .replace(/(^|\s)راوەست(ە|ان|ین|ن)?(?=\s|$|[.,!?;:،؛؟])/g, '$1ڕاوەست$2')
-         .replace(/(^|\s)راکە(ن|یت)?(?=\s|$|[.,!?;:،؛؟])/g, '$1ڕاکە$2')
-         .replace(/(^|\s)رێنووس(?=\s|$|[.,!?;:،؛؟])/g, '$1ڕێنووس')
-         .replace(/(^|\s)ریش(ەکە|م|ی)?(?=\s|$|[.,!?;:،؛؟])/g, '$1ڕیش$2')
-         .replace(/(^|\s)ریشە(ی|کان)?(?=\s|$|[.,!?;:،؛؟])/g, '$1ڕیشە$2')
-         .replace(/(^|\s)برۆ(ن|یت|م|ین)?(?=\s|$|[.,!?;:،؛؟])/g, '$1بڕۆ$2')
-         .replace(/(^|\s)مەرۆ(ن|ین)?(?=\s|$|[.,!?;:،؛؟])/g, '$1مەڕۆ$2')
-         .replace(/(^|\s)دەرۆ(م|یت|ات|ین|ن)?(?=\s|$|[.,!?;:،؛؟])/g, '$1دەڕۆ$2')
-         .replace(/(^|\s)دەروات(?=\s|$|[.,!?;:،؛؟])/g, '$1دەڕوات')
-         .replace(/(^|\s)نەروات(?=\s|$|[.,!?;:،؛؟])/g, '$1نەڕوات')
-         .replace(/(^|\s)نەرۆ(م|یت|ات|ین|ن)?(?=\s|$|[.,!?;:،؛؟])/g, '$1نەڕۆ$2')
-         .replace(/(^|\s)کوری(?=\s|$|[.,!?;:،؛؟])/g, '$1کوڕی')
-         .replace(/(^|\s)کور(?=\s|$|[.,!?;:،؛؟])/g, '$1کوڕ')
-         .replace(/(^|\s)بریار(دان|ەکان|ی|م|ت)?(?=\s|$|[.,!?;:،؛؟])/g, '$1بڕیار$2')
-         .replace(/(^|\s)بروانە(?=\s|$|[.,!?;:،؛؟])/g, '$1بڕوانە')
-         .replace(/(^|\s)بروام(?=\s|$|[.,!?;:،؛؟])/g, '$1بڕوام')
-         .replace(/(^|\s)بروابکە(?=\s|$|[.,!?;:،؛؟])/g, '$1بڕوابکە')
-         .replace(/(^|\s)بروا(?=\s|$|[.,!?;:،؛؟])/g, '$1بڕوا')
-         .replace(/(^|\s)بروانامە(کان|ی)?(?=\s|$|[.,!?;:،؛؟])/g, '$1بڕوانامە$2')
-         .replace(/(^|\s)زور(?=\s|$|[.,!?;:،؛؟])/g, '$1زۆر')
-         .replace(/گۆرانکاری/g, 'گۆڕانکاری')
-         .replace(/سپاس/g, 'سوپاس');
+    // Heavy R vocabulary corrections
+    s = s.replace(HEAVY_R_PREFIX_REGEX, '$1ڕ$2')
+      .replace(/(^|\s)برۆ(ن|یت|م|ین)?(?=\s|$|[.,!?;:،؛؟])/g, '$1بڕۆ$2')
+      .replace(/(^|\s)مەرۆ(ن|ین)?(?=\s|$|[.,!?;:،؛؟])/g, '$1مەڕۆ$2')
+      .replace(/(^|\s)دەرۆ(م|یت|ات|ین|ن)?(?=\s|$|[.,!?;:،؛؟])/g, '$1دەڕۆ$2')
+      .replace(/(^|\s)دەروات(?=\s|$|[.,!?;:،؛؟])/g, '$1دەڕوات')
+      .replace(/(^|\s)نەروات(?=\s|$|[.,!?;:،؛؟])/g, '$1نەڕوات')
+      .replace(/(^|\s)نەرۆ(م|یت|ات|ین|ن)?(?=\s|$|[.,!?;:،؛؟])/g, '$1نەڕۆ$2')
+      .replace(/(^|\s)کوری?(?=\s|$|[.,!?;:،؛؟])/g, '$1کوڕی')
+      .replace(/(^|\s)بریار(?=\s|$|[.,!?;:،؛؟])/g, '$1بڕیار')
+      .replace(/(^|\s)بروا(?=\s|$|[.,!?;:،؛؟])/g, '$1بڕوا')
+      .replace(/(^|\s)بروابکە(?=\s|$|[.,!?;:،؛؟])/g, '$1بڕوابکە')
+      .replace(/(^|\s)بروانە(?=\s|$|[.,!?;:،؛؟])/g, '$1بڕوانە')
+      .replace(/(^|\s)زور(?=\s|$|[.,!?;:،؛؟])/g, '$1زۆر')
+      .replace(/گۆرانکاری/g, 'گۆڕانکاری')
+      .replace(/سپاس/g, 'سوپاس');
 
-    // Sorani Kurdish Velarized L (ڵ) corrections
-    s = s.replace(/(^|\s)مال(ی|ەوە|مان|تان|یان|ەکەم|ەکان)?(?=\s|$|[.,!?;:،؛؟])/g, '$1ماڵ$2')
-         .replace(/(^|\s)بەلێ(م)?(?=\s|$|[.,!?;:،؛؟])/g, '$1بەڵێ$2')
-         .replace(/(^|\s)دەلێ(ت|م|ن|یت|ین)(?=\s|$|[.,!?;:،؛؟])/g, '$1دەڵێ$2')
-         .replace(/(^|\s)بلێ(ن|م|یت|ین)?(?=\s|$|[.,!?;:،؛؟])/g, '$1بڵێ$2')
-         .replace(/(^|\s)گول(م|ەکان|ی|زار)?(?=\s|$|[.,!?;:،؛؟])/g, '$1گوڵ$2')
-         .replace(/(^|\s)سال(ان|ی|ە|انە|ێک|ەکان)?(?=\s|$|[.,!?;:،؛؟])/g, '$1ساڵ$2')
-         .replace(/خۆشحال(ی|ییە| بووم|م)?/g, 'خۆشحاڵ$1')
-         .replace(/(^|\s)مندال(ان|ەکە|م|ی|بوون|ەکان)?(?=\s|$|[.,!?;:،؛؟])/g, '$1منداڵ$2')
-         .replace(/(^|\s)سلاو(تان|ی|ت)?(?=\s|$|[.,!?;:،؛؟])/g, '$1سڵاو$2')
-         .replace(/(^|\s)گەلا(کان|ی)?(?=\s|$|[.,!?;:،؛؟])/g, '$1گەڵا$2')
-         .replace(/(^|\s)کەلەک(ەم|ی|ە)?(?=\s|$|[.,!?;:،؛؟])/g, '$1کەڵەک$2')
-         .replace(/(^|\s)چۆل(ە|ی|کردن|ەوانی)?(?=\s|$|[.,!?;:،؛؟])/g, '$1چۆڵ$2')
-         .replace(/(^|\s)تەلە(ی|کان|کە)?(?=\s|$|[.,!?;:،؛؟])/g, '$1تەڵە$2')
-         .replace(/(^|\s)خال(ی|م|ەکان|ۆ)?(?=\s|$|[.,!?;:،؛؟])/g, '$1خاڵ$2')
-         .replace(/(^|\s)تال(ە|ی|تر|ەکان)?(?=\s|$|[.,!?;:،؛؟])/g, '$1تاڵ$2')
-         .replace(/(^|\s)پیالە(ی|یک|کان)?(?=\s|$|[.,!?;:،؛؟])/g, '$1پیاڵە$2')
-         .replace(/(^|\s)دل(م|ت|ی|خۆش|تەنگ|نیام|نیابە|نیا|سۆز|پاک|داری)?(?=\s|$|[.,!?;:،؛؟])/g, '$1دڵ$2')
-         .replace(/(^|\s)پۆلا(?=\s|$|[.,!?;:،؛؟])/g, '$1پۆڵا')
-         .replace(/(^|\s)قولپ(?=\s|$|[.,!?;:،؛؟])/g, '$1قوڵپ')
-         .replace(/(^|\s)کەلەشێر(?=\s|$|[.,!?;:،؛؟])/g, '$1کەڵەشێر')
-         .replace(/(^|\s)کەلک(?=\s|$|[.,!?;:،؛؟])/g, '$1کەڵک')
-         .replace(/(^|\s)کەلەپوور(?=\s|$|[.,!?;:،؛؟])/g, '$1کەڵەپوور')
-         .replace(/(^|\s)خەلوز(?=\s|$|[.,!?;:،؛؟])/g, '$1خەڵووز')
-         .replace(/(^|\s)چەپەل(?=\s|$|[.,!?;:،؛؟])/g, '$1چەپەڵ')
-         .replace(/(^|\s)بالا(بەرز)?(?=\s|$|[.,!?;:،؛؟])/g, '$1باڵا$2')
-         .replace(/(^|\s)قەلا(کان|ی)?(?=\s|$|[.,!?;:،؛؟])/g, '$1قەڵا$2')
-         .replace(/(^|\s)چەپلە(?=\s|$|[.,!?;:،؛؟])/g, '$1چەپڵە')
-         .replace(/(^|\s)کۆمەل(گا|ایەتی|ەکان|ی|ە)?(?=\s|$|[.,!?;:،؛؟])/g, '$1کۆمەڵ$2')
-         .replace(/(^|\s)ئالۆز(ی|تر)?(?=\s|$|[.,!?;:،؛؟])/g, '$1ئاڵۆز$2')
-         .replace(/(^|\s)هەلە(کان|ی|یە)?(?=\s|$|[.,!?;:،؛؟])/g, '$1هەڵە$2')
-         .replace(/(^|\s)تێکەل(کردن|او)?(?=\s|$|[.,!?;:،؛؟])/g, '$1تێکەڵ$2')
-         .replace(/(^|\s)گەلالە(?=\s|$|[.,!?;:،؛؟])/g, '$1گەڵاڵە')
-         .replace(/(^|\s)کۆلان(ەکان|ی)?(?=\s|$|[.,!?;:،؛؟])/g, '$1کۆڵان$2')
-         .replace(/(^|\s)قوول(ی|تر|ایی)?(?=\s|$|[.,!?;:،؛؟])/g, '$1قووڵ$2')
-         .replace(/(^|\s)قول(ی|تر|ایی)?(?=\s|$|[.,!?;:،؛؟])/g, '$1قووڵ$2')
-         .replace(/(^|\s)بالندە(کان|ی)?(?=\s|$|[.,!?;:،؛؟])/g, '$1باڵندە$2')
-         .replace(/(^|\s)ئالا(کان|ی)?(?=\s|$|[.,!?;:،؛؟])/g, '$1ئاڵا$2')
-         .replace(/(^|\s)خەلک(ی)?(?=\s|$|[.,!?;:،؛؟])/g, '$1خەڵک$2')
-         .replace(/(^|\s)خەلات(کردن|ەکان|ی)?(?=\s|$|[.,!?;:،؛؟])/g, '$1خەڵات$2')
-         .replace(/(^|\s)بەلگە(نامە|کان|ی)?(?=\s|$|[.,!?;:،؛؟])/g, '$1بەڵگە$2')
-         .replace(/(^|\s)بەلێن(دان|ەکان|ی)?(?=\s|$|[.,!?;:،؛؟])/g, '$1بەڵێن$2')
-         .replace(/(^|\s)شەپۆل(ەکان|ی)?(?=\s|$|[.,!?;:،؛؟])/g, '$1شەپۆڵ$2')
-         .replace(/(^|\s)خۆل(ەمێش|ی)?(?=\s|$|[.,!?;:،؛؟])/g, '$1خۆڵ$2')
-         .replace(/(^|\s)قەلەم(?=\s|$|[.,!?;:،؛؟])/g, '$1قەڵەم')
-         .replace(/(^|\s)کەلەگا(?=\s|$|[.,!?;:،؛؟])/g, '$1کەڵەگا')
-         .replace(/(^|\s)تۆپەل(?=\s|$|[.,!?;:،؛؟])/g, '$1تۆپەڵ')
-         .replace(/(^|\s)چقل(?=\s|$|[.,!?;:،؛؟])/g, '$1چقڵ')
-         .replace(/(^|\s)هەلبژاردن(?=\s|$|[.,!?;:،؛؟])/g, '$1هەڵبژاردن')
-         .replace(/(^|\s)هەلسان(?=\s|$|[.,!?;:،؛؟])/g, '$1هەڵسان')
-         .replace(/(^|\s)هەلگرتن(?=\s|$|[.,!?;:،؛؟])/g, '$1هەڵگرتن')
-         .replace(/(^|\s)هەلهاتن(?=\s|$|[.,!?;:،؛؟])/g, '$1هەڵهاتن')
-         .replace(/(^|\s)هەلمەت(?=\s|$|[.,!?;:،؛؟])/g, '$1هەڵمەت')
-         .replace(/(^|\s)هەلوێست(?=\s|$|[.,!?;:،؛؟])/g, '$1هەڵوێست')
-         .replace(/(^|\s)هەلکەوتوو(?=\s|$|[.,!?;:،؛؟])/g, '$1هەڵکەوتوو')
-         .replace(/(^|\s)هەلچوون(?=\s|$|[.,!?;:،؛؟])/g, '$1هەڵچوون')
-         .replace(/(^|\s)هەلسەنگاندن(?=\s|$|[.,!?;:،؛؟])/g, '$1هەڵسەنگاندن')
-         .replace(/(^|\s)هەلوەشاندنەوە(?=\s|$|[.,!?;:،؛؟])/g, '$1هەڵوەشاندنەوە');
+    // Velarized L (ڵ) corrections
+    VELARIZED_L_STEMS.forEach(([plain, velar]) => {
+      const re = new RegExp('(^|\\s)' + plain + '([\\u0600-\\u06ff]*)(?=\\s|$|[.,!?;:،؛؟])', 'g');
+      s = s.replace(re, '$1' + velar + '$2');
+    });
 
     return s;
   }
@@ -215,94 +127,100 @@ const TranslatorOrthography = (() => {
       .replace(/([\p{L}\u0600-\u06FF]+)\s+(مان|تان|یان|ەکەم|ەکەت|ەکەی|ەکەمان|ەکەتان|ەکەیان|ەکان)(?=\s|$|[.,!?;:،؛؟])/gu, '$1$2');
   }
 
+  // Common phrase replacements for natural Kurdish dialogue
+  const DIALOGUE_NATURALIZATIONS = [
+    [/ئۆ خوای من|خوای من|ئەی خوای گەورە|ئۆهـ خوای من/g, 'ئەی خوایە'],
+    [/سەیر بکە،?/g, 'سەیرکە'],
+    [/من زۆر سوپاستان دەکەم/g, 'زۆر سوپاس'],
+    [/هیچ کێشەیەک نییە|کێشەیەک نییە/g, 'کێشە نییە'],
+    [/بە دڵنیاییەوە/g, 'بێگومان'],
+    [/سوپاس بۆ تۆ/g, 'سوپاس'],
+    [/زۆر سوپاس بۆ تۆ/g, 'زۆر سوپاس'],
+    [/بە ڵێ|بەل ێ/g, 'بەڵێ'],
+    [/دە ڵێ/g, 'دەڵێ'],
+    [/سو پاس/g, 'سوپاس'],
+    [/س ڵاو|سڵا و/g, 'سڵاو'],
+    [/خۆ شحاڵ|خۆش حاڵ/g, 'خۆشحاڵ'],
+    [/خۆشحاڵم بتبینم/g, 'خۆشحاڵم بە بینینت'],
+    [/بێ گومان/g, 'بێگومان'],
+    [/لە کوێ/g, 'لەکوێ'],
+    [/بۆ چی/g, 'بۆچی'],
+    [/لە بەر/g, 'لەبەر'],
+    [/لە گەڵ/g, 'لەگەڵ'],
+    [/بە تایبەت/g, 'بەتایبەت'],
+    [/بە ڕاستی/g, 'بەڕاستی'],
+    [/لە ڕاستیدا/g, 'لەڕاستیدا'],
+    [/بێ ئەوەی/g, 'بێئەوەی'],
+    [/لەبەر ئەوەی/g, 'لەبەرئەوەی'],
+    [/سەر کەوتن/g, 'سەرکەوتن'],
+    [/سەر دەکەوێت/g, 'سەردەکەوێت'],
+    [/دەست پێ کردن/g, 'دەستپێکردن'],
+    [/دەست پێ دەکات/g, 'دەستپێدەکات'],
+    [/دە بارەی|دەربارە ی/g, 'دەربارەی'],
+    [/ڕاستە قینە/g, 'ڕاستەقینە'],
+    [/بەخێر بێیت/g, 'بەخێربێیت'],
+    [/بەخێر بێن/g, 'بەخێربێن'],
+    [/دەستت خۆش بێت/g, 'دەستت خۆش'],
+    [/ڕۆژ باش/g, 'ڕۆژباش'],
+    [/شەو باش/g, 'شەوباش'],
+    [/بەیانی باش/g, 'بەیانیباش'],
+    [/ماڵ ئاوا/g, 'ماڵئاوا'],
+    [/سوپاس گوزارم/g, 'سوپاسگوزارم'],
+    [/لە دەست دان/g, 'لەدەستدان'],
+    [/لە بیر کردن/g, 'لەبیرکردن'],
+    [/لە یاد کردن/g, 'لەیادکردن'],
+    [/لە ناو بردن/g, 'لەناوبردن'],
+    [/ئەوەیە بۆچی/g, 'بۆیە'],
+    [/ئەوەیە چۆن/g, 'ئاوا'],
+    [/ئەوەیە کاتێک/g, 'ئەو کاتەی'],
+    [/ئەوەیە لە کوێ/g, 'لەوێیە کە'],
+    [/هیچ شتێک نییە/g, 'هیچ نییە'],
+    [/چاوەڕێ بە/g, 'بۆستە'],
+    [/هێمن بە/g, 'هێمن ببەوە'],
+    [/لێ ى/g, 'لێی'],
+    [/پێ ى/g, 'پێی'],
+    [/تێ ى/g, 'تێی'],
+    [/خۆت لە ماڵەوە بکە|وەک ماڵی خۆت ڕەفتار بکە/g, 'ماڵی خۆتە'],
+    [/پشوویەکم پێ بدە/g, 'دە لێم گەڕێ'],
+    [/لەسەر جەستەی مردووم|تەنها لەسەر لاشەی من/g, 'تەنها لەسەر تەرمەکەم'],
+    [/تۆ دەبێت گاڵتەم پێبکەیت|تۆ دەبێت گاڵتە بکەیت/g, 'گاڵتەم لەگەڵ دەکەیت؟'],
+    [/لە پێش چاوی مندا نا/g, 'تا من لێرەبم مەحاڵە'],
+    [/تەنها بۆ یەک سات/g, 'تەنها بۆ ساتێک'],
+    [/لە لایەن/g, 'لەلایەن'],
+    [/لە کاتێکدا/g, 'لەکاتێکدا'],
+    [/لە هەمان کاتدا/g, 'لەهەمان کاتدا'],
+    [/لە شوێنی/g, 'لەشوێنی'],
+    [/دەست بەجێ/g, 'دەستبەجێ'],
+    [/جێ بەجێ/g, 'جێبەجێ'],
+    [/ڕێ پێ دان/g, 'ڕێپێدان'],
+    [/تێ پەڕین/g, 'تێپەڕین'],
+    [/ڕوو بەڕوو/g, 'ڕووبەڕوو'],
+    [/دەستبەردار بە|دەست بەردار بە/g, 'دەستبەرداربە'],
+    [/تکایە بمبورە|بمبورە/g, 'تکایە لێمببوورە'],
+    [/ئەوە چی بوو/g, 'ئەوە چی بوو؟'],
+    [/چی ڕوویدا/g, 'چی ڕوویدا؟'],
+    [/ئەمە چییە/g, 'ئەمە چییە؟'],
+    [/دەمت داخە/g, 'دەمت دابخە'],
+    [/وەرە سەرەوە/g, 'دەی!'],
+    [/وەرە پیاو/g, 'دەی برام!'],
+    [/پشتم بگرە/g, 'پشتیوانیم لێبکە'],
+    [/بە دڵنیاییەوە بەڵێ/g, 'بێگومان بەڵێ'],
+    [/پێویستم بە تۆیە/g, 'پێویستم پێتە'],
+    [/پێویستت بە منە/g, 'پێویستت پێمە'],
+    [/لەگەڵ من وەرە/g, 'لەگەڵم وەرە'],
+  ];
+
   /** Naturalize machine-translated subtitle dialogue for fluent Sorani Kurdish. */
   function naturalizeDialogue(str) {
     if (!str) return '';
-    let res = str
-      // Remove mechanical, non-dialogue question particle "ئایا" at start of sentences
-      .replace(/(^|[\s،؛؟.\n])ئایا\s+/g, '$1')
-      .replace(/ئۆ خوای من/g, 'ئەی خوایە')
-      .replace(/خوای من/g, 'ئەی خوایە')
-      .replace(/ئەی خوای گەورە/g, 'ئەی خوایە')
-      .replace(/ئۆهـ خوای من/g, 'ئەی خوایە')
-      .replace(/سەیر بکە،/g, 'سەیرکە،')
-      .replace(/سەیر بکە/g, 'سەیرکە')
-      .replace(/من زۆر سوپاستان دەکەم/g, 'زۆر سوپاس')
-      .replace(/هیچ کێشەیەک نییە/g, 'کێشە نییە')
-      .replace(/کێشەیەک نییە/g, 'کێشە نییە')
-      .replace(/بە دڵنیاییەوە/g, 'بێگومان')
-      .replace(/سوپاس بۆ تۆ/g, 'سوپاس')
-      .replace(/زۆر سوپاس بۆ تۆ/g, 'زۆر سوپاس')
-      .replace(/بە ڵێ/g, 'بەڵێ')
-      .replace(/بەل ێ/g, 'بەڵێ')
-      .replace(/دە ڵێ/g, 'دەڵێ')
-      .replace(/سو پاس/g, 'سوپاس')
-      .replace(/س ڵاو/g, 'سڵاو')
-      .replace(/سڵا و/g, 'سڵاو')
-      .replace(/خۆ شحاڵ/g, 'خۆشحاڵ')
-      .replace(/خۆش حاڵ/g, 'خۆشحاڵ')
-      .replace(/خۆشحاڵم بتبینم/g, 'خۆشحاڵم بە بینینت')
-      .replace(/بێ گومان/g, 'بێگومان')
-      .replace(/لە کوێ/g, 'لەکوێ')
-      .replace(/بۆ چی/g, 'بۆچی')
-      .replace(/لە بەر/g, 'لەبەر')
-      .replace(/لە گەڵ/g, 'لەگەڵ')
-      .replace(/بە تایبەت/g, 'بەتایبەت')
-      .replace(/بە ڕاستی/g, 'بەڕاستی')
-      .replace(/لە ڕاستیدا/g, 'لەڕاستیدا')
-      .replace(/بێ ئەوەی/g, 'بێئەوەی')
-      .replace(/لەبەر ئەوەی/g, 'لەبەرئەوەی')
-      .replace(/لێ ببوورە/g, 'لێببوورە')
-      .replace(/لێ ببوورن/g, 'لێببوورن')
-      .replace(/سەر کەوتن/g, 'سەرکەوتن')
-      .replace(/سەر دەکەوێت/g, 'سەردەکەوێت')
-      .replace(/تێک دان/g, 'تێکدان')
-      .replace(/تێک دەدات/g, 'تێکدەدات')
-      .replace(/پێک هاتن/g, 'پێکهاتن')
-      .replace(/پێک دەهێنێت/g, 'پێکهێنێت')
-      .replace(/بە جێ هێشتن/g, 'بەجێهێشتن')
-      .replace(/دەست پێ کردن/g, 'دەستپێکردن')
-      .replace(/دەست پێ دەکات/g, 'دەستپێدەکات')
-      .replace(/چاودێری کردن/g, 'چاودێریکردن')
-      .replace(/یارمەتی دان/g, 'یارمەتیدان')
-      .replace(/دە بارەی/g, 'دەربارەی')
-      .replace(/دەربارە ی/g, 'دەربارەی')
-      .replace(/ڕاستە قینە/g, 'ڕاستەقینە')
-      .replace(/پێش ئەوە ی/g, 'پێش ئەوەی')
-      .replace(/پاش ئەوە ی/g, 'پاش ئەوەی')
-      .replace(/هەر چەندە/g, 'هەرچەندە')
-      .replace(/هەر وەها/g, 'هەروەها')
-      .replace(/هەر یەک/g, 'هەریەک')
-      .replace(/هەر ئێستا/g, 'هەرئێستا')
-      .replace(/هەر چۆنێک بێت/g, 'هەرچۆنێک بێت')
-      .replace(/لە ئێستادا/g, 'لەئێستادا')
-      .replace(/لە ڕاستیدا/g, 'لەڕاستیدا')
-      .replace(/بە شێوەیەکی گشتی/g, 'بەگشتی')
-      .replace(/بە هیچ شێوەیەک/g, 'بەهیچ شێوەیەک')
-      .replace(/جێگای داخە/g, 'بەداخەوە')
-      .replace(/بەداخەوەم/g, 'بەداخەوە')
-      .replace(/(^|[\s،؛؟.\n])تۆ لە کوێیت(?=\s|$|[.,!?;:،؛؟])/g, '$1لەکوێیت')
-      .replace(/(^|[\s،؛؟.\n])لە کوێیت تۆ(?=\s|$|[.,!?;:،؛؟])/g, '$1لەکوێیت')
-      .replace(/(^|[\s،؛؟.\n])چۆنیت تۆ(?=\s|$|[.,!?;:،؛؟])/g, '$1چۆنیت')
-      .replace(/(^|[\s،؛؟.\n])تۆ چۆنیت(?=\s|$|[.,!?;:،؛؟])/g, '$1چۆنیت')
-      .replace(/(^|[\s،؛؟.\n])تۆ کێیت(?=\s|$|[.,!?;:،؛؟])/g, '$1کێیت')
-      .replace(/(^|[\s،؛؟.\n])کێیت تۆ(?=\s|$|[.,!?;:،؛؟])/g, '$1کێیت')
-      .replace(/بەخێر بێیت/g, 'بەخێربێیت')
-      .replace(/بەخێر بێن/g, 'بەخێربێن')
-      .replace(/دەستت خۆش بێت/g, 'دەستت خۆش')
-      .replace(/خۆشحاڵ بووم بتبینم/g, 'خۆشحاڵ بووم بە بینینت')
-      .replace(/ڕۆژ باش/g, 'ڕۆژباش')
-      .replace(/شەو باش/g, 'شەوباش')
-      .replace(/بەیانی باش/g, 'بەیانیباش')
-      .replace(/ماڵ ئاوا/g, 'ماڵئاوا')
-      .replace(/سوپاس گوزارم/g, 'سوپاسگوزارم')
-      .replace(/لە دەست دان/g, 'لەدەستدان')
-      .replace(/لە بیر کردن/g, 'لەبیرکردن')
-      .replace(/لە یاد کردن/g, 'لەیادکردن')
-      .replace(/لە ناو بردن/g, 'لەناوبردن')
-      .replace(/لە خەو هەڵسان/g, 'لەخەوهەڵسان')
+    let res = str.replace(/(^|[\s،؛؟.\n])ئایا\s+/g, '$1');
 
-      // Drop redundant subjective pronouns in conversational Sorani Kurdish
+    DIALOGUE_NATURALIZATIONS.forEach(([pattern, replacement]) => {
+      res = res.replace(pattern, replacement);
+    });
+
+    // Drop redundant subject pronouns in spoken Kurdish
+    res = res
       .replace(/(^|[\s،؛؟.\n])من نازانم(?=\s|$|[.,!?;:،؛؟])/g, '$1نازانم')
       .replace(/(^|[\s،؛؟.\n])من دەزانم(?=\s|$|[.,!?;:،؛؟])/g, '$1دەزانم')
       .replace(/(^|[\s،؛؟.\n])من دەبێت(?=\s|$|[.,!?;:،؛؟])/g, '$1دەبێت')
@@ -310,592 +228,101 @@ const TranslatorOrthography = (() => {
       .replace(/(^|[\s،؛؟.\n])من پێم وایە(?=\s|$|[.,!?;:،؛؟])/g, '$1پێم وایە')
       .replace(/(^|[\s،؛؟.\n])من دەمەوێت(?=\s|$|[.,!?;:،؛؟])/g, '$1دەمەوێت')
       .replace(/(^|[\s،؛؟.\n])تۆ دەتوانیت(?=\s|$|[.,!?;:،؛؟])/g, '$1دەتوانیت')
-      .replace(/(^|[\s،؛؟.\n])ئێمە دەتوانین(?=\s|$|[.,!?;:،؛؟])/g, '$1دەتوانین')
-
-      // Fix machine-translated word-for-word idioms into fluid Sorani dialogue
-      .replace(/ئەوەیە بۆچی/g, 'بۆیە')
-      .replace(/ئەوەیە چۆن/g, 'ئاوا')
-      .replace(/ئەوەیە کاتێک/g, 'ئەو کاتەی')
-      .replace(/ئەوەیە لە کوێ/g, 'لەوێیە کە')
-      .replace(/هیچ شتێک نییە/g, 'هیچ نییە')
-      .replace(/چاوەڕێ بە/g, 'بۆستە')
-      .replace(/هێمن بە/g, 'هێمن ببەوە')
-      .replace(/لێ ى/g, 'لێی')
-      .replace(/پێ ى/g, 'پێی')
-      .replace(/تێ ى/g, 'تێی')
-      .replace(/بۆ ى/g, 'بۆیی')
-      .replace(/پێ م/g, 'پێم')
-      .replace(/لێ م/g, 'لێم')
-      .replace(/تێ م/g, 'تێم')
-      .replace(/بۆ م/g, 'بۆم')
-      .replace(/خۆت لە ماڵەوە بکە/g, 'ماڵی خۆتە')
-      .replace(/وەک ماڵی خۆت ڕەفتار بکە/g, 'وەک ماڵی خۆت تەماشای بکە')
-      .replace(/وەک ماڵی خۆت سەیر بکە/g, 'وەک ماڵی خۆت تەماشای بکە')
-      .replace(/پشوویەکم پێ بدە/g, 'دە لێم گەڕێ')
-      .replace(/لەسەر جەستەی مردووم/g, 'تەنها لەسەر تەرمەکەم')
-      .replace(/تۆ دەبێت گاڵتەم پێبکەیت/g, 'گاڵتەم لەگەڵ دەکەیت؟')
-      .replace(/تۆ دەبێت گاڵتە بکەیت/g, 'گاڵتەم لەگەڵ دەکەیت؟')
-      .replace(/هەرگیز لە پێش چاوم ڕوونادات/g, 'تا من لێرەبم مەحاڵە')
-      .replace(/لە پێش چاوی مندا نا/g, 'تا من لێرەبم مەحاڵە')
-      .replace(/چاوەڕێم بە/g, 'چاوەڕێم بکە')
-      .replace(/گوێت لە منە/g, 'گوێت لێمە')
-      .replace(/گوێت لە من نییە/g, 'گوێت لێم نییە')
-      .replace(/سەرت لە کڵاوی خۆت بێت/g, 'دەست لە کارمەوە مەدە')
-      .replace(/تەنها بۆ یەک سات/g, 'تەنها بۆ ساتێک')
-      .replace(/لە لایەن/g, 'لەلایەن')
-      .replace(/لە کاتێکدا/g, 'لەکاتێکدا')
-      .replace(/لە هەمان کاتدا/g, 'لەهەمان کاتدا')
-      .replace(/لە شوێنی/g, 'لەشوێنی')
-      .replace(/پشت بەستن/g, 'پشتبەستن')
-      .replace(/خۆ ڕاگرتن/g, 'خۆڕاگرتن')
-      .replace(/خۆ بەدەستەوەدان/g, 'خۆبەدەستەوەدان')
-      .replace(/سەر سووڕمان/g, 'سەرسوڕمان')
-      .replace(/دەست بەجێ/g, 'دەستبەجێ')
-      .replace(/جێ بەجێ/g, 'جێبەجێ')
-      .replace(/ڕێ پێ دان/g, 'ڕێپێدان')
-      .replace(/تێ پەڕین/g, 'تێپەڕین')
-      .replace(/ڕوو بەڕوو/g, 'ڕووبەڕوو')
-      .replace(/دوور کەوتنەوە/g, 'دوورکەوتنەوە')
-      .replace(/نزیک بوونەوە/g, 'نزیکبوونەوە')
-      .replace(/کۆ بوونەوە/g, 'کۆبوونەوە')
-      .replace(/بڵاو بوونەوە/g, 'بڵاوبوونەوە')
-      .replace(/بەردەوام بوون/g, 'بەردەوامبوون')
-      .replace(/سەر لێ شێواو/g, 'سەرلێشێواو')
-      .replace(/دڵ تەنگ/g, 'دڵتەنگ')
-      .replace(/دڵ خۆش/g, 'دڵخۆش')
-      .replace(/چاوەڕوان نەکراو/g, 'چاوەڕواننەکراو')
-      .replace(/جێگەی سەرنج/g, 'جێگای سەرنج')
-      .replace(/جێگەی شانازی/g, 'جێگای شانازی')
-      .replace(/چی ڕوودەدات لێرە/g, 'چی ڕوودەدات لێرە؟')
-      .replace(/پەلە مەکە/g, 'هێمن بە')
-      .replace(/دەستبەردار بە/g, 'دەستبەرداربە')
-      .replace(/دەست بەردار بە/g, 'دەستبەرداربە')
-      .replace(/نازانم چی بڵێم/g, 'نازانم چی بڵێم')
-      .replace(/بە هیچ جۆرێک/g, 'بەهیچ جۆرێک')
-      .replace(/ئاگاداری خۆت بە/g, 'ئاگات لە خۆت بێت')
-      .replace(/ئاگاداربە/g, 'ئاگات لە خۆت بێت')
-      .replace(/تکایە بمبورە/g, 'تکایە لێمببوورە')
-      .replace(/بمبورە/g, 'لێمببوورە')
-      .replace(/ئەوە چی بوو/g, 'ئەوە چی بوو؟')
-      .replace(/چی ڕوویدا/g, 'چی ڕوویدا؟')
-      .replace(/خەمت نەبێت/g, 'خەمت نەبێت')
-      .replace(/سوپاس بۆ هەموو شتێک/g, 'سوپاس بۆ هەموو شتێک')
-      .replace(/بۆ هەمیشە/g, 'بۆ هەمیشە')
-      .replace(/تۆ دەتوانیت بیکەیت/g, 'دەتوانیت بیکەیت')
-      .replace(/من دەتوانم بیکەم/g, 'دەتوانم بیکەم')
-      .replace(/با بڕۆین/g, 'با بڕۆین')
-      .replace(/خۆت ئامادە بکە/g, 'خۆت ئامادە بکە')
-      .replace(/هەرگیز لێت نابوورم/g, 'هەرگیز لێت نابوورم')
-      .replace(/کۆڵ نادەم/g, 'کۆڵ نادەم')
-      .replace(/چیتر نا/g, 'چیتر نا')
-      .replace(/ڕاست دەکەیت/g, 'ڕاست دەکەیت')
-      .replace(/پشتم پێ ببەستە/g, 'متمانەم پێبکە')
-      .replace(/دەست لەمن هەڵگرە/g, 'دەستم لێ هەڵگرە')
-      .replace(/لێم گەڕێ بە تەنیا/g, 'تەنیا بمکەرەوە')
-      .replace(/ئەمە کەی کاتی ئەمەیە/g, 'ئەمە کەی کاتی ئەمەیە؟')
-      .replace(/من دەڵێم بەڵێ/g, 'پێم وایە بەڵێ')
-      .replace(/ئێمە لێرەین/g, 'لێرەین')
-      .replace(/تۆ لەوێیت/g, 'لەوێیت')
-      .replace(/با لێرە دەرچین/g, 'با لەم شوێنە بڕۆین')
-      .replace(/تۆ بە تەنیا نیت/g, 'بە تەنیا نیت')
-      .replace(/تۆ لێم تێدەگەیت/g, 'تێم دەگەیت؟')
-      .replace(/هەموو شتێک بە باشی دەڕوات/g, 'هەموو شتێک باشە')
-      .replace(/ئەمە چییە/g, 'ئەمە چییە؟')
-      .replace(/ئەوە چییە/g, 'ئەوە چییە؟')
-      .replace(/بۆچی لێرەیت/g, 'بۆچی لێرەیت؟')
-      .replace(/تۆ شێتی/g, 'شێت بوویت؟')
-      .replace(/دەمت داخە/g, 'دەمت داخە')
-      .replace(/دەمت دابخە/g, 'بێدەنگ بە')
-      .replace(/وەرە سەرەوە/g, 'دەی!')
-      .replace(/وەرە پیاو/g, 'دەی برام!')
-      .replace(/وەرە پێشەوە/g, 'وەرە پێشەوە')
-      .replace(/تۆ ئەمەت دەستکەوت/g, 'تۆ دەتوانیت!')
-      .replace(/تۆ ئەوەت بەدەستهێنا/g, 'تۆ دەتوانیت!')
-      .replace(/پشتم بگرە/g, 'پشتیوانیم لێبکە')
-      .replace(/فڕێدانی خاولی/g, 'کۆڵدان')
-      .replace(/خاولی فڕێ بدە/g, 'کۆڵ بدە')
-      .replace(/شکاندنی سەهۆڵ/g, 'شکاندنی بەستەڵەکی شەرم')
-      .replace(/تەنها لەسەر لاشەی من/g, 'تەنها لەسەر تەرمەکەم')
-      .replace(/سەرت لە هەوادا بێت/g, 'سەربەرز بە')
-      .replace(/لەژێر کەشوهەوادا/g, 'تەندروستیم باش نییە')
-      .replace(/لە دەرەوەی شوێن/g, 'لە شوێنی خۆی نییە')
-      .replace(/لە دەرەوەی پرسیار/g, 'مەحاڵە')
-      .replace(/سەیرکردنی چاو لە چاو/g, 'هاوڕابوون')
-      .replace(/تۆپی پێ لە گۆڕەپانی تۆدایە/g, 'بڕیارەکە لە دەستی تۆیە')
-      .replace(/پەنجەکانت بپەڕێنە/g, 'هیوای چاک بخوازە')
-      .replace(/پەنجەکان تێپەڕێنە/g, 'هیوام وایە')
-      .replace(/با بە ڕاست بڵێین/g, 'با ڕاستگۆ بین')
-      .replace(/کاتی ئەوە هاتووە/g, 'کاتی هاتووە')
-      .replace(/هیچ ڕێگەیەکی تر نییە/g, 'هیچ ڕێگەیەکی تر نییە')
-      .replace(/لە دەستت نایەت/g, 'ناتوانیت بیکەیت')
-      .replace(/بە هەموو توانامەوە/g, 'بە هەموو هێزمەوە')
-      .replace(/پێویست ناکات بترسیت/g, 'مەترسە')
-      .replace(/خۆت بپارێزە/g, 'خۆت بپارێزە!')
-      .replace(/تەنها بڕۆ/g, 'تەنها بڕۆ!')
-      .replace(/چی تر بڵێم/g, 'چی تر بڵێم؟')
-      .replace(/من دەمرم/g, 'خەریکە دەمرم')
-      .replace(/با ئێرە بەجێبهێڵین/g, 'با لەم شوێنە بڕۆین')
-      .replace(/لە ژیاندا بمێنەرەوە/g, 'بە زیندوویی بمێنەرەوە')
-      .replace(/هەرگیز باوەڕم نەدەکرد/g, 'هەرگیز باوەڕم نەدەکرد')
-      .replace(/لێرەوە دیارە/g, 'لێرەوە دیارە')
-      .replace(/ئەوە هەڵەیە/g, 'ئەوە هەڵەیە')
-      .replace(/ڕێگەم پێبدە/g, 'لێمگەڕێ')
-      .replace(/ئەوە لە دەستی مندا نییە/g, 'لە دەسەڵاتی مندا نییە')
-      .replace(/لە دەستی مندا نییە/g, 'لە دەسەڵاتی مندا نییە')
-      .replace(/بە دڵنیاییەوە بەڵێ/g, 'بێگومان بەڵێ')
-      .replace(/چاوەڕێی من بکە/g, 'چاوەڕێم بە')
-      .replace(/چاوەڕێی تۆ دەکەم/g, 'چاوەڕێت دەکەم')
-      .replace(/پێویستم بە تۆیە/g, 'پێویستم پێتە')
-      .replace(/پێویستت بە منە/g, 'پێویستت پێمە')
-      .replace(/لەگەڵ من وەرە/g, 'لەگەڵم وەرە')
-      .replace(/لەگەڵ تۆ دێم/g, 'لەگەڵت دێم')
-      .replace(/بە من بڵێ/g, 'پێم بڵێ')
-      .replace(/بە تۆ دەڵێم/g, 'پێت دەڵێم')
-      .replace(/بە ئێمە بڵێ/g, 'پێمان بڵێ')
-      .replace(/هیچ شتێک مەڵێ/g, 'هیچ مەڵێ')
-      .replace(/هیچ شتێک مەکە/g, 'هیچ مەکە')
-      .replace(/ئاگات لە من بێت/g, 'ئاگات لێم بێت')
-      .replace(/ئاگام لە تۆیە/g, 'ئاگام لێتە')
-      .replace(/لەسەر هێڵ بە/g, 'لە پەیوەندیدا بمێنەرەوە')
-      .replace(/با ئەوە بکەین/g, 'با بیکەین');
+      .replace(/(^|[\s،؛؟.\n])ئێمە دەتوانین(?=\s|$|[.,!?;:،؛؟])/g, '$1دەتوانین');
 
     return res;
   }
 
-  /**
-   * Clean up Google's typography and grammar for a subtitle line, applying Sorani Kurdish
-   * conventions (r12a orthography notes / Kurdish Academy & subtitle natural dialogue):
-   *  - remove stray space before punctuation ("word !" -> "word!")
-   *  - pull punctuation that landed on its own line up to the previous line
-   *  - normalize Eastern numbers to ASCII or Kurdish numbers based on preference
-   *  - convert Arabic characters to Kurdish equivalents (Kaf, Yaa, Teh Marbuta, Heh)
-   *  - join split Sorani verbal prefixes/affixes
-   *  - naturalize subtitle conversational dialogue
-   *  - clean up leftover untranslated English words and handle speech cut-offs
-   *  - use Arabic script marks: comma "،", semicolon "؛", question "؟"
-   */
-  function normalizeText(text, isArabic = true, useKurdishDigits = false) {
+  /** Kurdish Punctuation & Orthographic Normalization */
+  function normalizeText(text, cleanPunctuation = true, useKurdishDigits = false) {
     if (!text) return '';
-    let t = text
-      .split('\n')
-      .map((line) => line.trim())
-      .join('\n')
-      .replace(/[ \t]+([.,!?;:،؛؟]+)/g, '$1')
-      .replace(/\n+([.,!?;:،؛؟]+)/g, '$1');
+    let s = text.replace(/[\u200E\u200F\u202A-\u202E]/g, '');
 
-    if (isArabic) {
-      // Strip Arabic short vowel diacritics / Harakat & Tatweel
-      t = t.replace(/[\u064b-\u0652\u0670]/g, '').replace(/\u0640/g, '');
+    s = normalizeSoraniAlphabet(s);
+    s = rejoinVerbalAffixes(s);
+    s = naturalizeDialogue(s);
+    s = normalizeDigits(s, useKurdishDigits);
 
-      // Normalize digits
-      t = normalizeDigits(t, useKurdishDigits);
-
-      // Kurdish alphabet normalization
-      t = normalizeSoraniAlphabet(t);
-
-      // Rejoin split Sorani Kurdish verbal affixes
-      t = rejoinVerbalAffixes(t);
-
-      // Naturalize dialogue
-      t = naturalizeDialogue(t);
-
-      // Speech interruptions & English cleanup
-      if (typeof TranslatorDict !== 'undefined') {
-        if (TranslatorDict.handleSpeechCutoffs) t = TranslatorDict.handleSpeechCutoffs(t);
-        if (TranslatorDict.cleanUntranslatedEnglish) t = TranslatorDict.cleanUntranslatedEnglish(t);
-      }
-
-      // Kurdish Punctuation (preserve HTML/ASS tags & bracket tokens)
-      t = t.replace(/(<[^>]*>|\{[^}]*\}|\[\s*T\s*[\d\u0660-\u0669\u06f0-\u06f9]+\s*\])|([,;?])/gi, (m, tag, punct) => {
-        if (tag) return tag;
-        if (punct === ',') return '،';
-        if (punct === ';') return '؛';
-        if (punct === '?') return '؟';
-        return punct;
-      });
-
-      // Fix dual-speaker hyphenation in Kurdish RTL:
-      // When lines start with dialogue hyphens (- or —), ensure the hyphen stays cleanly at the beginning of each line
-      t = t.split('\n').map((line) => {
-        let l = line.trim();
-        if (/^[-—–•]\s*/.test(l)) {
-          l = '- ' + l.replace(/^[-—–•]\s*/, '').trim();
-        }
-        // Remove rogue trailing hyphens that flipped to line end in RTL
-        if (l.startsWith('- ') && l.endsWith(' -')) {
-          l = l.slice(0, -2).trim();
-        }
-        return l;
-      }).join('\n');
-
-      // Purge isolated placeholder remnants (like stray 'W', 'w', 'p', 'P', 'T', 't')
-      t = t.replace(/(^|[\s،؛؟.\n])[WwPpTt](?=[\s،؛؟.,!?:-]|$)/g, '$1')
-           .replace(/[ \t]{2,}/g, ' ');
+    if (cleanPunctuation) {
+      s = s.replace(/,/g, '،')
+           .replace(/;/g, '؛')
+           .replace(/\?/g, '؟')
+           .replace(/\s+([،؛؟.!])/g, '$1')
+           .replace(/\n\s*([،؛؟.!])/g, '$1')
+           .replace(/([،؛؟])([^\s\n])/g, '$1 $2')
+           .replace(/[ \t]{2,}/g, ' ')
+           .trim();
     }
-
-    return t;
+    return s;
   }
 
-  /**
-   * Postprocess a Kurdish subtitle string:
-   * - Normalizes Sorani punctuation & typography.
-   * - Replaces raw Arabic letters with Kurdish Sorani equivalents.
-   * - Naturalizes conversational syntax and fixes compound word spacing.
-   * - Optionally applies Kurdish digits and character name glossary replacements.
-   */
+  /** Complete post-processing pipeline for Kurdish Sorani subtitles. */
   function postprocessSorani(text, options = {}) {
-    if (text == null) return '';
-    const str = typeof text === 'string' ? text : String(text);
-    if (!str.trim()) return '';
-    let res = normalizeText(str, true, !!options.kurdishDigits);
-    res = naturalizeDialogue(res);
-    if (typeof TranslatorDict !== 'undefined' && TranslatorDict.cleanUntranslatedEnglish) {
-      res = TranslatorDict.cleanUntranslatedEnglish(res);
-    }
-    return res;
+    if (!text) return '';
+    return normalizeText(text, true, !!options.kurdishDigits);
   }
 
-  /**
-   * Standardize text for fast, forgiving search matches across Arabic, Persian, Kurdish, and Latin scripts.
-   * Strips diacritics, unifies Arabic/Kurdish letter variants, converts numbers to ASCII, and lowercases.
-   */
-  function normalizeForSearch(str) {
-    if (!str) return '';
-    return String(str)
+  /** Text search normalization (accent/diacritic/heavy letter insensitive). */
+  function normalizeForSearch(text) {
+    if (!text) return '';
+    return String(text)
       .toLowerCase()
-      .replace(/[\u064b-\u0652\u0670\u0640]/g, '') // strip Arabic diacritics & tatweel
-      .replace(/[\u0660-\u0669]/g, (d) => String(d.charCodeAt(0) - 0x0660)) // Arabic-Indic digits
-      .replace(/[\u06f0-\u06f9]/g, (d) => String(d.charCodeAt(0) - 0x06f0)) // Eastern Arabic digits
-      .replace(/[\u0622\u0623\u0625\u0626\u0671]/g, 'ا') // آ, أ, إ, ئ, ٱ -> ا
-      .replace(/\u0643/g, 'ک') // ك -> ک
-      .replace(/[\u064A\u0649\u06CE\u06CC]/g, 'ی') // ي, ى, ێ, ی -> ی
-      .replace(/[\u0629\u06BE\u06C1]/g, 'ە') // ة, ھ, ہ -> ە
-      .replace(/[\u06B5]/g, 'ل') // ڵ -> ل
-      .replace(/[\u0695\u0696]/g, 'ر') // ڕ, ڑ -> ر
-      .replace(/[\u06C6\u06C7\u06C8]/g, 'و') // ۆ, ۇ, ۈ -> و
-      .replace(/[،,]/g, ' ')
-      .replace(/[؟?]/g, ' ')
-      .replace(/[؛;]/g, ' ')
-      .replace(/[.!:_"-]/g, ' ')
-      .replace(/[\u200c\u200d\u200e\u200f]/g, '') // invisible zero-width chars
+      .replace(/[ڕر]/g, 'ر')
+      .replace(/[ڵل]/g, 'ل')
+      .replace(/[ێیىي]/g, 'ی')
+      .replace(/[ۆوو]/g, 'و')
+      .replace(/[ەههـة]/g, 'ە')
+      .replace(/[گکك]/g, 'ک')
+      .replace(/[پب]/g, 'ب')
+      .replace(/[چج]/g, 'ج')
+      .replace(/[ژز]/g, 'ز')
+      .replace(/[\u064B-\u065F\u0670]/g, '')
+      .replace(/[.,!?;:،؛؟"'«»\-_(){}[\]<>/\\#*&^%$@~`|]/g, ' ')
       .replace(/\s+/g, ' ')
       .trim();
   }
 
-  /**
-   * Check for advanced English phrases in source text and return alternative translations.
-   */
+  /** Kurdish Hawar Latin (Kurmanji) Transliteration Table */
+  const SORANI_TO_HAWAR = [
+    ['ئا', 'a'], ['ئە', 'e'], ['ئی', 'î'], ['ئێ', 'ê'], ['ئو', 'u'], ['ئۆ', 'o'], ['ئوو', 'û'],
+    ['ا', 'a'], ['ە', 'e'], ['ێ', 'ê'], ['ۆ', 'o'], ['وو', 'û'], ['و', 'w'], ['ی', 'y'],
+    ['ب', 'b'], ['پ', 'p'], ['ت', 't'], ['ج', 'c'], ['چ', 'ç'], ['ح', 'h'], ['خ', 'x'],
+    ['د', 'd'], ['ر', 'r'], ['ڕ', 'rr'], ['ز', 'z'], ['ژ', 'j'], ['س', 's'], ['ش', 'ş'],
+    ['ع', "'"], ['غ', 'ẍ'], ['ف', 'f'], ['ڤ', 'v'], ['ق', 'q'], ['ک', 'k'], ['گ', 'g'],
+    ['ل', 'l'], ['ڵ', 'll'], ['م', 'm'], ['ن', 'n'], ['ه', 'h'], ['ھ', 'h']
+  ];
+
+  /** Transliterate Kurdish Sorani Arabic-script text to Kurdish Hawar Latin. */
+  function toHawarLatin(str) {
+    if (!str) return '';
+    let res = str;
+    SORANI_TO_HAWAR.forEach(([ar, lat]) => {
+      res = res.split(ar).join(lat);
+    });
+    return res;
+  }
+
+  /** Get alternative idiom translations from dictionary. */
   function getAdvancedAlternatives(englishText) {
     if (!englishText) return [];
-    if (typeof TranslatorDict !== 'undefined' && TranslatorDict.findMatches) {
-      return TranslatorDict.findMatches(englishText);
+    const lex = getLexicon();
+    const clean = englishText.toLowerCase().trim();
+    if (lex[clean] && lex[clean].alternatives) {
+      return lex[clean].alternatives;
     }
-    const lower = englishText.toLowerCase();
-    const found = [];
-    const lex = (typeof TranslatorDict !== 'undefined' && TranslatorDict.LEXICON) ? TranslatorDict.LEXICON : ADVANCED_SUBTITLE_LEXICON;
-    for (const [expr, data] of Object.entries(lex)) {
-      if (lower.includes(expr)) {
-        found.push({
-          expression: expr,
-          kurdish: data.kurdish,
-          primary: data.kurdish,
-          context: data.context || expr,
-          alternatives: data.alternatives || [],
-        });
-      }
-    }
-    return found;
-  }
-
-  /**
-   * Ensure screen placement override tags (like {\an8}, {\pos(x,y)}) and formatting tags
-   * maintain their proper leading/trailing position in the translated line despite RTL reordering.
-   */
-  function fixPlacementAndTagOrder(text, originalText) {
-    if (!text || !originalText) return text || '';
-
-    const origLines = originalText.split('\n');
-    const transLines = text.split('\n');
-
-    const fixed = transLines.map((tLine, i) => {
-      const origLine = origLines[i] || origLines[0] || '';
-      let line = tLine;
-
-      // Extract all leading ASS control codes and HTML tags
-      const leadTagMatch = origLine.match(/^((?:\{[^}]+\}|<[^>]+>\s*)+)/);
-      if (leadTagMatch) {
-        const leadTags = leadTagMatch[1].trim();
-        // Check for any ASS override command or HTML position/font tags
-        if (/^\{[^{}]*\\(?:an?\d+|pos|move|fad|clip|org|c&|1c&|2c&|3c&|4c&|fn|fs|b\d|i\d|u\d|s\d|shad|bord|q\d)[^{}]*\}/i.test(leadTags) || /^<(?:top|mid|font\b|b|i|u)/i.test(leadTags)) {
-          if (!line.startsWith(leadTags)) {
-            let stripped = line;
-            const escaped = leadTags.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-            stripped = stripped.replace(new RegExp(escaped, 'g'), '').trim();
-            line = leadTags + (stripped ? (leadTags.startsWith('{') ? stripped : ' ' + stripped) : '');
-          }
-        }
-      }
-
-      // Extract trailing HTML tags
-      const trailTagMatch = origLine.match(/((?:<\/[a-z0-9]+>\s*)+)$/i);
-      if (trailTagMatch) {
-        const trailTags = trailTagMatch[1].trim();
-        if (!line.endsWith(trailTags)) {
-          let stripped = line;
-          const escaped = trailTags.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-          stripped = stripped.replace(new RegExp(escaped, 'g'), '').trim();
-          line = (stripped ? stripped + ' ' : '') + trailTags;
-        }
-      }
-
-      // Multi-speaker alignment: if original line started with hyphen (- ), ensure translated line also has it
-      if (/^[-—–•]\s+/.test(origLine.replace(/^\{[^}]+\}/g, '').trim()) && !/^[-—–•]\s+/.test(line.replace(/^\{[^}]+\}/g, '').trim())) {
-        const tagMatch = line.match(/^(\{[\s\S]*?\})/);
-        if (tagMatch) {
-          const tags = tagMatch[1];
-          const rest = line.slice(tags.length).trim();
-          line = `${tags}- ${rest}`;
-        } else {
-          line = `- ${line.trim()}`;
-        }
-      }
-
-      return line.trim();
-    });
-
-    return fixed.join('\n').trim();
-  }
-
-  /**
-   * Perform line-for-line quality check and Kurdish validation on a subtitle line.
-   * Returns a detailed score, detected linguistic or formatting issues, suggestions,
-   * detailed issue objects, alternative wordings, and the auto-improved text.
-   */
-  function checkLineQuality(arg1, arg2 = '') {
-    let kurdishLine = typeof arg1 === 'string' ? arg1 : (arg1 != null ? String(arg1) : '');
-    let origLine = typeof arg2 === 'string' ? arg2 : (arg2 != null ? String(arg2) : '');
-
-    const hasArabic1 = /[\u0600-\u06ff]/.test(kurdishLine);
-    const hasArabic2 = /[\u0600-\u06ff]/.test(origLine);
-    if (!hasArabic1 && hasArabic2) {
-      const tmp = kurdishLine;
-      kurdishLine = origLine;
-      origLine = tmp;
-    }
-
-    const text = (kurdishLine || '').trim();
-    if (!text) {
-      return { score: 100, issues: [], suggestions: [], issueDetails: [], alternatives: [], improvedText: '' };
-    }
-
-    const issues = [];
-    const suggestions = [];
-    const issueDetails = [];
-    let penalties = 0;
-
-    // 1. Check for untranslated Latin / English words
-    const latinWords = text.match(/\b[a-zA-Z]{2,}\b/g);
-    if (latinWords && !text.includes('{\\')) {
-      const filtered = latinWords.filter((w) => !/^(WEBVTT|NOTE|STYLE|ASS|SSA|pos|an\d|fs|fn|c|b|i|u|s|k|kf|ko|q|r)$/i.test(w));
-      if (filtered.length > 0) {
-        const msg = `وشەی وەرنەگێڕدراو یان ئینگلیزی: "${filtered.slice(0, 3).join(', ')}"`;
-        issues.push(msg);
-        suggestions.push('وشە ئینگلیزییەکان وەربگێڕە بۆ کوردی');
-        issueDetails.push({
-          id: 'untranslated_words',
-          category: 'untranslated',
-          severity: 'error',
-          title: 'وشەی ئینگلیزی وەرنەگێڕدراو',
-          description: msg,
-          fixAvailable: true,
-        });
-        penalties += Math.min(30, filtered.length * 15);
-      }
-    }
-
-    // 2. Check for Arabic letter relics
-    const arabicRelics = [];
-    if (/[\u0643]/.test(text)) arabicRelics.push('ك');
-    if (/[\u064A\u0649]/.test(text)) arabicRelics.push('ي/ى');
-    if (/[\u0629]/.test(text)) arabicRelics.push('ة');
-    if (/\u0640(?![-—–])/.test(text)) arabicRelics.push('ـ');
-
-    if (arabicRelics.length > 0) {
-      const msg = `پیتە عەرەبییەکان لە جێگەی پیتی کوردی بەکارهاتوون (${arabicRelics.join('، ')})`;
-      issues.push(msg);
-      suggestions.push('پیتەکان بگۆڕە بۆ (ک، ی، ە)');
-      issueDetails.push({
-        id: 'arabic_relics',
-        category: 'orthography',
-        severity: 'warning',
-        title: 'پیت و نیشانەی نادروستی عەرەبی',
-        description: msg,
-        fixAvailable: true,
-      });
-      penalties += arabicRelics.length * 8;
-    }
-
-    // 3. Check for mechanical question starter "ئایا"
-    if (/(?:^|[\s\n])ئایا\s+/.test(text)) {
-      const msg = 'دەستپێکی ڕستە بە "ئایا" لە ژێرنووسی کوردیدا نەگونجاو و ڕۆبۆتییە';
-      issues.push(msg);
-      suggestions.push('پیت یان وشەی "ئایا" لاببە بۆ ئەوەی ڕستەکە سروشتی و ڕەوان بێت');
-      issueDetails.push({
-        id: 'mechanical_aya',
-        category: 'dialogue',
-        severity: 'warning',
-        title: 'دەستپێکی نادروستی "ئایا"',
-        description: msg,
-        fixAvailable: true,
-      });
-      penalties += 8;
-    }
-
-    // 4. Check for split verbal prefixes
-    if (/(?:^|\s)(?:دە|ئە|نا|نە|مە|بی|تێ|ڕێ|پێ|وەر|دەر|دا|هەڵ|دەست)\s+(?:بێت|زانم|زانی|کات|کەم|کەن|چێت|چم|چن|ڵێم|ڵێت|توانم|بوو|کرد|کە|ڕۆ|دەگەم|کەوتن|دان|گرتن)/.test(text)) {
-      const msg = 'پێشگرە لێکدراوەکانی کردار لێکجیاکراونەتەوە (وەک: دە کات، نا زانم)';
-      issues.push(msg);
-      suggestions.push('پێشگرەکە بلکێنە بە کردارەکەوە (دەستکاریکردن بۆ: دەکات، نازانم)');
-      issueDetails.push({
-        id: 'split_verbal_affix',
-        category: 'prefix',
-        severity: 'warning',
-        title: 'لێکجیابوونەوەی پێشگری کردار',
-        description: msg,
-        fixAvailable: true,
-      });
-      penalties += 10;
-    }
-
-    // 5. Check punctuation marks
-    if (/[?;,]/.test(text) && !text.includes('{\\')) {
-      const msg = 'هێماکانی خاڵبەندی بە شێوازی لاتینی ماونەتەوە (?, ;, ,)';
-      issues.push(msg);
-      suggestions.push('خاڵبەندی کوردی بەکاربهێنە (؟، ؛، ،)');
-      issueDetails.push({
-        id: 'latin_punctuation',
-        category: 'punctuation',
-        severity: 'info',
-        title: 'خاڵبەندی لاتینی لە دەقی کوردی',
-        description: msg,
-        fixAvailable: true,
-      });
-      penalties += 5;
-    }
-
-    // 6. Check dual-speaker dialogue formatting
-    if (origLine && (origLine.includes('\n-') || origLine.startsWith('- ') || origLine.includes(' - '))) {
-      if (!text.includes('-')) {
-        const msg = 'هێمای دیالۆگی دوو کەس (-) لە ژێرنووسەکەدا نییە';
-        issues.push(msg);
-        suggestions.push('هێمای - لە سەرەتای هەر دێڕێکی دیالۆگ دابنێ');
-        issueDetails.push({
-          id: 'dialogue_hyphen_missing',
-          category: 'dialogue',
-          severity: 'info',
-          title: 'دیالۆگی چەندکەسی',
-          description: msg,
-          fixAvailable: true,
-        });
-        penalties += 8;
-      }
-    }
-
-    // 7. Check for bracket token residue
-    if (/\[\s*(?:T|W|p)\d*\s*\]|\b[TWp]\d+\b|[\u0001\u0002\u0003§]/.test(text)) {
-      const msg = 'کۆدی کاتی پاشماوەی وەرگێڕان یان نیشانەی کاتی ماوەتەوە';
-      issues.push(msg);
-      suggestions.push('کۆدەکان پاکبکەرەوە');
-      issueDetails.push({
-        id: 'token_residue',
-        category: 'token',
-        severity: 'error',
-        title: 'پاشماوەی کۆدی تەکنیکی',
-        description: msg,
-        fixAvailable: true,
-      });
-      penalties += 20;
-    }
-
-    // 8. Line length warning
-    const lines = text.split('\n');
-    const tooLongLine = lines.find((l) => l.replace(/<[^>]*>|\{[^}]*\}/g, '').length > 40);
-    if (tooLongLine) {
-      const charLen = tooLongLine.replace(/<[^>]*>|\{[^}]*\}/g, '').length;
-      const msg = `درێژی دێڕ زۆرە (${charLen} پیت) و خوێندنەوەی لەسەر شاشە گران دەکات`;
-      issues.push(msg);
-      suggestions.push('دێڕەکە بەسەر دوو دێڕدا دابەش بکە');
-      issueDetails.push({
-        id: 'line_length',
-        category: 'timing',
-        severity: 'info',
-        title: 'درێژیی دێڕی ژێرنووس',
-        description: msg,
-        fixAvailable: true,
-      });
-      penalties += 5;
-    }
-
-    // 9. Reading Speed (CPS - Characters Per Second) Check
-    const durMs = typeof durationMs === 'number' && durationMs > 0 ? durationMs : 0;
-    if (durMs > 0) {
-      const durSec = durMs / 1000;
-      const plainLen = text.replace(/<[^>]*>|\{[^}]*\}/g, '').trim().length;
-      const cps = plainLen / durSec;
-      if (cps > 19) {
-        const msg = `خێرایی خوێندنەوە زۆر بەرزە (${cps.toFixed(1)} پیت لە چرکەیەکدا) - مەترسی نەخوێندنەوە لەسەر شاشە`;
-        issues.push(msg);
-        suggestions.push('کاتەکەی درێژبکەرەوە یان ڕستەکە کورتتر بکەرەوە');
-        issueDetails.push({
-          id: 'high_cps',
-          category: 'timing',
-          severity: 'warning',
-          title: 'خێرایی زۆری خوێندنەوە (CPS)',
-          description: msg,
-          fixAvailable: false,
-        });
-        penalties += 10;
-      }
-    }
-
-    // Alternatives check from Advanced Lexicon
-    const alternatives = getAdvancedAlternatives(origLine);
-
-    // Compute improved text
-    let improved = normalizeSoraniAlphabet(text);
-    improved = rejoinVerbalAffixes(improved);
-    improved = naturalizeDialogue(improved);
-    if (typeof TranslatorDict !== 'undefined') {
-      if (TranslatorDict.handleSpeechCutoffs) improved = TranslatorDict.handleSpeechCutoffs(improved);
-      if (TranslatorDict.cleanUntranslatedEnglish) improved = TranslatorDict.cleanUntranslatedEnglish(improved);
-    }
-    improved = normalizeText(improved, true, false);
-    improved = fixPlacementAndTagOrder(improved, origLine);
-
-    const score = Math.max(15, Math.min(100, 100 - penalties));
-
-    return {
-      score,
-      issues,
-      suggestions,
-      issueDetails,
-      alternatives,
-      improvedText: improved,
-    };
+    return [];
   }
 
   /**
    * Intelligently split an overly long single-line Kurdish subtitle into two balanced lines.
-   * Handles multi-speaker dialogue hyphens, Kurdish conjunctions (وە، کە، بەڵام، چونکە، بۆیە، کاتێک),
-   * Kurdish commas (،), semicolons (؛), and question marks (؟) while preserving formatting tags.
+   * Handles speaker dialogue hyphens, conjunctions, and punctuation.
    */
   function splitLongKurdishLine(text, maxLineChars = 38) {
     if (!text || typeof text !== 'string') return '';
-    if (text.includes('\n')) return text; // already multi-line
+    if (text.includes('\n')) return text;
     const cleanText = text.trim();
     if (cleanText.length <= maxLineChars) return cleanText;
 
-    // Check for multi-speaker hyphens: e.g. "- سڵاو لە هەمووان - چۆنیت براکەم؟"
     const multiSpeakerMatch = cleanText.match(/^([-—–]\s*[^\n]+?)\s+([-—–]\s*[^\n]+)$/);
     if (multiSpeakerMatch) {
       return `${multiSpeakerMatch[1].trim()}\n${multiSpeakerMatch[2].trim()}`;
@@ -907,14 +334,13 @@ const TranslatorOrthography = (() => {
     const midChar = Math.floor(cleanText.length / 2);
     let bestIndex = -1;
     let minDistance = Infinity;
-
     let runningCharCount = 0;
+
     for (let i = 0; i < words.length - 1; i++) {
       runningCharCount += words[i].length + 1;
       const nextWord = words[i + 1];
       const distance = Math.abs(runningCharCount - midChar);
 
-      // Preferred break points
       const hasComma = words[i].endsWith('،') || words[i].endsWith(',') || words[i].endsWith('؛') || words[i].endsWith(';');
       const hasSpeakerDash = /^[-—–]/.test(nextWord);
       const isConjunction = /^(وە|کە|چونکە|بەڵام|بۆیە|لەبەرئەوەی|یان|تەنانەت|ئەگەر|کاتێک|تاوەکو|ئاخۆ|لەگەڵ)$/.test(nextWord);
@@ -935,8 +361,81 @@ const TranslatorOrthography = (() => {
       const line2 = words.slice(bestIndex + 1).join(' ');
       return `${line1}\n${line2}`;
     }
-
     return cleanText;
+  }
+
+  /**
+   * Fix markup and token placement order in RTL subtitle lines.
+   */
+  function fixPlacementAndTagOrder(text) {
+    if (!text) return '';
+    return text.replace(/(\{\\an\d+\})\s*([\s\S]+)/g, '$1 $2');
+  }
+
+  /**
+   * Deep line-by-line quality analyzer for Kurdish subtitles.
+   */
+  function checkLineQuality(cue, originalText) {
+    if (!cue) return { score: 100, issues: [], suggestions: [], improvedText: '' };
+    const text = cue.text || '';
+    const duration = Math.max(0.2, ((cue.end || 0) - (cue.start || 0)) / 1000);
+    const charCount = text.replace(/<[^>]*>|\{[^}]*\}/g, '').trim().length;
+    const cps = duration > 0 ? (charCount / duration) : 0;
+
+    const issues = [];
+    const suggestions = [];
+    const issueDetails = [];
+
+    // 1. Reading Speed (Characters Per Second)
+    if (cps > 24) {
+      issues.push('cps_too_fast');
+      suggestions.push(`Reading speed too fast (${cps.toFixed(1)} CPS). Consider shortening or extending duration.`);
+      issueDetails.push({ code: 'CPS_TOO_FAST', severity: 'warning', message: `Fast reading speed: ${cps.toFixed(1)} chars/sec` });
+    }
+
+    // 2. Arabic letter remnants
+    if (/[\u0643\u064A\u0649\u0629]/.test(text)) {
+      issues.push('arabic_letters');
+      suggestions.push('Contains non-Kurdish Arabic letters (ك, ي, ى, ة). Auto-fix to convert to (ک, ی, ە).');
+      issueDetails.push({ code: 'ARABIC_LETTERS', severity: 'warning', message: 'Contains Arabic letters instead of Kurdish script' });
+    }
+
+    // 3. Split verbal prefixes
+    if (/(?:^|\s)(?:دە|نا|نە|مە|بی|تێ|پێ|لێ)\s+[\u0600-\u06ff]+/.test(text)) {
+      issues.push('split_prefixes');
+      suggestions.push('Split verbal prefixes detected (دە، نا، نە...).');
+      issueDetails.push({ code: 'SPLIT_PREFIXES', severity: 'info', message: 'Kurdish verbal prefixes should be joined' });
+    }
+
+    // 4. Overly long lines
+    const lines = text.split('\n');
+    const hasLongLine = lines.some((l) => l.trim().length > 42);
+    if (hasLongLine) {
+      issues.push('long_line');
+      suggestions.push('Line exceeds 42 characters. Consider breaking into two lines.');
+      issueDetails.push({ code: 'LONG_LINE', severity: 'info', message: 'Line is long for comfortable subtitle reading' });
+    }
+
+    // Generate improved text
+    let improved = normalizeText(text, true, false);
+    if (hasLongLine && lines.length === 1) {
+      improved = splitLongKurdishLine(improved);
+    }
+
+    const alternatives = originalText ? getAdvancedAlternatives(originalText) : [];
+
+    let score = 100;
+    score -= issues.length * 12;
+    if (score < 40) score = 40;
+
+    return {
+      score,
+      issues,
+      suggestions,
+      issueDetails,
+      alternatives,
+      improvedText: improved,
+    };
   }
 
   return {
@@ -947,6 +446,7 @@ const TranslatorOrthography = (() => {
     normalizeText,
     postprocessSorani,
     normalizeForSearch,
+    toHawarLatin,
     getAdvancedAlternatives,
     checkLineQuality,
     fixPlacementAndTagOrder,

@@ -3,7 +3,7 @@
  * Exposes AppVersion as a global module.
  */
 const AppVersion = (() => {
-  const APP_VERSION = 'v109';
+  const APP_VERSION = 'v110';
   let isRefreshing = false;
   let hasShownUpdateNotice = false;
   let lastCheckedTimestamp = Date.now();
