@@ -1000,5 +1000,3 @@ const Translator = (() => {
 })();
 
 if (typeof module !== 'undefined' && module.exports) module.exports = Translator;
-
-module.exports._testFetch = translateChunk;
