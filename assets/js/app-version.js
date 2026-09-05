@@ -3,7 +3,7 @@
  * Exposes AppVersion as a global module.
  */
 const AppVersion = (() => {
-  const APP_VERSION = 'v111';
+  const APP_VERSION = 'v110';
   let isRefreshing = false;
   let hasShownUpdateNotice = false;
   let lastCheckedTimestamp = Date.now();
@@ -50,23 +50,6 @@ const AppVersion = (() => {
    */
   function initInstallPrompt() {
     const installBtn = document.getElementById('installBtn');
-    const isStandalone = window.matchMedia('(display-mode: standalone)').matches ||
-                         (window.navigator && window.navigator.standalone === true);
-
-    if (isStandalone) {
-      if (installBtn) {
-        installBtn.hidden = true;
-        installBtn.style.display = 'none';
-      }
-      return;
-    }
-
-    const isIos = /iphone|ipad|ipod/i.test(navigator.userAgent);
-    if (isIos && installBtn) {
-      installBtn.hidden = false;
-      installBtn.classList.remove('hidden');
-      installBtn.style.display = 'inline-flex';
-    }
 
     window.addEventListener('beforeinstallprompt', (e) => {
       e.preventDefault();
@@ -81,13 +64,14 @@ const AppVersion = (() => {
     if (installBtn) {
       installBtn.addEventListener('click', async () => {
         if (!deferredInstallPrompt) {
+          const isIos = /iphone|ipad|ipod/i.test(navigator.userAgent);
           if (isIos) {
             if (typeof Toast !== 'undefined') {
-              Toast.show(getI18nText('iosInstallHint', 'iOS: Tap Share (📤) and then "Add to Home Screen" (+) to install.'), 'info', 6000);
+              Toast.show(getI18nText('iosInstallHint', 'Tap Share and then "Add to Home Screen" to install.'), 'info', 5000);
             }
           } else {
             if (typeof Toast !== 'undefined') {
-              Toast.show(getI18nText('pwaInstallPrompt', 'Install from browser menu (Add to Home Screen / Install App).'), 'info', 4000);
+              Toast.show(getI18nText('pwaInstallPrompt', 'Install from browser menu (Add to Home Screen).'), 'info', 4000);
             }
           }
           return;
@@ -158,8 +142,6 @@ const AppVersion = (() => {
     }, 5000);
   }
 
-  let lastOnlineState = navigator.onLine;
-
   function updateNetworkStatus() {
     const els = getElements();
     const isOnline = navigator.onLine;
@@ -174,17 +156,6 @@ const AppVersion = (() => {
     }
     if (els.networkStatusBadge) {
       els.networkStatusBadge.style.color = isOnline ? '#34d399' : '#94a3b8';
-    }
-
-    if (lastOnlineState !== isOnline) {
-      lastOnlineState = isOnline;
-      if (typeof Toast !== 'undefined') {
-        if (isOnline) {
-          Toast.show(getI18nText('netBackOnline', '✓ Back online. Network sync restored.'), 'success', 3000);
-        } else {
-          Toast.show(getI18nText('netWentOffline', 'Offline mode active: Subtitle player & editor work offline.'), 'info', 4000);
-        }
-      }
     }
   }
 

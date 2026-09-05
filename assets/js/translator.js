@@ -446,7 +446,7 @@ const Translator = (() => {
       try {
         const translatedJoined = await translateChunk(joined, srcLang, tgtLang, signal);
         flags.anyTranslated = true;
-        const split = splitBatch(translatedJoined);
+        const split = splitBatch(translatedJoined, batch.length);
 
         if (split.length === batch.length) {
           batch.forEach((item, i) => {
@@ -644,17 +644,16 @@ const Translator = (() => {
     if (!data) return '';
     if (typeof data === 'string') return decodeHtmlEntities(data);
     if (Array.isArray(data)) {
-      if (typeof data[0] === 'string') return decodeHtmlEntities(data[0]);
+      if (typeof data[0] === 'string') return decodeHtmlEntities(data.join(''));
       if (Array.isArray(data[0])) {
-        if (typeof data[0][0] === 'string') {
-          const text = data[0].map((seg) => (Array.isArray(seg) && typeof seg[0] === 'string' ? seg[0] : '')).join('');
-          if (text) return decodeHtmlEntities(text);
-          return decodeHtmlEntities(data[0][0]);
-        }
-        if (Array.isArray(data[0][0])) {
-          const text = data[0].map((seg) => (Array.isArray(seg) && typeof seg[0] === 'string' ? seg[0] : '')).join('');
-          if (text) return decodeHtmlEntities(text);
-        }
+        const text = data[0]
+          .map((seg) => {
+            if (typeof seg === 'string') return seg;
+            if (Array.isArray(seg) && typeof seg[0] === 'string') return seg[0];
+            return '';
+          })
+          .join('');
+        if (text) return decodeHtmlEntities(text);
       }
     }
     if (data && Array.isArray(data.sentences)) {
@@ -809,7 +808,7 @@ const Translator = (() => {
     return Math.min(250 * 2 ** attempt + Math.random() * 200, 2500);
   }
 
-  function splitBatch(translated) {
+  function splitBatch(translated, expectedCount) {
     const parts = [];
     let cur = [];
     for (const line of translated.split('\n')) {
@@ -829,6 +828,15 @@ const Translator = (() => {
       }
     }
     parts.push(cur.join('\n'));
+
+    if (expectedCount && parts.length !== expectedCount) {
+      if (parts.length === expectedCount + 1 && parts[parts.length - 1].trim() === '') {
+        parts.pop();
+      } else if (parts.length === expectedCount + 1 && parts[0].trim() === '') {
+        parts.shift();
+      }
+    }
+
     return parts;
   }
 

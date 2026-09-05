@@ -32,8 +32,9 @@
   position: relative;
   width: 100%;
   aspect-ratio: 16 / 9;
-  min-height: 220px;
-  max-height: 520px;
+  height: auto;
+  min-height: unset;
+  max-height: unset;
   background: radial-gradient(circle at 50% 40%, #15121c 0%, #08060b 80%);
   display: flex;
   flex-direction: column;

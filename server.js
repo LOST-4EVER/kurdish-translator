@@ -37,14 +37,16 @@ async function fetchGoogleTranslate(text, sl = 'auto', tl = 'ckb') {
           translated = data;
         } else if (Array.isArray(data)) {
           if (typeof data[0] === 'string') {
-            translated = data[0];
+            translated = data.join('');
           } else if (Array.isArray(data[0])) {
-            if (typeof data[0][0] === 'string') {
-              translated = data[0][0];
-            } else if (Array.isArray(data[0][0])) {
-              translated = data[0].map((seg) => (Array.isArray(seg) && typeof seg[0] === 'string' ? seg[0] : '')).join('');
-            }
+            translated = data[0].map((seg) => {
+              if (typeof seg === 'string') return seg;
+              if (Array.isArray(seg) && typeof seg[0] === 'string') return seg[0];
+              return '';
+            }).join('');
           }
+        } else if (data && Array.isArray(data.sentences)) {
+          translated = data.sentences.map((s) => s.trans || '').join('');
         }
         if (translated) return translated;
       }

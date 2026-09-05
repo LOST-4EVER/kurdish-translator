@@ -251,7 +251,7 @@ body[dir="rtl"] {
 [dir="rtl"] .adv-trigger-chevron { transform: rotate(180deg); }
 [dir="rtl"] .adv-trigger-btn:hover .adv-trigger-chevron { transform: translateX(-3px) rotate(180deg); }
 [dir="rtl"] .modal-close { left: 14px; right: auto; }
-[dir="rtl"] .refresh-dropdown { right: auto; left: 0; text-align: right; }
+[dir="rtl"] .refresh-dropdown { right: auto; left: 50%; transform: translateX(-50%); text-align: right; }
 [dir="rtl"] .ed-search-nav { flex-direction: row-reverse; }
 [dir="rtl"] .tour-btn-group { flex-direction: row-reverse; }
 

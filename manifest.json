@@ -1,6 +1,6 @@
 {
   "name": "Kurdî Subtitle Translator",
-  "short_name": "Kurdî Subs",
+  "short_name": "Kurdî Subtitles",
   "description": "Translate subtitle files into Kurdish Sorani right in your browser. SRT, VTT, ASS, SSA, SUB, SMI. Installable and works offline.",
   "id": "./",
   "start_url": "./",

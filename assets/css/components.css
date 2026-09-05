@@ -326,10 +326,21 @@ select:focus { outline: none; border-color: var(--md-sys-color-primary); box-sha
 }
 
 /* ---------- Topbar Header Refresh & Update Menu ---------- */
+.footer-refresh-wrap {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  width: 100%;
+  margin: 14px auto 12px;
+  position: relative;
+  z-index: 50;
+}
+
 .refresh-menu-wrap {
   position: relative;
   display: inline-flex;
   align-items: center;
+  justify-content: center;
   flex-shrink: 0;
 }
 
@@ -338,13 +349,13 @@ select:focus { outline: none; border-color: var(--md-sys-color-primary); box-sha
   align-items: center;
   gap: 6px;
   height: 38px;
-  padding: 0 12px;
+  padding: 0 16px;
   background: var(--md-sys-color-surface-container-low);
   border: 1px solid var(--md-sys-color-outline-variant);
   border-radius: var(--md-shape-corner-medium);
   color: var(--md-sys-color-on-surface);
   font-family: inherit;
-  font-size: 12px;
+  font-size: 12.5px;
   font-weight: 700;
   cursor: pointer;
   transition: all var(--motion) var(--ease);
@@ -384,6 +395,9 @@ select:focus { outline: none; border-color: var(--md-sys-color-primary); box-sha
 .refresh-icon {
   transition: transform 0.4s ease;
   flex-shrink: 0;
+  width: 15px;
+  height: 15px;
+  aspect-ratio: 1 / 1;
 }
 
 .refresh-pill-btn:hover .refresh-icon,
@@ -419,6 +433,7 @@ select:focus { outline: none; border-color: var(--md-sys-color-primary); box-sha
   right: -2px;
   width: 9px;
   height: 9px;
+  aspect-ratio: 1 / 1;
   border-radius: 50%;
   background: #f43f5e;
   border: 2px solid var(--md-sys-color-surface-container-high);
@@ -438,31 +453,47 @@ select:focus { outline: none; border-color: var(--md-sys-color-primary); box-sha
 
 .refresh-dropdown {
   position: absolute;
-  top: calc(100% + 8px);
-  bottom: auto;
-  right: 0;
-  width: 290px;
+  bottom: calc(100% + 12px) !important;
+  top: auto !important;
+  left: 50% !important;
+  right: auto !important;
+  transform: translateX(-50%) !important;
+  width: 310px;
+  max-width: calc(100vw - 32px);
+  max-height: min(480px, calc(100vh - 140px));
+  overflow-y: auto;
+  overflow-x: hidden;
   background: var(--md-sys-color-surface-container-high);
   border: 1px solid var(--md-sys-color-outline-variant);
   border-radius: var(--md-shape-corner-medium);
-  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.65), 0 0 0 1px rgba(255, 255, 255, 0.09);
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.75), 0 0 0 1px rgba(255, 255, 255, 0.09);
   padding: 10px;
   z-index: 1010;
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
-  animation: dropdownDropDown 0.22s cubic-bezier(0.16, 1, 0.3, 1);
-  transform-origin: top right;
+  animation: dropdownDropUp 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+  transform-origin: bottom center;
 }
 
 [dir="rtl"] .refresh-dropdown {
-  right: auto;
-  left: 0;
-  transform-origin: top left;
+  left: 50% !important;
+  right: auto !important;
+  transform: translateX(-50%) !important;
+  transform-origin: bottom center !important;
+  text-align: right;
 }
 
-@keyframes dropdownDropDown {
-  from { opacity: 0; transform: scale(0.92) translateY(-8px); }
-  to { opacity: 1; transform: scale(1) translateY(0); }
+@keyframes dropdownDropUp {
+  from { opacity: 0; transform: translateX(-50%) scale(0.93) translateY(10px); }
+  to { opacity: 1; transform: translateX(-50%) scale(1) translateY(0); }
+}
+
+.refresh-dropdown::-webkit-scrollbar {
+  width: 5px;
+}
+.refresh-dropdown::-webkit-scrollbar-thumb {
+  background: var(--md-sys-color-outline-variant);
+  border-radius: 4px;
 }
 
 .refresh-menu-header {
