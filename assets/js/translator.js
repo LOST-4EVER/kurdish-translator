@@ -497,6 +497,21 @@ const Translator = (() => {
    */
   async function translateLines(lines, srcLang = 'auto', tgtLang = 'ckb', onProgress, signal, options = {}) {
     if (!Array.isArray(lines) || !lines.length) return [];
+
+    // Normalize parameters if optional arguments were shifted or passed in inverted order
+    if (typeof onProgress === 'object' && onProgress !== null && !(onProgress instanceof AbortSignal)) {
+      options = onProgress;
+      onProgress = null;
+    } else if (onProgress instanceof AbortSignal) {
+      signal = onProgress;
+      onProgress = null;
+    }
+    if (signal && !(signal instanceof AbortSignal) && typeof signal === 'object') {
+      options = signal;
+      signal = null;
+    }
+    const progressCb = typeof onProgress === 'function' ? onProgress : null;
+
     const opts = typeof options === 'object' && options !== null ? options : {};
     const isArabic = ARABIC_SCRIPT.has(tgtLang);
     const useKurdishDigits = !!opts.kurdishDigits;
@@ -596,7 +611,7 @@ const Translator = (() => {
 
       doneLines += batch.length;
       if (opts.onBatch) opts.onBatch(results, doneLines, totalLines);
-      if (onProgress) onProgress(mainFraction * (doneLines / totalLines), doneLines, totalLines);
+      if (progressCb) progressCb(mainFraction * (doneLines / totalLines), doneLines, totalLines);
       if (b < batches.length - 1) await sleep(DELAY_MS, signal);
     }
 
@@ -632,11 +647,11 @@ const Translator = (() => {
             if (opts.onBatch) opts.onBatch(results, doneLines + k + 1, totalLines + retryTotal);
           }
         } catch {}
-        if (onProgress) onProgress(mainFraction + (1 - mainFraction) * (k + 1) / Math.max(1, retryTotal), doneLines + k + 1, totalLines + retryTotal);
+        if (progressCb) progressCb(mainFraction + (1 - mainFraction) * (k + 1) / Math.max(1, retryTotal), doneLines + k + 1, totalLines + retryTotal);
       }
     }
 
-    if (onProgress) onProgress(1, totalLines + retryTotal, totalLines + retryTotal);
+    if (progressCb) progressCb(1, totalLines + retryTotal, totalLines + retryTotal);
     results.failedCount = failedLines;
     return results;
   }
@@ -975,9 +990,13 @@ const Translator = (() => {
     } catch {}
   }
 
-  async function translateSingleLine(line, srcLang = 'auto', tgtLang = 'ckb', options = {}) {
+  async function translateSingleLine(line, srcLang = 'auto', tgtLang = 'ckb', options = {}, signal = null) {
     if (!line || !line.trim()) return '';
-    const res = await translateLines([line], srcLang, tgtLang, options);
+    if (options instanceof AbortSignal) {
+      signal = options;
+      options = {};
+    }
+    const res = await translateLines([line], srcLang, tgtLang, null, signal, options);
     return (res && res[0]) ? res[0] : line;
   }
 

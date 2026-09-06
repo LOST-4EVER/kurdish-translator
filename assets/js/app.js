@@ -1822,18 +1822,24 @@
             Translator.translateSingleLine(sourceText, srcLang, 'ckb')
               .then((newText) => {
                 if (newText) {
-                  c.text = newText;
+                  const incOrig = els.includeOriginal ? els.includeOriginal.checked : false;
+                  const cleanTrans = newText.trim();
+                  const finalText = (incOrig && c.origText && c.origText.trim() !== cleanTrans)
+                    ? `${c.origText.trim()}\n${cleanTrans}`
+                    : cleanTrans;
+
+                  c.text = finalText;
                   const input = row.querySelector('.ed-input');
                   if (input) {
-                    input.value = displayText(newText);
+                    input.value = displayText(finalText);
                     autoGrow(input);
                   }
                   if (typeof SubtitlePlayer !== 'undefined' && typeof SubtitlePlayer.updateText === 'function') {
-                    SubtitlePlayer.updateText(i, newText);
+                    SubtitlePlayer.updateText(i, finalText);
                   }
-                  applyCueEdit(i, newText);
+                  applyCueEdit(i, finalText);
                   pushUndoState();
-                  updateRowToolbar(row, c, newText);
+                  updateRowToolbar(row, c, finalText);
                   updateDetectionSummary();
                   if (typeof Toast !== 'undefined') {
                     Toast.show(
