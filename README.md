@@ -1,6 +1,6 @@
 # 🎬 Kurdî Subtitle Translator | وەرگێڕی پێشکەوتووی ژێرنووسی کوردی
 
-[![Version v106](https://img.shields.io/badge/Version-v106-7c5cfc?style=flat-square&logo=github)](https://LOST-4EVER.github.io/kurdish-translator/)
+[![Version v114](https://img.shields.io/badge/Version-v114-7c5cfc?style=flat-square&logo=github)](https://LOST-4EVER.github.io/kurdish-translator/)
 [![Progressive Web App](https://img.shields.io/badge/PWA-Installable%20%26%20Offline-0ea5e9?style=flat-square&logo=pwa&logoColor=white)](https://LOST-4EVER.github.io/kurdish-translator/)
 [![Target Kurdish Sorani](https://img.shields.io/badge/Target%20Language-Kurdish%20Sorani%20(ckb)-fbbf24?style=flat-square)](https://LOST-4EVER.github.io/kurdish-translator/)
 [![100% Client-Side](https://img.shields.io/badge/Privacy-100%25%20In--Browser-10b981?style=flat-square&logoColor=white)](https://LOST-4EVER.github.io/kurdish-translator/)
@@ -109,11 +109,21 @@ The application includes an extensive Kurdish Sorani cinematic dialogue engine (
 
 ---
 
-## 📝 Live Subtitle Editor & Instant Search
+## 📝 Live Subtitle Editor, Line-by-Line Detection & Inspector
 
+- **Line-by-Line Detection Engine:** Real-time subtitle analysis computing Characters-Per-Second (CPS), cue durations, character counts, and line numbers dynamically for every cue.
+- **Smart Category Filtering:** Instantly filter subtitle list by:
+  - **All Cues:** Complete subtitle sequence.
+  - **⚠️ Warnings:** Cues exceeding professional reading speed limits (> 20 CPS) or excessive characters (> 42 chars/line).
+  - **🌐 Untranslated:** Cues containing leftover English letters, Latin tokens, or failed translations.
+  - **💬 Dialogue:** Subtitle cues containing conversation dashes (`-`, `—`, `–`).
+- **Row-Level Action Buttons:**
+  - **🔄 Retranslate Single Line:** 1-click on-demand retranslation of any individual cue using the full multi-API failover engine without needing to reprocess the entire file.
+  - **✨ Polish Kurdish Line:** 1-click automated linguistic correction applying Sorani orthography, verbal prefix rejoining (`دە-`, `نا-`), and heavy consonant normalization (`ڕ`, `ڵ`).
 - **Bi-Directional Synchronization:** Editing any cue immediately reflects on the live player screen and updates the output download payload.
 - **Real-Time Filter & Search:** Search across dialogue lines, cue indices, or timestamps with match counts and <kbd>Enter</kbd> / <kbd>Shift+Enter</kbd> navigation.
 - **Undo / Redo Stack:** Multi-step historical state management with standard shortcut support (<kbd>Ctrl+Z</kbd> / <kbd>Ctrl+Y</kbd>).
+- **Safe HTML & ASS Text Rendering:** High-fidelity sanitized rendering of subtitle styling tags (`<i>`, `<b>`, `<u>`, color codes, and linebreaks) on the preview player screen.
 
 ---
 

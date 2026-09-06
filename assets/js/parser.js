@@ -428,7 +428,7 @@ Style: Top,Noto Naskh Arabic,44,16777215,65535,0,0,-1,0,1,3.2,1.8,8,40,40,35,0,1
     return res.trim();
   }
 
-  function normalizeTextForASS(text) {
+  function normalizeTextForASS(text, settings = '', rawText = '') {
     if (!text) return '';
     let res = String(text)
       .replace(/\r\n/g, '\n')
@@ -442,7 +442,67 @@ Style: Top,Noto Naskh Arabic,44,16777215,65535,0,0,-1,0,1,3.2,1.8,8,40,40,35,0,1
         return `{\\c&H${b}${g}${r}&}${inner}{\\c}`;
       })
       .replace(/<[^>]+>/g, ''); // strip any remaining non-supported HTML tags
+
+    // Preserve or synthesize placement override if converting from WebVTT or top-aligned cues
+    const combined = `${settings} ${rawText} ${text}`;
+    const hasExistingAlign = /\{\\a(?:n\d+|\d+)\}/i.test(res);
+    if (!hasExistingAlign) {
+      const isTop = /line:(?:0|1|2|3|4|5|10|15|20)%/i.test(settings) || /line:[0-3]\b/i.test(settings) || /<top>/i.test(combined) || /\{\\an[789]\}/i.test(rawText);
+      const isMid = /line:(?:40|45|50|55|60)%/i.test(settings) || /<mid>/i.test(combined) || /\{\\an[456]\}/i.test(rawText);
+      const isLeft = /align:(?:left|start)/i.test(settings);
+      const isRight = /align:(?:right|end)/i.test(settings);
+
+      if (isTop) {
+        const alignTag = isLeft ? '{\\an7}' : (isRight ? '{\\an9}' : '{\\an8}');
+        res = alignTag + res;
+      } else if (isMid) {
+        const alignTag = isLeft ? '{\\an4}' : (isRight ? '{\\an6}' : '{\\an5}');
+        res = alignTag + res;
+      } else if (isLeft) {
+        res = '{\\an1}' + res;
+      } else if (isRight) {
+        res = '{\\an3}' + res;
+      }
+    }
+
     return res.replace(/\n/g, '\\N');
+  }
+
+  function normalizeTextForSUB(text) {
+    if (!text) return '';
+    let res = String(text)
+      .replace(/\\N/gi, '|')
+      .replace(/\\n/gi, '|')
+      .replace(/\r\n/g, '|')
+      .replace(/\r/g, '|')
+      .replace(/\n/g, '|');
+
+    // Convert HTML tags to MicroDVD syntax codes
+    res = res
+      .replace(/<i>([\s\S]*?)<\/i>/gi, '{y:i}$1')
+      .replace(/<b>([\s\S]*?)<\/b>/gi, '{y:b}$1')
+      .replace(/<u>([\s\S]*?)<\/u>/gi, '{y:u}$1')
+      .replace(/<font\s+color=["']#?([0-9a-fA-F]{2})([0-9a-fA-F]{2})([0-9a-fA-F]{2})["']>([\s\S]*?)<\/font>/gi, (m, r, g, b, inner) => {
+        return `{c:$${b}${g}${r}}${inner}`;
+      })
+      .replace(/<[^>]+>/g, '');
+
+    return res.trim();
+  }
+
+  function normalizeTextForSAMI(text) {
+    if (!text) return '';
+    let s = normalizeTextForStandard(text, true);
+    // Protect supported HTML tags (i, b, u, font), escape the rest
+    const supported = [];
+    s = s.replace(/<\/?(?:i|b|u|font\b[^>]*)\/?>/gi, (tag) => {
+      const idx = supported.length;
+      supported.push(tag);
+      return `___SAMI_TAG_${idx}___`;
+    });
+    s = escapeXml(s);
+    s = s.replace(/___SAMI_TAG_(\d+)___/g, (_, idx) => supported[parseInt(idx, 10)] || '');
+    return s.replace(/\n/g, '<br>');
   }
 
   function serialize(parsedOrFormat, cues) {
@@ -460,10 +520,15 @@ Style: Top,Noto Naskh Arabic,44,16777215,65535,0,0,-1,0,1,3.2,1.8,8,40,40,35,0,1
       case 'vtt': {
         const header = 'WEBVTT\n\nSTYLE\n::cue {\n  font-family: \'Noto Naskh Arabic\', \'Vazirmatn\', \'Noto Sans Arabic\', \'Segoe UI\', Tahoma, sans-serif;\n  font-size: 100%;\n}\n\n';
         const body = cueList.map((c) => {
-          let s = c.settings ? ' ' + c.settings : '';
+          let s = c.settings ? ' ' + c.settings.trim() : '';
           const raw = String(c.rawText || c.text || '');
-          if (!s && (/\{\\an[789]\}/i.test(raw) || /\{\\a[567]\}/i.test(raw) || /<top>/i.test(raw))) {
-            s = ' line:10% position:50% align:center';
+          if (!s) {
+            const placement = getPlacementZone(c);
+            if (placement === 'top') {
+              s = ' line:10% position:50% align:center';
+            } else if (placement === 'mid') {
+              s = ' line:50% position:50% align:center';
+            }
           }
           return `${fmtVTT(c.start)} --> ${fmtVTT(c.end)}${s}\n${normalizeTextForStandard(c.text)}`;
         }).join('\n\n') + '\n';
@@ -477,12 +542,12 @@ Style: Top,Noto Naskh Arabic,44,16777215,65535,0,0,-1,0,1,3.2,1.8,8,40,40,35,0,1
       case 'sub': {
         const fps = (parsed.meta && parsed.meta.fps) || 23.976;
         const frame = (ms) => Math.round((ms / 1000) * fps);
-        const body = cueList.map((c) => `{${frame(c.start)}}{${frame(c.end)}}${normalizeTextForStandard(c.text).replace(/\n/g, '|')}`).join('\n');
+        const body = cueList.map((c) => `{${frame(c.start)}}{${frame(c.end)}}${normalizeTextForSUB(c.text)}`).join('\n');
         return `{1}{1}${fps.toFixed(3)}\n${body}\n`;
       }
       case 'smi':
         return '<SAMI>\n<HEAD><TITLE>Kurdish Subtitles</TITLE>\n<STYLE TYPE="text/css">\n<!--\nP { font-family: \'Noto Naskh Arabic\', \'Vazirmatn\', \'Noto Sans Arabic\', sans-serif; font-size: 24pt; text-align: center; color: #FFFFFF; direction: rtl; }\n.KURD { Name: Kurdish; lang: ckb; SAMIType: CC; }\n-->\n</STYLE>\n</HEAD>\n<BODY>\n' +
-          cueList.map((c) => `<SYNC Start=${c.start}><P class=KURD>${escapeXml(normalizeTextForStandard(c.text)).replace(/\n/g, '<br>')}</P></SYNC>`).join('\n') +
+          cueList.map((c) => `<SYNC Start=${c.start}><P class=KURD>${normalizeTextForSAMI(c.text)}</P></SYNC>`).join('\n') +
           '\n</BODY>\n</SAMI>\n';
       case 'txt':
         return cueList.map((c) => normalizeTextForStandard(c.text)).join('\n\n') + '\n';
@@ -541,7 +606,7 @@ Style: Top,Noto Naskh Arabic,44,16777215,65535,0,0,-1,0,1,3.2,1.8,8,40,40,35,0,1
       order.forEach((f) => { val[f] = (c.extra && c.extra[f]) ?? ASS_FALLBACKS[f.toLowerCase()] ?? ''; });
       val[keyOf('start')] = fmtASS(c.start);
       val[keyOf('end')] = fmtASS(c.end);
-      val[keyOf('text')] = normalizeTextForASS(c.text);
+      val[keyOf('text')] = normalizeTextForASS(c.text, c.settings, c.rawText);
       lines.push(`Dialogue: ${order.map((f) => val[f]).join(',')}`);
     }
     return lines.join('\n') + '\n';

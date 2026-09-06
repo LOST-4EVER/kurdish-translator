@@ -655,6 +655,15 @@ select:focus { outline: none; border-color: var(--md-sys-color-primary); box-sha
   color: #f43f5e;
 }
 
+.refresh-item.github-sync-item svg {
+  color: #38bdf8;
+}
+
+.refresh-item.github-sync-item:hover {
+  background: rgba(56, 189, 248, 0.12);
+  color: #38bdf8;
+}
+
 .refresh-item .item-text {
   display: flex;
   flex-direction: column;

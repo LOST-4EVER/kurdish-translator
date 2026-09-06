@@ -298,6 +298,35 @@ const SubtitlePlayer = (() => {
     return { vAlign, hAlign };
   }
 
+  function formatSubtitleHtml(text) {
+    if (!text) return '';
+    let res = String(text)
+      .replace(/\\N/gi, '\n')
+      .replace(/\\n/gi, '\n')
+      .replace(/\\h/gi, ' ');
+    // Convert ASS inline tags to standard HTML tags
+    res = res
+      .replace(/\{\\i1\}/gi, '<i>').replace(/\{\\i0\}/gi, '</i>')
+      .replace(/\{\\b1\}/gi, '<b>').replace(/\{\\b0\}/gi, '</b>')
+      .replace(/\{\\u1\}/gi, '<u>').replace(/\{\\u0\}/gi, '</u>')
+      .replace(/\{\\(?:c|1c)&H([0-9a-fA-F]{2})([0-9a-fA-F]{2})([0-9a-fA-F]{2})&\}/gi, (_, b, g, r) => `<font color="#${r}${g}${b}">`)
+      .replace(/\{[^{}]*\}/g, ''); // strip remaining control tags
+
+    // Sanitize: protect allowed tags <i>, <b>, <u>, <font>, <br>
+    const tokens = [];
+    res = res.replace(/<\/?(?:i|b|u|font(?:\s+color=["']#[0-9a-fA-F]{3,6}["'])?|br)\s*\/?>/gi, (match) => {
+      const idx = tokens.length;
+      tokens.push(match);
+      return `___TAG_${idx}___`;
+    });
+    // Escape raw special characters
+    res = res.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    // Restore allowed tags
+    res = res.replace(/___TAG_(\d+)___/g, (_, idx) => tokens[parseInt(idx, 10)] || '');
+    // Convert newlines to <br> for clean multiline display
+    return res.replace(/\n/g, '<br>');
+  }
+
   function renderScreenCues(screenEl, activeList) {
     if (!screenEl) return;
 
@@ -338,26 +367,26 @@ const SubtitlePlayer = (() => {
       // Handle multiline with distinct tag placement (e.g. {\an8} on line 1, {\an2} on line 2)
       if (lines.length > 1 && (raw.includes('\\an') || raw.includes('\\a') || raw.includes('<top>'))) {
         lines.forEach((line, i) => {
-          const stripped = line.replace(/<[^>]+>/g, '').replace(/\{[^}]*\}/g, '').trim();
-          if (!stripped) return;
+          const plainText = line.replace(/<[^>]+>/g, '').replace(/\{[^}]*\}/g, '').trim();
+          if (!plainText) return;
           const placement = getCuePlacement(c, rawLines[i] || rawLines[0] || '');
           const span = document.createElement('span');
           span.className = 'screen-text';
-          span.textContent = stripped;
-          span.setAttribute('dir', hasArabic(stripped) ? 'rtl' : 'ltr');
+          span.innerHTML = formatSubtitleHtml(line);
+          span.setAttribute('dir', hasArabic(plainText) ? 'rtl' : 'ltr');
           span.style.textAlign = placement.hAlign;
 
           const targetZone = placement.vAlign === 'top' ? zoneTop : (placement.vAlign === 'mid' ? zoneMid : zoneBottom);
           targetZone.appendChild(span);
         });
       } else {
-        const stripped = clean.replace(/<[^>]+>/g, '').replace(/\{[^}]*\}/g, '').trim();
-        if (stripped) {
+        const plainText = clean.replace(/<[^>]+>/g, '').replace(/\{[^}]*\}/g, '').trim();
+        if (plainText) {
           const placement = getCuePlacement(c);
           const span = document.createElement('span');
           span.className = 'screen-text';
-          span.textContent = stripped;
-          span.setAttribute('dir', hasArabic(stripped) ? 'rtl' : 'ltr');
+          span.innerHTML = formatSubtitleHtml(clean);
+          span.setAttribute('dir', hasArabic(plainText) ? 'rtl' : 'ltr');
           span.style.textAlign = placement.hAlign;
 
           const targetZone = placement.vAlign === 'top' ? zoneTop : (placement.vAlign === 'mid' ? zoneMid : zoneBottom);
@@ -386,8 +415,7 @@ const SubtitlePlayer = (() => {
         const textEls = el.screen.querySelectorAll('.screen-text');
         textEls.forEach((t) => {
           t.classList.remove('caption-updated');
-          void t.offsetWidth;
-          t.classList.add('caption-updated');
+          requestAnimationFrame(() => t.classList.add('caption-updated'));
         });
       }
 
@@ -467,16 +495,18 @@ const SubtitlePlayer = (() => {
     if (!screenW || !screenH) return;
 
     const base = Math.round(Math.min(screenW * 0.052, screenH * 0.16));
-    let size = Math.max(14, Math.round(base * fontScale));
-    const maxH = Math.max(45, (screenH / Math.max(1, textEls.length)) * 0.85);
+    const targetSize = Math.max(14, Math.round(base * fontScale));
 
     textEls.forEach((t) => {
-      t.style.fontSize = `${size}px`;
-      let currentSize = size;
-      while (currentSize > 12 && (t.offsetHeight > maxH || t.scrollHeight > maxH + 10)) {
-        currentSize -= 1;
-        t.style.fontSize = `${currentSize}px`;
+      const textLen = (t.textContent || '').length;
+      const lineBreaks = ((t.textContent || '').match(/\n/g) || []).length + 1;
+      let size = targetSize;
+      if (lineBreaks > 2 || textLen > 70) {
+        size = Math.max(13, Math.round(targetSize * 0.82));
+      } else if (lineBreaks > 1 || textLen > 45) {
+        size = Math.max(14, Math.round(targetSize * 0.9));
       }
+      t.style.fontSize = `${size}px`;
     });
   }
 

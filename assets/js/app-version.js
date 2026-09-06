@@ -3,11 +3,12 @@
  * Exposes AppVersion as a global module.
  */
 const AppVersion = (() => {
-  const APP_VERSION = 'v110';
+  const APP_VERSION = 'v114';
   let isRefreshing = false;
   let hasShownUpdateNotice = false;
   let lastCheckedTimestamp = Date.now();
   let timeTickerInterval = null;
+  let latestGitHubMeta = null;
 
   function getElements() {
     return {
@@ -24,6 +25,7 @@ const AppVersion = (() => {
       updateBadgeDot: document.getElementById('updateBadgeDot'),
       btnQuickRefresh: document.getElementById('btnQuickRefresh'),
       btnForceRefresh: document.getElementById('btnForceRefresh'),
+      btnSyncGitHub: document.getElementById('btnSyncGitHub'),
       btnCheckUpdate: document.getElementById('btnCheckUpdate'),
       btnToggleChangelog: document.getElementById('btnToggleChangelog'),
       changelogPanel: document.getElementById('changelogPanel'),
@@ -263,11 +265,37 @@ const AppVersion = (() => {
   }
 
   /**
-   * Fetch the latest version published to GitHub Pages / repository.
+   * Fetch the latest version and commit info published to GitHub Pages / repository.
    */
   async function fetchLatestGitHubVersion() {
     if (!navigator.onLine) return null;
+
+    // 1. Check official GitHub API for the latest commit on the main branch
+    try {
+      const ctrl = new AbortController();
+      const tid = setTimeout(() => ctrl.abort(), 3500);
+      const res = await fetch('https://api.github.com/repos/LOST-4EVER/kurdish-translator/commits/main', {
+        headers: { 'Accept': 'application/vnd.github.v3+json' },
+        cache: 'no-store',
+        signal: ctrl.signal
+      });
+      clearTimeout(tid);
+      if (res.ok) {
+        const data = await res.json();
+        if (data && data.sha) {
+          latestGitHubMeta = {
+            sha: data.sha.slice(0, 7),
+            message: data.commit && data.commit.message ? data.commit.message.split('\n')[0] : '',
+            date: data.commit && data.commit.committer ? data.commit.committer.date : '',
+            url: data.html_url || 'https://github.com/LOST-4EVER/kurdish-translator'
+          };
+        }
+      }
+    } catch {}
+
+    // 2. Scan remote files for versioning tag
     const endpoints = [
+      'https://raw.githubusercontent.com/LOST-4EVER/kurdish-translator/main/assets/js/app-version.js?_t=' + Date.now(),
       'https://lost-4ever.github.io/kurdish-translator/sw.js?_t=' + Date.now(),
       'https://raw.githubusercontent.com/LOST-4EVER/kurdish-translator/main/sw.js?_t=' + Date.now()
     ];
@@ -280,7 +308,8 @@ const AppVersion = (() => {
         clearTimeout(tid);
         if (!res.ok) continue;
         const text = await res.text();
-        const match = text.match(/const\s+CACHE\s*=\s*['"](?:kurdish-translator-)?v?(\d+)['"]/i)
+        const match = text.match(/APP_VERSION\s*=\s*['"](?:v)?(\d+)['"]/i)
+          || text.match(/const\s+CACHE\s*=\s*['"](?:kurdish-translator-)?v?(\d+)['"]/i)
           || text.match(/CACHE\s*=\s*['"]([^'"]+)['"]/);
         if (match) {
           const vNum = parseInt(match[1], 10);
@@ -289,6 +318,48 @@ const AppVersion = (() => {
       } catch {}
     }
     return null;
+  }
+
+  /**
+   * Sync application directly with GitHub, purging local caches and reloading.
+   */
+  async function syncWithGitHub() {
+    const els = getElements();
+    if (els.refreshMenu) els.refreshMenu.classList.add('hidden');
+    if (typeof Toast !== 'undefined') {
+      Toast.show(getI18nText('syncingGitHub', 'Connecting to GitHub repository...'), 'info', 3000);
+    }
+
+    try {
+      const ghVer = await fetchLatestGitHubVersion();
+      let statusMsg = '';
+      if (latestGitHubMeta && latestGitHubMeta.sha) {
+        statusMsg = `GitHub (${latestGitHubMeta.sha}): ${latestGitHubMeta.message || 'Latest commit'}`;
+      } else if (ghVer) {
+        statusMsg = `GitHub release: ${ghVer}`;
+      }
+
+      if ('caches' in window) {
+        const keys = await caches.keys();
+        await Promise.all(keys.map((k) => caches.delete(k)));
+      }
+      if ('serviceWorker' in navigator) {
+        const registrations = await navigator.serviceWorker.getRegistrations();
+        await Promise.all(registrations.map((r) => r.unregister()));
+      }
+
+      if (typeof Toast !== 'undefined') {
+        Toast.show(statusMsg || getI18nText('syncComplete', 'Synced with GitHub! Reloading...'), 'success', 3500);
+      }
+
+      setTimeout(() => {
+        const targetUrl = new URL(window.location.href);
+        targetUrl.searchParams.set('_gh_sync', Date.now().toString());
+        window.location.href = targetUrl.toString();
+      }, 600);
+    } catch (err) {
+      performForceRefresh('Updating and purging cache...');
+    }
   }
 
   /**
@@ -495,6 +566,12 @@ const AppVersion = (() => {
       });
     }
 
+    if (els.btnSyncGitHub) {
+      els.btnSyncGitHub.addEventListener('click', () => {
+        syncWithGitHub();
+      });
+    }
+
     if (els.btnCheckUpdate) {
       els.btnCheckUpdate.addEventListener('click', () => {
         checkForAppUpdates(true);
@@ -538,6 +615,8 @@ const AppVersion = (() => {
     init,
     checkForAppUpdates,
     fetchLatestGitHubVersion,
+    syncWithGitHub,
+    getGitHubMeta: () => latestGitHubMeta,
     performQuickRefresh,
     performForceRefresh,
   };

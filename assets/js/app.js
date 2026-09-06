@@ -73,6 +73,12 @@
     installBtn: '#installBtn',
     toast: '#toast',
     editorList: '#editorList', editorStatus: '#editorStatus',
+    edDetectionBar: '#edDetectionBar',
+    edFilterAll: '#edFilterAll', edFilterWarnings: '#edFilterWarnings',
+    edFilterUntrans: '#edFilterUntrans', edFilterDialogue: '#edFilterDialogue',
+    edBadgeAll: '#edBadgeAll', edBadgeWarnings: '#edBadgeWarnings',
+    edBadgeUntrans: '#edBadgeUntrans', edBadgeDialogue: '#edBadgeDialogue',
+    edAvgCpsVal: '#edAvgCpsVal', edDialogueVal: '#edDialogueVal',
     edSearchInput: '#edSearchInput', edSearchCount: '#edSearchCount', edSearchClearBtn: '#edSearchClearBtn',
     edSearchNav: '#edSearchNav', edSearchPrevBtn: '#edSearchPrevBtn', edSearchNextBtn: '#edSearchNextBtn',
     edCount: '#edCount', undoBtn: '#undoBtn', redoBtn: '#redoBtn',
@@ -602,6 +608,152 @@
       : 'Synced with the preview — edits apply live';
   }
 
+  // ---------- Line-by-Line Detection & Inspector Engine ----------
+
+  function inspectCue(cue, textOverride) {
+    const text = textOverride !== undefined ? textOverride : (cue.text || '');
+    const clean = text.replace(/<[^>]+>/g, '').replace(/\{[^}]*\}/g, '').trim();
+    const duration = Math.max(0.1, ((cue.end || 0) - (cue.start || 0)) / 1000);
+    const chars = clean.length;
+    const cps = duration > 0 ? (chars / duration) : 0;
+    const lines = clean.split(/\r?\n/);
+    const lineCount = lines.length;
+    const maxLineLen = lines.reduce((m, l) => Math.max(m, l.trim().length), 0);
+
+    const isFast = cps > 22;
+    const isVeryFast = cps > 26;
+    const isTooShort = duration < 0.6;
+    const isTooLong = duration > 8.0;
+    const isLongLine = maxLineLen > 42;
+    const hasUntranslated = /\b[a-zA-Z]{3,}\b/.test(clean);
+    const hasArabicLetters = /[\u0643\u064A\u0649\u0629]/.test(clean);
+    const isDialogue = lines.some((l) => l.trim().startsWith('- ') || l.trim().startsWith('– ')) || clean.includes('\n- ');
+    const hasWarning = isFast || isTooShort || isTooLong || isLongLine || hasUntranslated || hasArabicLetters;
+
+    return {
+      duration,
+      chars,
+      cps,
+      lineCount,
+      maxLineLen,
+      isFast,
+      isVeryFast,
+      isTooShort,
+      isTooLong,
+      isLongLine,
+      hasUntranslated,
+      hasArabicLetters,
+      isDialogue,
+      hasWarning,
+    };
+  }
+
+  function updateRowToolbar(row, cue, textOverride) {
+    if (!row) return;
+    const insp = inspectCue(cue, textOverride);
+    row.dataset.hasWarning = insp.hasWarning ? 'true' : 'false';
+    row.dataset.isDialogue = insp.isDialogue ? 'true' : 'false';
+    row.dataset.hasUntranslated = insp.hasUntranslated ? 'true' : 'false';
+
+    const durPill = row.querySelector('.ed-dur-pill');
+    if (durPill) durPill.textContent = `${insp.duration.toFixed(1)}s`;
+
+    const cpsPill = row.querySelector('.ed-cps-pill');
+    if (cpsPill) {
+      cpsPill.textContent = `${insp.cps.toFixed(1)} CPS`;
+      cpsPill.className = `ed-metric-pill ed-cps-pill ${insp.cps > 22 ? 'ed-cps-fast' : (insp.cps > 18 ? 'ed-cps-amber' : 'ed-cps-normal')}`;
+    }
+
+    const charsPill = row.querySelector('.ed-chars-pill');
+    if (charsPill) charsPill.textContent = `${insp.chars} ch · ${insp.lineCount}L`;
+
+    const metrics = row.querySelector('.ed-cue-metrics');
+    if (metrics) {
+      metrics.querySelectorAll('.ed-issue-pill').forEach((p) => p.remove());
+
+      if (insp.isFast) {
+        const p = document.createElement('span');
+        p.className = 'ed-issue-pill ed-issue-fast';
+        p.textContent = currentUiLang === 'ckb' ? '⚠️ خێرا' : '⚠️ Fast';
+        metrics.appendChild(p);
+      }
+      if (insp.isLongLine) {
+        const p = document.createElement('span');
+        p.className = 'ed-issue-pill ed-issue-long';
+        p.textContent = currentUiLang === 'ckb' ? '⚠️ دێڕی درێژ' : '⚠️ Long line';
+        metrics.appendChild(p);
+      }
+      if (insp.hasUntranslated) {
+        const p = document.createElement('span');
+        p.className = 'ed-issue-pill ed-issue-untrans';
+        p.textContent = currentUiLang === 'ckb' ? '🔤 ئینگلیزی' : '🔤 Untranslated';
+        metrics.appendChild(p);
+      }
+      if (insp.isDialogue) {
+        const p = document.createElement('span');
+        p.className = 'ed-issue-pill ed-issue-dialogue';
+        p.textContent = currentUiLang === 'ckb' ? '👥 وتووێژ' : '👥 Dialogue';
+        metrics.appendChild(p);
+      }
+    }
+  }
+
+  function updateDetectionSummary() {
+    if (!workCues || !workCues.length) {
+      if (els.edBadgeAll) els.edBadgeAll.textContent = '0';
+      if (els.edBadgeWarnings) els.edBadgeWarnings.textContent = '0';
+      if (els.edBadgeUntrans) els.edBadgeUntrans.textContent = '0';
+      if (els.edBadgeDialogue) els.edBadgeDialogue.textContent = '0';
+      if (els.edAvgCpsVal) els.edAvgCpsVal.textContent = '0';
+      if (els.edDialogueVal) els.edDialogueVal.textContent = '0';
+      return;
+    }
+
+    let warningCount = 0;
+    let untransCount = 0;
+    let dialogueCount = 0;
+    let totalCps = 0;
+
+    workCues.forEach((c) => {
+      const insp = inspectCue(c);
+      if (insp.hasWarning) warningCount++;
+      if (insp.hasUntranslated) untransCount++;
+      if (insp.isDialogue) dialogueCount++;
+      totalCps += insp.cps;
+    });
+
+    const avgCps = (totalCps / workCues.length).toFixed(1);
+    const useKurdishDigits = currentUiLang === 'ckb' || (els.kurdishDigitsToggle && els.kurdishDigitsToggle.checked);
+    const fmt = (val) => useKurdishDigits && typeof Translator !== 'undefined' ? Translator.normalizeDigits(String(val)) : String(val);
+
+    if (els.edBadgeAll) els.edBadgeAll.textContent = fmt(workCues.length);
+    if (els.edBadgeWarnings) els.edBadgeWarnings.textContent = fmt(warningCount);
+    if (els.edBadgeUntrans) els.edBadgeUntrans.textContent = fmt(untransCount);
+    if (els.edBadgeDialogue) els.edBadgeDialogue.textContent = fmt(dialogueCount);
+    if (els.edAvgCpsVal) els.edAvgCpsVal.textContent = fmt(avgCps);
+    if (els.edDialogueVal) els.edDialogueVal.textContent = fmt(dialogueCount);
+  }
+
+  let detectionSummaryTimer = null;
+  function updateDetectionSummaryDebounced() {
+    clearTimeout(detectionSummaryTimer);
+    detectionSummaryTimer = setTimeout(updateDetectionSummary, 250);
+  }
+
+  let activeCategoryFilter = 'all';
+
+  function setCategoryFilter(filterName) {
+    activeCategoryFilter = filterName;
+    const chips = [els.edFilterAll, els.edFilterWarnings, els.edFilterUntrans, els.edFilterDialogue];
+    chips.forEach((chip) => {
+      if (!chip) return;
+      const match = chip.dataset.filter === filterName;
+      chip.classList.toggle('active', match);
+      chip.setAttribute('aria-selected', match ? 'true' : 'false');
+    });
+    filterEditor();
+  }
+
   function buildEditor() {
     const list = els.editorList;
     if (!list) return;
@@ -619,6 +771,7 @@
       empty.textContent = 'Load a subtitle file to edit it here.';
       list.appendChild(empty);
       if (els.edCount) els.edCount.textContent = '';
+      updateDetectionSummary();
       return;
     }
     if (els.edCount) els.edCount.textContent = `· ${workCues.length}`;
@@ -631,6 +784,11 @@
       row.className = 'ed-row';
       row.dataset.index = i;
       rows[i] = row;
+
+      const insp = inspectCue(c);
+      row.dataset.hasWarning = insp.hasWarning ? 'true' : 'false';
+      row.dataset.isDialogue = insp.isDialogue ? 'true' : 'false';
+      row.dataset.hasUntranslated = insp.hasUntranslated ? 'true' : 'false';
 
       const meta = document.createElement('div');
       meta.className = 'ed-meta';
@@ -684,10 +842,84 @@
       const input = document.createElement('textarea');
       input.className = 'ed-input';
       input.value = displayText(c.text);
+      input.rows = Math.min(6, Math.max(1, (input.value.match(/\n/g) || []).length + 1));
       input.setAttribute('dir', dirFor(input.value));
       input.setAttribute('aria-label', `Cue ${i + 1} text`);
+      input.addEventListener('input', () => autoGrow(input));
       inputs[i] = input;
       body.appendChild(input);
+
+      // Line Inspector Toolbar
+      const toolbar = document.createElement('div');
+      toolbar.className = 'ed-cue-toolbar';
+
+      const metrics = document.createElement('div');
+      metrics.className = 'ed-cue-metrics';
+
+      const durPill = document.createElement('span');
+      durPill.className = 'ed-metric-pill ed-dur-pill';
+      durPill.textContent = `${insp.duration.toFixed(1)}s`;
+
+      const cpsPill = document.createElement('span');
+      cpsPill.className = `ed-metric-pill ed-cps-pill ${insp.cps > 22 ? 'ed-cps-fast' : (insp.cps > 18 ? 'ed-cps-amber' : 'ed-cps-normal')}`;
+      cpsPill.textContent = `${insp.cps.toFixed(1)} CPS`;
+
+      const charsPill = document.createElement('span');
+      charsPill.className = 'ed-metric-pill ed-chars-pill';
+      charsPill.textContent = `${insp.chars} ch · ${insp.lineCount}L`;
+
+      metrics.appendChild(durPill);
+      metrics.appendChild(cpsPill);
+      metrics.appendChild(charsPill);
+
+      if (insp.isFast) {
+        const p = document.createElement('span');
+        p.className = 'ed-issue-pill ed-issue-fast';
+        p.textContent = currentUiLang === 'ckb' ? '⚠️ خێرا' : '⚠️ Fast';
+        metrics.appendChild(p);
+      }
+      if (insp.isLongLine) {
+        const p = document.createElement('span');
+        p.className = 'ed-issue-pill ed-issue-long';
+        p.textContent = currentUiLang === 'ckb' ? '⚠️ دێڕی درێژ' : '⚠️ Long line';
+        metrics.appendChild(p);
+      }
+      if (insp.hasUntranslated) {
+        const p = document.createElement('span');
+        p.className = 'ed-issue-pill ed-issue-untrans';
+        p.textContent = currentUiLang === 'ckb' ? '🔤 ئینگلیزی' : '🔤 Untranslated';
+        metrics.appendChild(p);
+      }
+      if (insp.isDialogue) {
+        const p = document.createElement('span');
+        p.className = 'ed-issue-pill ed-issue-dialogue';
+        p.textContent = currentUiLang === 'ckb' ? '👥 وتووێژ' : '👥 Dialogue';
+        metrics.appendChild(p);
+      }
+
+      const actions = document.createElement('div');
+      actions.className = 'ed-cue-actions';
+
+      const retransBtn = document.createElement('button');
+      retransBtn.type = 'button';
+      retransBtn.className = 'ed-row-action-btn ed-retrans-btn';
+      retransBtn.title = currentUiLang === 'ckb' ? 'وەرگێڕانەوەی ئەم دێڕە' : 'Retranslate this line';
+      retransBtn.setAttribute('aria-label', 'Retranslate line');
+      retransBtn.innerHTML = `<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon></svg><span>${currentUiLang === 'ckb' ? 'وەرگێڕانەوە' : 'Retranslate'}</span>`;
+
+      const polishBtn = document.createElement('button');
+      polishBtn.type = 'button';
+      polishBtn.className = 'ed-row-action-btn ed-polish-btn';
+      polishBtn.title = currentUiLang === 'ckb' ? 'ڕێکخستنی کوردی ئەم دێڕە' : 'Polish Kurdish';
+      polishBtn.setAttribute('aria-label', 'Polish Kurdish');
+      polishBtn.innerHTML = `<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"></path></svg><span>${currentUiLang === 'ckb' ? 'ڕێکخستن' : 'Polish'}</span>`;
+
+      actions.appendChild(retransBtn);
+      actions.appendChild(polishBtn);
+
+      toolbar.appendChild(metrics);
+      toolbar.appendChild(actions);
+      body.appendChild(toolbar);
 
       row.appendChild(body);
       frag.appendChild(row);
@@ -697,25 +929,25 @@
     if (editorObserver) {
       editorObserver.disconnect();
     }
-    editorObserver = new IntersectionObserver((entries) => {
-      entries.forEach((entry) => {
-        if (entry.isIntersecting) {
-          const input = entry.target;
-          autoGrow(input);
-          editorObserver.unobserve(input);
-        }
+    // Only use IntersectionObserver on a small set of initially visible cues to keep UI snappy
+    if (inputs.length <= 150) {
+      editorObserver = new IntersectionObserver((entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) {
+            autoGrow(entry.target);
+            editorObserver.unobserve(entry.target);
+          }
+        });
+      }, {
+        root: els.editorList,
+        rootMargin: '100px',
       });
-    }, {
-      root: els.editorList,
-      rootMargin: '100px',
-    });
-
-    inputs.forEach((input) => {
-      editorObserver.observe(input);
-    });
+      inputs.forEach((input) => editorObserver.observe(input));
+    }
 
     rowEls = rows;
     lastActiveRow = null;
+    updateDetectionSummary();
     if (els.edSearchInput && els.edSearchInput.value.trim()) {
       filterEditor();
     }
@@ -799,9 +1031,13 @@
       if (nav) nav.classList.add('hidden');
       if (rowEls) {
         rowEls.forEach((row) => {
-          if (row) {
-            row.classList.remove('search-hidden', 'search-matched', 'search-current-match');
-          }
+          if (!row) return;
+          let matchesCategory = true;
+          if (activeCategoryFilter === 'warnings') matchesCategory = row.dataset.hasWarning === 'true';
+          else if (activeCategoryFilter === 'untranslated') matchesCategory = row.dataset.hasUntranslated === 'true';
+          else if (activeCategoryFilter === 'dialogue') matchesCategory = row.dataset.isDialogue === 'true';
+          row.classList.remove('search-hidden', 'search-matched', 'search-current-match');
+          row.classList.toggle('filter-hidden', !matchesCategory);
         });
       }
       return;
@@ -828,7 +1064,7 @@
         const time = `${SubParser.fmtSRT(cue.start)} ${SubParser.fmtSRT(cue.end)}`.toLowerCase();
         const cueNum = String(i + 1);
 
-        const matches =
+        const matchesQuery =
           normText.includes(normQuery) ||
           lowerText.includes(lowerQuery) ||
           time.includes(normQuery) ||
@@ -836,12 +1072,17 @@
           cueNum === rawQuery ||
           `#${cueNum}` === rawQuery;
 
-        if (matches) {
+        let matchesCategory = true;
+        if (activeCategoryFilter === 'warnings') matchesCategory = row.dataset.hasWarning === 'true';
+        else if (activeCategoryFilter === 'untranslated') matchesCategory = row.dataset.hasUntranslated === 'true';
+        else if (activeCategoryFilter === 'dialogue') matchesCategory = row.dataset.isDialogue === 'true';
+
+        if (matchesQuery && matchesCategory) {
           searchMatchIndices.push(i);
-          row.classList.remove('search-hidden');
+          row.classList.remove('search-hidden', 'filter-hidden');
           row.classList.add('search-matched');
         } else {
-          row.classList.add('search-hidden');
+          row.classList.add(!matchesCategory ? 'filter-hidden' : 'search-hidden');
           row.classList.remove('search-matched', 'search-current-match');
         }
       });
@@ -862,10 +1103,12 @@
     if (!list || !row) return;
     if (userIsScrolling) return;
     if (els.syncVideoToggle && !els.syncVideoToggle.checked) return;
-    const r = row.getBoundingClientRect();
-    const b = list.getBoundingClientRect();
-    if (r.top < b.top + 8 || r.bottom > b.bottom - 8) {
-      row.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    const rowTop = row.offsetTop;
+    const rowBottom = rowTop + row.offsetHeight;
+    const viewTop = list.scrollTop;
+    const viewBottom = viewTop + list.clientHeight;
+    if (rowTop < viewTop + 12 || rowBottom > viewBottom - 12) {
+      list.scrollTo({ top: Math.max(0, rowTop - 60), behavior: 'auto' });
     }
   }
 
@@ -1510,6 +1753,10 @@
         const i = parseInt(row.dataset.index, 10);
         autoGrow(input);
         applyCueEdit(i, input.value);
+        if (workCues && workCues[i]) {
+          updateRowToolbar(row, workCues[i], input.value);
+          updateDetectionSummaryDebounced();
+        }
       });
 
       els.editorList.addEventListener('focusin', (e) => {
@@ -1555,6 +1802,109 @@
       }, { passive: true });
 
       els.editorList.addEventListener('click', (e) => {
+        const retransBtn = e.target.closest('.ed-retrans-btn');
+        if (retransBtn) {
+          e.stopPropagation();
+          if (retransBtn.classList.contains('loading')) return;
+          const row = retransBtn.closest('.ed-row');
+          if (!row) return;
+          const i = parseInt(row.dataset.index, 10);
+          const c = workCues && workCues[i];
+          if (!c) return;
+
+          const sourceText = c.origText || c.text || '';
+          if (!sourceText.trim()) return;
+
+          retransBtn.classList.add('loading');
+          const srcLang = els.srcLang ? els.srcLang.value : 'auto';
+
+          if (typeof Translator !== 'undefined' && typeof Translator.translateSingleLine === 'function') {
+            Translator.translateSingleLine(sourceText, srcLang, 'ckb')
+              .then((newText) => {
+                if (newText) {
+                  c.text = newText;
+                  const input = row.querySelector('.ed-input');
+                  if (input) {
+                    input.value = displayText(newText);
+                    autoGrow(input);
+                  }
+                  if (typeof SubtitlePlayer !== 'undefined' && typeof SubtitlePlayer.updateText === 'function') {
+                    SubtitlePlayer.updateText(i, newText);
+                  }
+                  applyCueEdit(i, newText);
+                  pushUndoState();
+                  updateRowToolbar(row, c, newText);
+                  updateDetectionSummary();
+                  if (typeof Toast !== 'undefined') {
+                    Toast.show(
+                      currentUiLang === 'ckb' ? 'دێڕەکە بە سەرکەوتوویی وەرگێڕدرایەوە!' : 'Line retranslated successfully!',
+                      'success'
+                    );
+                  }
+                }
+              })
+              .catch(() => {
+                if (typeof Toast !== 'undefined') {
+                  Toast.show(
+                    currentUiLang === 'ckb' ? 'هەڵە لە وەرگێڕانەوەی دێڕەکە.' : 'Failed to retranslate line.',
+                    'error'
+                  );
+                }
+              })
+              .finally(() => {
+                retransBtn.classList.remove('loading');
+              });
+          }
+          return;
+        }
+
+        const polishBtn = e.target.closest('.ed-polish-btn');
+        if (polishBtn) {
+          e.stopPropagation();
+          const row = polishBtn.closest('.ed-row');
+          if (!row) return;
+          const i = parseInt(row.dataset.index, 10);
+          const c = workCues && workCues[i];
+          if (!c) return;
+
+          const currentVal = c.text || '';
+          const polished = typeof TranslatorOrthography !== 'undefined' && typeof TranslatorOrthography.postprocessSorani === 'function'
+            ? TranslatorOrthography.postprocessSorani(currentVal)
+            : (typeof Translator !== 'undefined' && typeof Translator.postprocessSorani === 'function'
+              ? Translator.postprocessSorani(currentVal)
+              : currentVal);
+
+          if (polished !== currentVal) {
+            c.text = polished;
+            const input = row.querySelector('.ed-input');
+            if (input) {
+              input.value = displayText(polished);
+              autoGrow(input);
+            }
+            if (typeof SubtitlePlayer !== 'undefined' && typeof SubtitlePlayer.updateText === 'function') {
+              SubtitlePlayer.updateText(i, polished);
+            }
+            applyCueEdit(i, polished);
+            pushUndoState();
+            updateRowToolbar(row, c, polished);
+            updateDetectionSummary();
+            if (typeof Toast !== 'undefined') {
+              Toast.show(
+                currentUiLang === 'ckb' ? 'ڕێنووسی کوردی دێڕەکە چاککرا!' : 'Line Kurdish polished!',
+                'success'
+              );
+            }
+          } else {
+            if (typeof Toast !== 'undefined') {
+              Toast.show(
+                currentUiLang === 'ckb' ? 'دێڕەکە پاک و ڕێکخراوە و کێشەی نییە.' : 'Line is already clean.',
+                'info'
+              );
+            }
+          }
+          return;
+        }
+
         const copyBtn = e.target.closest('.ed-orig-copy-btn');
         if (copyBtn) {
           e.stopPropagation();
@@ -1575,7 +1925,7 @@
           return;
         }
 
-        if (e.target.closest('.ed-input')) return;
+        if (e.target.closest('.ed-input') || e.target.closest('.ed-cue-toolbar')) return;
         const row = e.target.closest('.ed-row');
         if (!row) return;
         const i = parseInt(row.dataset.index, 10);
@@ -1597,11 +1947,30 @@
       });
     }
 
+    [
+      { el: els.edFilterAll, filter: 'all' },
+      { el: els.edFilterWarnings, filter: 'warnings' },
+      { el: els.edFilterUntrans, filter: 'untranslated' },
+      { el: els.edFilterDialogue, filter: 'dialogue' },
+    ].forEach(({ el, filter }) => {
+      if (el) {
+        el.addEventListener('click', () => setCategoryFilter(filter));
+      }
+    });
+
     if (els.edSearchInput) {
-      els.edSearchInput.addEventListener('input', filterEditor);
+      let searchDebounceTimer = null;
+      els.edSearchInput.addEventListener('input', () => {
+        if (searchDebounceTimer) clearTimeout(searchDebounceTimer);
+        searchDebounceTimer = setTimeout(filterEditor, 120);
+      });
       els.edSearchInput.addEventListener('keydown', (e) => {
         if (e.key === 'Enter') {
           e.preventDefault();
+          if (searchDebounceTimer) {
+            clearTimeout(searchDebounceTimer);
+            filterEditor();
+          }
           if (e.shiftKey) {
             prevSearchMatch();
           } else {
@@ -1609,6 +1978,7 @@
           }
         } else if (e.key === 'Escape') {
           e.preventDefault();
+          if (searchDebounceTimer) clearTimeout(searchDebounceTimer);
           els.edSearchInput.value = '';
           filterEditor();
           els.edSearchInput.blur();

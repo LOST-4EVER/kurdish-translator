@@ -6,7 +6,7 @@
  * (Google's endpoint), so offline mode lets you load files and use the
  * preview player, but translating requires a connection.
  */
-const CACHE = 'kurdish-translator-v111';
+const CACHE = 'kurdish-translator-v114';
 const SHARED_CACHE = 'kurdish-shared-file';
 
 const ASSETS = [
@@ -113,6 +113,9 @@ self.addEventListener('fetch', (event) => {
 
   // Only handle GET.
   if (event.request.method !== 'GET') return;
+
+  // Never cache or intercept dynamic backend API proxy requests.
+  if (url.pathname.startsWith('/api/')) return;
 
   // Endpoint to retrieve shared subtitle payload
   if (url.pathname.endsWith('/shared-subtitle-data') || url.searchParams.has('get_shared')) {

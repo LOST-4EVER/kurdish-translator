@@ -127,10 +127,11 @@ const Translator = (() => {
       const origLine = origLines[i] || origLines[0] || '';
       let line = tLine;
 
+      // Preserve leading formatting and position tags: ASS, MicroDVD ({y:i}), HTML (<font>)
       const leadTagMatch = origLine.match(/^((?:\{[^}]+\}|<[^>]+>\s*)+)/);
       if (leadTagMatch) {
         const leadTags = leadTagMatch[1].trim();
-        if (/^\{[^{}]*\\(?:an?\d|pos|move|fad|org|c&|1c&|3c&|4c&|fn|fs|b\d|i\d|shad|bord)[^{}]*\}/i.test(leadTags) || /^<(?:top|font\b)/i.test(leadTags)) {
+        if (/^\{[^{}]*(?:\\(?:an?\d|pos|move|fad|org|c&|1c&|3c&|4c&|fn|fs|b\d|i\d|shad|bord)|y:[ibusc]|c:\$|P:\d+)[^{}]*\}/i.test(leadTags) || /^<(?:top|font\b|i\b|b\b)/i.test(leadTags)) {
           if (!line.startsWith(leadTags)) {
             let stripped = line;
             const escaped = leadTags.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
@@ -140,6 +141,7 @@ const Translator = (() => {
         }
       }
 
+      // Preserve trailing tags: HTML closing tags </font>, </i>, </b>
       const trailTagMatch = origLine.match(/((?:<\/[a-z0-9]+>\s*)+)$/i);
       if (trailTagMatch) {
         const trailTags = trailTagMatch[1].trim();
@@ -150,6 +152,19 @@ const Translator = (() => {
           line = (stripped ? stripped + ' ' : '') + trailTags;
         }
       }
+
+      // Multi-speaker dialogue dash preservation: if original started with a dash, ensure translated line does too
+      const origTrim = origLine.trim();
+      if (/^[-—–]\s+/.test(origTrim) || origTrim.startsWith('-')) {
+        // Remove any stranded trailing dash that flipped to the end in RTL
+        line = line.replace(/\s*[-—–]$/, '').trim();
+        if (!/^[-—–]/.test(line.trim())) {
+          line = '- ' + line.trim();
+        } else if (!/^[-—–]\s/.test(line.trim())) {
+          line = line.replace(/^([-—–])\s*/, '$1 ');
+        }
+      }
+
       return line.trim();
     });
 
@@ -239,13 +254,18 @@ const Translator = (() => {
     [/\bmy\s+bad\b/gi, 'my mistake'],
     [/\bno\s+problem\b/gi, 'no problem'],
     [/\byou\s+are\s+welcome\b/gi, 'you are welcome'],
-    [/\bdon['’]?t\s+worry\b/gi, 'do not worry'],
+    [/\bdon['’]?t\s+worry\b|\bno\s+worries\b/gi, 'do not worry'],
     [/\btake\s+it\s+easy\b/gi, 'relax'],
+    [/\bmake\s+sure\b/gi, 'ensure'],
     [/\bmake\s+yourself\s+at\s+home\b/gi, 'feel comfortable'],
     [/\bmind\s+your\s+own\s+business\b/gi, 'do not interfere'],
     [/\bon\s+my\s+way\b/gi, 'coming now'],
     [/\bgive\s+me\s+a\s+hand\b/gi, 'help me'],
     [/\bget\s+out\s+of\s+here\b/gi, 'leave right now'],
+    [/\bright\s+away\b|\bstraight\s+away\b/gi, 'immediately'],
+    [/\bfigure\s+out\b/gi, 'understand'],
+    [/\bgive\s+up\b/gi, 'surrender'],
+    [/\blook\s+after\b/gi, 'protect and care for'],
     // Combat & Tactical
     [/\block\s+and\s+load\b/gi, 'prepare weapons'],
     [/\bfire\s+in\s+the\s+hole\b/gi, 'danger explosive'],
@@ -331,6 +351,64 @@ const Translator = (() => {
       s = s.replace(pattern, replacement);
     });
     return s;
+  }
+
+  const getDict = () => {
+    if (typeof TranslatorDict !== 'undefined') return TranslatorDict;
+    if (typeof require !== 'undefined') {
+      try { return require('./translator-dict.js'); } catch {}
+    }
+    return null;
+  };
+
+  function matchSingleLineLexicon(str, dict) {
+    if (!str || typeof str !== 'string') return null;
+    let prefix = '';
+    let body = str.trim();
+    if (body.startsWith('- ')) {
+      prefix = '- ';
+      body = body.slice(2).trim();
+    }
+
+    const clean = body
+      .toLowerCase()
+      .replace(/[,،\-—–]/g, ' ')
+      .replace(/[.!?؟؛…"'«»()[\]{}]+/g, '')
+      .replace(/\s+/g, ' ')
+      .trim();
+
+    if (clean && dict.LEXICON && dict.LEXICON[clean]) {
+      let res = dict.LEXICON[clean].kurdish;
+      if (body.endsWith('?') || body.endsWith('؟')) {
+        if (!res.endsWith('؟') && !res.endsWith('?')) res += '؟';
+      } else if (body.endsWith('!')) {
+        if (!res.endsWith('!')) res += '!';
+      }
+      return prefix + res;
+    }
+    return null;
+  }
+
+  function lookupLexicon(rawText) {
+    if (!rawText || typeof rawText !== 'string') return null;
+    const dict = getDict();
+    if (!dict || !dict.LEXICON) return null;
+
+    const sublines = rawText.split(/\r?\n/);
+    if (sublines.length > 1) {
+      const translatedSublines = [];
+      for (const line of sublines) {
+        if (!line.trim()) {
+          translatedSublines.push('');
+          continue;
+        }
+        const subResult = matchSingleLineLexicon(line, dict);
+        if (!subResult) return null;
+        translatedSublines.push(subResult);
+      }
+      return translatedSublines.join('\n');
+    }
+    return matchSingleLineLexicon(rawText, dict);
   }
 
   const getOrthography = () => {
@@ -423,18 +501,35 @@ const Translator = (() => {
     const isArabic = ARABIC_SCRIPT.has(tgtLang);
     const useKurdishDigits = !!opts.kurdishDigits;
 
-    const batches = buildBatches(lines, srcLang, tgtLang);
-    const totalLines = lines.filter((l) => l && l.trim()).length || 1;
-    const mainFraction = opts.accuracy ? 0.8 : 1.0;
     const results = new Array(lines.length).fill('');
+    let lexiconMatchedCount = 0;
 
-    const origNorm = lines.map((l) => normalizeText(l || '', isArabic, useKurdishDigits));
-
-    let doneLines = 0;
-    let retryTotal = 0;
     let anyTranslated = false;
     let sawHardFail = false;
     let failedLines = 0;
+
+    // Instant idiomatic lexicon matching for Kurdish subtitles
+    if (tgtLang === 'ckb') {
+      for (let i = 0; i < lines.length; i++) {
+        const raw = lines[i];
+        if (!raw || !raw.trim()) continue;
+        const matched = lookupLexicon(raw);
+        if (matched) {
+          results[i] = postprocessSorani(matched, { kurdishDigits: useKurdishDigits });
+          lexiconMatchedCount++;
+          anyTranslated = true;
+        }
+      }
+    }
+
+    const batches = buildBatches(lines, srcLang, tgtLang, results);
+    const totalLines = lines.filter((l) => l && l.trim()).length || 1;
+    const mainFraction = opts.accuracy ? 0.8 : 1.0;
+
+    const origNorm = lines.map((l) => normalizeText(l || '', isArabic, useKurdishDigits));
+
+    let doneLines = lexiconMatchedCount;
+    let retryTotal = 0;
 
     const flags = { anyTranslated, sawHardFail, failedLines };
 
@@ -452,7 +547,9 @@ const Translator = (() => {
           batch.forEach((item, i) => {
             let restored = restoreNewlines(restore(split[i].trim(), item.toks));
             restored = cleanLeftoverTokens(restored);
-            let norm = normalizeText(restored, isArabic, useKurdishDigits);
+            let norm = (tgtLang === 'ckb')
+              ? postprocessSorani(restored, { kurdishDigits: useKurdishDigits })
+              : normalizeText(restored, isArabic, useKurdishDigits);
             norm = fixPlacementAndTagOrder(norm, item.raw);
             results[item.index] = norm;
           });
@@ -464,7 +561,9 @@ const Translator = (() => {
               const single = await translateChunk(item.text, srcLang, tgtLang, signal);
               let restored = restoreNewlines(restore(single.trim(), item.toks));
               restored = cleanLeftoverTokens(restored);
-              let norm = normalizeText(restored, isArabic, useKurdishDigits);
+              let norm = (tgtLang === 'ckb')
+                ? postprocessSorani(restored, { kurdishDigits: useKurdishDigits })
+                : normalizeText(restored, isArabic, useKurdishDigits);
               norm = fixPlacementAndTagOrder(norm, item.raw);
               results[item.index] = norm;
             } catch {
@@ -483,7 +582,9 @@ const Translator = (() => {
             flags.anyTranslated = true;
             let restored = restoreNewlines(restore(single.trim(), item.toks));
             restored = cleanLeftoverTokens(restored);
-            let norm = normalizeText(restored, isArabic, useKurdishDigits);
+            let norm = (tgtLang === 'ckb')
+              ? postprocessSorani(restored, { kurdishDigits: useKurdishDigits })
+              : normalizeText(restored, isArabic, useKurdishDigits);
             norm = fixPlacementAndTagOrder(norm, item.raw);
             results[item.index] = norm;
           } catch {
@@ -540,13 +641,14 @@ const Translator = (() => {
     return results;
   }
 
-  function buildBatches(lines, srcLang, tgtLang) {
+  function buildBatches(lines, srcLang, tgtLang, results = []) {
     const batches = [];
     let current = [];
     let chars = 0;
 
     lines.forEach((text, index) => {
       if (!text.trim()) return;
+      if (results && results[index]) return; // Skip lines already matched by exact lexicon
       if (current.length >= BATCH_LINES || chars + text.length > MAX_CHARS_PER_REQUEST) {
         batches.push(current);
         current = [];
@@ -586,7 +688,7 @@ const Translator = (() => {
     const scoped = scopedSignal(signal);
     try {
       let res;
-      if (text.length > 400) {
+      if (text.length > 200 || text.includes('\n') || text.includes(BATCH_SEP)) {
         res = await fetch('/api/translate', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -688,7 +790,25 @@ const Translator = (() => {
     }
     const scoped = scopedSignal(signal);
     try {
-      const res = await fetch(`${host}?${params.toString()}`, { method: 'GET', signal: scoped.signal });
+      let res;
+      if (text.length > 800) {
+        res = await fetch(host, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8' },
+          body: params.toString(),
+          signal: scoped.signal
+        });
+      } else {
+        res = await fetch(`${host}?${params.toString()}`, { method: 'GET', signal: scoped.signal });
+      }
+      if (res.status === 414) {
+        res = await fetch(host, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8' },
+          body: params.toString(),
+          signal: scoped.signal
+        });
+      }
       if (res.status === 429) {
         const retryAfter = Number(res.headers.get('retry-after'));
         const wait = Number.isFinite(retryAfter) && retryAfter > 0 ? retryAfter * 1000 : backoffMs(attempt);
@@ -855,8 +975,15 @@ const Translator = (() => {
     } catch {}
   }
 
+  async function translateSingleLine(line, srcLang = 'auto', tgtLang = 'ckb', options = {}) {
+    if (!line || !line.trim()) return '';
+    const res = await translateLines([line], srcLang, tgtLang, options);
+    return (res && res[0]) ? res[0] : line;
+  }
+
   return {
     translateLines,
+    translateSingleLine,
     warmup,
     normalizeText,
     normalizeDigits,

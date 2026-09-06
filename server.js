@@ -20,34 +20,86 @@ const MIME_TYPES = {
   '.txt': 'text/plain; charset=utf-8'
 };
 
+function decodeHtmlEntities(str) {
+  if (!str || typeof str !== 'string') return str || '';
+  return str
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'")
+    .replace(/&apos;/g, "'")
+    .replace(/&amp;/g, '&')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&nbsp;/g, ' ')
+    .replace(/&#(\d+);/g, (_, dec) => String.fromCharCode(dec));
+}
+
+function extractTranslationFromGoogle(data) {
+  if (!data) return '';
+  if (typeof data === 'string') return decodeHtmlEntities(data);
+  if (Array.isArray(data)) {
+    if (typeof data[0] === 'string') return decodeHtmlEntities(data.join(''));
+    if (Array.isArray(data[0])) {
+      const text = data[0]
+        .map((seg) => {
+          if (typeof seg === 'string') return seg;
+          if (Array.isArray(seg) && typeof seg[0] === 'string') return seg[0];
+          return '';
+        })
+        .join('');
+      if (text) return decodeHtmlEntities(text);
+    }
+  }
+  if (data && Array.isArray(data.sentences)) {
+    const text = data.sentences.map((s) => s.trans || '').join('');
+    if (text) return decodeHtmlEntities(text);
+  }
+  return '';
+}
+
 async function fetchGoogleTranslate(text, sl = 'auto', tl = 'ckb') {
-  const hosts = [
-    `https://translate.googleapis.com/translate_a/single?client=gtx&sl=${encodeURIComponent(sl)}&tl=${encodeURIComponent(tl)}&dt=t&q=${encodeURIComponent(text)}`,
-    `https://clients5.google.com/translate_a/t?client=dict-chrome-ex&sl=${encodeURIComponent(sl)}&tl=${encodeURIComponent(tl)}&q=${encodeURIComponent(text)}`,
-    `https://clients1.google.com/translate_a/single?client=gtx&sl=${encodeURIComponent(sl)}&tl=${encodeURIComponent(tl)}&dt=t&q=${encodeURIComponent(text)}`
+  if (!text || !text.trim()) return '';
+
+  // 1. Try POST with form-urlencoded body (handles batches, newlines, delimiters without URL length limits)
+  const postEndpoints = [
+    'https://translate.googleapis.com/translate_a/single',
+    'https://clients1.google.com/translate_a/single'
   ];
 
-  for (const url of hosts) {
+  const params = new URLSearchParams({
+    client: 'gtx',
+    sl,
+    tl,
+    dt: 't',
+    q: text
+  });
+
+  for (const endpoint of postEndpoints) {
+    try {
+      const resp = await fetch(endpoint, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8' },
+        body: params.toString()
+      });
+      if (resp.ok) {
+        const data = await resp.json();
+        const translated = extractTranslationFromGoogle(data);
+        if (translated) return translated;
+      }
+    } catch {}
+  }
+
+  // 2. Fallback to GET endpoints
+  const getEndpoints = [
+    `https://translate.googleapis.com/translate_a/single?client=gtx&sl=${encodeURIComponent(sl)}&tl=${encodeURIComponent(tl)}&dt=t&q=${encodeURIComponent(text.slice(0, 1500))}`,
+    `https://clients5.google.com/translate_a/t?client=dict-chrome-ex&sl=${encodeURIComponent(sl)}&tl=${encodeURIComponent(tl)}&q=${encodeURIComponent(text.slice(0, 1500))}`
+  ];
+
+  for (const url of getEndpoints) {
     try {
       const resp = await fetch(url, { method: 'GET' });
       if (resp.ok) {
         const data = await resp.json();
-        let translated = '';
-        if (typeof data === 'string') {
-          translated = data;
-        } else if (Array.isArray(data)) {
-          if (typeof data[0] === 'string') {
-            translated = data.join('');
-          } else if (Array.isArray(data[0])) {
-            translated = data[0].map((seg) => {
-              if (typeof seg === 'string') return seg;
-              if (Array.isArray(seg) && typeof seg[0] === 'string') return seg[0];
-              return '';
-            }).join('');
-          }
-        } else if (data && Array.isArray(data.sentences)) {
-          translated = data.sentences.map((s) => s.trans || '').join('');
-        }
+        const translated = extractTranslationFromGoogle(data);
         if (translated) return translated;
       }
     } catch {}
