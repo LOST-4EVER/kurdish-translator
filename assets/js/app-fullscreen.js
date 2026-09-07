@@ -122,6 +122,20 @@ const AppFullscreen = (() => {
     });
   }
 
+  function getPlacement(c, lineText) {
+    if (typeof SubtitlePlayer !== 'undefined' && typeof SubtitlePlayer.getCuePlacement === 'function') {
+      return SubtitlePlayer.getCuePlacement(c, lineText);
+    }
+    return getZoneAndAlign(lineText || (c && (c.rawText || c.text)) || '');
+  }
+
+  function formatHtml(str) {
+    if (typeof SubtitlePlayer !== 'undefined' && typeof SubtitlePlayer.formatSubtitleHtml === 'function') {
+      return SubtitlePlayer.formatSubtitleHtml(str);
+    }
+    return sanitizeSubtitleHtml(str);
+  }
+
   function renderFsCues(screenEl, activeList) {
     if (!screenEl) return;
 
@@ -152,24 +166,51 @@ const AppFullscreen = (() => {
     if (!activeList || !activeList.length) return;
 
     activeList.forEach((c) => {
+      const raw = String(c.rawText || c.text || '');
       const clean = String(c.text || '').replace(/\\N/g, '\n');
-      const { zone, align } = getZoneAndAlign(clean);
-      const targetZone = zone === 'top' ? zoneTop : (zone === 'mid' ? zoneMid : zoneBottom);
-
       const lines = clean.split('\n');
-      lines.forEach((line) => {
-        // Strip ASS/MicroDVD tags for text measurement & display
-        const strippedTags = line.replace(/\{[^}]*\}/g, '').replace(/<top>|<mid>|<bot>/gi, '').trim();
-        if (!strippedTags) return;
+      const rawLines = raw.split(/\\N|\n/);
 
-        const span = document.createElement('span');
-        span.className = 'fs-text';
-        span.innerHTML = sanitizeSubtitleHtml(strippedTags);
-        span.setAttribute('dir', hasArabic(strippedTags) ? 'rtl' : 'ltr');
-        span.style.textAlign = align;
+      if (lines.length > 1 && (raw.includes('\\an') || raw.includes('\\a') || raw.includes('<top>'))) {
+        lines.forEach((line, i) => {
+          const plainText = line.replace(/<[^>]+>/g, '').replace(/\{[^}]*\}/g, '').trim();
+          if (!plainText) return;
+          const placement = getPlacement(c, rawLines[i] || rawLines[0] || '');
+          const v = placement.vAlign || placement.zone || 'bottom';
+          const h = placement.hAlign || placement.align || 'center';
 
-        targetZone.appendChild(span);
-      });
+          const span = document.createElement('span');
+          span.className = 'fs-text';
+          span.innerHTML = formatHtml(line);
+          span.setAttribute('dir', hasArabic(plainText) ? 'rtl' : 'ltr');
+          span.style.textAlign = h;
+          if (h === 'left') span.style.alignSelf = 'flex-start';
+          else if (h === 'right') span.style.alignSelf = 'flex-end';
+          else span.style.alignSelf = 'center';
+
+          const targetZone = v === 'top' ? zoneTop : (v === 'mid' ? zoneMid : zoneBottom);
+          targetZone.appendChild(span);
+        });
+      } else {
+        const plainText = clean.replace(/<[^>]+>/g, '').replace(/\{[^}]*\}/g, '').trim();
+        if (plainText) {
+          const placement = getPlacement(c);
+          const v = placement.vAlign || placement.zone || 'bottom';
+          const h = placement.hAlign || placement.align || 'center';
+
+          const span = document.createElement('span');
+          span.className = 'fs-text';
+          span.innerHTML = formatHtml(clean);
+          span.setAttribute('dir', hasArabic(plainText) ? 'rtl' : 'ltr');
+          span.style.textAlign = h;
+          if (h === 'left') span.style.alignSelf = 'flex-start';
+          else if (h === 'right') span.style.alignSelf = 'flex-end';
+          else span.style.alignSelf = 'center';
+
+          const targetZone = v === 'top' ? zoneTop : (v === 'mid' ? zoneMid : zoneBottom);
+          targetZone.appendChild(span);
+        }
+      }
     });
   }
 
@@ -380,11 +421,16 @@ const AppFullscreen = (() => {
 
       els.fsScreen.addEventListener('click', (e) => {
         if (e.target.closest('.fs-btn, button, select, input, textarea')) return;
-        setTimeout(() => {
-          if (Date.now() - lastTapTime >= 300) {
-            openFsEditor();
-          }
-        }, 320);
+        // Single click toggles playback
+        if (typeof SubtitlePlayer !== 'undefined') {
+          SubtitlePlayer.toggle();
+          updateFsScreen();
+        }
+      });
+
+      els.fsScreen.addEventListener('dblclick', (e) => {
+        if (e.target.closest('.fs-btn, button, select, input, textarea')) return;
+        openFsEditor();
       });
     }
 
@@ -515,8 +561,31 @@ const AppFullscreen = (() => {
 
     document.addEventListener('keydown', (e) => {
       if (!fsActive) return;
+      const isInputFocused = document.activeElement === els.fsInput || document.activeElement.tagName === 'TEXTAREA' || document.activeElement.tagName === 'INPUT';
       if (e.key === 'Escape') {
         document.activeElement === els.fsInput ? closeFsEditor() : exitFs();
+      } else if (!isInputFocused) {
+        if (e.key === ' ' || e.code === 'Space') {
+          e.preventDefault();
+          if (typeof SubtitlePlayer !== 'undefined') SubtitlePlayer.toggle();
+          updateFsScreen();
+        } else if (e.key === 'ArrowLeft') {
+          e.preventDefault();
+          if (typeof SubtitlePlayer !== 'undefined') SubtitlePlayer.jump(-5000);
+          updateFsScreen();
+          triggerGestureFeedback('rewind');
+        } else if (e.key === 'ArrowRight') {
+          e.preventDefault();
+          if (typeof SubtitlePlayer !== 'undefined') SubtitlePlayer.jump(5000);
+          updateFsScreen();
+          triggerGestureFeedback('forward');
+        } else if (e.key === 'f' || e.key === 'F') {
+          e.preventDefault();
+          exitFs();
+        } else if (e.key === 'e' || e.key === 'E') {
+          e.preventDefault();
+          openFsEditor();
+        }
       }
     });
 

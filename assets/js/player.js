@@ -271,6 +271,7 @@ const SubtitlePlayer = (() => {
     // Check ASS / SSA / SRT alignment tags: {\an1}..{\an9}, {\a1}..{\a11}
     const anMatch = raw.match(/\{\\an(\d)\}/i);
     const aMatch = raw.match(/\{\\a(\d+)\}/i);
+    const posMatch = raw.match(/\{\\pos\(\s*([0-9.]+)\s*,\s*([0-9.]+)\s*\)\}/i);
     if (anMatch) {
       const num = parseInt(anMatch[1], 10);
       if (num >= 7 && num <= 9) vAlign = 'top';
@@ -288,6 +289,16 @@ const SubtitlePlayer = (() => {
 
       if (num === 1 || num === 5 || num === 9) hAlign = 'left';
       else if (num === 3 || num === 7 || num === 11) hAlign = 'right';
+      else hAlign = 'center';
+    } else if (posMatch) {
+      const x = parseFloat(posMatch[1]);
+      const y = parseFloat(posMatch[2]);
+      if (y < 260) vAlign = 'top';
+      else if (y > 540) vAlign = 'bottom';
+      else vAlign = 'mid';
+
+      if (x < 420) hAlign = 'left';
+      else if (x > 860) hAlign = 'right';
       else hAlign = 'center';
     } else if (/<top>/i.test(raw) || /line:(?:0|1|2|3|4|5|10|15|20)%/i.test(settings) || /line:[0-3]\b/i.test(settings)) {
       vAlign = 'top';
@@ -380,6 +391,9 @@ const SubtitlePlayer = (() => {
           span.innerHTML = formatSubtitleHtml(line);
           span.setAttribute('dir', hasArabic(plainText) ? 'rtl' : 'ltr');
           span.style.textAlign = placement.hAlign;
+          if (placement.hAlign === 'left') span.style.alignSelf = 'flex-start';
+          else if (placement.hAlign === 'right') span.style.alignSelf = 'flex-end';
+          else span.style.alignSelf = 'center';
 
           const targetZone = placement.vAlign === 'top' ? zoneTop : (placement.vAlign === 'mid' ? zoneMid : zoneBottom);
           targetZone.appendChild(span);
@@ -393,6 +407,9 @@ const SubtitlePlayer = (() => {
           span.innerHTML = formatSubtitleHtml(clean);
           span.setAttribute('dir', hasArabic(plainText) ? 'rtl' : 'ltr');
           span.style.textAlign = placement.hAlign;
+          if (placement.hAlign === 'left') span.style.alignSelf = 'flex-start';
+          else if (placement.hAlign === 'right') span.style.alignSelf = 'flex-end';
+          else span.style.alignSelf = 'center';
 
           const targetZone = placement.vAlign === 'top' ? zoneTop : (placement.vAlign === 'mid' ? zoneMid : zoneBottom);
           targetZone.appendChild(span);
@@ -504,7 +521,7 @@ const SubtitlePlayer = (() => {
 
     textEls.forEach((t) => {
       const textLen = (t.textContent || '').length;
-      const lineBreaks = ((t.textContent || '').match(/\n/g) || []).length + 1;
+      const lineBreaks = (t.innerHTML.match(/<br\s*\/?>/gi) || []).length + 1;
       let size = targetSize;
       if (lineBreaks > 2 || textLen > 70) {
         size = Math.max(13, Math.round(targetSize * 0.82));
@@ -545,6 +562,8 @@ const SubtitlePlayer = (() => {
     fitText,
     setFontScale,
     setAspectRatio,
+    formatSubtitleHtml,
+    getCuePlacement,
     get aspectRatio() { return currentAspectRatio; },
     setCueCallback,
     setTimeCallback,

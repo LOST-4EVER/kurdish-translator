@@ -121,45 +121,55 @@ const Translator = (() => {
     const transLines = text.split('\n');
 
     const fixed = transLines.map((tLine, i) => {
-      const origLine = origLines[i] || origLines[0] || '';
-      let line = tLine;
+      const origLine = origLines[i] !== undefined ? origLines[i] : '';
+      let line = String(tLine || '').trim();
+      if (!origLine) return line;
 
-      // Preserve leading formatting and position tags: ASS, MicroDVD ({y:i}), HTML (<font>)
-      const leadTagMatch = origLine.match(/^((?:\{[^}]+\}|<[^>]+>\s*)+)/);
-      if (leadTagMatch) {
-        const leadTags = leadTagMatch[1].trim();
-        if (/^\{[^{}]*(?:\\(?:an?\d|pos|move|fad|org|c&|1c&|3c&|4c&|fn|fs|b\d|i\d|shad|bord)|y:[ibusc]|c:\$|P:\d+)[^{}]*\}/i.test(leadTags) || /^<(?:top|font\b|i\b|b\b)/i.test(leadTags)) {
-          if (!line.startsWith(leadTags)) {
-            let stripped = line;
-            const escaped = leadTags.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-            stripped = stripped.replace(new RegExp(escaped, 'g'), '').trim();
-            line = leadTags + (stripped ? (leadTags.startsWith('{') ? stripped : ' ' + stripped) : '');
-          }
+      // Extract leading formatting & alignment tags from origLine (even if before/after a dash)
+      let leadTags = '';
+      const leadTagBeforeDash = origLine.match(/^\s*((?:\{[^}]+\}|<[a-zA-Z0-9]+(?:\s+[^>]+)?>\s*)+)/);
+      if (leadTagBeforeDash) {
+        leadTags = leadTagBeforeDash[1].trim();
+      } else {
+        const leadTagAfterDash = origLine.match(/^\s*[-—–]\s*((?:\{[^}]+\}|<[a-zA-Z0-9]+(?:\s+[^>]+)?>\s*)+)/);
+        if (leadTagAfterDash) {
+          leadTags = leadTagAfterDash[1].trim();
         }
       }
 
-      // Preserve trailing tags: HTML closing tags </font>, </i>, </b>
+      // Check if original line had a dialogue hyphen/dash
+      const hadDash = /^\s*[-—–]/.test(origLine) || /^\s*\{[^}]+\}\s*[-—–]/.test(origLine);
+
+      // Strip leadTags wherever they landed in translated line (e.g. pushed to end by BiDi reordering)
+      if (leadTags) {
+        const escaped = leadTags.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        line = line.replace(new RegExp(escaped, 'g'), '').trim();
+      }
+
+      // Handle trailing tags: HTML closing tags </font>, </i>, </b>
       const trailTagMatch = origLine.match(/((?:<\/[a-z0-9]+>\s*)+)$/i);
+      let trailTags = '';
       if (trailTagMatch) {
-        const trailTags = trailTagMatch[1].trim();
-        if (!line.endsWith(trailTags)) {
-          let stripped = line;
-          const escaped = trailTags.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-          stripped = stripped.replace(new RegExp(escaped, 'g'), '').trim();
-          line = (stripped ? stripped + ' ' : '') + trailTags;
-        }
+        trailTags = trailTagMatch[1].trim();
+        const escaped = trailTags.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        line = line.replace(new RegExp(escaped, 'g'), '').trim();
       }
 
-      // Multi-speaker dialogue dash preservation: if original started with a dash, ensure translated line does too
-      const origTrim = origLine.trim();
-      if (/^[-—–]\s+/.test(origTrim) || origTrim.startsWith('-')) {
-        // Remove any stranded trailing dash that flipped to the end in RTL
+      // Strip any misplaced trailing dash that flipped to the end in RTL
+      if (hadDash) {
         line = line.replace(/\s*[-—–]$/, '').trim();
-        if (!/^[-—–]/.test(line.trim())) {
-          line = '- ' + line.trim();
-        } else if (!/^[-—–]\s/.test(line.trim())) {
-          line = line.replace(/^([-—–])\s*/, '$1 ');
-        }
+        line = line.replace(/^[-—–]\s*/, '').trim();
+      }
+
+      // Reassemble cleanly: leadTags + dash + body + trailTags
+      if (hadDash) {
+        line = '- ' + line;
+      }
+      if (leadTags) {
+        line = leadTags + line;
+      }
+      if (trailTags) {
+        line = line + trailTags;
       }
 
       return line.trim();
