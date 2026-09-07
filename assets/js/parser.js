@@ -308,12 +308,69 @@ const SubParser = (() => {
     return cues;
   }
 
-  // ---------- Main parse ----------
+  // ---------- Transcript / Plain TXT ----------
+  const TXT_TIMECODE_PREFIX = /^(?:\[?(\d{1,2}:\d{2}(?::\d{2})?(?:[.,]\d{1,3})?)\]?)\s*(?:[-–—:]\s*)?(.*)$/;
+  const YOUTUBE_TIMESTAMP_ONLY = /^\d{1,2}:\d{2}(?::\d{2})?$/;
+
   function parseTXT(content) {
-    const lines = content.replace(/\r/g, '').split('\n').map((l) => l.trim()).filter(Boolean);
+    const rawLines = content.replace(/\r/g, '').split('\n').map((l) => l.trim()).filter(Boolean);
+    if (!rawLines.length) return [];
+
+    // Check if lines are formatted like YouTube transcripts: Timestamp on line 1, text on line 2
+    let isAlternatingYoutube = false;
+    if (rawLines.length >= 2 && YOUTUBE_TIMESTAMP_ONLY.test(rawLines[0]) && !YOUTUBE_TIMESTAMP_ONLY.test(rawLines[1])) {
+      isAlternatingYoutube = true;
+    }
+
+    if (isAlternatingYoutube) {
+      const cues = [];
+      for (let i = 0; i < rawLines.length; i += 2) {
+        const timeStr = rawLines[i];
+        const textStr = rawLines[i + 1] || '';
+        const start = toMs(timeStr);
+        const nextTimeStr = rawLines[i + 2];
+        const nextStart = nextTimeStr ? toMs(nextTimeStr) : start + 3500;
+        const end = Math.max(start + 500, nextStart - 50);
+        if (textStr) {
+          cues.push({ index: cues.length + 1, start, end, text: textStr });
+        }
+      }
+      if (cues.length) return cues;
+    }
+
+    // Check if lines have inline timestamp prefix: [00:01:23] Text or 01:23 - Text
+    let timestampCount = 0;
+    for (let i = 0; i < Math.min(rawLines.length, 10); i++) {
+      if (TXT_TIMECODE_PREFIX.test(rawLines[i])) timestampCount++;
+    }
+
+    if (timestampCount >= 2) {
+      const parsedItems = [];
+      for (const line of rawLines) {
+        const m = line.match(TXT_TIMECODE_PREFIX);
+        if (m && m[2]) {
+          parsedItems.push({ start: toMs(m[1]), text: m[2].trim() });
+        } else if (parsedItems.length && line) {
+          parsedItems[parsedItems.length - 1].text += '\n' + line;
+        }
+      }
+      if (parsedItems.length) {
+        parsedItems.sort((a, b) => a.start - b.start);
+        const cues = [];
+        for (let i = 0; i < parsedItems.length; i++) {
+          const cur = parsedItems[i];
+          const next = parsedItems[i + 1];
+          const end = next ? Math.max(cur.start + 500, next.start - 50) : cur.start + 3500;
+          cues.push({ index: i + 1, start: cur.start, end, text: cur.text });
+        }
+        return cues;
+      }
+    }
+
+    // Fallback: Plain text file without timestamps
     const cues = [];
     let curTime = 0;
-    lines.forEach((line, i) => {
+    rawLines.forEach((line, i) => {
       cues.push({
         index: i + 1,
         start: curTime,

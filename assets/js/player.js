@@ -22,6 +22,7 @@ const SubtitlePlayer = (() => {
   let lastSec = -1;     // last whole second written to the time readout
   let cursor = -1;      // cached cue index from the last cueAt() lookup
   let fontScale = 1;    // font scale multiplier
+  let currentAspectRatio = '16:9';
 
   const el = {};
 
@@ -42,8 +43,12 @@ const SubtitlePlayer = (() => {
     el.skipForward = _('#skipForwardBtn');
     el.time = _('#timeDisplay');
     el.speed = _('#speedSel');
+    el.aspectRatio = _('#aspectRatioSel');
     el.tlTooltip = _('#tlTooltip');
 
+    if (el.aspectRatio) {
+      el.aspectRatio.addEventListener('change', (e) => setAspectRatio(e.target.value));
+    }
     if (el.play) el.play.addEventListener('click', toggle);
     if (el.restart) el.restart.addEventListener('click', () => seek(0));
     if (el.prevCue) el.prevCue.addEventListener('click', () => stepCue(-1));
@@ -516,6 +521,16 @@ const SubtitlePlayer = (() => {
     fitText();
   }
 
+  /** Set aspect ratio for the preview screen (e.g. 16:9, 9:16, 21:9, 4:3). */
+  function setAspectRatio(ratio) {
+    currentAspectRatio = ratio || '16:9';
+    if (el.screen) el.screen.dataset.ratio = currentAspectRatio;
+    if (el.aspectRatio && el.aspectRatio.value !== currentAspectRatio) {
+      el.aspectRatio.value = currentAspectRatio;
+    }
+    fitText();
+  }
+
   return {
     init,
     load,
@@ -529,6 +544,8 @@ const SubtitlePlayer = (() => {
     updateText,
     fitText,
     setFontScale,
+    setAspectRatio,
+    get aspectRatio() { return currentAspectRatio; },
     setCueCallback,
     setTimeCallback,
     get playing() { return playing; },

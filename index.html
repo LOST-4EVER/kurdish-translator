@@ -350,7 +350,7 @@
         <!-- STEP 1 : upload -->
         <section class="card upload-card" id="stepUpload">
           <div class="dropzone" id="dropzone" tabindex="0" role="button">
-            <input type="file" id="fileInput" accept=".srt,.vtt,.ass,.ssa,.sub,.smi,text/plain" hidden />
+            <input type="file" id="fileInput" accept=".srt,.vtt,.ass,.ssa,.sub,.smi,.txt,text/plain" hidden />
             <div class="dz-icon">
               <svg width="48" height="48" viewBox="0 0 24 24" fill="currentColor"><path d="M20 6h-8l-2-2H4c-1.11 0-1.99.89-1.99 2L2 18c0 1.11.89 2 2 2h16c1.11 0 2-.89 2-2V8c0-1.11-.89-2-2-2zm0 12H4V8h16v10zM8 13.01l1.41 1.41L11 12.84V17h2v-4.16l1.59 1.59L16 13.01 12 9l-4 4.01z"/></svg>
             </div>
@@ -616,6 +616,9 @@
                 <option value="srt">SRT (SubRip)</option>
                 <option value="vtt">WebVTT</option>
                 <option value="ass">ASS / SSA</option>
+                <option value="sub">SUB (MicroDVD)</option>
+                <option value="smi">SAMI (.smi)</option>
+                <option value="txt">TXT (Transcript)</option>
               </select>
             </div>
           </div>
@@ -699,6 +702,14 @@
               </div>
 
               <div class="ctl-secondary-group">
+                <div class="select-wrap speed ctl-select" title="Aspect Ratio">
+                  <select id="aspectRatioSel" aria-label="Subtitle Player Aspect Ratio">
+                    <option value="16:9" selected>16:9</option>
+                    <option value="9:16">9:16</option>
+                    <option value="21:9">21:9</option>
+                    <option value="4:3">4:3</option>
+                  </select>
+                </div>
                 <div class="select-wrap speed ctl-select" title="Subtitle Font Size">
                   <span class="select-icon">A</span>
                   <select id="fontSizeSel" aria-label="Subtitle Font Size">
@@ -995,6 +1006,14 @@
       </div>
 
       <div class="fs-top-right">
+        <div class="select-wrap speed fs-select-wrap" title="Aspect Ratio">
+          <select id="fsAspectRatioSel" aria-label="Fullscreen Aspect Ratio">
+            <option value="16:9" selected>16:9 Wide</option>
+            <option value="9:16">9:16 Vertical</option>
+            <option value="21:9">21:9 Cinema</option>
+            <option value="4:3">4:3 TV</option>
+          </select>
+        </div>
         <div class="select-wrap speed fs-select-wrap" data-i18n-title="fontSize" title="Subtitle Font Size">
           <span class="fs-select-icon">A</span>
           <select id="fsFontSizeSel" aria-label="Subtitle Font Size">

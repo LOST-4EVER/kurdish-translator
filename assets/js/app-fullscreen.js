@@ -36,6 +36,7 @@ const AppFullscreen = (() => {
       fsRewindFeedback: document.getElementById('fsRewindFeedback'),
       fsForwardFeedback: document.getElementById('fsForwardFeedback'),
       fsFontSizeSel: document.getElementById('fsFontSizeSel'),
+      fsAspectRatioSel: document.getElementById('fsAspectRatioSel'),
       fsSpeedSel: document.getElementById('fsSpeedSel'),
       fsUndoBtn: document.getElementById('fsUndoBtn'),
       fsRedoBtn: document.getElementById('fsRedoBtn'),
@@ -43,6 +44,46 @@ const AppFullscreen = (() => {
       fsEdRedoBtn: document.getElementById('fsEdRedoBtn'),
       fsEdPolishBtn: document.getElementById('fsEdPolishBtn'),
     };
+  }
+
+  function escapeHtml(str) {
+    return (str || '')
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;');
+  }
+
+  function sanitizeSubtitleHtml(raw) {
+    if (!raw) return '';
+    const safe = escapeHtml(raw);
+    return safe
+      .replace(/&lt;i&gt;/gi, '<i>')
+      .replace(/&lt;\/i&gt;/gi, '</i>')
+      .replace(/&lt;b&gt;/gi, '<b>')
+      .replace(/&lt;\/b&gt;/gi, '</b>')
+      .replace(/&lt;u&gt;/gi, '<u>')
+      .replace(/&lt;\/u&gt;/gi, '</u>')
+      .replace(/&lt;font\s+color=['"]?([#a-zA-Z0-9]+)['"]?&gt;/gi, '<span style="color:$1">')
+      .replace(/&lt;\/font&gt;/gi, '</span>');
+  }
+
+  function getZoneAndAlign(cueText) {
+    let zone = 'bottom';
+    let align = 'center';
+    const clean = String(cueText || '');
+
+    if (/\{\\an[789]\}/i.test(clean) || /<top>/i.test(clean) || /line:([0-2]?\d%)/i.test(clean)) {
+      zone = 'top';
+    } else if (/\{\\an[456]\}/i.test(clean) || /<mid>/i.test(clean) || /line:([3-6]\d%)/i.test(clean)) {
+      zone = 'mid';
+    }
+
+    if (/\{\\an[147]\}/i.test(clean) || /align:(?:start|left)/i.test(clean)) {
+      align = 'left';
+    } else if (/\{\\an[369]\}/i.test(clean) || /align:(?:end|right)/i.test(clean)) {
+      align = 'right';
+    }
+    return { zone, align };
   }
 
   function hasArabic(s) {
@@ -112,19 +153,22 @@ const AppFullscreen = (() => {
 
     activeList.forEach((c) => {
       const clean = String(c.text || '').replace(/\\N/g, '\n');
-      const lines = clean.split('\n');
+      const { zone, align } = getZoneAndAlign(clean);
+      const targetZone = zone === 'top' ? zoneTop : (zone === 'mid' ? zoneMid : zoneBottom);
 
+      const lines = clean.split('\n');
       lines.forEach((line) => {
-        const stripped = line.replace(/<[^>]+>/g, '').replace(/\{[^}]*\}/g, '').trim();
-        if (!stripped) return;
+        // Strip ASS/MicroDVD tags for text measurement & display
+        const strippedTags = line.replace(/\{[^}]*\}/g, '').replace(/<top>|<mid>|<bot>/gi, '').trim();
+        if (!strippedTags) return;
 
         const span = document.createElement('span');
         span.className = 'fs-text';
-        span.textContent = stripped;
-        span.setAttribute('dir', hasArabic(stripped) ? 'rtl' : 'ltr');
-        span.style.textAlign = 'center';
+        span.innerHTML = sanitizeSubtitleHtml(strippedTags);
+        span.setAttribute('dir', hasArabic(strippedTags) ? 'rtl' : 'ltr');
+        span.style.textAlign = align;
 
-        zoneBottom.appendChild(span);
+        targetZone.appendChild(span);
       });
     });
   }
@@ -245,6 +289,11 @@ const AppFullscreen = (() => {
     let i = cues.findIndex((c) => pos >= c.start && pos < c.end);
     if (i < 0) i = 0;
     fsCueIndex = i;
+
+    if (typeof SubtitlePlayer !== 'undefined' && SubtitlePlayer.aspectRatio) {
+      if (els.fsAspectRatioSel) els.fsAspectRatioSel.value = SubtitlePlayer.aspectRatio;
+      if (els.fsScreen) els.fsScreen.dataset.ratio = SubtitlePlayer.aspectRatio;
+    }
 
     updateFsScreen();
     requestAnimationFrame(() => fitFsText());
@@ -387,6 +436,17 @@ const AppFullscreen = (() => {
 
     if (els.fsFontSizeSel) {
       els.fsFontSizeSel.addEventListener('change', () => fitFsText());
+    }
+
+    if (els.fsAspectRatioSel) {
+      els.fsAspectRatioSel.addEventListener('change', (e) => {
+        const val = e.target.value;
+        if (typeof SubtitlePlayer !== 'undefined' && SubtitlePlayer.setAspectRatio) {
+          SubtitlePlayer.setAspectRatio(val);
+        }
+        if (els.fsScreen) els.fsScreen.dataset.ratio = val;
+        fitFsText();
+      });
     }
 
     // Scrubber drag & click

@@ -45,7 +45,13 @@
   box-sizing: border-box;
   cursor: pointer;
   user-select: none;
+  transition: aspect-ratio 0.2s ease, max-height 0.2s ease;
 }
+
+.screen[data-ratio="16:9"] { aspect-ratio: 16 / 9; max-height: none; }
+.screen[data-ratio="9:16"] { aspect-ratio: 9 / 16; max-height: 520px; margin: 0 auto; }
+.screen[data-ratio="21:9"] { aspect-ratio: 21 / 9; max-height: none; }
+.screen[data-ratio="4:3"] { aspect-ratio: 4 / 3; max-height: 480px; margin: 0 auto; }
 
 .screen:focus-visible {
   outline: 2px solid var(--md-sys-color-primary);
@@ -111,9 +117,10 @@
 .screen-text[dir="rtl"] {
   direction: rtl;
   unicode-bidi: isolate;
-  line-height: 1.7;
+  line-height: 1.55;
   font-family: var(--font-subtitle);
-  letter-spacing: 0.015em;
+  font-weight: 650;
+  letter-spacing: 0.01em;
   font-feature-settings: "cv01", "ss01";
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;

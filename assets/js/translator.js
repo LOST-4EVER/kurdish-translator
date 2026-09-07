@@ -24,9 +24,6 @@ const Translator = (() => {
     'https://clients2.google.com/translate_a/single',
     'https://clients3.google.com/translate_a/single',
     'https://clients4.google.com/translate_a/single',
-    'https://clients5.google.com/translate_a/t',
-    'https://clients1.google.com/translate_a/t',
-    'https://translate.googleapis.com/translate_a/t',
   ];
 
   // Secondary public privacy-friendly Lingva Translate instances
@@ -696,7 +693,7 @@ const Translator = (() => {
     };
   }
 
-  const CLIENTS = ['gtx', 'dict-chrome-ex', 'tw-ob', 't'];
+  const CLIENTS = ['gtx', 'dict-chrome-ex', 'tw-ob'];
 
   async function fetchServerProxy(text, srcLang, tgtLang, signal) {
     if (typeof window === 'undefined' || !window.location || !window.location.origin) return null;
@@ -887,45 +884,54 @@ const Translator = (() => {
   }
 
   async function translateChunk(text, srcLang, tgtLang, signal) {
+    if (!text || !text.trim()) return '';
+
     let lastErr;
     try {
       const proxyResult = await fetchServerProxy(text, srcLang, tgtLang, signal);
-      if (proxyResult) return proxyResult;
+      if (proxyResult) {
+        return proxyResult;
+      }
     } catch {}
 
     for (let attempt = 0; attempt < MAX_ATTEMPTS; attempt++) {
       throwIfAborted(signal);
       try {
+        let result = '';
         if (attempt < 3) {
           try {
-            return await fetchGoogle(text, srcLang, tgtLang, signal, attempt);
+            result = await fetchGoogle(text, srcLang, tgtLang, signal, attempt);
           } catch (googleErr) {
             if (googleErr.status === 429 && googleErr.wait) {
               await sleep(Math.min(googleErr.wait, 2000), signal);
             }
             try {
-              return await fetchGoogleT(text, srcLang, tgtLang, signal, attempt);
+              result = await fetchGoogleT(text, srcLang, tgtLang, signal, attempt);
             } catch {}
-            throw googleErr;
+            if (!result) throw googleErr;
           }
         } else if (attempt === 3) {
           try {
-            return await fetchGoogleT(text, srcLang, tgtLang, signal, attempt);
+            result = await fetchGoogleT(text, srcLang, tgtLang, signal, attempt);
           } catch {
-            try { return await fetchGoogle(text, srcLang, tgtLang, signal, attempt + 1); } catch {}
+            try { result = await fetchGoogle(text, srcLang, tgtLang, signal, attempt + 1); } catch {}
           }
         } else if (attempt === 4) {
           try {
-            return await fetchLingva(text, srcLang, tgtLang, signal, attempt);
+            result = await fetchLingva(text, srcLang, tgtLang, signal, attempt);
           } catch {
-            try { return await fetchGoogle(text, srcLang, tgtLang, signal, attempt + 1); } catch {}
+            try { result = await fetchGoogle(text, srcLang, tgtLang, signal, attempt + 1); } catch {}
           }
         } else {
           try {
-            return await fetchMyMemory(text, srcLang, tgtLang, signal);
+            result = await fetchMyMemory(text, srcLang, tgtLang, signal);
           } catch {
-            try { return await fetchGoogle(text, srcLang, tgtLang, signal, 0); } catch {}
+            try { result = await fetchGoogle(text, srcLang, tgtLang, signal, 0); } catch {}
           }
+        }
+
+        if (result) {
+          return result;
         }
       } catch (err) {
         if (signal && signal.aborted) throw err;
@@ -1003,6 +1009,7 @@ const Translator = (() => {
   return {
     translateLines,
     translateSingleLine,
+    lookupLexicon,
     warmup,
     normalizeText,
     normalizeDigits,

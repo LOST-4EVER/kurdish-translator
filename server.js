@@ -59,44 +59,67 @@ function extractTranslationFromGoogle(data) {
 async function fetchGoogleTranslate(text, sl = 'auto', tl = 'ckb') {
   if (!text || !text.trim()) return '';
 
-  // 1. Try POST with form-urlencoded body (handles batches, newlines, delimiters without URL length limits)
+  const headers = {
+    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
+    'Accept': 'application/json, text/plain, */*',
+    'Accept-Language': 'en-US,en;q=0.9,ckb;q=0.8,ku;q=0.7',
+    'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8'
+  };
+
+  // 1. Try POST with form-urlencoded body (handles large batches, newlines, delimiters without URL length limits)
   const postEndpoints = [
     'https://translate.googleapis.com/translate_a/single',
-    'https://clients1.google.com/translate_a/single'
+    'https://clients1.google.com/translate_a/single',
+    'https://clients2.google.com/translate_a/single',
+    'https://clients3.google.com/translate_a/single',
+    'https://clients5.google.com/translate_a/single'
   ];
 
-  const params = new URLSearchParams({
-    client: 'gtx',
-    sl,
-    tl,
-    dt: 't',
-    q: text
-  });
+  const clients = ['gtx', 'dict-chrome-ex', 'tw-ob'];
 
-  for (const endpoint of postEndpoints) {
-    try {
-      const resp = await fetch(endpoint, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8' },
-        body: params.toString()
-      });
-      if (resp.ok) {
-        const data = await resp.json();
-        const translated = extractTranslationFromGoogle(data);
-        if (translated) return translated;
-      }
-    } catch {}
+  for (const client of clients) {
+    const params = new URLSearchParams({
+      client,
+      sl,
+      tl,
+      dt: 't',
+      ie: 'UTF-8',
+      oe: 'UTF-8',
+      q: text
+    });
+
+    for (const endpoint of postEndpoints) {
+      try {
+        const resp = await fetch(endpoint, {
+          method: 'POST',
+          headers,
+          body: params.toString()
+        });
+        if (resp.ok) {
+          const data = await resp.json();
+          const translated = extractTranslationFromGoogle(data);
+          if (translated) return translated;
+        }
+      } catch {}
+    }
   }
 
   // 2. Fallback to GET endpoints
   const getEndpoints = [
-    `https://translate.googleapis.com/translate_a/single?client=gtx&sl=${encodeURIComponent(sl)}&tl=${encodeURIComponent(tl)}&dt=t&q=${encodeURIComponent(text.slice(0, 1500))}`,
-    `https://clients5.google.com/translate_a/t?client=dict-chrome-ex&sl=${encodeURIComponent(sl)}&tl=${encodeURIComponent(tl)}&q=${encodeURIComponent(text.slice(0, 1500))}`
+    `https://translate.googleapis.com/translate_a/single?client=gtx&sl=${encodeURIComponent(sl)}&tl=${encodeURIComponent(tl)}&dt=t&ie=UTF-8&oe=UTF-8&q=${encodeURIComponent(text)}`,
+    `https://clients5.google.com/translate_a/t?client=dict-chrome-ex&sl=${encodeURIComponent(sl)}&tl=${encodeURIComponent(tl)}&q=${encodeURIComponent(text)}`,
+    `https://clients1.google.com/translate_a/t?client=tw-ob&sl=${encodeURIComponent(sl)}&tl=${encodeURIComponent(tl)}&q=${encodeURIComponent(text)}`
   ];
 
   for (const url of getEndpoints) {
     try {
-      const resp = await fetch(url, { method: 'GET' });
+      const resp = await fetch(url, {
+        method: 'GET',
+        headers: {
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
+          'Accept': '*/*'
+        }
+      });
       if (resp.ok) {
         const data = await resp.json();
         const translated = extractTranslationFromGoogle(data);
