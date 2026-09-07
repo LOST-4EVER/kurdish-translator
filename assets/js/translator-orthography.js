@@ -620,9 +620,10 @@ const TranslatorOrthography = (() => {
    * Deep line-by-line quality analyzer for Kurdish subtitles.
    */
   function checkLineQuality(cue, originalText) {
-    if (!cue) return { score: 100, issues: [], suggestions: [], improvedText: '' };
-    const text = cue.text || '';
-    const duration = Math.max(0.2, ((cue.end || 0) - (cue.start || 0)) / 1000);
+    if (!cue) return { score: 100, issues: [], suggestions: [], issueDetails: [], alternatives: [], improvedText: '' };
+    const text = typeof cue === 'string' ? cue : (cue.text || '');
+    const hasTiming = typeof cue === 'object' && typeof cue.start === 'number' && typeof cue.end === 'number' && cue.end > cue.start;
+    const duration = hasTiming ? Math.max(0.2, (cue.end - cue.start) / 1000) : 0;
     const charCount = text.replace(/<[^>]*>|\{[^}]*\}/g, '').trim().length;
     const cps = duration > 0 ? (charCount / duration) : 0;
 
@@ -631,7 +632,7 @@ const TranslatorOrthography = (() => {
     const issueDetails = [];
 
     // 1. Reading Speed (Characters Per Second)
-    if (cps > 24) {
+    if (duration > 0 && cps > 24) {
       issues.push('cps_too_fast');
       suggestions.push(`Reading speed too fast (${cps.toFixed(1)} CPS). Consider shortening or extending duration.`);
       issueDetails.push({ code: 'CPS_TOO_FAST', severity: 'warning', message: `Fast reading speed: ${cps.toFixed(1)} chars/sec` });

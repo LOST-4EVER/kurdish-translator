@@ -98,7 +98,7 @@ const AppQuality = (() => {
       const kurdText = cue.text || '';
 
       const res = (typeof Translator !== 'undefined' && Translator.checkLineQuality)
-        ? Translator.checkLineQuality(kurdText, srcText)
+        ? Translator.checkLineQuality(cue, srcText)
         : { score: 100, issues: [], issueDetails: [], suggestions: [] };
 
       // Advanced idiom expressions check
