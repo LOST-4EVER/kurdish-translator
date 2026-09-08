@@ -139,7 +139,7 @@ const SubParser = (() => {
       if (m) {
         if (current) cues.push(current);
         const settings = m[3] ? m[3].trim() : '';
-        current = { start: toMs(m[1]), end: toMs(m[2]), settings, text: [] };
+        current = { start: toMs(m[1]), end: toMs(m[2]), rawStart: m[1], rawEnd: m[2], settings, text: [] };
         continue;
       }
       if (/^(?:NOTE|STYLE|REGION)\b/i.test(line)) { inHeaderBlock = true; continue; }
@@ -158,7 +158,7 @@ const SubParser = (() => {
     const out = [];
     for (const c of cues) {
       const text = c.text.join('\n').trim();
-      if (text) out.push({ index: out.length + 1, start: c.start, end: c.end, settings: c.settings || '', text });
+      if (text) out.push({ index: out.length + 1, start: c.start, end: c.end, rawStart: c.rawStart, rawEnd: c.rawEnd, settings: c.settings || '', text });
     }
     return out;
   }
@@ -203,7 +203,7 @@ const SubParser = (() => {
         // serialization can round-trip them instead of resetting to defaults.
         const extra = {};
         fields.forEach((f, i) => { if (f.toLowerCase() !== 'text') extra[f] = parts[i] ?? ''; });
-        cues.push({ index: cues.length + 1, start: assToMs(t0[1]), end: assToMs(t1[1]), text, extra });
+        cues.push({ index: cues.length + 1, start: assToMs(t0[1]), end: assToMs(t1[1]), rawStart: t0[1], rawEnd: t1[1], text, extra });
         continue;
       }
 
@@ -414,7 +414,9 @@ const SubParser = (() => {
       default: result = { format: 'srt', cues: [] }; break;
     }
     if (result && Array.isArray(result.cues)) {
-      result.cues.sort((a, b) => a.start - b.start);
+      if (result.format !== 'ass' && result.format !== 'ssa') {
+        result.cues.sort((a, b) => a.start - b.start);
+      }
       result.cues.forEach((cue, index) => {
         cue.index = index + 1;
       });
@@ -578,7 +580,6 @@ Style: Top,Noto Naskh Arabic,44,16777215,65535,0,0,-1,0,1,3.2,1.8,8,40,40,35,0,1
         const header = 'WEBVTT\n\nSTYLE\n::cue {\n  font-family: \'Noto Naskh Arabic\', \'Vazirmatn\', \'Noto Sans Arabic\', \'Segoe UI\', Tahoma, sans-serif;\n  font-size: 100%;\n}\n\n';
         const body = cueList.map((c) => {
           let s = c.settings ? ' ' + c.settings.trim() : '';
-          const raw = String(c.rawText || c.text || '');
           if (!s) {
             const placement = getPlacementZone(c);
             if (placement === 'top') {
@@ -587,12 +588,18 @@ Style: Top,Noto Naskh Arabic,44,16777215,65535,0,0,-1,0,1,3.2,1.8,8,40,40,35,0,1
               s = ' line:50% position:50% align:center';
             }
           }
-          return `${fmtVTT(c.start)} --> ${fmtVTT(c.end)}${s}\n${normalizeTextForStandard(c.text)}`;
+          const startStr = (c.rawStart && !c._shifted) ? c.rawStart : fmtVTT(c.start);
+          const endStr = (c.rawEnd && !c._shifted) ? c.rawEnd : fmtVTT(c.end);
+          return `${startStr} --> ${endStr}${s}\n${normalizeTextForStandard(c.text)}`;
         }).join('\n\n') + '\n';
         return header + body;
       }
       case 'srt':
-        return cueList.map((c, i) => `${i + 1}\n${fmtSRT(c.start)} --> ${fmtSRT(c.end)}\n${normalizeTextForStandard(c.text)}`).join('\n\n') + '\n';
+        return cueList.map((c, i) => {
+          const startStr = (c.rawStart && !c._shifted) ? c.rawStart : fmtSRT(c.start);
+          const endStr = (c.rawEnd && !c._shifted) ? c.rawEnd : fmtSRT(c.end);
+          return `${i + 1}\n${startStr} --> ${endStr}\n${normalizeTextForStandard(c.text)}`;
+        }).join('\n\n') + '\n';
       case 'ass':
       case 'ssa':
         return serializeASS(parsed, cueList);
@@ -661,8 +668,8 @@ Style: Top,Noto Naskh Arabic,44,16777215,65535,0,0,-1,0,1,3.2,1.8,8,40,40,35,0,1
     for (const c of cues) {
       const val = {};
       order.forEach((f) => { val[f] = (c.extra && c.extra[f]) ?? ASS_FALLBACKS[f.toLowerCase()] ?? ''; });
-      val[keyOf('start')] = fmtASS(c.start);
-      val[keyOf('end')] = fmtASS(c.end);
+      val[keyOf('start')] = (c.rawStart && !c._shifted) ? c.rawStart : fmtASS(c.start);
+      val[keyOf('end')] = (c.rawEnd && !c._shifted) ? c.rawEnd : fmtASS(c.end);
       val[keyOf('text')] = normalizeTextForASS(c.text, c.settings, c.rawText);
       lines.push(`Dialogue: ${order.map((f) => val[f]).join(',')}`);
     }
@@ -698,8 +705,15 @@ Style: Top,Noto Naskh Arabic,44,16777215,65535,0,0,-1,0,1,3.2,1.8,8,40,40,35,0,1
    */
   function fixOverlaps(cues, options = {}) {
     if (!cues || !cues.length) return { cues: [], fixedCount: 0 };
-    const minDur = options.minDuration !== undefined ? options.minDuration : (options.minDurationMs !== undefined ? options.minDurationMs : 750);
-    const gap = options.gap !== undefined ? options.gap : (options.gapMs !== undefined ? options.gapMs : 40); // 40ms buffer prevents player collision
+    // If format is ASS or SSA, subtitles can naturally layer simultaneously, so skip overlap shifting
+    if (options.format === 'ass' || options.format === 'ssa') {
+      const res = cues.map((c, i) => ({ ...c, index: i + 1 }));
+      res.cues = res;
+      res.fixedCount = 0;
+      return res;
+    }
+    const minDur = options.minDuration !== undefined ? options.minDuration : (options.minDurationMs !== undefined ? options.minDurationMs : 600);
+    const gap = options.gap !== undefined ? options.gap : (options.gapMs !== undefined ? options.gapMs : 20); // 20ms buffer
     const mode = options.mode || 'trim';
 
     // Clone and ensure sorted by start time
@@ -735,24 +749,21 @@ Style: Top,Noto Naskh Arabic,44,16777215,65535,0,0,-1,0,1,3.2,1.8,8,40,40,35,0,1
         }
 
         // Case 2: Temporal overlap (cur.end > next.start)
-        // If cues occupy different screen zones (e.g. top sign and bottom dialogue), allow simultaneous display!
+        // Cap cur.end so it does not collide with next.start, but NEVER alter next.start so lip-sync is 100% original.
         if (cur.end > next.start && !diffScreenZones) {
-          const maxAllowedEnd = Math.max(cur.start + minDur, next.start - gap);
+          const maxAllowedEnd = Math.max(cur.start + 100, next.start - gap);
           if (cur.end > maxAllowedEnd) {
             cur.end = maxAllowedEnd;
-            fixedCount++;
-          }
-          // If next cue start is before cur.end after adjustment, nudge next start slightly if safe
-          if (next.start < cur.end + gap && next.end > cur.end + gap + minDur) {
-            sorted[i + 1].start = cur.end + gap;
+            cur._shifted = true;
             fixedCount++;
           }
         }
       }
 
-      // Ensure minimum readable duration
+      // Ensure minimum readable duration if end was invalid
       if (cur.end <= cur.start) {
         cur.end = cur.start + minDur;
+        cur._shifted = true;
         fixedCount++;
       }
 
@@ -780,7 +791,7 @@ Style: Top,Noto Naskh Arabic,44,16777215,65535,0,0,-1,0,1,3.2,1.8,8,40,40,35,0,1
       const start = Math.max(0, (c.start || 0) + deltaMs);
       const minEnd = start + 200;
       const end = Math.max(minEnd, (c.end || 0) + deltaMs);
-      return { ...c, start, end };
+      return { ...c, start, end, _shifted: true };
     });
   }
 

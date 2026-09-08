@@ -8,7 +8,7 @@
   <meta name="mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="default" />
-  <meta name="apple-mobile-web-app-title" content="Kurdî Subtitles" />
+  <meta name="apple-mobile-web-app-title" content="Kurdî Subs" />
   <link rel="manifest" href="manifest.json" />
   <link rel="apple-touch-icon" href="assets/icons/apple-touch-icon.png" />
   <link rel="canonical" href="https://lost-4ever.github.io/kurdish-translator/" />
@@ -446,11 +446,22 @@
 
             <label class="switch-row">
               <span>
+                <strong data-i18n="optContextTitle">Context-Aware Dialogue Continuity</strong>
+                <em data-i18n="optContextSub">harmonize dialogue flow when a sentence continues across cues or responds to a previous question</em>
+              </span>
+              <span class="switch">
+                <input type="checkbox" id="contextAwareToggle" checked role="switch" />
+                <span class="slider"></span>
+              </span>
+            </label>
+
+            <label class="switch-row">
+              <span>
                 <strong data-i18n="optFixOverlapTitle">Fix Dialogue Overlaps & Collisions</strong>
                 <em data-i18n="optFixOverlapSub">prevent subtitle collision when two speakers talk or cues clash across media players</em>
               </span>
               <span class="switch">
-                <input type="checkbox" id="fixOverlapToggle" checked role="switch" />
+                <input type="checkbox" id="fixOverlapToggle" role="switch" />
                 <span class="slider"></span>
               </span>
             </label>
@@ -761,9 +772,18 @@
               </div>
             </div>
             <div class="ed-header-actions">
-              <a class="ed-download-btn" id="edDownloadBtn" title="Save &amp; Download Edited Subtitles" aria-label="Save &amp; Download" download style="display: none;">
+              <button type="button" class="ed-save-btn" id="edSaveBtn" title="Save All Edits (Ctrl+S)" aria-label="Save All Edits">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path>
+                  <polyline points="17 21 17 13 7 13 7 21"></polyline>
+                  <polyline points="7 3 7 8 15 8"></polyline>
+                </svg>
+                <span class="btn-text" data-i18n="edSave">Save</span>
+                <span class="ed-dirty-badge hidden" id="edDirtyBadge">0</span>
+              </button>
+              <a class="ed-download-btn" id="edDownloadBtn" title="Download Kurdish Subtitles" aria-label="Download Subtitles" download>
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
-                <span class="btn-text" data-i18n="edSaveDownload">Save &amp; Download</span>
+                <span class="btn-text" data-i18n="btnDownload">Download</span>
               </a>
             </div>
           </div>

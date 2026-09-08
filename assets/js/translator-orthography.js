@@ -687,6 +687,126 @@ const TranslatorOrthography = (() => {
     };
   }
 
+  /**
+   * Harmonize dialogue flow and grammatical continuity across consecutive subtitle cues.
+   * Handles multi-cue split sentences, conditional clauses, conjunction pairs,
+   * question-response turns, and verbal complementizers.
+   */
+  function resolveDialogueContext(results, originalLines, options = {}) {
+    if (!results || !Array.isArray(results) || !originalLines || !Array.isArray(originalLines)) {
+      return results;
+    }
+    const n = Math.min(results.length, originalLines.length);
+    const updated = [...results];
+
+    for (let i = 0; i < n; i++) {
+      let cur = updated[i];
+      if (!cur || typeof cur !== 'string') continue;
+
+      const origCur = (originalLines[i] || '').trim();
+      const origPrev = i > 0 ? (originalLines[i - 1] || '').trim() : '';
+      const prevTrans = i > 0 ? (updated[i - 1] || '').trim() : '';
+
+      if (!origPrev) continue;
+
+      // 1. Check if current sentence is a direct continuation of previous sentence
+      const prevEndsEllipsis = /[.…—~-]{2,}$/.test(origPrev) || /[.…—~-]{2,}$/.test(prevTrans);
+      const prevEndsUnclosed = /[,;،؛—\-\s]$/.test(origPrev) || !/[.!?؟]$/.test(origPrev);
+      const curStartsEllipsis = /^[.…—~-]{2,}/.test(origCur);
+      const curStartsLower = /^[a-z]/.test(origCur);
+      const isContinuation = (prevEndsEllipsis && curStartsEllipsis) ||
+                             (prevEndsUnclosed && (curStartsLower || curStartsEllipsis)) ||
+                             /^(?:and|but|or|so|yet|because|since|that|which|who|whom|whose|where|when|if|although|though|then|than|as|with|by|for|to)\b/i.test(origCur);
+
+      const origCurClean = origCur.replace(/^[.…—~-\s]+/, '');
+
+      if (isContinuation) {
+        // A. Subordinate clause bridge: If previous clause was conditional/causal ("ئەگەر...", "لەبەر ئەوەی...", "تەنانەت ئەگەر...")
+        if (/^(?:if|even if|although|though|unless|whenever)\b/i.test(origPrev)) {
+          if (!/^(?:ئەوا|ئەوسا|ئەوکات|بەڵام)\b/.test(cur) && !/^(?:then|still|yet)\b/i.test(origCurClean)) {
+            if (/^then\b/i.test(origCurClean)) {
+              cur = cur.replace(/^(?:پاشان|ئینجا|دواتر)\s+/i, 'ئەوا ');
+            }
+          }
+        }
+
+        // B. Not only... but also (نەک تەنها... بەڵکو...یش)
+        if (/\bnot only\b/i.test(origPrev) || /نەک تەنها|تەنیا نییە/.test(prevTrans)) {
+          if (/\b(?:but also|but even)\b/i.test(origCurClean) || /^(?:بەڵام هەروەها|بەڵام تەنانەت)/.test(cur)) {
+            cur = cur.replace(/^(?:بەڵام هەروەها|بەڵام تەنانەت|هەروەها)\s*/, 'بەڵکو ');
+            if (!/یش\b|یش\s/.test(cur)) {
+              cur = cur.replace(/(\S+)$/, '$1یش');
+            }
+          }
+        }
+
+        // C. Verbs of speech / knowledge in previous line ("I told you...", "He said...", "Do you know...")
+        if (/\b(?:said|told|think|believe|know|see|hear|remember|swear|promise|hope)\b/i.test(origPrev) ||
+            /(?:دەزانم|دەزانیت|گوتی|وتم|پێم وتی|بڕوا بکە|سوێند دەخۆم|هیوادارم|دەبینم|دەبیستم)/.test(prevTrans)) {
+          if (!/^کە\s+/.test(cur) && !/^[.,!?;:،؛؟]/.test(cur)) {
+            if (/^(?:that|how|what|why|who)\b/i.test(origCurClean) || /^[a-z]/.test(origCurClean)) {
+              cur = 'کە ' + cur;
+            }
+          }
+        }
+
+        // D. Clean up awkward sentence starters Google outputs when translating fragmented continuation lines
+        cur = cur
+          .replace(/^ئەوە کە\s+/g, 'کە ')
+          .replace(/^ئەوەیە کە\s+/g, 'کە ')
+          .replace(/^ئەوەی کە\s+/g, 'کە ')
+          .replace(/^بە شێوەیەک کە\s+/g, 'بە جۆرێک کە ');
+      }
+
+      // 2. Question -> Answer conversational context
+      const prevIsQuestion = /[?؟]$/.test(origPrev) || /[?؟]$/.test(prevTrans) ||
+                            /^(?:who|what|where|when|why|how|is|are|am|do|does|did|can|could|will|would|have|has|had)\b/i.test(origPrev);
+
+      if (prevIsQuestion) {
+        const cleanOrigCur = origCur.toLowerCase().replace(/[^a-z0-9'\s]/g, '').trim();
+
+        const QA_MAP = {
+          'always': 'هەمیشە ئامادەم',
+          'never': 'هەرگیز',
+          'not yet': 'هێشتا نا',
+          'of course': 'بێگومان بەڵێ',
+          'why not': 'بۆچی نا؟',
+          'nobody': 'هیچ کەسێک',
+          'no one': 'کەس / هیچ کەسێک',
+          'nothing': 'هیچ شتێک',
+          'nowhere': 'هیچ شوێنێک',
+          'just now': 'هەر ئێستا',
+          'not really': 'لە ڕاستیدا نا',
+          'me': 'منم',
+          'its me': 'منم',
+          "it's me": 'منم',
+          'i know': 'دەزانم',
+          "i don't know": 'نازانم',
+          'i have no idea': 'هیچ بیرۆکەیەکم نییە',
+          'because i said so': 'چونکە من وا دەڵێم',
+          'because i had to': 'لەبەر ئەوەی ناچار بووم',
+          'i think so': 'پێم وایە وا بێت',
+          'i hope so': 'هیوادارم وا بێت',
+          'i doubt it': 'گومانم هەیە وا بێت',
+          'maybe': 'لەوانەیە',
+          'perhaps': 'ڕەنگە',
+          'sure': 'بێگومان',
+          'definitely': 'بە دڵنیاییەوە',
+          'absolutely': 'تەواو مسۆگەرە',
+          'exactly': 'ڕێک وایە',
+        };
+
+        if (QA_MAP[cleanOrigCur]) {
+          cur = QA_MAP[cleanOrigCur];
+        }
+      }
+
+      updated[i] = cur;
+    }
+
+    return updated;
+  }
+
   return {
     normalizeDigits,
     normalizeSoraniAlphabet,
@@ -700,6 +820,7 @@ const TranslatorOrthography = (() => {
     checkLineQuality,
     fixPlacementAndTagOrder,
     splitLongKurdishLine,
+    resolveDialogueContext,
   };
 })();
 

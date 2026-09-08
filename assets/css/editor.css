@@ -111,6 +111,58 @@
   flex-shrink: 0;
 }
 
+.ed-save-btn {
+  background: var(--md-sys-color-surface-container-high);
+  color: var(--md-sys-color-on-surface);
+  border: 1px solid var(--md-sys-color-outline-variant);
+  height: 36px;
+  padding: 0 13px;
+  border-radius: 3px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  transition: all var(--motion) var(--ease);
+  white-space: nowrap;
+}
+.ed-save-btn:hover {
+  background: var(--md-sys-color-surface-container-highest);
+  color: var(--md-sys-color-primary);
+  border-color: var(--md-sys-color-primary);
+  transform: translateY(-1px);
+}
+.ed-save-btn:active {
+  transform: scale(0.97);
+}
+.ed-save-btn.has-edits {
+  background: rgba(251, 191, 36, 0.15);
+  color: #fbbf24;
+  border-color: rgba(251, 191, 36, 0.5);
+  animation: edPulseDirty 2.5s infinite ease-in-out;
+}
+.ed-save-btn.just-saved {
+  background: rgba(52, 211, 153, 0.2);
+  color: #34d399;
+  border-color: rgba(52, 211, 153, 0.6);
+}
+@keyframes edPulseDirty {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(251, 191, 36, 0); }
+  50% { box-shadow: 0 0 8px 1px rgba(251, 191, 36, 0.35); }
+}
+
+.ed-dirty-badge {
+  font-size: 10px;
+  font-weight: 700;
+  padding: 1px 5px;
+  border-radius: 2px;
+  background: #fbbf24;
+  color: #0f172a;
+  line-height: 1;
+}
+
 .ed-download-btn {
   background: linear-gradient(135deg, #d0bcff 0%, #b69df8 100%);
   color: #1c004f;

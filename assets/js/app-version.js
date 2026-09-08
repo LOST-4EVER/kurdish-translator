@@ -3,7 +3,7 @@
  * Exposes AppVersion as a global module.
  */
 const AppVersion = (() => {
-  const APP_VERSION = 'v117';
+  const APP_VERSION = 'v120';
   let isRefreshing = false;
   let hasShownUpdateNotice = false;
   let lastCheckedTimestamp = Date.now();
@@ -52,6 +52,12 @@ const AppVersion = (() => {
    */
   function initInstallPrompt() {
     const installBtn = document.getElementById('installBtn');
+    const isStandalone = window.matchMedia('(display-mode: standalone)').matches || navigator.standalone === true;
+    if (isStandalone && installBtn) {
+      installBtn.hidden = true;
+      installBtn.style.display = 'none';
+      return;
+    }
 
     window.addEventListener('beforeinstallprompt', (e) => {
       e.preventDefault();

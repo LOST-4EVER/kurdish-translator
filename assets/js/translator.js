@@ -660,6 +660,17 @@ const Translator = (() => {
 
     if (progressCb) progressCb(1, totalLines + retryTotal, totalLines + retryTotal);
     results.failedCount = failedLines;
+
+    if (isArabic && opts.contextAware !== false) {
+      const orth = getOrthography();
+      if (orth && orth.resolveDialogueContext) {
+        const harmonized = orth.resolveDialogueContext(results, lines, { kurdishDigits: useKurdishDigits });
+        for (let i = 0; i < results.length; i++) {
+          if (harmonized[i]) results[i] = harmonized[i];
+        }
+      }
+    }
+
     return results;
   }
 
@@ -1035,6 +1046,10 @@ const Translator = (() => {
     checkLineQuality,
     getAdvancedAlternatives,
     postprocessSorani,
+    resolveDialogueContext: (res, orig, opts) => {
+      const orth = getOrthography();
+      return orth && orth.resolveDialogueContext ? orth.resolveDialogueContext(res, orig, opts) : res;
+    },
   };
 })();
 

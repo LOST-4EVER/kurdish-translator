@@ -43,7 +43,7 @@
     fileName: '#fileName', fileMeta: '#fileMeta', changeFile: '#changeFile',
     srcLang: '#srcLang', tgtLang: '#tgtLang', keepOnly: '#keepOnly',
     includeOriginal: '#includeOriginal', accuracyToggle: '#accuracyToggle',
-    kurdishDigitsToggle: '#kurdishDigitsToggle', fixOverlapToggle: '#fixOverlapToggle',
+    kurdishDigitsToggle: '#kurdishDigitsToggle', contextAwareToggle: '#contextAwareToggle', fixOverlapToggle: '#fixOverlapToggle',
     addBomToggle: '#addBomToggle', crlfToggle: '#crlfToggle',
     openAdvModalBtn: '#openAdvModalBtn', closeAdvModalBtn: '#closeAdvModalBtn',
     doneAdvModalBtn: '#doneAdvModalBtn', advModalBackdrop: '#advModalBackdrop',
@@ -66,7 +66,7 @@
     progressDetail: '#progressDetail', lineCount: '#lineCount', cancelBtn: '#cancelBtn',
     liveCaption: '#liveCaption', liveOrigCaption: '#liveOrigCaption', liveTimecode: '#liveTimecode',
     livePlaceholder: '#livePlaceholder', liveFeed: '#liveFeed',
-    downloadBtn: '#downloadBtn', edDownloadBtn: '#edDownloadBtn', copyBtn: '#copyBtn',
+    downloadBtn: '#downloadBtn', edDownloadBtn: '#edDownloadBtn', edSaveBtn: '#edSaveBtn', edDirtyBadge: '#edDirtyBadge', copyBtn: '#copyBtn',
     translateAgainBtn: '#translateAgainBtn', doneFormat: '#doneFormat', doneSize: '#doneSize',
     previewBtn: '#previewBtn',
     previewTab: '#previewTab', tabTranslate: '#tabTranslate', tabPreview: '#tabPreview',
@@ -484,28 +484,118 @@
     checkEditsState();
   }
 
-  function hasEdits() {
-    if (!baseCues || !workCues) return false;
-    if (baseCues.length !== workCues.length) return true;
-    for (let i = 0; i < workCues.length; i++) {
-      if (workCues[i].text !== baseCues[i].text) return true;
+  function countEdits() {
+    if (!baseCues || !workCues) return 0;
+    let count = 0;
+    const len = Math.min(baseCues.length, workCues.length);
+    for (let i = 0; i < len; i++) {
+      if (workCues[i].text !== baseCues[i].text) count++;
     }
-    return false;
+    if (baseCues.length !== workCues.length) {
+      count += Math.abs(baseCues.length - workCues.length);
+    }
+    return count;
+  }
+
+  function hasEdits() {
+    return countEdits() > 0;
   }
 
   function checkEditsState() {
-    const edited = hasEdits();
+    const editCount = countEdits();
+    const edited = editCount > 0;
     dirty = edited;
+
     if (els.edDownloadBtn) {
-      if (edited && parsed) {
+      if (parsed) {
         els.edDownloadBtn.style.display = 'inline-flex';
-        els.edDownloadBtn.classList.add('has-edits');
+        if (edited) els.edDownloadBtn.classList.add('has-edits');
+        else els.edDownloadBtn.classList.remove('has-edits');
       } else {
         els.edDownloadBtn.style.display = 'none';
-        els.edDownloadBtn.classList.remove('has-edits');
       }
     }
+
+    if (els.edSaveBtn) {
+      if (parsed) {
+        els.edSaveBtn.style.display = 'inline-flex';
+        if (edited) els.edSaveBtn.classList.add('has-edits');
+        else els.edSaveBtn.classList.remove('has-edits');
+      } else {
+        els.edSaveBtn.style.display = 'none';
+      }
+    }
+
+    if (els.edDirtyBadge) {
+      if (editCount > 0) {
+        els.edDirtyBadge.textContent = String(editCount);
+        els.edDirtyBadge.classList.remove('hidden');
+      } else {
+        els.edDirtyBadge.classList.add('hidden');
+      }
+    }
+
     updateStatus();
+  }
+
+  /** Flush any in-progress typing from focused textarea into workCues and cancel pending debounce timers */
+  function flushPendingEdits() {
+    if (document.activeElement && document.activeElement.classList && document.activeElement.classList.contains('ed-input')) {
+      const input = document.activeElement;
+      const row = input.closest('.ed-row');
+      if (row && row.dataset.index !== undefined) {
+        const idx = parseInt(row.dataset.index, 10);
+        if (!isNaN(idx) && workCues && workCues[idx]) {
+          const clean = input.value.replace(/\r?\n/g, '\n').trim();
+          if (workCues[idx].text !== clean) {
+            workCues[idx].text = clean;
+            if (typeof Translator !== 'undefined' && Translator.normalizeForSearch) {
+              workCues[idx]._normText = Translator.normalizeForSearch(clean);
+            }
+          }
+        }
+      }
+    }
+
+    if (editDebounceTimer) {
+      clearTimeout(editDebounceTimer);
+      editDebounceTimer = null;
+    }
+    lastCommittedState = JSON.stringify(workCues);
+    updateUndoRedoUI();
+    checkEditsState();
+    prepareDownload();
+  }
+
+  /** Explicitly save all current edits permanently into base cues and refresh the download package */
+  function saveEditsPermanently() {
+    if (!parsed || !workCues || !workCues.length) return;
+    flushPendingEdits();
+
+    baseCues = workCues.map((c) => ({ ...c }));
+    dirty = false;
+    lastCommittedState = JSON.stringify(workCues);
+    updateUndoRedoUI();
+    checkEditsState();
+    prepareDownload();
+
+    if (els.edSaveBtn) {
+      els.edSaveBtn.classList.add('just-saved');
+      const textSpan = els.edSaveBtn.querySelector('.btn-text');
+      const origText = textSpan ? textSpan.textContent : '';
+      if (textSpan) textSpan.textContent = currentUiLang === 'ckb' ? '✓ پاشەکەوت کرا' : '✓ Saved';
+      setTimeout(() => {
+        if (els.edSaveBtn) els.edSaveBtn.classList.remove('just-saved');
+        if (textSpan) textSpan.textContent = origText;
+      }, 2000);
+    }
+
+    if (typeof Toast !== 'undefined') {
+      Toast.success(
+        currentUiLang === 'ckb' ? 'دەستکارییەکان پاشەکەوت کران!' : 'Edits saved successfully!',
+        currentUiLang === 'ckb' ? 'هەموو گۆڕانکارییەکان بۆ ژێرنووسەکە جێگیر کران.' : 'All subtitle modifications have been permanently applied.'
+      );
+    }
   }
 
   function restoreCuesState() {
@@ -1437,6 +1527,7 @@
       if (els.liveFeed) els.liveFeed.innerHTML = '';
 
       const startMs = Date.now();
+      const contextAware = els.contextAwareToggle ? els.contextAwareToggle.checked : true;
       const translated = await Translator.translateLines(lines, srcLang, tgtLang, (p, done, total) => {
         if (cancelFlag) return;
         const elapsedSec = (Date.now() - startMs) / 1000;
@@ -1455,12 +1546,13 @@
       }, controller.signal, {
         accuracy,
         kurdishDigits,
+        contextAware,
         onBatch: (results, done) => { if (!cancelFlag) renderLive(results, done); }
       });
       if (cancelFlag) return; // cancelled mid-run: discard results, stay on settings
 
       let finalCues = applyTranslation(translated);
-      const fixOverlapChecked = els.fixOverlapToggle ? els.fixOverlapToggle.checked : true;
+      const fixOverlapChecked = els.fixOverlapToggle ? els.fixOverlapToggle.checked : false;
       if (fixOverlapChecked && typeof SubParser !== 'undefined' && SubParser.fixOverlaps) {
         finalCues = SubParser.fixOverlaps(finalCues, { mode: 'trim', minDurationMs: 600, gapMs: 20 });
       }
@@ -1516,10 +1608,10 @@
 
   function prepareDownload() {
     if (!parsed || !file) return;
-    // Edits are included in the output only when "Save edits" is on.
-    let cues = els.saveEditsToggle.checked ? workCues : baseCues;
+    // Edits are included in the output unless "Save edits" has been explicitly disabled.
+    let cues = (els.saveEditsToggle && !els.saveEditsToggle.checked) ? baseCues : workCues;
 
-    const fixOverlapChecked = els.fixOverlapToggle ? els.fixOverlapToggle.checked : true;
+    const fixOverlapChecked = els.fixOverlapToggle ? els.fixOverlapToggle.checked : false;
     if (fixOverlapChecked && typeof SubParser !== 'undefined' && SubParser.fixOverlaps) {
       cues = SubParser.fixOverlaps(cues, { mode: 'trim', minDurationMs: 600, gapMs: 20 });
     }
@@ -2017,6 +2109,7 @@
     // the file as .txt. Subtitle text is small, so swap to a data: URL on
     // iOS (within the click gesture) where the filename is honored.
     els.downloadBtn.addEventListener('click', () => {
+      flushPendingEdits();
       prepareDownload();
       if (!resultText || !parsed) return;
       if (isIOS) {
@@ -2045,6 +2138,7 @@
 
     if (els.edDownloadBtn) {
       els.edDownloadBtn.addEventListener('click', () => {
+        flushPendingEdits();
         prepareDownload();
         if (!resultText || !parsed) return;
         if (isIOS) {
@@ -2063,6 +2157,23 @@
         }
       });
     }
+
+    if (els.edSaveBtn) {
+      els.edSaveBtn.addEventListener('click', (e) => {
+        e.preventDefault();
+        saveEditsPermanently();
+      });
+    }
+
+    // Ctrl+S / Cmd+S shortcut to save edits directly
+    window.addEventListener('keydown', (e) => {
+      if ((e.ctrlKey || e.metaKey) && (e.key === 's' || e.key === 'S')) {
+        if (parsed && workCues && workCues.length) {
+          e.preventDefault();
+          saveEditsPermanently();
+        }
+      }
+    });
 
     els.cancelBtn.addEventListener('click', () => {
       cancelFlag = true;
@@ -2145,6 +2256,19 @@
     if (els.syncVideoToggle) {
       els.syncVideoToggle.addEventListener('change', () => {
         store.set('syncVideo', els.syncVideoToggle.checked ? '1' : '0');
+      });
+    }
+
+    if (els.contextAwareToggle) {
+      els.contextAwareToggle.addEventListener('change', () => {
+        store.set('contextAware', els.contextAwareToggle.checked ? '1' : '0');
+      });
+    }
+
+    if (els.fixOverlapToggle) {
+      els.fixOverlapToggle.addEventListener('change', () => {
+        store.set('fix_overlap', els.fixOverlapToggle.checked ? '1' : '0');
+        prepareDownload();
       });
     }
 
@@ -2324,7 +2448,8 @@
     if (els.includeOriginal) els.includeOriginal.checked = store.get('includeOriginal', '0') === '1';
     if (els.accuracyToggle) els.accuracyToggle.checked = store.get('accuracy', '0') === '1';
     if (els.kurdishDigitsToggle) els.kurdishDigitsToggle.checked = store.get('kurdishDigits', '0') === '1';
-    if (els.fixOverlapToggle) els.fixOverlapToggle.checked = store.get('fix_overlap', '1') !== '0';
+    if (els.contextAwareToggle) els.contextAwareToggle.checked = store.get('contextAware', '1') !== '0';
+    if (els.fixOverlapToggle) els.fixOverlapToggle.checked = store.get('fix_overlap', '0') === '1';
     if (els.addBomToggle) els.addBomToggle.checked = store.get('addBom', '0') === '1';
     if (els.crlfToggle) els.crlfToggle.checked = store.get('useCrlf', '0') === '1';
     if (els.showOrigToggle) {
