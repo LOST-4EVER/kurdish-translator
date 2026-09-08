@@ -1215,9 +1215,12 @@
         }
         return; // normal editor-list highlight is hidden behind the overlay
       }
-      if (!cue || idx < 0) return;
       if (document.activeElement && document.activeElement.classList && document.activeElement.classList.contains('ed-input')) return;
-      if (lastActiveRow && lastActiveRow.classList) lastActiveRow.classList.remove('active');
+      if (lastActiveRow && lastActiveRow.classList) {
+        lastActiveRow.classList.remove('active');
+        lastActiveRow = null;
+      }
+      if (!cue || idx < 0) return;
       if (!rowEls || !rowEls[idx]) return;
       const row = rowEls[idx];
       if (row && row.classList) {
@@ -1862,8 +1865,8 @@
           const i = parseInt(row.dataset.index, 10);
           const c = workCues && workCues[i];
           if (c && typeof SubtitlePlayer !== 'undefined') {
-            SubtitlePlayer.seek(c.start);
             editWasPlaying = SubtitlePlayer.playing;
+            SubtitlePlayer.seek(c.start);
             SubtitlePlayer.pause();
           }
         }

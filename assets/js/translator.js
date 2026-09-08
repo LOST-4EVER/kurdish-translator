@@ -128,13 +128,13 @@ const Translator = (() => {
       // Extract leading formatting & alignment tags from origLine (even if before/after a dash)
       let leadTags = '';
       const leadTagBeforeDash = origLine.match(/^\s*((?:\{[^}]+\}|<[a-zA-Z0-9]+(?:\s+[^>]+)?>\s*)+)/);
+      const leadTagAfterDash = origLine.match(/^\s*[-—–]\s*((?:\{[^}]+\}|<[a-zA-Z0-9]+(?:\s+[^>]+)?>\s*)+)/);
+      const dashBeforeTag = Boolean(leadTagAfterDash);
+
       if (leadTagBeforeDash) {
         leadTags = leadTagBeforeDash[1].trim();
-      } else {
-        const leadTagAfterDash = origLine.match(/^\s*[-—–]\s*((?:\{[^}]+\}|<[a-zA-Z0-9]+(?:\s+[^>]+)?>\s*)+)/);
-        if (leadTagAfterDash) {
-          leadTags = leadTagAfterDash[1].trim();
-        }
+      } else if (leadTagAfterDash) {
+        leadTags = leadTagAfterDash[1].trim();
       }
 
       // Check if original line had a dialogue hyphen/dash
@@ -161,15 +161,11 @@ const Translator = (() => {
         line = line.replace(/^[-—–]\s*/, '').trim();
       }
 
-      // Reassemble cleanly: leadTags + dash + body + trailTags
-      if (hadDash) {
-        line = '- ' + line;
-      }
-      if (leadTags) {
-        line = leadTags + line;
-      }
-      if (trailTags) {
-        line = line + trailTags;
+      // Reassemble cleanly preserving whether dash preceded tags or vice versa
+      if (dashBeforeTag) {
+        line = (hadDash ? '- ' : '') + (leadTags ? leadTags : '') + line + trailTags;
+      } else {
+        line = (leadTags ? leadTags : '') + (hadDash ? '- ' : '') + line + trailTags;
       }
 
       return line.trim();

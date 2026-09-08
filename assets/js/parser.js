@@ -130,6 +130,7 @@ const SubParser = (() => {
     const cues = [];
     let current = null;
     let inHeaderBlock = false;
+    let lastWasBlank = true;
 
     for (let i = 0; i < lines.length; i++) {
       const line = lines[i].trim();
@@ -140,18 +141,42 @@ const SubParser = (() => {
         if (current) cues.push(current);
         const settings = m[3] ? m[3].trim() : '';
         current = { start: toMs(m[1]), end: toMs(m[2]), rawStart: m[1], rawEnd: m[2], settings, text: [] };
+        lastWasBlank = false;
         continue;
       }
       if (/^(?:NOTE|STYLE|REGION)\b/i.test(line)) { inHeaderBlock = true; continue; }
-      if (!current || !line) continue;
-      // A line immediately followed by a timing line is a cue identifier/index.
-      const next = lines[i + 1];
-      if (next && TIMECODE_LINE.test(next.trim())) continue;
-      // In blank-line-separated SRT the index ("1") is alone on its line, with
-      // the blank cue separator between it and the timing line. Skip those too.
-      const after = lines[i + 2];
-      if (!next && /^\d+$/.test(line) && after && TIMECODE_LINE.test(after.trim())) continue;
+      if (!line) {
+        lastWasBlank = true;
+        continue;
+      }
+      if (!current) {
+        lastWasBlank = false;
+        continue;
+      }
+
+      // Determine if this line is an index or cue identifier for the NEXT cue:
+      // In WebVTT / SRT, an identifier only appears before the timecode line.
+      // If current cue has no text yet, this line MUST be its subtitle payload.
+      const next = lines[i + 1] ? lines[i + 1].trim() : '';
+      if (next && TIMECODE_LINE.test(next)) {
+        const isNumericIndex = /^\d+$/.test(line);
+        const isSimpleId = isNumericIndex || (/^[\w.-]+$/.test(line) && !/^[a-zA-Z]+$/.test(line));
+        const isId = lastWasBlank || (current.text.length > 0 && isSimpleId);
+        if (isId) {
+          lastWasBlank = false;
+          continue;
+        }
+      }
+
+      // In blank-line-separated SRT where index "1" has blank line between it and timecode
+      const after = lines[i + 2] ? lines[i + 2].trim() : '';
+      if (!next && /^\d+$/.test(line) && after && TIMECODE_LINE.test(after)) {
+        lastWasBlank = false;
+        continue;
+      }
+
       current.text.push(line);
+      lastWasBlank = false;
     }
     if (current) cues.push(current);
 
@@ -588,16 +613,16 @@ Style: Top,Noto Naskh Arabic,44,16777215,65535,0,0,-1,0,1,3.2,1.8,8,40,40,35,0,1
               s = ' line:50% position:50% align:center';
             }
           }
-          const startStr = (c.rawStart && !c._shifted) ? c.rawStart : fmtVTT(c.start);
-          const endStr = (c.rawEnd && !c._shifted) ? c.rawEnd : fmtVTT(c.end);
+          const startStr = (c.rawStart && !c._shifted && /^\d+:\d{2}(?::\d{2})?\.\d{3}$/.test(c.rawStart)) ? c.rawStart : fmtVTT(c.start);
+          const endStr = (c.rawEnd && !c._shifted && /^\d+:\d{2}(?::\d{2})?\.\d{3}$/.test(c.rawEnd)) ? c.rawEnd : fmtVTT(c.end);
           return `${startStr} --> ${endStr}${s}\n${normalizeTextForStandard(c.text)}`;
         }).join('\n\n') + '\n';
         return header + body;
       }
       case 'srt':
         return cueList.map((c, i) => {
-          const startStr = (c.rawStart && !c._shifted) ? c.rawStart : fmtSRT(c.start);
-          const endStr = (c.rawEnd && !c._shifted) ? c.rawEnd : fmtSRT(c.end);
+          const startStr = (c.rawStart && !c._shifted && /^\d{2}:\d{2}:\d{2},\d{3}$/.test(c.rawStart)) ? c.rawStart : fmtSRT(c.start);
+          const endStr = (c.rawEnd && !c._shifted && /^\d{2}:\d{2}:\d{2},\d{3}$/.test(c.rawEnd)) ? c.rawEnd : fmtSRT(c.end);
           return `${i + 1}\n${startStr} --> ${endStr}\n${normalizeTextForStandard(c.text)}`;
         }).join('\n\n') + '\n';
       case 'ass':
@@ -668,8 +693,8 @@ Style: Top,Noto Naskh Arabic,44,16777215,65535,0,0,-1,0,1,3.2,1.8,8,40,40,35,0,1
     for (const c of cues) {
       const val = {};
       order.forEach((f) => { val[f] = (c.extra && c.extra[f]) ?? ASS_FALLBACKS[f.toLowerCase()] ?? ''; });
-      val[keyOf('start')] = (c.rawStart && !c._shifted) ? c.rawStart : fmtASS(c.start);
-      val[keyOf('end')] = (c.rawEnd && !c._shifted) ? c.rawEnd : fmtASS(c.end);
+      val[keyOf('start')] = (c.rawStart && !c._shifted && /^\d+:\d{2}:\d{2}\.\d{2}$/.test(c.rawStart)) ? c.rawStart : fmtASS(c.start);
+      val[keyOf('end')] = (c.rawEnd && !c._shifted && /^\d+:\d{2}:\d{2}\.\d{2}$/.test(c.rawEnd)) ? c.rawEnd : fmtASS(c.end);
       val[keyOf('text')] = normalizeTextForASS(c.text, c.settings, c.rawText);
       lines.push(`Dialogue: ${order.map((f) => val[f]).join(',')}`);
     }
@@ -729,6 +754,13 @@ Style: Top,Noto Naskh Arabic,44,16777215,65535,0,0,-1,0,1,3.2,1.8,8,40,40,35,0,1
       const cur = { ...sorted[i] };
       const next = sorted[i + 1] ? { ...sorted[i + 1] } : null;
 
+      // Ensure minimum readable duration if end was invalid or missing
+      if (cur.end <= cur.start) {
+        cur.end = cur.start + minDur;
+        cur._shifted = true;
+        fixedCount++;
+      }
+
       if (next) {
         const curZone = getPlacementZone(cur);
         const nextZone = getPlacementZone(next);
@@ -758,13 +790,6 @@ Style: Top,Noto Naskh Arabic,44,16777215,65535,0,0,-1,0,1,3.2,1.8,8,40,40,35,0,1
             fixedCount++;
           }
         }
-      }
-
-      // Ensure minimum readable duration if end was invalid
-      if (cur.end <= cur.start) {
-        cur.end = cur.start + minDur;
-        cur._shifted = true;
-        fixedCount++;
       }
 
       result.push(cur);
