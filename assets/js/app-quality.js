@@ -201,7 +201,9 @@ const AppQuality = (() => {
 
     if (!listToRender.length) {
       els.qualityIssuesList.innerHTML = `<div class="char-empty-msg" style="padding: 2.5rem 1rem; text-align: center; color: var(--text-muted);">
-        <div style="font-size: 2.5rem; margin-bottom: 0.5rem;">🎉</div>
+        <div style="margin-bottom: 0.75rem; color: #10b981;">
+          <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>
+        </div>
         <div style="font-weight: 600; font-size: 1.1rem; color: var(--text-primary); margin-bottom: 0.25rem;">
           ${isCkb ? 'هەموو دێڕەکان بێ کێشەن و ستانداردن!' : 'All Lines Look Great!'}
         </div>
@@ -251,7 +253,7 @@ const AppQuality = (() => {
 
       if (item.advancedAlternatives && item.advancedAlternatives.length > 0) {
         tagsHtml += `<span class="quality-issue-tag idiom">
-          ⚡ ${isCkb ? 'دەستەواژەی پێشکەوتوو' : 'Advanced Expressions'}
+          <svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor" style="vertical-align:-1px; margin-right:3px;"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg><span>${isCkb ? 'دەستەواژەی پێشکەوتوو' : 'Advanced Expressions'}</span>
         </span>`;
       }
 
@@ -259,8 +261,8 @@ const AppQuality = (() => {
       if (item.advancedAlternatives && item.advancedAlternatives.length > 0) {
         altsHtml = `
           <div class="quality-alts-box" style="margin-top: 0.75rem; padding: 0.6rem 0.75rem; background: var(--surface-secondary, rgba(255,255,255,0.04)); border-radius: 8px; border: 1px dashed var(--border-color, rgba(255,255,255,0.15));">
-            <div style="font-size: 0.75rem; font-weight: 600; color: var(--text-muted, #94a3b8); margin-bottom: 0.4rem;">
-              💡 ${isCkb ? 'پێشنیارە گونجاوەکانی کوردی (کلیک بکە بۆ جێبەجێکردن):' : 'Natural Kurdish alternatives (click to apply):'}
+            <div style="font-size: 0.75rem; font-weight: 600; color: var(--text-muted, #94a3b8); margin-bottom: 0.4rem; display:flex; align-items:center; gap:4px;">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:-1px;"><path d="M9 18h6"/><path d="M10 22h4"/><path d="M12 2a7 7 0 0 0-7 7c0 2.38 1.19 4.47 3 5.74V17a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1v-2.26c1.81-1.27 3-3.36 3-5.74a7 7 0 0 0-7-7z"/></svg><span>${isCkb ? 'پێشنیارە گونجاوەکانی کوردی (کلیک بکە بۆ جێبەجێکردن):' : 'Natural Kurdish alternatives (click to apply):'}</span>
             </div>
             <div style="display: flex; flex-wrap: wrap; gap: 0.4rem;">
               ${item.advancedAlternatives.map((alt) => `
@@ -282,8 +284,8 @@ const AppQuality = (() => {
             <span style="font-size: 0.75rem; font-family: monospace; color: var(--text-muted, #94a3b8);">${timeFmt}</span>
           </div>
           <div style="display: flex; gap: 0.4rem; align-items: center;">
-            <button type="button" class="quick-fix-row-btn btn-xs" data-cue-index="${item.cueIndex}" style="font-size: 0.75rem; padding: 0.3rem 0.6rem; background: var(--accent-primary, #6366f1); color: #fff; border: none; border-radius: 4px; cursor: pointer; font-weight: 600; transition: opacity 0.15s ease;">
-              ⚡ ${isCkb ? 'چاکسازی خۆکار' : 'Auto Polish'}
+            <button type="button" class="quick-fix-row-btn btn-xs" data-cue-index="${item.cueIndex}" style="font-size: 0.75rem; padding: 0.3rem 0.6rem; background: var(--accent-primary, #6366f1); color: #fff; border: none; border-radius: 4px; cursor: pointer; font-weight: 600; transition: opacity 0.15s ease; display: inline-flex; align-items: center; gap: 3px;">
+              <svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg><span>${isCkb ? 'چاکسازی خۆکار' : 'Auto Polish'}</span>
             </button>
             <button type="button" class="goto-cue-btn btn-xs" data-cue-index="${item.cueIndex}" style="font-size: 0.75rem; padding: 0.3rem 0.6rem; background: var(--surface-secondary, rgba(255,255,255,0.06)); color: var(--text-primary, #f8fafc); border: 1px solid var(--border-color, rgba(255,255,255,0.12)); border-radius: 4px; cursor: pointer;">
               ${isCkb ? 'دەستکاری' : 'Edit'}

@@ -70,6 +70,8 @@
     translateAgainBtn: '#translateAgainBtn', doneFormat: '#doneFormat', doneSize: '#doneSize',
     previewBtn: '#previewBtn',
     previewTab: '#previewTab', tabTranslate: '#tabTranslate', tabPreview: '#tabPreview',
+    videoEditorTab: '#videoEditorTab', tabVideoEditor: '#tabVideoEditor',
+    openVideoStudioCtaBtn: '#openVideoStudioCtaBtn', openVideoStudioDoneBtn: '#openVideoStudioDoneBtn',
     installBtn: '#installBtn',
     toast: '#toast',
     editorList: '#editorList', editorStatus: '#editorStatus',
@@ -243,8 +245,10 @@
 
   // Step cards keyed by step name (avoid string-building element lookups).
   const getStepEl = (s) => els['step' + s[0].toUpperCase() + s.slice(1)] || $(`#step${s[0].toUpperCase() + s.slice(1)}`);
+  let activeStepName = 'upload';
 
   function showStep(name) {
+    activeStepName = name;
     STEPS.forEach((s) => {
       const stepEl = getStepEl(s);
       if (stepEl && stepEl.classList) stepEl.classList.add('hidden');
@@ -761,28 +765,32 @@
     if (metrics) {
       metrics.querySelectorAll('.ed-issue-pill').forEach((p) => p.remove());
 
+      const svgWarn = '<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="display:inline-block; vertical-align:-1px; margin-right:3px;"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>';
+      const svgUntrans = '<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="display:inline-block; vertical-align:-1px; margin-right:3px;"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>';
+      const svgDial = '<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="display:inline-block; vertical-align:-1px; margin-right:3px;"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>';
+
       if (insp.isFast) {
         const p = document.createElement('span');
         p.className = 'ed-issue-pill ed-issue-fast';
-        p.textContent = currentUiLang === 'ckb' ? '⚠️ خێرا' : '⚠️ Fast';
+        p.innerHTML = `${svgWarn}<span>${currentUiLang === 'ckb' ? 'خێرا' : 'Fast'}</span>`;
         metrics.appendChild(p);
       }
       if (insp.isLongLine) {
         const p = document.createElement('span');
         p.className = 'ed-issue-pill ed-issue-long';
-        p.textContent = currentUiLang === 'ckb' ? '⚠️ دێڕی درێژ' : '⚠️ Long line';
+        p.innerHTML = `${svgWarn}<span>${currentUiLang === 'ckb' ? 'دێڕی درێژ' : 'Long line'}</span>`;
         metrics.appendChild(p);
       }
       if (insp.hasUntranslated) {
         const p = document.createElement('span');
         p.className = 'ed-issue-pill ed-issue-untrans';
-        p.textContent = currentUiLang === 'ckb' ? '🔤 ئینگلیزی' : '🔤 Untranslated';
+        p.innerHTML = `${svgUntrans}<span>${currentUiLang === 'ckb' ? 'ئینگلیزی' : 'Untranslated'}</span>`;
         metrics.appendChild(p);
       }
       if (insp.isDialogue) {
         const p = document.createElement('span');
         p.className = 'ed-issue-pill ed-issue-dialogue';
-        p.textContent = currentUiLang === 'ckb' ? '👥 وتووێژ' : '👥 Dialogue';
+        p.innerHTML = `${svgDial}<span>${currentUiLang === 'ckb' ? 'وتووێژ' : 'Dialogue'}</span>`;
         metrics.appendChild(p);
       }
     }
@@ -962,28 +970,32 @@
       metrics.appendChild(cpsPill);
       metrics.appendChild(charsPill);
 
+      const svgWarn = '<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="display:inline-block; vertical-align:-1px; margin-right:3px;"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>';
+      const svgUntrans = '<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="display:inline-block; vertical-align:-1px; margin-right:3px;"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>';
+      const svgDial = '<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="display:inline-block; vertical-align:-1px; margin-right:3px;"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>';
+
       if (insp.isFast) {
         const p = document.createElement('span');
         p.className = 'ed-issue-pill ed-issue-fast';
-        p.textContent = currentUiLang === 'ckb' ? '⚠️ خێرا' : '⚠️ Fast';
+        p.innerHTML = `${svgWarn}<span>${currentUiLang === 'ckb' ? 'خێرا' : 'Fast'}</span>`;
         metrics.appendChild(p);
       }
       if (insp.isLongLine) {
         const p = document.createElement('span');
         p.className = 'ed-issue-pill ed-issue-long';
-        p.textContent = currentUiLang === 'ckb' ? '⚠️ دێڕی درێژ' : '⚠️ Long line';
+        p.innerHTML = `${svgWarn}<span>${currentUiLang === 'ckb' ? 'دێڕی درێژ' : 'Long line'}</span>`;
         metrics.appendChild(p);
       }
       if (insp.hasUntranslated) {
         const p = document.createElement('span');
         p.className = 'ed-issue-pill ed-issue-untrans';
-        p.textContent = currentUiLang === 'ckb' ? '🔤 ئینگلیزی' : '🔤 Untranslated';
+        p.innerHTML = `${svgUntrans}<span>${currentUiLang === 'ckb' ? 'ئینگلیزی' : 'Untranslated'}</span>`;
         metrics.appendChild(p);
       }
       if (insp.isDialogue) {
         const p = document.createElement('span');
         p.className = 'ed-issue-pill ed-issue-dialogue';
-        p.textContent = currentUiLang === 'ckb' ? '👥 وتووێژ' : '👥 Dialogue';
+        p.innerHTML = `${svgDial}<span>${currentUiLang === 'ckb' ? 'وتووێژ' : 'Dialogue'}</span>`;
         metrics.appendChild(p);
       }
 
@@ -1301,16 +1313,28 @@
   }
 
   // ---------- Tabs ----------
+  let currentActiveTab = 'translate';
   function switchTab(name) {
     if (name === 'preview' && !parsed) {
       toast('Load a subtitle file first.', true);
       return; // don't switch to an empty preview tab
+    }
+    if (name === 'video-editor') {
+      if (typeof VideoStudio !== 'undefined' && VideoStudio.enterStudioMode) {
+        VideoStudio.enterStudioMode(currentActiveTab);
+      }
+      return;
+    }
+    currentActiveTab = name;
+    if (typeof VideoStudio !== 'undefined' && VideoStudio.isStudioActive) {
+      VideoStudio.exitStudioMode();
     }
     tabButtons.forEach((b) => {
       if (b && b.classList) b.classList.toggle('active', b.dataset.tab === name);
     });
     if (els.tabTranslate && els.tabTranslate.classList) els.tabTranslate.classList.toggle('hidden', name !== 'translate');
     if (els.tabPreview && els.tabPreview.classList) els.tabPreview.classList.toggle('hidden', name !== 'preview');
+    if (els.tabVideoEditor && els.tabVideoEditor.classList) els.tabVideoEditor.classList.add('hidden');
     if (name === 'preview') {
       if (typeof SubtitlePlayer !== 'undefined' && SubtitlePlayer.fitText) {
         requestAnimationFrame(() => SubtitlePlayer.fitText());
@@ -1322,6 +1346,17 @@
     }
   }
   tabButtons.forEach((b) => b.addEventListener('click', () => switchTab(b.dataset.tab)));
+  if (els.openVideoStudioCtaBtn) {
+    els.openVideoStudioCtaBtn.addEventListener('click', () => switchTab('video-editor'));
+  }
+
+  // Global cue accessor for Video Studio and other modules
+  window._getAppWorkCues = () => {
+    if (workCues && workCues.length) return workCues;
+    if (parsed && parsed.cues && parsed.cues.length) return parsed.cues;
+    return [];
+  };
+  window._getAppFileName = () => (file && file.name) || '';
 
   // ---------- File handling ----------
   const formatSize = (n) => n < 1024 ? `${n} B`
@@ -2229,6 +2264,23 @@
 
     els.previewBtn.addEventListener('click', () => switchTab('preview'));
 
+    const launchVideoStudioWithSubs = () => {
+      switchTab('videoEditor');
+      if (typeof VideoEditor !== 'undefined' && VideoEditor.enterStudioMode) {
+        VideoEditor.enterStudioMode();
+        if (workCues && workCues.length) {
+          VideoEditor.applyCurrentSubtitles(true);
+        }
+      }
+    };
+
+    if (els.openVideoStudioDoneBtn) {
+      els.openVideoStudioDoneBtn.addEventListener('click', launchVideoStudioWithSubs);
+    }
+    if (els.openVideoStudioCtaBtn) {
+      els.openVideoStudioCtaBtn.addEventListener('click', launchVideoStudioWithSubs);
+    }
+
     // Editor toggles.
     if (els.showOrigToggle) {
       els.showOrigToggle.addEventListener('change', () => {
@@ -2477,6 +2529,20 @@
     applyLanguage(savedLang);
 
     buildEditor();
+
+    // Expose Bridge APIs for Video Studio and External Modules
+    window._getAppWorkCues = () => (workCues && workCues.length ? workCues : (parsed && parsed.cues ? parsed.cues : null));
+    window._getAppParsed = () => parsed;
+    window._getAppFile = () => file;
+    window._getAppFileName = () => (file ? file.name : (parsed && parsed.format ? `subtitles.${parsed.format}` : 'subtitle.srt'));
+    window._updateAppWorkCues = (newCues) => {
+      if (Array.isArray(newCues)) {
+        updateCues(newCues);
+      }
+    };
+    window._getAppCurrentStep = () => activeStepName;
+    window._switchAppTab = (tabName) => switchTab(tabName);
+    window._getAppResultText = () => resultText;
 
     // Handle mobile orientation changes and window resizing for responsive editor rows
     let resizeTimer = null;

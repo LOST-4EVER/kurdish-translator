@@ -55,7 +55,7 @@ const SubtitlePlayer = (() => {
     if (el.nextCue) el.nextCue.addEventListener('click', () => stepCue(1));
     if (el.skipBack) el.skipBack.addEventListener('click', () => jump(-5000));
     if (el.skipForward) el.skipForward.addEventListener('click', () => jump(5000));
-    if (el.speed) el.speed.addEventListener('change', (e) => { speed = Number(e.target.value); });
+    if (el.speed) el.speed.addEventListener('change', (e) => setSpeed(e.target.value));
 
     const handleScrub = (e) => {
       if (!el.tl) return;
@@ -532,6 +532,19 @@ const SubtitlePlayer = (() => {
     });
   }
 
+  /** Set playback speed with wall-clock compensation to prevent playback position jumps. */
+  function setSpeed(newSpeed) {
+    const num = Number(newSpeed) || 1;
+    if (playing) {
+      startPerf = performance.now();
+      basePos = pos;
+    }
+    speed = num;
+    if (el.speed && Number(el.speed.value) !== num) {
+      el.speed.value = String(num);
+    }
+  }
+
   /** Set font scale multiplier for subtitle preview text. */
   function setFontScale(scale) {
     fontScale = Number(scale) || 1;
@@ -558,6 +571,7 @@ const SubtitlePlayer = (() => {
     seekToCue,
     jump,
     stepCue,
+    setSpeed,
     updateText,
     fitText,
     setFontScale,

@@ -6,7 +6,7 @@
  * (Google's endpoint), so offline mode lets you load files and use the
  * preview player, but translating requires a connection.
  */
-const CACHE = 'kurdish-translator-v121';
+const CACHE = 'kurdish-translator-v127';
 const SHARED_CACHE = 'kurdish-shared-file';
 
 const ASSETS = [
@@ -22,6 +22,17 @@ const ASSETS = [
   './assets/css/fullscreen.css',
   './assets/css/toast.css',
   './assets/css/style.css',
+  './assets/video-editor/video-editor.css',
+  './assets/video-editor/video-editor.html',
+  './assets/video-editor/video-editor-ui.js',
+  './assets/video-editor/video-editor-state.js',
+  './assets/video-editor/video-editor-player.js',
+  './assets/video-editor/video-editor-overlay.js',
+  './assets/video-editor/video-editor-inspector.js',
+  './assets/video-editor/video-editor-popovers.js',
+  './assets/video-editor/video-editor-burner.js',
+  './assets/video-editor/timeline.js',
+  './assets/video-editor/video-editor.js',
   './assets/js/i18n.js',
   './assets/js/toast.js',
   './assets/js/parser.js',
@@ -61,9 +72,14 @@ self.addEventListener('activate', (event) => {
 // Message listener for client controls
 self.addEventListener('message', (event) => {
   if (!event.data) return;
-  if (event.data.type === 'SKIP_WAITING') {
+  const isSkipWaiting = event.data === 'SKIP_WAITING' ||
+    event.data.type === 'SKIP_WAITING' ||
+    event.data.action === 'skipWaiting' ||
+    event.data.action === 'SKIP_WAITING';
+
+  if (isSkipWaiting) {
     self.skipWaiting();
-  } else if (event.data.type === 'CLEAR_ALL_CACHES') {
+  } else if (event.data.type === 'CLEAR_ALL_CACHES' || event.data === 'CLEAR_ALL_CACHES') {
     caches.keys().then((keys) => {
       return Promise.all(keys.map((k) => caches.delete(k)));
     }).then(() => {
@@ -71,7 +87,7 @@ self.addEventListener('message', (event) => {
         event.ports[0].postMessage({ success: true });
       }
     });
-  } else if (event.data.type === 'GET_VERSION') {
+  } else if (event.data.type === 'GET_VERSION' || event.data === 'GET_VERSION') {
     if (event.ports && event.ports[0]) {
       event.ports[0].postMessage({ version: CACHE });
     }

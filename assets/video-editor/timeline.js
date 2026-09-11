@@ -1,0 +1,536 @@
+/**
+ * timeline.js — VN-style compact multi-track timeline for Video Studio.
+ * Features left track header icons (🎵+, [T]+, 🖼+, 🎬+, 🔊),
+ * golden Kurdish subtitle cue blocks with text preview, video filmstrip clip,
+ * full-height scrubber needle, time ruler with tick dots, and zero-lag seeking.
+ */
+(() => {
+  'use strict';
+
+  class StudioTimeline {
+    constructor(containerEl, options = {}) {
+      this.container = typeof containerEl === 'string' ? document.querySelector(containerEl) : containerEl;
+      if (!this.container) {
+        console.error('StudioTimeline: Container element not found');
+        return;
+      }
+
+      this.options = Object.assign({
+        pixelsPerSecond: 48, // Base zoom scale
+        minPixelsPerSecond: 10,
+        maxPixelsPerSecond: 240,
+        onSeek: null,
+        onCueSelect: null,
+      }, options);
+
+      this.duration = 0;      // Total duration in ms
+      this.currentTime = 0;   // Current playhead in ms
+      this.cues = [];         // Array of subtitle cues
+      this.activeCueIndex = -1;
+      this.zoom = this.options.pixelsPerSecond;
+      this.isDragging = false;
+      this.trackWidth = 0;
+
+      // Ultra-smooth playhead performance caching
+      this._cuePillMap = new Map();
+      this._canvasLeft = 0;
+      this._lastPlayheadX = -1;
+      this._pendingSeekRaf = null;
+      this._pendingSeekTime = null;
+
+      this._initDOM();
+      this._bindEvents();
+    }
+
+    _initDOM() {
+      this.container.innerHTML = `
+        <div class="vn-timeline-wrapper">
+          <!-- Left Track Headers (Directly matching VN Editor with crisp SVG icons) -->
+          <div class="vn-track-headers-col">
+            <div class="vn-track-header-item vn-hdr-music" title="Music & Audio Track">
+              <span class="vn-hdr-icon">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><path d="M12 3v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z"/></svg>
+              </span>
+              <span class="vn-hdr-plus"><svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></span>
+            </div>
+            <div class="vn-track-header-item vn-hdr-text" title="Subtitle / Text Track">
+              <span class="vn-hdr-icon vn-hdr-icon-gold">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M5 4v3h5.5v12h3V7H19V4z"/></svg>
+              </span>
+              <span class="vn-hdr-plus"><svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></span>
+            </div>
+            <div class="vn-track-header-item vn-hdr-sticker" title="Overlay & Sticker Track">
+              <span class="vn-hdr-icon">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+              </span>
+              <span class="vn-hdr-plus"><svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></span>
+            </div>
+            <div class="vn-track-header-item vn-hdr-video" title="Main Video Track">
+              <span class="vn-hdr-icon">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><rect x="2" y="2" width="20" height="20" rx="2.18" ry="2.18"/><line x1="7" y1="2" x2="7" y2="22"/><line x1="17" y1="2" x2="17" y2="22"/><line x1="2" y1="12" x2="22" y2="12"/></svg>
+              </span>
+              <span class="vn-hdr-plus"><svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></span>
+            </div>
+            <div class="vn-track-header-item vn-hdr-audio" title="Audio Volume">
+              <span class="vn-hdr-icon">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/></svg>
+              </span>
+            </div>
+            <div class="vn-track-header-item vn-hdr-ruler-spacer"></div>
+          </div>
+
+          <!-- Timeline Viewport (Scrollable horizontally) -->
+          <div class="vn-timeline-viewport" tabindex="0" role="slider" aria-label="Video Timeline" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
+            <div class="vn-timeline-scroll-canvas">
+              <!-- 1. Music Track (Auxiliary) -->
+              <div class="vn-lane vn-lane-music">
+                <div class="vn-lane-music-bg"></div>
+              </div>
+
+              <!-- 2. Subtitle Cues Track (Golden blocks with Kurdish text preview) -->
+              <div class="vn-lane vn-lane-subtitles">
+                <div class="vn-cues-layer"></div>
+              </div>
+
+              <!-- 3. Picture-in-picture / Sticker Track -->
+              <div class="vn-lane vn-lane-sticker">
+                <div class="vn-lane-sticker-line"></div>
+              </div>
+
+              <!-- 4. Video Track (Filmstrip with yellow clip border) -->
+              <div class="vn-lane vn-lane-video">
+                <div class="vn-video-clip-box" id="vnVideoClipBox">
+                  <div class="vn-filmstrip-frames" id="vnFilmstripFrames"></div>
+                  <div class="vn-clip-handle left-handle"></div>
+                  <div class="vn-clip-handle right-handle"></div>
+                </div>
+              </div>
+
+              <!-- 5. Audio Waveform Lane -->
+              <div class="vn-lane vn-lane-audio">
+                <div class="vn-audio-bar-fill" id="vnAudioBarFill"></div>
+              </div>
+
+              <!-- Bottom Time Ruler with dot ticks (VN Style) -->
+              <div class="vn-lane vn-lane-ruler" title="Click to seek playhead">
+                <canvas class="vn-ruler-canvas"></canvas>
+              </div>
+
+              <!-- Full-Height Scrubber Needle -->
+              <div class="vn-needle-scrubber">
+                <div class="vn-needle-head">
+                  <span class="vn-needle-time">0:00</span>
+                </div>
+                <div class="vn-needle-line"></div>
+              </div>
+
+              <!-- Hover Time Preview Indicator -->
+              <div class="vn-hover-indicator hidden">
+                <div class="vn-hover-line"></div>
+                <div class="vn-hover-tooltip">00:00</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      `;
+
+      this.dom = {
+        viewport: this.container.querySelector('.vn-timeline-viewport'),
+        scrollCanvas: this.container.querySelector('.vn-timeline-scroll-canvas'),
+        cuesLayer: this.container.querySelector('.vn-cues-layer'),
+        videoClipBox: this.container.querySelector('#vnVideoClipBox'),
+        filmstripFrames: this.container.querySelector('#vnFilmstripFrames'),
+        audioBarFill: this.container.querySelector('#vnAudioBarFill'),
+        rulerCanvas: this.container.querySelector('.vn-ruler-canvas'),
+        rulerLane: this.container.querySelector('.vn-lane-ruler'),
+        needle: this.container.querySelector('.vn-needle-scrubber'),
+        needleTime: this.container.querySelector('.vn-needle-time'),
+        hoverIndicator: this.container.querySelector('.vn-hover-indicator'),
+        hoverTooltip: this.container.querySelector('.vn-hover-tooltip'),
+      };
+    }
+
+    _bindEvents() {
+      // Scrubber Interaction (pointer down anywhere on scroll canvas)
+      const onPointerDown = (e) => {
+        if (e.button !== 0) return; // Left-click only
+        this.isDragging = true;
+        this.dom.viewport.setPointerCapture(e.pointerId);
+
+        // Cache canvas left position on gesture start to prevent reflow during drag
+        const rect = this.dom.scrollCanvas.getBoundingClientRect();
+        this._canvasLeft = rect.left;
+
+        this._handleScrubEvent(e);
+
+        const onPointerMove = (moveEvent) => {
+          if (!this.isDragging) return;
+          this._handleScrubEvent(moveEvent);
+        };
+
+        const onPointerUp = (upEvent) => {
+          this.isDragging = false;
+          try {
+            this.dom.viewport.releasePointerCapture(upEvent.pointerId);
+          } catch {}
+          this.dom.viewport.removeEventListener('pointermove', onPointerMove);
+          this.dom.viewport.removeEventListener('pointerup', onPointerUp);
+          this.dom.viewport.removeEventListener('pointercancel', onPointerUp);
+
+          // Flush any final seek immediately on release
+          if (this._pendingSeekTime !== null && typeof this.options.onSeek === 'function') {
+            this.options.onSeek(this._pendingSeekTime);
+            this._pendingSeekTime = null;
+          }
+        };
+
+        this.dom.viewport.addEventListener('pointermove', onPointerMove, { passive: true });
+        this.dom.viewport.addEventListener('pointerup', onPointerUp);
+        this.dom.viewport.addEventListener('pointercancel', onPointerUp);
+      };
+
+      this.dom.scrollCanvas.addEventListener('pointerdown', (e) => {
+        // If clicked on a cue block, let the cue click handler handle selection
+        if (e.target.closest('.vn-cue-pill')) return;
+        onPointerDown(e);
+      });
+
+      // Update cached canvas bounds on scroll or resize
+      this.dom.viewport.addEventListener('scroll', () => {
+        if (this.dom.scrollCanvas) {
+          this._canvasLeft = this.dom.scrollCanvas.getBoundingClientRect().left;
+        }
+      }, { passive: true });
+
+      // Mouse wheel zoom with Ctrl/Cmd or horizontal scroll
+      this.dom.viewport.addEventListener('wheel', (e) => {
+        if (e.ctrlKey || e.metaKey) {
+          e.preventDefault();
+          const factor = e.deltaY < 0 ? 1.15 : 0.85;
+          this.setZoom(this.zoom * factor);
+        }
+      }, { passive: false });
+
+      // Hover indicator
+      this.dom.viewport.addEventListener('pointermove', (e) => {
+        if (this.isDragging || !this.duration) {
+          this.dom.hoverIndicator.classList.add('hidden');
+          return;
+        }
+        const clientX = e.clientX - (this._canvasLeft || this.dom.scrollCanvas.getBoundingClientRect().left);
+        if (clientX < 0 || clientX > this.trackWidth) {
+          this.dom.hoverIndicator.classList.add('hidden');
+          return;
+        }
+        const timeMs = Math.max(0, Math.min(this.duration, (clientX / this.zoom) * 1000));
+        this.dom.hoverIndicator.style.transform = `translate3d(${clientX}px, 0, 0)`;
+        this.dom.hoverTooltip.textContent = this.formatTimecode(timeMs);
+        this.dom.hoverIndicator.classList.remove('hidden');
+      }, { passive: true });
+
+      this.dom.viewport.addEventListener('pointerleave', () => {
+        this.dom.hoverIndicator.classList.add('hidden');
+      });
+
+      // Resize observer
+      if (window.ResizeObserver) {
+        new ResizeObserver(() => {
+          this._updateDimensions();
+          this._renderRuler();
+          if (this.dom.scrollCanvas) {
+            this._canvasLeft = this.dom.scrollCanvas.getBoundingClientRect().left;
+          }
+        }).observe(this.dom.viewport);
+      }
+    }
+
+    _handleScrubEvent(e) {
+      if (this._canvasLeft === undefined || this._canvasLeft === null) {
+        this._canvasLeft = this.dom.scrollCanvas.getBoundingClientRect().left;
+      }
+      const clientX = e.clientX - this._canvasLeft;
+      const targetTimeMs = Math.max(0, Math.min(this.duration || Infinity, (clientX / this.zoom) * 1000));
+
+      // 1. Update playhead needle visually immediately at 120Hz/60Hz with zero layout thrashing
+      this.setTime(targetTimeMs, true);
+
+      // 2. Throttle video element seek via RAF to avoid choking video decoders during rapid mouse moves
+      this._pendingSeekTime = targetTimeMs;
+      if (!this._pendingSeekRaf) {
+        this._pendingSeekRaf = requestAnimationFrame(() => {
+          this._pendingSeekRaf = null;
+          if (this._pendingSeekTime !== null && typeof this.options.onSeek === 'function') {
+            this.options.onSeek(this._pendingSeekTime);
+            this._pendingSeekTime = null;
+          }
+        });
+      }
+    }
+
+    setDuration(durationMs) {
+      this.duration = Math.max(0, durationMs || 0);
+      this._updateDimensions();
+      this._renderRuler();
+      this._renderCues();
+      this._updatePlayhead();
+    }
+
+    setTime(timeMs, isInternal = false) {
+      this.currentTime = Math.max(0, Math.min(this.duration || Infinity, timeMs || 0));
+      this._updatePlayhead();
+      this._updateActiveCue();
+
+      if (!isInternal && !this.isDragging) {
+        this._ensurePlayheadInView();
+      }
+    }
+
+    setCues(cues) {
+      this.cues = Array.isArray(cues) ? cues : [];
+      this._renderCues();
+      this._updateActiveCue();
+    }
+
+    setZoom(pixelsPerSecond) {
+      const clamped = Math.max(
+        this.options.minPixelsPerSecond,
+        Math.min(this.options.maxPixelsPerSecond, pixelsPerSecond)
+      );
+      if (Math.abs(clamped - this.zoom) < 0.5) return;
+      this.zoom = clamped;
+
+      this._updateDimensions();
+      this._renderRuler();
+      this._renderCues();
+      this._updatePlayhead();
+    }
+
+    zoomToFit() {
+      if (!this.duration) return;
+      const availableWidth = this.dom.viewport.clientWidth - 60;
+      if (availableWidth <= 100) return;
+      const durationSeconds = this.duration / 1000;
+      const fitZoom = availableWidth / durationSeconds;
+      this.setZoom(fitZoom);
+    }
+
+    _updateDimensions() {
+      const durationSeconds = Math.max(1, (this.duration || 10000) / 1000);
+      this.trackWidth = Math.max(this.dom.viewport.clientWidth, durationSeconds * this.zoom);
+      this.dom.scrollCanvas.style.width = `${this.trackWidth}px`;
+
+      // Update video clip box width
+      if (this.dom.videoClipBox) {
+        const clipWidth = durationSeconds * this.zoom;
+        this.dom.videoClipBox.style.width = `${clipWidth}px`;
+      }
+    }
+
+    _renderRuler() {
+      const canvas = this.dom.rulerCanvas;
+      if (!canvas) return;
+
+      const dpr = window.devicePixelRatio || 1;
+      const width = this.trackWidth;
+      const height = 22;
+
+      canvas.width = width * dpr;
+      canvas.height = height * dpr;
+      canvas.style.width = `${width}px`;
+      canvas.style.height = `${height}px`;
+
+      const ctx = canvas.getContext('2d');
+      ctx.scale(dpr, dpr);
+      ctx.clearRect(0, 0, width, height);
+
+      // Determine tick intervals (e.g. 20:16, 20:18 with small dots like VN)
+      let majorInterval = 2; // default 2 seconds
+      if (this.zoom < 25) {
+        majorInterval = 10;
+      } else if (this.zoom < 45) {
+        majorInterval = 5;
+      } else if (this.zoom > 100) {
+        majorInterval = 1;
+      }
+
+      const totalSec = Math.ceil(this.duration / 1000);
+
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.45)';
+      ctx.font = '10px "Inter", -apple-system, sans-serif';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+
+      for (let s = 0; s <= totalSec; s += 1) {
+        const x = s * this.zoom;
+        const isMajor = s % majorInterval === 0;
+
+        if (isMajor) {
+          const timeStr = this.formatTimecode(s * 1000, false);
+          ctx.fillText(timeStr, x, 11);
+        } else {
+          // VN-style subtle dot
+          ctx.fillStyle = 'rgba(255, 255, 255, 0.2)';
+          ctx.beginPath();
+          ctx.arc(x, 11, 1.2, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.fillStyle = 'rgba(255, 255, 255, 0.45)';
+        }
+      }
+    }
+
+    _renderCues() {
+      const layer = this.dom.cuesLayer;
+      if (!layer) return;
+      layer.innerHTML = '';
+      this._cuePillMap.clear();
+
+      if (!this.cues || !this.cues.length) return;
+
+      const frag = document.createDocumentFragment();
+
+      this.cues.forEach((cue, idx) => {
+        const startSec = (cue.start || 0) / 1000;
+        const endSec = Math.max(startSec + 0.1, (cue.end || (cue.start + 1000)) / 1000);
+        const durationSec = endSec - startSec;
+
+        const leftPx = startSec * this.zoom;
+        const widthPx = Math.max(12, durationSec * this.zoom);
+
+        const pill = document.createElement('div');
+        pill.className = 'vn-cue-pill';
+        pill.dataset.index = idx;
+        pill.style.left = `${leftPx}px`;
+        pill.style.width = `${widthPx}px`;
+
+        const isArabic = /[\u0600-\u06FF\u0750-\u077F\uFB50-\uFDFF\uFE70-\uFEFF]/.test(cue.text || '');
+        if (isArabic) pill.classList.add('rtl-cue');
+
+        const cleanText = (cue.text || '').replace(/<[^>]+>/g, '').replace(/\{[^}]*\}/g, '').trim();
+
+        pill.innerHTML = `
+          <div class="vn-cue-pill-inner">
+            <span class="vn-cue-text">${cleanText}</span>
+          </div>
+        `;
+        pill.title = `#${idx + 1} [${this.formatTimecode(cue.start)} ➔ ${this.formatTimecode(cue.end)}]: ${cleanText}`;
+
+        pill.addEventListener('click', (e) => {
+          e.stopPropagation();
+          this.activeCueIndex = idx;
+          this.setTime(cue.start, true);
+          this._updateActiveCue();
+          if (typeof this.options.onCueSelect === 'function') {
+            this.options.onCueSelect(cue, idx);
+          }
+        });
+
+        this._cuePillMap.set(idx, pill);
+        frag.appendChild(pill);
+      });
+
+      layer.appendChild(frag);
+    }
+
+    _updatePlayhead() {
+      const currentSec = this.currentTime / 1000;
+      const x = currentSec * this.zoom;
+
+      // Sub-pixel threshold check to skip redundant DOM updates
+      if (Math.abs(x - this._lastPlayheadX) >= 0.25) {
+        this._lastPlayheadX = x;
+        this.dom.needle.style.transform = `translate3d(${x}px, 0, 0)`;
+        this.dom.needleTime.textContent = this.formatTimecode(this.currentTime);
+
+        if (this.duration > 0 && this.dom.audioBarFill) {
+          const pct = Math.min(100, (this.currentTime / this.duration) * 100);
+          const intPct = Math.round(pct);
+          if (intPct !== this._lastIntPct) {
+            this._lastIntPct = intPct;
+            this.dom.audioBarFill.style.width = `${pct}%`;
+            this.dom.viewport.setAttribute('aria-valuenow', intPct);
+          }
+        }
+      }
+    }
+
+    _findCueIndexAtTime(timeMs) {
+      const cues = this.cues;
+      if (!cues || !cues.length) return -1;
+      let low = 0;
+      let high = cues.length - 1;
+      while (low <= high) {
+        const mid = (low + high) >> 1;
+        const c = cues[mid];
+        if (timeMs >= c.start && timeMs <= c.end) return mid;
+        if (timeMs < c.start) high = mid - 1;
+        else low = mid + 1;
+      }
+      return -1;
+    }
+
+    _updateActiveCue() {
+      // 1. Fast check if current active cue is still active
+      let activeIdx = -1;
+      if (this.activeCueIndex >= 0 && this.activeCueIndex < this.cues.length) {
+        const c = this.cues[this.activeCueIndex];
+        if (c && this.currentTime >= c.start && this.currentTime <= c.end) {
+          activeIdx = this.activeCueIndex;
+        }
+      }
+      // 2. Binary search fallback O(log N)
+      if (activeIdx === -1) {
+        activeIdx = this._findCueIndexAtTime(this.currentTime);
+      }
+
+      if (activeIdx !== this.activeCueIndex) {
+        // Remove active class from old cue pill (O(1))
+        if (this.activeCueIndex !== -1) {
+          const oldPill = this._cuePillMap.get(this.activeCueIndex);
+          if (oldPill) oldPill.classList.remove('active');
+        }
+        this.activeCueIndex = activeIdx;
+        // Add active class to new cue pill (O(1))
+        if (activeIdx !== -1) {
+          const newPill = this._cuePillMap.get(activeIdx);
+          if (newPill) newPill.classList.add('active');
+        }
+      }
+    }
+
+    _ensurePlayheadInView() {
+      const currentSec = this.currentTime / 1000;
+      const playheadX = currentSec * this.zoom;
+      const scrollLeft = this.dom.viewport.scrollLeft;
+      const viewportWidth = this.dom.viewport.clientWidth;
+
+      if (playheadX > scrollLeft + viewportWidth - 100) {
+        this.dom.viewport.scrollLeft = playheadX - 100;
+      } else if (playheadX < scrollLeft + 50) {
+        this.dom.viewport.scrollLeft = Math.max(0, playheadX - 50);
+      }
+    }
+
+    formatTimecode(ms, includeMillis = true) {
+      if (isNaN(ms) || ms < 0) ms = 0;
+      const totalSec = Math.floor(ms / 1000);
+      const m = Math.floor(totalSec / 60);
+      const s = totalSec % 60;
+      const millis = Math.floor(ms % 1000);
+
+      const sPad = String(s).padStart(2, '0');
+      if (includeMillis) {
+        const mPad = String(m).padStart(2, '0');
+        const msPad = String(millis).padStart(3, '0');
+        return `${mPad}:${sPad}.${msPad}`;
+      }
+      const mPad = String(m).padStart(2, '0');
+      return `${mPad}:${sPad}`;
+    }
+
+    destroy() {
+      this.container.innerHTML = '';
+    }
+  }
+
+  window.StudioTimeline = StudioTimeline;
+})();

@@ -58,6 +58,7 @@
   <link rel="stylesheet" href="assets/css/editor.css" />
   <link rel="stylesheet" href="assets/css/fullscreen.css" />
   <link rel="stylesheet" href="assets/css/toast.css" />
+  <link rel="stylesheet" href="assets/video-editor/video-editor.css" />
   <link rel="stylesheet" href="assets/css/style.css" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -341,6 +342,21 @@
         </span>
         <span data-i18n="tabPreview">Preview</span>
       </button>
+      <button class="tab" data-tab="video-editor" id="videoEditorTab">
+        <span class="tab-ic">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="2" y="2" width="20" height="20" rx="2.18" ry="2.18"></rect>
+            <line x1="7" y1="2" x2="7" y2="22"></line>
+            <line x1="17" y1="2" x2="17" y2="22"></line>
+            <line x1="2" y1="12" x2="22" y2="12"></line>
+            <line x1="2" y1="7" x2="7" y2="7"></line>
+            <line x1="2" y1="17" x2="7" y2="17"></line>
+            <line x1="17" y1="17" x2="22" y2="17"></line>
+            <line x1="17" y1="7" x2="22" y2="7"></line>
+          </svg>
+        </span>
+        <span data-i18n="tabVideoEditor">Video Studio</span>
+      </button>
     </nav>
 
     <main class="stage">
@@ -555,7 +571,7 @@
               <h2 data-i18n="progressTitle">Translating…</h2>
             </div>
             <div class="progress-badge-group">
-              <span class="progress-speed-badge" id="progressSpeed">⚡ Processing</span>
+              <span class="progress-speed-badge" id="progressSpeed"><svg class="speed-icon" width="13" height="13" viewBox="0 0 24 24" fill="currentColor" style="display:inline-block; vertical-align:-1px; margin-right:3px;"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg><span>Processing</span></span>
               <span id="progressPct">0%</span>
             </div>
           </div>
@@ -597,7 +613,7 @@
 
             <!-- Live Streamed Cue Feed -->
             <div class="live-feed-header">
-              <span data-i18n="liveStreamTitle">⚡ Streamed Subtitle Cues</span>
+              <span class="live-feed-title-wrap"><svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor" style="display:inline-block; vertical-align:-1px; margin-right:4px;"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg><span data-i18n="liveStreamTitle">Streamed Subtitle Cues</span></span>
             </div>
             <div class="live-feed" id="liveFeed"></div>
           </div>
@@ -642,6 +658,10 @@
             <button class="btn-secondary" id="previewBtn">
               <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
               <span data-i18n="btnPreview">Preview subtitles</span>
+            </button>
+            <button class="btn-secondary" id="openVideoStudioDoneBtn" style="border-color: rgba(234, 179, 8, 0.4); color: #fef08a;">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
+              <span>Edit &amp; Burn Video</span>
             </button>
             <button class="btn-secondary" id="copyBtn">
               <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z"/></svg>
@@ -902,8 +922,25 @@
           <!-- Segment 4: Cue List -->
           <div class="editor-list" id="editorList" aria-label="Editable subtitle cues"></div>
           <p class="editor-hint" data-i18n="edHint">Click a row to jump player · Type to edit live · <b>Esc</b> or <b>Ctrl+Enter</b> to finish</p>
+
+          <!-- Segment 5: Video Studio CTA -->
+          <div class="video-studio-preview-cta" id="videoStudioPreviewCta">
+            <div class="cta-text">
+              <h3><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block; vertical-align:-3px; margin-right:6px;"><rect x="2" y="2" width="20" height="20" rx="2.18" ry="2.18"></rect><line x1="7" y1="2" x2="7" y2="22"></line><line x1="17" y1="2" x2="17" y2="22"></line><line x1="2" y1="12" x2="22" y2="12"></line><line x1="2" y1="7" x2="7" y2="7"></line><line x1="2" y1="17" x2="7" y2="17"></line><line x1="17" y1="17" x2="22" y2="17"></line><line x1="17" y1="7" x2="22" y2="7"></line></svg>Apply Subtitles to Video (MOV, MP4, WebM)</h3>
+              <p>Import a video from your device, sync subtitles on an interactive timeline, inspect dialogues with the Text Shower, and burn or export your final video.</p>
+            </div>
+            <button type="button" class="btn-primary" id="openVideoStudioCtaBtn">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <polygon points="5 3 19 12 5 21 5 3"></polygon>
+              </svg>
+              <span>Open Video Studio</span>
+            </button>
+          </div>
         </section>
       </div>
+
+      <!-- ============ VIDEO STUDIO TAB (DECOUPLED MODULAR WORKSTATION) ============ -->
+      <div id="tabVideoEditor" class="hidden vn-studio-root"></div>
     </main>
 
     <footer class="footer">
@@ -921,7 +958,7 @@
             <div class="refresh-menu-header">
               <div class="header-status-badge">
                 <span class="live-dot online" id="refreshLiveDot" title="Network status"></span>
-                <span class="menu-ver-tag" id="currentVerTag">v114</span>
+                <span class="menu-ver-tag" id="currentVerTag">v127</span>
               </div>
               <div class="header-status-meta">
                 <span class="menu-status-txt" id="refreshStatusTxt" data-i18n="appUpToDate">App up to date</span>
@@ -976,21 +1013,21 @@
                   <polyline points="10 9 9 9 8 9"></polyline>
                 </svg>
                 <div class="item-text">
-                  <strong data-i18n="whatsNew">What's New in v114</strong>
+                  <strong data-i18n="whatsNew">What's New in v127</strong>
                   <span data-i18n="whatsNewSub">View latest improvements</span>
                 </div>
               </button>
               <div class="changelog-panel hidden" id="changelogPanel">
                 <div class="changelog-badge-row">
-                  <span class="changelog-ver">Release v114</span>
+                  <span class="changelog-ver">Release v127</span>
                   <span class="changelog-date">2026</span>
                 </div>
                 <ul class="changelog-list">
-                  <li>🔍 <strong>Line-by-Line Detection Bar:</strong> Interactive filtering by Warnings, Untranslated fragments, and Dialogue rows with live metric counters.</li>
-                  <li>⚡ <strong>Live CPS &amp; Line Diagnostics:</strong> Instant per-line Characters-Per-Second calculation, duration pills, reading pace alerts, and long-line warnings.</li>
-                  <li>🎯 <strong>Row-Level Action Buttons:</strong> In-line 1-click retranslation and Kurdish orthographic polishing directly from the subtitle list.</li>
-                  <li>🎨 <strong>Safe HTML &amp; ASS Text Rendering:</strong> Seamless formatting tags support (italics, bold, underline, color codes, linebreaks) without XSS vulnerabilities.</li>
-                  <li>📱 <strong>PWA Cache v114:</strong> Service worker shell updated for offline preview and fast updates.</li>
+                  <li><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="display:inline-block; vertical-align:-1px; margin-right:4px;"><rect x="2" y="2" width="20" height="20" rx="2.18" ry="2.18"/><line x1="7" y1="2" x2="7" y2="22"/><line x1="17" y1="2" x2="17" y2="22"/><line x1="2" y1="12" x2="22" y2="12"/><line x1="2" y1="7" x2="7" y2="7"/><line x1="2" y1="17" x2="7" y2="17"/><line x1="17" y1="17" x2="22" y2="17"/><line x1="17" y1="7" x2="22" y2="7"/></svg><strong>Video Subtitle Studio:</strong> High-performance HTML5 video canvas player with custom subtitle styling, full timeline scrubbing, and on-device video burner export.</li>
+                  <li><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="display:inline-block; vertical-align:-1px; margin-right:4px;"><circle cx="12" cy="12" r="10"/><polygon points="10 8 16 12 10 16 10 8"/></svg><strong>Lag-Free Video Ingestion &amp; Playback:</strong> Smooth video drag-and-drop ingestion, fast seek caching, and wall-clock synchronization.</li>
+                  <li><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="display:inline-block; vertical-align:-1px; margin-right:4px;"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 14 14"/></svg><strong>Pitch-Preserved Speed Control:</strong> Seamless playback speed adjustment (0.5× to 2.0×) preserving natural audio pitch and cue alignment.</li>
+                  <li><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="display:inline-block; vertical-align:-1px; margin-right:4px;"><path d="M4 7V4h16v3"/><path d="M9 20h6"/><path d="M12 4v16"/></svg><strong>Dynamic Kurdish Typography:</strong> Expanded font selection including Noto Naskh, Noto Sans, Vazirmatn, and system fonts with instant scaling.</li>
+                  <li><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="display:inline-block; vertical-align:-1px; margin-right:4px;"><path d="M23 4v6h-6"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg><strong>PWA v127 Update Engine:</strong> Service worker instant activation, one-click cache purge, and real-time GitHub sync.</li>
                 </ul>
               </div>
               <button class="refresh-item force-item" id="btnForceRefresh" role="menuitem">
@@ -1133,7 +1170,7 @@
           <span id="fsEdCueLabel">Edit Subtitle Cue</span>
         </span>
         <div class="fs-ed-tools">
-          <button type="button" class="fs-btn-chip" id="fsEdPolishBtn" title="Auto-polish Kurdish typography on this line">⚡ Polish</button>
+          <button type="button" class="fs-btn-chip" id="fsEdPolishBtn" title="Auto-polish Kurdish typography on this line"><svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor" style="display:inline-block; vertical-align:-1px; margin-right:3px;"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>Polish</button>
           <button type="button" class="fs-btn fs-icon-btn fs-btn-mini" id="fsEdUndoBtn" data-i18n-title="undo" title="Undo change" aria-label="Undo change" disabled>
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 14 4 9 9 4"></polyline><path d="M20 20v-7a4 4 0 0 0-4-4H4"></path></svg>
           </button>
@@ -1198,8 +1235,8 @@
           </div>
 
           <div class="quality-actions-bar">
-            <button type="button" class="btn-primary" id="fixAllQualityBtn" data-i18n="btnFixAllIssues">⚡ Auto-Polish &amp; Fix Kurdish</button>
-            <button type="button" class="btn-secondary" id="fixOverlapsNowBtn">⚡ Fix Dialogue Overlaps</button>
+            <button type="button" class="btn-primary" id="fixAllQualityBtn" data-i18n="btnFixAllIssues"><svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor" style="display:inline-block; vertical-align:-2px; margin-right:5px;"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg><span>Auto-Polish &amp; Fix Kurdish</span></button>
+            <button type="button" class="btn-secondary" id="fixOverlapsNowBtn"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block; vertical-align:-2px; margin-right:5px;"><polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg><span>Fix Dialogue Overlaps</span></button>
           </div>
 
           <!-- Quality Modal Filter Tabs & Search -->
@@ -1214,7 +1251,7 @@
             <div class="quality-search-wrap">
               <svg class="quality-search-ic" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
               <input type="text" id="qualitySearchInput" class="quality-search-input" placeholder="Filter issues..." aria-label="Filter quality issues" />
-              <button type="button" class="quality-search-clear hidden" id="qualitySearchClear" aria-label="Clear filter">×</button>
+              <button type="button" class="quality-search-clear hidden" id="qualitySearchClear" aria-label="Clear filter"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg></button>
             </div>
           </div>
 
@@ -1278,6 +1315,15 @@
   <script src="assets/js/app-tour.js"></script>
   <script src="assets/js/app-quality.js"></script>
   <script src="assets/js/app-fullscreen.js"></script>
+  <script src="assets/video-editor/video-editor-ui.js"></script>
+  <script src="assets/video-editor/video-editor-state.js"></script>
+  <script src="assets/video-editor/video-editor-player.js"></script>
+  <script src="assets/video-editor/video-editor-overlay.js"></script>
+  <script src="assets/video-editor/video-editor-inspector.js"></script>
+  <script src="assets/video-editor/video-editor-popovers.js"></script>
+  <script src="assets/video-editor/video-editor-burner.js"></script>
+  <script src="assets/video-editor/timeline.js"></script>
+  <script src="assets/video-editor/video-editor.js"></script>
   <script src="assets/js/app.js"></script>
 </body>
 </html>

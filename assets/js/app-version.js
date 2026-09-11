@@ -3,7 +3,7 @@
  * Exposes AppVersion as a global module.
  */
 const AppVersion = (() => {
-  const APP_VERSION = 'v120';
+  const APP_VERSION = 'v127';
   let isRefreshing = false;
   let hasShownUpdateNotice = false;
   let lastCheckedTimestamp = Date.now();
@@ -253,7 +253,7 @@ const AppVersion = (() => {
    */
   function showUpdateAvailable(reg, newVerStr) {
     const els = getElements();
-    const verDisplay = newVerStr || 'v96+';
+    const verDisplay = newVerStr || 'v127+';
 
     if (els.updateBadgeDot) els.updateBadgeDot.classList.remove('hidden');
     if (els.refreshBtn) els.refreshBtn.classList.add('has-update');
@@ -394,7 +394,16 @@ const AppVersion = (() => {
     try {
       if ('serviceWorker' in navigator) {
         const reg = await navigator.serviceWorker.getRegistration();
-        if (reg) await reg.update();
+        if (reg) {
+          await reg.update().catch(() => {});
+          if (reg.waiting) {
+            showUpdateAvailable(reg);
+            if (manual && typeof Toast !== 'undefined') {
+              Toast.show(`${getI18nText('newVersionAvailable', 'New version available')}!`, 'success', 4000);
+            }
+            return;
+          }
+        }
       }
 
       let foundNew = false;
@@ -488,16 +497,27 @@ const AppVersion = (() => {
     try {
       if ('serviceWorker' in navigator) {
         const reg = await navigator.serviceWorker.getRegistration();
-        if (reg && reg.waiting) {
-          reg.waiting.postMessage({ type: 'SKIP_WAITING' });
-          return;
+        if (reg) {
+          if (reg.waiting) {
+            reg.waiting.postMessage({ type: 'SKIP_WAITING' });
+            reg.waiting.postMessage('SKIP_WAITING');
+          }
+          await reg.update().catch(() => {});
+          if (reg.waiting) {
+            reg.waiting.postMessage({ type: 'SKIP_WAITING' });
+            reg.waiting.postMessage('SKIP_WAITING');
+          }
         }
       }
-    } catch {}
+    } catch (e) {
+      console.warn('Service worker refresh trigger:', e);
+    }
 
     setTimeout(() => {
+      if (isRefreshing) return;
+      isRefreshing = true;
       window.location.reload();
-    }, 400);
+    }, 350);
   }
 
   /**
@@ -525,7 +545,7 @@ const AppVersion = (() => {
       const url = new URL(window.location.href);
       url.searchParams.set('_r', Date.now().toString());
       window.location.href = url.toString();
-    }, 500);
+    }, 400);
   }
 
   /**
@@ -548,12 +568,22 @@ const AppVersion = (() => {
         }
       });
 
-      document.addEventListener('click', (e) => {
+      const closeMenu = (e) => {
         if (!els.refreshMenu.classList.contains('hidden')) {
           if (!els.refreshMenu.contains(e.target) && !els.refreshBtn.contains(e.target)) {
             els.refreshMenu.classList.add('hidden');
             els.refreshBtn.setAttribute('aria-expanded', 'false');
           }
+        }
+      };
+
+      document.addEventListener('click', closeMenu);
+      document.addEventListener('touchstart', closeMenu, { passive: true });
+
+      document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && !els.refreshMenu.classList.contains('hidden')) {
+          els.refreshMenu.classList.add('hidden');
+          els.refreshBtn.setAttribute('aria-expanded', 'false');
         }
       });
     }
@@ -599,12 +629,14 @@ const AppVersion = (() => {
 
     if (els.bannerRefreshBtn) {
       els.bannerRefreshBtn.addEventListener('click', () => {
+        if (els.updateBanner) els.updateBanner.classList.add('hidden');
         performQuickRefresh();
       });
     }
 
     if (els.bannerForceRefreshBtn) {
       els.bannerForceRefreshBtn.addEventListener('click', () => {
+        if (els.updateBanner) els.updateBanner.classList.add('hidden');
         performForceRefresh();
       });
     }
