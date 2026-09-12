@@ -1,13 +1,13 @@
 # 🎬 Kurdî Subtitle Translator | وەرگێڕی پێشکەوتووی ژێرنووسی کوردی
 
-[![Version v114](https://img.shields.io/badge/Version-v114-7c5cfc?style=flat-square&logo=github)](https://LOST-4EVER.github.io/kurdish-translator/)
+[![Version v132](https://img.shields.io/badge/Version-v132-7c5cfc?style=flat-square&logo=github)](https://LOST-4EVER.github.io/kurdish-translator/)
 [![Progressive Web App](https://img.shields.io/badge/PWA-Installable%20%26%20Offline-0ea5e9?style=flat-square&logo=pwa&logoColor=white)](https://LOST-4EVER.github.io/kurdish-translator/)
 [![Target Kurdish Sorani](https://img.shields.io/badge/Target%20Language-Kurdish%20Sorani%20(ckb)-fbbf24?style=flat-square)](https://LOST-4EVER.github.io/kurdish-translator/)
 [![100% Client-Side](https://img.shields.io/badge/Privacy-100%25%20In--Browser-10b981?style=flat-square&logoColor=white)](https://LOST-4EVER.github.io/kurdish-translator/)
 [![Zero Build Step](https://img.shields.io/badge/Build-Zero%20Dependencies-ec4899?style=flat-square)](https://LOST-4EVER.github.io/kurdish-translator/)
 [![GitHub Pages](https://img.shields.io/badge/Deployment-GitHub%20Pages-6366f1?style=flat-square&logo=githubpages&logoColor=white)](https://LOST-4EVER.github.io/kurdish-translator/)
 
-A state-of-the-art, 100% client-side subtitle translation and fansubbing suite designed specifically for **Kurdish Sorani (کوردیی ناوەندی - `ckb`)**. Purpose-built for anime fansubbers, cinema translators, and video editors, it features an advanced Kurdish linguistic normalizer, an extensive anime, cartoon & tactical military cultural lexicon, a real-time subtitle player, a live synchronized editor, an interactive onboarding guide, and an automated Kurdish orthographic quality inspector.
+A state-of-the-art, 100% client-side subtitle translation and fansubbing suite designed specifically for **Kurdish Sorani (کوردیی ناوەندی - `ckb`)**. Purpose-built for anime fansubbers, cinema translators, and video editors, it features an advanced Kurdish linguistic normalizer, an extensive anime, cartoon & tactical military cultural lexicon, a real-time subtitle player, a live synchronized editor, an interactive onboarding guide, an automated Kurdish orthographic quality inspector, and a zero-scroll **Video Subtitle Studio Workstation** with native MKV/MOV support and video burning.
 
 🔗 **Live Web Application:** [https://LOST-4EVER.github.io/kurdish-translator/](https://LOST-4EVER.github.io/kurdish-translator/)
 
@@ -15,12 +15,12 @@ A state-of-the-art, 100% client-side subtitle translation and fansubbing suite d
 
 ## 📑 Table of Contents
 1. [Supported Subtitle Formats & Encodings](#-supported-subtitle-formats--encodings)
-2. [Anime, Cartoon, Tactical & Cinema Kurdish Intelligence](#-anime-cartoon-tactical--cinema-kurdish-intelligence)
-3. [Core Translation & Multi-API Failover Engine](#-core-translation--multi-api-failover-engine)
-4. [Real-Time Subtitle Player & Cinema Mode](#-real-time-subtitle-player--cinema-mode)
-5. [Live Subtitle Editor & Instant Search](#-live-subtitle-editor--instant-search)
-6. [Interactive Onboarding Guide & Live Tour](#-interactive-onboarding-guide--live-tour)
-7. [Kurdish Quality Inspector & Auto-Repair](#-kurdish-quality-inspector--auto-repair)
+2. [Video Subtitle Studio Workstation & MKV/MOV Support](#-video-subtitle-studio-workstation--mkvmov-support)
+3. [Anime, Cartoon, Tactical & Cinema Kurdish Intelligence](#-anime-cartoon-tactical--cinema-kurdish-intelligence)
+4. [Core Translation & Multi-API Failover Engine](#-core-translation--multi-api-failover-engine)
+5. [Real-Time Subtitle Player & Cinema Mode](#-real-time-subtitle-player--cinema-mode)
+6. [Live Subtitle Editor & Instant Search](#-live-subtitle-editor--instant-search)
+7. [Advanced Subtitle Tools & Quality Inspector](#-advanced-subtitle-tools--quality-inspector)
 8. [Character Glossary & Speaker Manager](#-character-glossary--speaker-manager)
 9. [PWA Offline Engine & Diagnostics](#-pwa-offline-engine--diagnostics)
 10. [Architecture & Source Structure](#-architecture--source-structure)
@@ -46,6 +46,25 @@ The built-in parser (`SubParser`) decodes, cleans, preserves styling tags, and s
 ### Encoding & Character Detection
 - **Automatic Byte Order Mark (BOM) Stripping:** Handles UTF-8 with BOM, UTF-16LE, and UTF-16BE seamlessly.
 - **Legacy Code Pages:** Automatically decodes Windows-1256 (Arabic/Kurdish), ISO-8859-1, and standard UTF-8 without mojibake.
+
+---
+
+## 🎬 Video Subtitle Studio Workstation & MKV/MOV Support
+
+A pro-grade, zero-scroll non-linear subtitle video editor built directly in the browser:
+
+### 🎞️ Multi-Track Interactive Timeline
+- **Hierarchical Media Tracks:** Dedicated tracks for **Music (مۆسیقا)**, **Subtitles (ژێرنووس)**, **Stickers & FX (ستیكەر)**, **Video (ڤیدیۆ)**, and **Audio (دەنگ)**.
+- **Micro-Precise Dragging & Trimming:** Adjust start/end timecodes, drag subtitle blocks, and split cues at the exact frame playhead.
+- **60Hz/120Hz Decoupled Playhead Clock:** Smooth `requestAnimationFrame` loop eliminating playhead stutter and sub-frame layout recalculations.
+- **Zoom & Auto-Fit:** Smooth timeline scaling from macro-overview to sub-second precision.
+
+### 📦 Native MKV & QuickTime MOV Importer
+- **Matroska EBML Binary Parser (`mkv-importer.js`):** In-browser demuxing of `.mkv` and `.webm` files with direct inspection of video codecs, audio tracks, and embedded subtitle streams (ASS/SSA, SRT).
+- **QuickTime MOV Support (`mov-importer.js`):** Direct playback of Apple ProRes, MP4, and MOV formats with duration probing and aspect-ratio detection.
+
+### 🔥 Hardware-Accelerated Video Subtitle Burner
+- **Client-Side Video Rendering:** Hardsub engine burning Kurdish typography with outline shadows and custom backgrounds directly onto video frames using Canvas2D and WebCodecs / MediaRecorder.
 
 ---
 

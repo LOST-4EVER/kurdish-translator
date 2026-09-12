@@ -424,8 +424,8 @@ const AppQuality = (() => {
     if (typeof Toast !== 'undefined') {
       Toast.show(
         isCkb
-          ? '🎉 هەموو دێڕەکان بە ستانداردی کوردی چاککران و کاتەکان ڕێکخران!'
-          : '🎉 Auto-polished all lines and resolved dialogue overlaps!',
+          ? 'هەموو دێڕەکان بە ستانداردی کوردی چاککران و کاتەکان ڕێکخران!'
+          : 'Auto-polished all lines and resolved dialogue overlaps!',
         'success',
         3000
       );
@@ -451,8 +451,8 @@ const AppQuality = (() => {
       if (typeof Toast !== 'undefined') {
         Toast.show(
           isCkb
-            ? '✓ کاتی ژێرنووسە تێکەڵبووەکان بە سەرکەوتوویی ڕێکخرانەوە!'
-            : '✓ Dialogue overlaps resolved and timed cleanly!',
+            ? 'کاتی ژێرنووسە تێکەڵبووەکان بە سەرکەوتوویی ڕێکخرانەوە!'
+            : 'Dialogue overlaps resolved and timed cleanly!',
           'success',
           2500
         );

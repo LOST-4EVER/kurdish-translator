@@ -268,6 +268,13 @@ const SubtitlePlayer = (() => {
     let vAlign = 'bottom';
     let hAlign = 'center';
 
+    if (cue && (cue.placement === 'top' || cue.placement === 'mid' || cue.placement === 'center')) {
+      vAlign = cue.placement === 'center' ? 'mid' : cue.placement;
+    }
+    if (cue && cue.align) {
+      hAlign = cue.align;
+    }
+
     // Check ASS / SSA / SRT alignment tags: {\an1}..{\an9}, {\a1}..{\a11}
     const anMatch = raw.match(/\{\\an(\d)\}/i);
     const aMatch = raw.match(/\{\\a(\d+)\}/i);
@@ -394,6 +401,8 @@ const SubtitlePlayer = (() => {
           if (placement.hAlign === 'left') span.style.alignSelf = 'flex-start';
           else if (placement.hAlign === 'right') span.style.alignSelf = 'flex-end';
           else span.style.alignSelf = 'center';
+          if (c.fontFamily) span.style.fontFamily = c.fontFamily;
+          if (c.color) span.style.color = c.color;
 
           const targetZone = placement.vAlign === 'top' ? zoneTop : (placement.vAlign === 'mid' ? zoneMid : zoneBottom);
           targetZone.appendChild(span);
@@ -410,6 +419,8 @@ const SubtitlePlayer = (() => {
           if (placement.hAlign === 'left') span.style.alignSelf = 'flex-start';
           else if (placement.hAlign === 'right') span.style.alignSelf = 'flex-end';
           else span.style.alignSelf = 'center';
+          if (c.fontFamily) span.style.fontFamily = c.fontFamily;
+          if (c.color) span.style.color = c.color;
 
           const targetZone = placement.vAlign === 'top' ? zoneTop : (placement.vAlign === 'mid' ? zoneMid : zoneBottom);
           targetZone.appendChild(span);

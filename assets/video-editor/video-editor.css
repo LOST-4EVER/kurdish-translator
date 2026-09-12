@@ -1,25 +1,32 @@
 /* ============================================================
-   Kurdî Subtitle Translator — VN-Style Video Subtitle Studio
-   Zero-scroll, compact layout inspired by VN Editor:
+   Kurdî Subtitle Translator — Video Subtitle Studio Workstation
+   Zero-Scroll, 100vh Workstation Layout
+   - Clean flat styling (No gradients)
+   - Emoji icon visual cues
    - Multi-track timeline (Music, Text, Sticker, Video, Audio)
-   - Left track headers with crisp SVG icons
-   - Golden Kurdish subtitle cue pills with live text
-   - Video filmstrip track with yellow selection border
-   - Compact Text Shower with reading pace and cue diagnostics
-   - Bottom action bar with floating popovers (Style, Sync, Speed, Volume)
-   - Glowing "Apply Subtitles" indicator when files are ready
+   - Kurdish typography overlay with live diagnostics
+   - Hardware-accelerated video export suite
    ============================================================ */
 
 /* ---------- Global Studio Mode Constraints ---------- */
+html:has(body.studio-mode),
 body.studio-mode {
   height: 100vh !important;
   max-height: 100vh !important;
+  width: 100vw !important;
+  max-width: 100vw !important;
   overflow: hidden !important;
   margin: 0 !important;
   padding: 0 !important;
-  background-color: #0b0911 !important;
+  background-color: #09080e !important;
   color: #e6e0e9;
   font-family: -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", Roboto, sans-serif;
+  position: fixed !important;
+  top: 0 !important;
+  left: 0 !important;
+  right: 0 !important;
+  bottom: 0 !important;
+  box-sizing: border-box !important;
 }
 
 body.studio-mode .topbar,
@@ -27,17 +34,16 @@ body.studio-mode .tabs,
 body.studio-mode .app-footer,
 body.studio-mode .footer,
 body.studio-mode .tour-overlay,
-body.studio-mode .update-banner {
-  display: none !important;
-}
-
+body.studio-mode .update-banner,
 body.studio-mode #tabTranslate,
 body.studio-mode #tabPreview {
   display: none !important;
 }
 
+body.studio-mode .app,
 body.studio-mode .container,
-body.studio-mode .main {
+body.studio-mode .main,
+body.studio-mode main {
   max-width: 100vw !important;
   width: 100vw !important;
   padding: 0 !important;
@@ -45,83 +51,133 @@ body.studio-mode .main {
   height: 100vh !important;
   max-height: 100vh !important;
   overflow: hidden !important;
+  box-sizing: border-box !important;
 }
 
-/* ---------- VN Studio Root Container (Zero-Scroll 100vh) ---------- */
+/* ---------- Studio Root Container (Zero-Scroll 100vh Flex Column) ---------- */
 .vn-studio-root {
   display: flex !important;
   flex-direction: column !important;
   height: 100vh !important;
   max-height: 100vh !important;
   width: 100vw !important;
+  max-width: 100vw !important;
   overflow: hidden !important;
-  background-color: #0b0911;
+  background-color: #09080e;
   position: relative;
   user-select: none;
-  box-sizing: border-box;
+  box-sizing: border-box !important;
+  margin: 0 !important;
+  padding: 0 !important;
 }
 
 .vn-studio-root.hidden {
   display: none !important;
 }
 
-/* ---------- 1. Studio Header (44px) ---------- */
+/* ---------- Universal SVG and Button Centering ---------- */
+.vn-icon-btn,
+.vn-icon-btn span,
+.vn-transport-btn,
+.vn-transport-btn span,
+.vn-tool-btn,
+.vn-tool-btn span,
+.vn-play-master-btn,
+.vn-play-icon-wrap,
+.vn-pause-icon-wrap,
+.vn-fs-corner-btn,
+.vn-popover-close,
+.vn-bubble-close-btn,
+.vn-hdr-icon,
+.vn-empty-emoji,
+.vn-btn-primary span,
+.vn-btn-secondary span,
+.vn-connect-btn span,
+.vn-export-btn span,
+.vn-file-badge svg,
+.vn-aspect-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  vertical-align: middle;
+}
+
+.vn-play-icon-wrap svg {
+  transform: translateX(1.5px); /* Precise optical center for triangle play icon */
+}
+
+/* ---------- 1. Studio Header (44px, Responsive, Zero-Scroll) ---------- */
 .vn-header {
+  flex: 0 0 44px;
   height: 44px;
   min-height: 44px;
   max-height: 44px;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0 14px;
-  background: #14131c;
+  padding: 0 10px;
+  background: #14121b;
   border-bottom: 1px solid rgba(255, 255, 255, 0.08);
   z-index: 40;
   box-sizing: border-box;
+  gap: 8px;
 }
 
 .vn-header-left,
 .vn-header-right {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
+  min-width: 0;
 }
 
 .vn-icon-btn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 30px;
-  height: 30px;
-  border-radius: 6px;
+  width: 32px;
+  height: 32px;
+  border-radius: 7px;
   background: rgba(255, 255, 255, 0.06);
   color: #e6e0e9;
   border: 1px solid rgba(255, 255, 255, 0.12);
   cursor: pointer;
   transition: all 0.15s ease;
   padding: 0;
+  line-height: 1;
+  flex-shrink: 0;
 }
 
 .vn-icon-btn:hover {
-  background: rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.14);
   color: #ffffff;
-  border-color: rgba(255, 255, 255, 0.25);
+  border-color: rgba(255, 255, 255, 0.28);
+}
+
+.vn-icon-btn:active {
+  transform: scale(0.96);
 }
 
 .vn-aspect-dropdown-wrap {
   position: relative;
   display: flex;
   align-items: center;
+  flex-shrink: 0;
+}
+
+.vn-aspect-icon {
+  position: absolute;
+  left: 7px;
+  pointer-events: none;
+  color: #facc15;
+  z-index: 2;
 }
 
 .vn-aspect-select {
   height: 28px;
-  background: rgba(234, 179, 8, 0.12);
+  background: rgba(234, 179, 8, 0.14);
   color: #fde047;
-  border: 1px solid rgba(234, 179, 8, 0.35);
+  border: 1px solid rgba(234, 179, 8, 0.4);
   border-radius: 6px;
-  padding: 0 8px;
-  font-size: 0.74rem;
+  padding: 0 8px 0 24px;
+  font-size: 0.72rem;
   font-weight: 700;
   cursor: pointer;
   outline: none;
@@ -129,122 +185,130 @@ body.studio-mode .main {
 }
 
 .vn-aspect-select:hover {
-  background: rgba(234, 179, 8, 0.2);
+  background: rgba(234, 179, 8, 0.24);
   border-color: #facc15;
 }
 
 .vn-aspect-select option {
-  background: #181722;
+  background: #181622;
   color: #ffffff;
 }
 
 .vn-file-badge {
-  font-size: 0.72rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 0.7rem;
   font-weight: 600;
-  color: rgba(255, 255, 255, 0.6);
+  color: rgba(255, 255, 255, 0.65);
   background: rgba(255, 255, 255, 0.05);
   padding: 3px 8px;
-  border-radius: 10px;
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  max-width: 170px;
+  border-radius: 6px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  max-width: 150px;
+  min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-/* Glowing Connect / Apply Subtitles Button */
-.vn-connect-btn {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  height: 28px;
-  padding: 0 10px;
-  border-radius: 6px;
-  font-size: 0.75rem;
-  font-weight: 700;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  border: 1px solid rgba(234, 179, 8, 0.35);
-  background: rgba(234, 179, 8, 0.12);
-  color: #fef08a;
+.vn-file-badge svg {
+  flex-shrink: 0;
+  color: #fde047;
+}
+
+.vn-file-name-text {
+  overflow: hidden;
+  text-overflow: ellipsis;
   white-space: nowrap;
 }
 
+/* Connect / Apply Subtitles Button */
+.vn-connect-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  height: 28px;
+  padding: 0 9px;
+  border-radius: 6px;
+  font-size: 0.74rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  border: 1px solid rgba(234, 179, 8, 0.4);
+  background: rgba(234, 179, 8, 0.16);
+  color: #fef08a;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
 .vn-connect-btn:hover {
-  background: rgba(234, 179, 8, 0.22);
+  background: rgba(234, 179, 8, 0.28);
   border-color: #fde047;
   color: #ffffff;
 }
 
-.vn-connect-btn.glowing {
-  background: linear-gradient(135deg, rgba(234, 179, 8, 0.28), rgba(202, 138, 4, 0.4));
-  border-color: #facc15;
-  color: #ffffff;
-  box-shadow: 0 0 12px rgba(250, 204, 21, 0.4), 0 0 3px rgba(250, 204, 21, 0.7);
-  animation: pulse-connect-btn 2.2s infinite ease-in-out;
+.vn-connect-btn:active {
+  transform: scale(0.97);
 }
 
-@keyframes pulse-connect-btn {
-  0%, 100% {
-    box-shadow: 0 0 6px rgba(250, 204, 21, 0.3), 0 0 2px rgba(250, 204, 21, 0.5);
-    border-color: #eab308;
-  }
-  50% {
-    box-shadow: 0 0 16px rgba(250, 204, 21, 0.7), 0 0 6px rgba(250, 204, 21, 0.9);
-    border-color: #fef08a;
-    transform: scale(1.02);
-  }
+.vn-connect-btn.glowing {
+  background: #ca8a04;
+  border-color: #facc15;
+  color: #ffffff;
+  box-shadow: 0 0 10px rgba(250, 204, 21, 0.5);
 }
 
 .vn-connect-pulse {
-  width: 7px;
-  height: 7px;
+  width: 6px;
+  height: 6px;
   border-radius: 50%;
   background: #4ade80;
-  box-shadow: 0 0 6px #4ade80;
-  animation: blink-dot 1.4s infinite;
+  box-shadow: 0 0 5px #4ade80;
+  flex-shrink: 0;
 }
 
-@keyframes blink-dot {
-  0%, 100% { opacity: 0.35; }
-  50% { opacity: 1; }
-}
-
-/* VN-Style Blue Export / Burn Button */
+/* Solid Purple Export / Burn Button */
 .vn-export-btn {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
+  gap: 5px;
   height: 28px;
   padding: 0 12px;
   border-radius: 6px;
-  font-size: 0.76rem;
+  font-size: 0.75rem;
   font-weight: 700;
   cursor: pointer;
-  background: linear-gradient(135deg, #a855f7, #ec4899);
-  border: none;
+  background: #a855f7;
+  border: 1px solid #c084fc;
   color: #ffffff;
-  box-shadow: 0 2px 8px rgba(168, 85, 247, 0.35);
   transition: all 0.15s ease;
   white-space: nowrap;
+  flex-shrink: 0;
 }
 
 .vn-export-btn:hover {
-  background: linear-gradient(135deg, #9333ea, #db2777);
-  box-shadow: 0 3px 12px rgba(168, 85, 247, 0.55);
+  background: #9333ea;
+  border-color: #e9d5ff;
 }
 
-/* ---------- 2. Player Stage (Flex 1 Adaptive Viewport, zero scroll) ---------- */
+.vn-export-btn:active {
+  transform: scale(0.97);
+}
+
+/* ---------- 2. Player Stage (Flex 1, Zero Scroll, Centered) ---------- */
 .vn-player-stage {
-  flex: 1 1 auto;
-  min-height: 140px;
+  flex: 1 1 0px;
+  min-height: 0;
+  min-width: 0;
+  max-height: 100%;
   display: flex;
   align-items: center;
   justify-content: center;
-  background: #07060b;
+  background: #06050a;
   position: relative;
   overflow: hidden;
-  padding: 6px 16px;
+  padding: 4px 12px;
   box-sizing: border-box;
 }
 
@@ -252,6 +316,7 @@ body.studio-mode .main {
   position: relative;
   max-width: 100%;
   max-height: 100%;
+  width: auto;
   height: 100%;
   display: flex;
   align-items: center;
@@ -260,7 +325,8 @@ body.studio-mode .main {
   border-radius: 8px;
   overflow: hidden;
   background: #000000;
-  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.7), 0 0 0 1px rgba(255, 255, 255, 0.08);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.8), 0 0 0 1px rgba(255, 255, 255, 0.08);
+  box-sizing: border-box;
 }
 
 .vn-viewport-container[data-ratio="9:16"] { aspect-ratio: 9 / 16; }
@@ -289,8 +355,8 @@ body.studio-mode .main {
   justify-content: center;
   width: 100%;
   height: 100%;
-  padding: 20px;
-  background: radial-gradient(circle at center, rgba(30, 26, 42, 0.8), rgba(10, 8, 16, 0.96));
+  padding: 16px;
+  background: #13111b;
   box-sizing: border-box;
 }
 
@@ -303,33 +369,34 @@ body.studio-mode .main {
   flex-direction: column;
   align-items: center;
   text-align: center;
-  max-width: 380px;
+  max-width: 360px;
 }
 
-.vn-empty-box.dragover {
+.vn-empty-box.drag-over {
   border: 2px dashed #facc15;
   border-radius: 8px;
   padding: 12px;
+  background: rgba(234, 179, 8, 0.08);
 }
 
-.vn-empty-icon {
-  color: #facc15;
-  margin-bottom: 8px;
-  opacity: 0.95;
+.vn-empty-emoji {
+  font-size: 2.2rem;
+  margin-bottom: 6px;
+  line-height: 1;
 }
 
 .vn-empty-title {
-  font-size: 0.95rem;
+  font-size: 0.92rem;
   font-weight: 700;
   color: #ffffff;
-  margin: 0 0 4px;
+  margin: 0 0 3px;
 }
 
 .vn-empty-subtitle {
-  font-size: 0.75rem;
+  font-size: 0.72rem;
   color: rgba(255, 255, 255, 0.55);
-  margin: 0 0 12px;
-  line-height: 1.4;
+  margin: 0 0 10px;
+  line-height: 1.35;
 }
 
 .vn-empty-actions {
@@ -340,12 +407,12 @@ body.studio-mode .main {
 .vn-btn-primary {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
+  gap: 5px;
   height: 30px;
-  padding: 0 14px;
+  padding: 0 12px;
   background: #eab308;
   color: #1c1917;
-  font-size: 0.76rem;
+  font-size: 0.74rem;
   font-weight: 700;
   border: none;
   border-radius: 6px;
@@ -360,25 +427,25 @@ body.studio-mode .main {
 .vn-btn-secondary {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
+  gap: 5px;
   height: 30px;
-  padding: 0 12px;
+  padding: 0 11px;
   background: rgba(255, 255, 255, 0.08);
   color: #e6e0e9;
-  font-size: 0.76rem;
+  font-size: 0.74rem;
   font-weight: 600;
   border: 1px solid rgba(255, 255, 255, 0.15);
   border-radius: 6px;
   cursor: pointer;
-  transition: all 0.15s ease;
+  transition: background 0.15s ease;
 }
 
 .vn-btn-secondary:hover {
-  background: rgba(255, 255, 255, 0.15);
+  background: rgba(255, 255, 255, 0.16);
   color: #ffffff;
 }
 
-/* Subtitle Overlay in Player Stage */
+/* Subtitle Overlay in Player Stage - Interactive, Clickable & Draggable */
 .vn-subtitle-overlay {
   position: absolute;
   left: 50%;
@@ -387,10 +454,80 @@ body.studio-mode .main {
   padding: 6px 14px;
   border-radius: 6px;
   background: rgba(0, 0, 0, 0.75);
-  pointer-events: none;
-  z-index: 10;
+  pointer-events: auto !important;
+  cursor: grab;
+  user-select: none;
+  touch-action: none;
+  z-index: 20;
   text-align: center;
-  transition: bottom 0.2s ease, top 0.2s ease;
+  box-sizing: border-box;
+  border: 1px dashed transparent;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.vn-subtitle-overlay:hover {
+  border-color: rgba(250, 204, 21, 0.6);
+  box-shadow: 0 0 14px rgba(250, 204, 21, 0.25);
+}
+
+.vn-subtitle-overlay.is-dragging {
+  cursor: grabbing !important;
+  border-color: #facc15 !important;
+  box-shadow: 0 0 20px rgba(250, 204, 21, 0.45) !important;
+}
+
+.vn-sub-drag-indicator {
+  position: absolute;
+  top: -10px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: #181622;
+  border: 1px solid rgba(250, 204, 21, 0.6);
+  color: #fde047;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.15s ease;
+  z-index: 25;
+}
+
+.vn-subtitle-overlay:hover .vn-sub-drag-indicator,
+.vn-subtitle-overlay.is-dragging .vn-sub-drag-indicator {
+  opacity: 1;
+}
+
+/* Snap Center Guides */
+.vn-snap-guide {
+  position: absolute;
+  pointer-events: none;
+  z-index: 15;
+}
+
+.vn-snap-guide-x,
+.vn-snap-x {
+  top: 0;
+  bottom: 0;
+  left: 50%;
+  width: 1px;
+  border-left: 1px dashed rgba(250, 204, 21, 0.75);
+}
+
+.vn-snap-guide-y,
+.vn-snap-y {
+  left: 0;
+  right: 0;
+  top: 50%;
+  height: 1px;
+  border-top: 1px dashed rgba(250, 204, 21, 0.75);
+}
+
+.vn-snap-guide.hidden {
+  display: none !important;
 }
 
 .vn-subtitle-overlay.hidden {
@@ -416,7 +553,7 @@ body.studio-mode .main {
 }
 
 .vn-subtitle-orig {
-  font-size: 0.85rem;
+  font-size: 0.82rem;
   color: rgba(255, 255, 255, 0.75);
   margin-top: 3px;
   font-style: italic;
@@ -430,36 +567,47 @@ body.studio-mode .main {
   position: absolute;
   top: 8px;
   right: 8px;
-  width: 28px;
-  height: 28px;
-  border-radius: 6px;
-  background: rgba(0, 0, 0, 0.55);
-  border: 1px solid rgba(255, 255, 255, 0.18);
+  width: 34px;
+  height: 34px;
+  border-radius: 8px;
+  background: rgba(14, 13, 20, 0.72);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
   color: #ffffff;
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  z-index: 12;
+  z-index: 25;
+  padding: 0;
   transition: all 0.15s ease;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.5);
 }
 
 .vn-fs-corner-btn:hover {
-  background: rgba(0, 0, 0, 0.8);
-  border-color: rgba(255, 255, 255, 0.4);
+  background: rgba(234, 179, 8, 0.22);
+  border-color: #facc15;
+  color: #fef08a;
+  transform: scale(1.06);
 }
 
-/* ---------- 3. Transport Bar (36px) ---------- */
+.vn-fs-corner-btn:active {
+  transform: scale(0.96);
+}
+
+/* ---------- 3. Transport Bar (40px, High-Precision) ---------- */
 .vn-transport-bar {
-  height: 36px;
-  min-height: 36px;
-  max-height: 36px;
+  flex: 0 0 40px;
+  height: 40px;
+  min-height: 40px;
+  max-height: 40px;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0 14px;
-  background: #111017;
-  border-top: 1px solid rgba(255, 255, 255, 0.05);
+  padding: 0 10px;
+  background: #111018;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
   border-bottom: 1px solid rgba(255, 255, 255, 0.08);
   z-index: 30;
   box-sizing: border-box;
@@ -468,12 +616,14 @@ body.studio-mode .main {
 .vn-timecode-wrap {
   display: flex;
   align-items: center;
+  min-width: 100px;
 }
 
 .vn-time-current {
   font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
   font-size: 0.74rem;
-  color: rgba(255, 255, 255, 0.7);
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.82);
   letter-spacing: 0.02em;
 }
 
@@ -484,28 +634,33 @@ body.studio-mode .main {
 }
 
 .vn-transport-btn {
-  width: 28px;
-  height: 28px;
+  width: 30px;
+  height: 30px;
   border-radius: 6px;
-  background: transparent;
+  background: rgba(255, 255, 255, 0.05);
   color: #cac4d0;
-  border: none;
+  border: 1px solid rgba(255, 255, 255, 0.08);
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: all 0.15s ease;
   padding: 0;
+  transition: all 0.15s ease;
 }
 
 .vn-transport-btn:hover {
-  background: rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.14);
   color: #ffffff;
+  border-color: rgba(255, 255, 255, 0.22);
+}
+
+.vn-transport-btn:active {
+  transform: scale(0.95);
 }
 
 .vn-play-master-btn {
-  width: 30px;
-  height: 30px;
+  width: 36px;
+  height: 36px;
   border-radius: 50%;
   background: #eab308;
   color: #1c1917;
@@ -514,13 +669,18 @@ body.studio-mode .main {
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: transform 0.1s ease, background 0.15s ease;
   padding: 0;
+  transition: transform 0.1s ease, background 0.15s ease;
+  box-shadow: 0 2px 8px rgba(234, 179, 8, 0.35);
 }
 
 .vn-play-master-btn:hover {
   background: #facc15;
-  transform: scale(1.08);
+  transform: scale(1.06);
+}
+
+.vn-play-master-btn:active {
+  transform: scale(0.95);
 }
 
 .vn-transport-right {
@@ -530,62 +690,64 @@ body.studio-mode .main {
 }
 
 .vn-sync-pill {
-  height: 22px;
+  height: 24px;
   padding: 0 8px;
-  border-radius: 11px;
-  background: rgba(234, 179, 8, 0.14);
-  border: 1px solid rgba(234, 179, 8, 0.3);
+  border-radius: 12px;
+  background: rgba(234, 179, 8, 0.15);
+  border: 1px solid rgba(234, 179, 8, 0.35);
   color: #fde047;
-  font-size: 0.7rem;
+  font-size: 0.68rem;
   font-weight: 700;
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: all 0.15s ease;
+  transition: background 0.15s ease;
 }
 
 .vn-sync-pill:hover {
-  background: rgba(234, 179, 8, 0.24);
+  background: rgba(234, 179, 8, 0.25);
   border-color: #facc15;
 }
 
 .vn-sync-pill.offset-active {
-  background: rgba(168, 85, 247, 0.2);
+  background: rgba(168, 85, 247, 0.25);
   border-color: #c084fc;
   color: #e9d5ff;
 }
 
 .vn-icon-btn-small {
-  width: 24px;
-  height: 24px;
+  width: 22px;
+  height: 22px;
   border-radius: 4px;
   background: rgba(255, 255, 255, 0.06);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  color: rgba(255, 255, 255, 0.7);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  color: rgba(255, 255, 255, 0.75);
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
   padding: 0;
-  transition: all 0.15s ease;
+  font-size: 0.78rem;
+  transition: background 0.15s ease;
 }
 
 .vn-icon-btn-small:hover {
-  background: rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.15);
   color: #ffffff;
 }
 
-/* ---------- 4. Text Shower Banner (34px) ---------- */
+/* ---------- 4. Text Shower Banner (32px) ---------- */
 .vn-text-shower-strip {
-  height: 34px;
-  min-height: 34px;
-  max-height: 34px;
+  flex: 0 0 32px;
+  height: 32px;
+  min-height: 32px;
+  max-height: 32px;
   display: flex;
   align-items: center;
-  gap: 10px;
-  padding: 0 14px;
-  background: #161420;
+  gap: 8px;
+  padding: 0 10px;
+  background: #15131f;
   border-bottom: 1px solid rgba(255, 255, 255, 0.06);
   cursor: pointer;
   transition: background 0.15s ease;
@@ -594,15 +756,15 @@ body.studio-mode .main {
 }
 
 .vn-text-shower-strip:hover {
-  background: #1f1c2d;
+  background: #1e1b2b;
 }
 
 .vn-shower-badge {
-  font-size: 0.7rem;
+  font-size: 0.68rem;
   font-weight: 700;
   background: rgba(234, 179, 8, 0.2);
   color: #fde047;
-  padding: 2px 6px;
+  padding: 1px 5px;
   border-radius: 4px;
   border: 1px solid rgba(234, 179, 8, 0.35);
   white-space: nowrap;
@@ -614,7 +776,7 @@ body.studio-mode .main {
   text-overflow: ellipsis;
   white-space: nowrap;
   font-family: "Noto Naskh Arabic", "Inter", sans-serif;
-  font-size: 0.85rem;
+  font-size: 0.82rem;
   font-weight: 600;
   color: #ffffff;
 }
@@ -625,9 +787,9 @@ body.studio-mode .main {
 }
 
 .vn-shower-cps {
-  font-size: 0.68rem;
+  font-size: 0.65rem;
   font-weight: 600;
-  padding: 2px 6px;
+  padding: 1px 5px;
   border-radius: 4px;
   background: rgba(34, 197, 94, 0.15);
   color: #4ade80;
@@ -639,21 +801,75 @@ body.studio-mode .main {
 }
 
 .vn-shower-chevron {
+  font-size: 0.75rem;
   color: rgba(255, 255, 255, 0.4);
   flex-shrink: 0;
 }
 
-/* ---------- 5. VN Multi-Track Timeline (175px) ---------- */
+/* ---------- Interactive Layout Resizer Bar (Between Stage & Timeline) ---------- */
+.vn-studio-resizer {
+  flex: 0 0 8px;
+  height: 8px;
+  min-height: 8px;
+  max-height: 8px;
+  background: #13111b;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  cursor: row-resize;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  z-index: 35;
+  user-select: none;
+  touch-action: none;
+  transition: background 0.15s ease;
+}
+
+.vn-studio-resizer:hover,
+.vn-studio-resizer.is-resizing {
+  background: #eab308;
+}
+
+.vn-resizer-line {
+  flex: 1;
+  height: 1px;
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.vn-resizer-handle {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  padding: 0 10px;
+}
+
+.vn-resizer-dot {
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.4);
+  transition: background 0.15s ease;
+}
+
+.vn-studio-resizer:hover .vn-resizer-dot,
+.vn-studio-resizer.is-resizing .vn-resizer-dot {
+  background: #1c1917;
+}
+
+/* ---------- 5. VN Multi-Track Timeline (Dynamic Resizable Height) ---------- */
 .vn-timeline-section {
-  height: 175px;
-  min-height: 175px;
-  max-height: 175px;
-  background: #0f0e15;
+  flex: 0 0 148px;
+  height: 148px;
+  min-height: 90px;
+  max-height: 60vh;
+  background: #0e0d14;
   position: relative;
   overflow: hidden;
   display: flex;
   border-bottom: 1px solid rgba(255, 255, 255, 0.08);
   box-sizing: border-box;
+  transition: height 0.05s ease-out;
 }
 
 #studioTimelineMount {
@@ -667,63 +883,55 @@ body.studio-mode .main {
   height: 100%;
 }
 
-/* Left Track Headers (VN Screenshot with SVGs) */
+/* Left Track Headers (Multi-track control column) */
 .vn-track-headers-col {
   width: 44px;
   min-width: 44px;
   max-width: 44px;
-  background: #15141c;
+  background: #14121b;
   border-right: 1px solid rgba(255, 255, 255, 0.08);
   display: flex;
   flex-direction: column;
   z-index: 15;
+  box-sizing: border-box !important;
 }
 
 .vn-track-header-item {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 2px;
   cursor: pointer;
   user-select: none;
-  transition: background 0.15s ease;
+  transition: all 0.15s ease;
   border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+  color: rgba(255, 255, 255, 0.55);
+  box-sizing: border-box !important;
+  width: 100%;
+  padding: 0;
 }
 
 .vn-track-header-item:hover {
-  background: rgba(255, 255, 255, 0.05);
+  background: rgba(255, 255, 255, 0.08);
+  color: #ffffff;
 }
 
-.vn-hdr-music { height: 26px; }
-.vn-hdr-text { height: 32px; background: rgba(234, 179, 8, 0.06); }
-.vn-hdr-sticker { height: 22px; }
-.vn-hdr-video { height: 42px; background: rgba(255, 255, 255, 0.03); }
-.vn-hdr-audio { height: 24px; }
-.vn-hdr-ruler-spacer { height: 24px; border-bottom: none; }
+.vn-hdr-music { height: 22px; color: #a78bfa; }
+.vn-hdr-text { height: 28px; background: rgba(234, 179, 8, 0.09); color: #fde047; }
+.vn-hdr-sticker { height: 20px; color: #38bdf8; }
+.vn-hdr-video { height: 36px; background: rgba(255, 255, 255, 0.03); color: #facc15; }
+.vn-hdr-audio { height: 22px; color: #c084fc; }
+.vn-hdr-ruler-spacer { height: 20px; border-bottom: none; }
 
 .vn-hdr-icon {
   display: flex;
   align-items: center;
   justify-content: center;
-  color: rgba(255, 255, 255, 0.7);
+  width: 100%;
+  height: 100%;
 }
 
-.vn-hdr-icon-gold {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 16px;
-  height: 16px;
-  background: #eab308;
-  color: #000000;
-  border-radius: 3px;
-}
-
-.vn-hdr-plus {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: rgba(255, 255, 255, 0.5);
+.vn-hdr-icon svg {
+  display: block;
 }
 
 /* Timeline Viewport & Scroll Canvas */
@@ -737,7 +945,7 @@ body.studio-mode .main {
 }
 
 .vn-timeline-viewport::-webkit-scrollbar {
-  height: 4px;
+  height: 3px;
 }
 .vn-timeline-viewport::-webkit-scrollbar-thumb {
   background: rgba(255, 255, 255, 0.2);
@@ -757,14 +965,14 @@ body.studio-mode .main {
   border-bottom: 1px solid rgba(255, 255, 255, 0.03);
 }
 
-.vn-lane-music { height: 26px; background: rgba(0, 0, 0, 0.2); }
-.vn-lane-subtitles { height: 32px; background: rgba(0, 0, 0, 0.15); }
-.vn-lane-sticker { height: 22px; background: rgba(0, 0, 0, 0.2); }
-.vn-lane-video { height: 42px; background: rgba(0, 0, 0, 0.3); }
-.vn-lane-audio { height: 24px; background: rgba(0, 0, 0, 0.25); }
-.vn-lane-ruler { height: 24px; border-bottom: none; background: #111017; }
+.vn-lane-music { height: 22px; background: rgba(0, 0, 0, 0.2); }
+.vn-lane-subtitles { height: 28px; background: rgba(0, 0, 0, 0.15); }
+.vn-lane-sticker { height: 20px; background: rgba(0, 0, 0, 0.2); }
+.vn-lane-video { height: 36px; background: rgba(0, 0, 0, 0.3); }
+.vn-lane-audio { height: 22px; background: rgba(0, 0, 0, 0.25); }
+.vn-lane-ruler { height: 20px; border-bottom: none; background: #100f16; }
 
-/* 2. Subtitle Cue Pills (Golden Rounded Blocks) */
+/* Subtitle Cue Pills (Solid Gold, No Gradient) */
 .vn-cues-layer {
   position: absolute;
   top: 0;
@@ -776,33 +984,32 @@ body.studio-mode .main {
 
 .vn-cue-pill {
   position: absolute;
-  top: 4px;
-  height: 24px;
-  background: linear-gradient(180deg, #d97706, #b45309);
+  top: 2px;
+  height: 22px;
+  background: #ca8a04;
   border: 1px solid #fde047;
-  border-radius: 5px;
+  border-radius: 4px;
   cursor: pointer;
   overflow: hidden;
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.4);
-  transition: transform 0.1s ease, border-color 0.15s ease, box-shadow 0.15s ease;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.4);
+  transition: border-color 0.15s ease, background 0.15s ease;
   z-index: 5;
 }
 
 .vn-cue-pill:hover {
   border-color: #ffffff;
-  box-shadow: 0 2px 8px rgba(250, 204, 21, 0.5);
-  transform: translateY(-1px);
+  background: #d97706;
 }
 
 .vn-cue-pill.active {
-  background: linear-gradient(180deg, #eab308, #ca8a04);
+  background: #eab308;
   border: 2px solid #ffffff;
-  box-shadow: 0 0 10px rgba(250, 204, 21, 0.8);
+  box-shadow: 0 0 8px rgba(250, 204, 21, 0.7);
   z-index: 8;
 }
 
 .vn-cue-pill-inner {
-  padding: 0 6px;
+  padding: 0 5px;
   height: 100%;
   display: flex;
   align-items: center;
@@ -811,26 +1018,58 @@ body.studio-mode .main {
 
 .vn-cue-text {
   font-family: "Noto Naskh Arabic", "Inter", sans-serif;
-  font-size: 0.72rem;
+  font-size: 0.7rem;
   font-weight: 700;
   color: #ffffff;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.7);
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.8);
 }
 
 .vn-cue-pill.rtl-cue .vn-cue-text {
   direction: rtl;
 }
 
-/* 4. Video Track Clip Box (with yellow selection border) */
+/* Video Empty Track State */
+.vn-video-empty-track {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 100%;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 12px;
+  box-sizing: border-box;
+  pointer-events: none;
+  z-index: 2;
+}
+
+.vn-video-empty-track.hidden {
+  display: none !important;
+}
+
+.vn-video-empty-track-text {
+  font-size: 0.68rem;
+  font-weight: 500;
+  color: rgba(255, 255, 255, 0.35);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  letter-spacing: 0.2px;
+}
+
+/* Video Track Clip Box */
 .vn-video-clip-box {
   position: absolute;
-  top: 3px;
+  top: 2px;
   left: 0;
-  height: 36px;
-  background: #1f1e29;
+  height: 30px;
+  background: #1c1b26;
   border: 2px solid #eab308;
   border-radius: 4px;
   overflow: hidden;
@@ -842,35 +1081,29 @@ body.studio-mode .main {
 .vn-filmstrip-frames {
   width: 100%;
   height: 100%;
-  background: repeating-linear-gradient(
-    90deg,
-    rgba(255, 255, 255, 0.04) 0px,
-    rgba(255, 255, 255, 0.04) 30px,
-    rgba(0, 0, 0, 0.2) 30px,
-    rgba(0, 0, 0, 0.2) 60px
-  );
+  background-color: #181722;
 }
 
 .vn-clip-handle {
   position: absolute;
   top: 0;
   bottom: 0;
-  width: 6px;
+  width: 5px;
   background: #eab308;
   cursor: ew-resize;
 }
 .vn-clip-handle.left-handle { left: 0; border-radius: 2px 0 0 2px; }
 .vn-clip-handle.right-handle { right: 0; border-radius: 0 2px 2px 0; }
 
-/* 5. Audio Waveform Fill */
+/* Audio Waveform Fill */
 .vn-audio-bar-fill {
   position: absolute;
-  top: 4px;
+  top: 3px;
   left: 0;
-  height: 16px;
-  background: rgba(168, 85, 247, 0.25);
+  height: 15px;
+  background: #4c1d95;
   border-radius: 3px;
-  border: 1px solid rgba(168, 85, 247, 0.4);
+  border: 1px solid #7c3aed;
 }
 
 /* Full-Height Scrubber Needle */
@@ -893,10 +1126,11 @@ body.studio-mode .main {
   padding: 1px 4px;
   border-radius: 3px;
   font-family: ui-monospace, SFMono-Regular, monospace;
-  font-size: 0.65rem;
+  font-size: 0.62rem;
   font-weight: 700;
   white-space: nowrap;
   box-shadow: 0 1px 4px rgba(0, 0, 0, 0.6);
+  letter-spacing: 0.2px;
 }
 
 .vn-needle-line {
@@ -906,7 +1140,7 @@ body.studio-mode .main {
   left: 0;
   width: 1.5px;
   background: #ffffff;
-  box-shadow: 0 0 4px rgba(255, 255, 255, 0.8);
+  box-shadow: 0 0 3px rgba(255, 255, 255, 0.8);
 }
 
 /* Hover Indicator */
@@ -938,20 +1172,21 @@ body.studio-mode .main {
   color: #fde047;
   padding: 1px 4px;
   border-radius: 3px;
-  font-size: 0.65rem;
+  font-size: 0.62rem;
   font-family: ui-monospace, monospace;
 }
 
 /* ---------- 6. Bottom Toolbar (48px) ---------- */
 .vn-bottom-bar {
+  flex: 0 0 48px;
   height: 48px;
   min-height: 48px;
   max-height: 48px;
   display: flex;
   align-items: center;
   justify-content: space-around;
-  padding: 0 8px;
-  background: #13111c;
+  padding: 0 6px;
+  background: #121019;
   border-top: 1px solid rgba(255, 255, 255, 0.08);
   z-index: 30;
   box-sizing: border-box;
@@ -963,12 +1198,12 @@ body.studio-mode .main {
   align-items: center;
   justify-content: center;
   gap: 2px;
-  height: 40px;
+  height: 42px;
   min-width: 44px;
   padding: 0 6px;
   background: transparent;
   border: none;
-  border-radius: 6px;
+  border-radius: 7px;
   color: rgba(255, 255, 255, 0.7);
   cursor: pointer;
   transition: all 0.15s ease;
@@ -976,58 +1211,69 @@ body.studio-mode .main {
   font-weight: 500;
 }
 
+.vn-tool-btn span.vn-tool-emoji {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  margin: 0;
+  padding: 0;
+  line-height: 1;
+}
+
+.vn-tool-btn span.vn-tool-emoji svg {
+  display: block;
+}
+
 .vn-tool-btn:hover {
   background: rgba(255, 255, 255, 0.08);
   color: #ffffff;
 }
 
+.vn-tool-btn:active {
+  transform: scale(0.96);
+}
+
 .vn-tool-btn.active {
-  background: rgba(234, 179, 8, 0.15);
+  background: rgba(234, 179, 8, 0.16);
   color: #fde047;
 }
 
 /* ---------- Floating Popovers (Above Bottom Bar) ---------- */
 .vn-popover {
   position: absolute;
-  bottom: 54px;
+  bottom: 48px;
   left: 50%;
   transform: translateX(-50%);
   width: 90%;
-  max-width: 360px;
-  background: #1b1924;
+  max-width: 350px;
+  max-height: calc(100vh - 100px);
+  overflow-y: auto;
+  overflow-x: hidden;
+  background: #1a1823;
   border: 1px solid rgba(255, 255, 255, 0.15);
-  border-radius: 10px;
-  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.7);
+  border-radius: 8px;
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.8);
   z-index: 50;
-  animation: popover-fade-in 0.15s ease-out;
+  box-sizing: border-box;
 }
 
 .vn-popover.hidden {
   display: none !important;
 }
 
-@keyframes popover-fade-in {
-  from {
-    opacity: 0;
-    transform: translate(-50%, 8px);
-  }
-  to {
-    opacity: 1;
-    transform: translate(-50%, 0);
-  }
-}
-
 .vn-popover-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 8px 12px;
+  padding: 7px 10px;
   border-bottom: 1px solid rgba(255, 255, 255, 0.08);
 }
 
 .vn-popover-header h4 {
   margin: 0;
-  font-size: 0.82rem;
+  font-size: 0.8rem;
   font-weight: 600;
   color: #ffffff;
 }
@@ -1035,30 +1281,68 @@ body.studio-mode .main {
 .vn-popover-close {
   background: transparent;
   border: none;
-  color: rgba(255, 255, 255, 0.5);
+  color: rgba(255, 255, 255, 0.6);
   cursor: pointer;
-  padding: 2px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  padding: 2px 5px;
+  font-size: 0.85rem;
   border-radius: 4px;
   transition: all 0.15s ease;
 }
 
 .vn-popover-close:hover {
   color: #ffffff;
-  background: rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.12);
 }
 
 .vn-popover-body {
-  padding: 10px 12px;
+  padding: 8px 10px;
+}
+
+.vn-popover-wide {
+  width: 380px !important;
+  max-width: calc(100vw - 20px) !important;
+}
+
+.vn-popover-action-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 8px 10px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 6px;
+  margin-bottom: 8px;
+}
+
+.vn-popover-action-card:last-child {
+  margin-bottom: 0;
+}
+
+.action-card-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex: 1;
+}
+
+.action-card-title {
+  font-size: 0.76rem;
+  font-weight: 700;
+  color: #fde047;
+}
+
+.action-card-sub {
+  font-size: 0.68rem;
+  color: rgba(255, 255, 255, 0.65);
+  line-height: 1.35;
 }
 
 .vn-popover-row {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: 8px;
+  margin-bottom: 7px;
 }
 
 .vn-popover-row:last-child {
@@ -1066,17 +1350,17 @@ body.studio-mode .main {
 }
 
 .vn-popover-row label {
-  font-size: 0.74rem;
-  color: rgba(255, 255, 255, 0.7);
+  font-size: 0.72rem;
+  color: rgba(255, 255, 255, 0.75);
 }
 
 .vn-pop-select {
-  background: #272533;
+  background: #252330;
   color: #ffffff;
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  border-radius: 6px;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 5px;
   padding: 3px 6px;
-  font-size: 0.74rem;
+  font-size: 0.72rem;
   outline: none;
 }
 
@@ -1084,20 +1368,20 @@ body.studio-mode .main {
 .vn-sync-display-box {
   text-align: center;
   font-family: ui-monospace, monospace;
-  font-size: 1.25rem;
+  font-size: 1.15rem;
   font-weight: 800;
   color: #fde047;
-  padding: 6px;
+  padding: 5px;
   background: rgba(0, 0, 0, 0.35);
-  border-radius: 6px;
-  margin-bottom: 6px;
+  border-radius: 5px;
+  margin-bottom: 5px;
 }
 
 .vn-sync-desc {
-  font-size: 0.7rem;
-  color: rgba(255, 255, 255, 0.5);
+  font-size: 0.68rem;
+  color: rgba(255, 255, 255, 0.55);
   text-align: center;
-  margin: 0 0 10px;
+  margin: 0 0 8px;
 }
 
 .vn-sync-btn-grid {
@@ -1107,20 +1391,19 @@ body.studio-mode .main {
 }
 
 .vn-pop-btn {
-  padding: 5px 8px;
-  background: #272533;
+  padding: 4px 7px;
+  background: #252330;
   color: #ffffff;
   border: 1px solid rgba(255, 255, 255, 0.12);
   border-radius: 4px;
-  font-size: 0.72rem;
+  font-size: 0.7rem;
   font-weight: 600;
   cursor: pointer;
-  transition: all 0.15s ease;
+  transition: background 0.15s ease;
 }
 
 .vn-pop-btn:hover {
-  background: #363345;
-  border-color: rgba(255, 255, 255, 0.25);
+  background: #343142;
 }
 
 .vn-pop-btn-primary {
@@ -1137,24 +1420,24 @@ body.studio-mode .main {
 .vn-speed-grid {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
-  gap: 6px;
+  gap: 5px;
 }
 
 .vn-speed-chip {
-  padding: 6px 0;
-  background: #272533;
+  padding: 5px 0;
+  background: #252330;
   color: #ffffff;
   border: 1px solid rgba(255, 255, 255, 0.12);
   border-radius: 4px;
-  font-size: 0.75rem;
+  font-size: 0.72rem;
   font-weight: 600;
   cursor: pointer;
   text-align: center;
-  transition: all 0.15s ease;
+  transition: background 0.15s ease;
 }
 
 .vn-speed-chip:hover {
-  background: #363345;
+  background: #343142;
 }
 
 .vn-speed-chip.active {
@@ -1172,17 +1455,21 @@ body.studio-mode .main {
 
 /* ---------- Modals (Cue Inspector & Video Burn) ---------- */
 .studio-modal-card {
-  max-width: 500px;
+  max-width: 480px;
   background: #171520;
   border: 1px solid rgba(255, 255, 255, 0.15);
-  border-radius: 12px;
+  border-radius: 10px;
   box-shadow: 0 16px 40px rgba(0, 0, 0, 0.85);
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
 }
 
 .cue-inspector-grid {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 8px;
 }
 
 .cue-timing-strip {
@@ -1190,22 +1477,22 @@ body.studio-mode .main {
   align-items: center;
   gap: 8px;
   background: rgba(0, 0, 0, 0.35);
-  padding: 6px 10px;
-  border-radius: 6px;
-  font-size: 0.78rem;
+  padding: 5px 8px;
+  border-radius: 5px;
+  font-size: 0.75rem;
 }
 
 .cue-badge-pill {
   background: rgba(234, 179, 8, 0.2);
   color: #fde047;
   font-weight: 700;
-  padding: 2px 6px;
+  padding: 2px 5px;
   border-radius: 4px;
 }
 
 .cue-dur-chip {
   margin-left: auto;
-  font-size: 0.72rem;
+  font-size: 0.7rem;
   color: rgba(255, 255, 255, 0.6);
 }
 
@@ -1217,8 +1504,8 @@ body.studio-mode .main {
 
 .cue-metric-item {
   background: rgba(255, 255, 255, 0.04);
-  padding: 6px 8px;
-  border-radius: 6px;
+  padding: 5px 7px;
+  border-radius: 5px;
   display: flex;
   flex-direction: column;
 }
@@ -1228,12 +1515,12 @@ body.studio-mode .main {
 }
 
 .cue-metric-label {
-  font-size: 0.68rem;
+  font-size: 0.65rem;
   color: rgba(255, 255, 255, 0.5);
 }
 
 .cue-metric-val {
-  font-size: 0.82rem;
+  font-size: 0.8rem;
   font-weight: 700;
   color: #ffffff;
   margin-top: 1px;
@@ -1241,21 +1528,21 @@ body.studio-mode .main {
 
 .cue-input-label {
   display: block;
-  font-size: 0.72rem;
+  font-size: 0.7rem;
   font-weight: 600;
   color: rgba(255, 255, 255, 0.7);
-  margin-bottom: 4px;
+  margin-bottom: 3px;
 }
 
 .cue-textarea {
   width: 100%;
   background: #23212e;
   border: 1px solid rgba(255, 255, 255, 0.15);
-  border-radius: 6px;
-  padding: 6px 8px;
+  border-radius: 5px;
+  padding: 5px 7px;
   color: #ffffff;
   font-family: "Noto Naskh Arabic", "Inter", sans-serif;
-  font-size: 0.9rem;
+  font-size: 0.88rem;
   resize: vertical;
   outline: none;
   box-sizing: border-box;
@@ -1267,21 +1554,21 @@ body.studio-mode .main {
 
 .cue-orig-preview {
   background: rgba(0, 0, 0, 0.25);
-  padding: 6px 8px;
+  padding: 5px 7px;
   border-radius: 4px;
-  font-size: 0.8rem;
+  font-size: 0.78rem;
   color: rgba(255, 255, 255, 0.7);
   font-style: italic;
 }
 
 .studio-btn-primary {
-  padding: 7px 14px;
+  padding: 6px 12px;
   background: #eab308;
   color: #1c1917;
   font-weight: 700;
-  font-size: 0.78rem;
+  font-size: 0.76rem;
   border: none;
-  border-radius: 6px;
+  border-radius: 5px;
   cursor: pointer;
   transition: background 0.15s ease;
 }
@@ -1291,31 +1578,19 @@ body.studio-mode .main {
 }
 
 .studio-btn-secondary {
-  padding: 7px 12px;
+  padding: 6px 10px;
   background: rgba(255, 255, 255, 0.08);
   color: #ffffff;
-  font-size: 0.78rem;
+  font-size: 0.76rem;
   font-weight: 600;
   border: 1px solid rgba(255, 255, 255, 0.15);
-  border-radius: 6px;
+  border-radius: 5px;
   cursor: pointer;
-  transition: all 0.15s ease;
+  transition: background 0.15s ease;
 }
 
 .studio-btn-secondary:hover {
   background: rgba(255, 255, 255, 0.15);
-}
-
-/* Media Queries for Mobile/Compact Displays */
-@media (max-width: 640px) {
-  .vn-file-badge {
-    display: none;
-  }
-  .vn-timeline-section {
-    height: 155px;
-    min-height: 155px;
-    max-height: 155px;
-  }
 }
 
 /* ==========================================================================
@@ -1323,7 +1598,7 @@ body.studio-mode .main {
    ========================================================================== */
 
 .studio-export-modal {
-  max-width: 580px;
+  max-width: 560px;
   width: 94%;
 }
 
@@ -1334,22 +1609,24 @@ body.studio-mode .main {
   background: rgba(74, 222, 128, 0.12);
   color: #4ade80;
   border: 1px solid rgba(74, 222, 128, 0.25);
-  font-size: 0.68rem;
+  font-size: 0.66rem;
   font-weight: 700;
-  padding: 2px 8px;
+  padding: 2px 7px;
   border-radius: 9999px;
   white-space: nowrap;
 }
 
 .export-modal-body {
-  padding: 16px 20px;
+  padding: 14px 16px;
+  overflow-y: auto;
+  flex: 1 1 auto;
 }
 
 .export-form-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 12px;
-  margin-bottom: 14px;
+  gap: 10px;
+  margin-bottom: 12px;
 }
 
 @media (max-width: 520px) {
@@ -1361,20 +1638,20 @@ body.studio-mode .main {
 .export-field {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 5px;
 }
 
 .export-label {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  font-size: 0.76rem;
+  font-size: 0.74rem;
   font-weight: 600;
   color: rgba(255, 255, 255, 0.9);
 }
 
 .export-label-hint {
-  font-size: 0.7rem;
+  font-size: 0.68rem;
   font-weight: 600;
   color: #facc15;
 }
@@ -1385,12 +1662,12 @@ body.studio-mode .main {
 
 .export-select {
   width: 100%;
-  padding: 8px 10px;
-  background: rgba(0, 0, 0, 0.45);
+  padding: 6px 8px;
+  background: #1f1d2b;
   border: 1px solid rgba(255, 255, 255, 0.15);
-  border-radius: 6px;
+  border-radius: 5px;
   color: #ffffff;
-  font-size: 0.78rem;
+  font-size: 0.76rem;
   outline: none;
   cursor: pointer;
   transition: border-color 0.15s ease;
@@ -1403,12 +1680,12 @@ body.studio-mode .main {
 .export-specs-card {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
-  gap: 8px;
-  padding: 10px 14px;
+  gap: 6px;
+  padding: 8px 10px;
   background: rgba(255, 255, 255, 0.04);
   border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 8px;
-  margin-bottom: 14px;
+  border-radius: 6px;
+  margin-bottom: 12px;
 }
 
 @media (max-width: 520px) {
@@ -1424,7 +1701,7 @@ body.studio-mode .main {
 }
 
 .export-spec-item .spec-label {
-  font-size: 0.66rem;
+  font-size: 0.64rem;
   text-transform: uppercase;
   letter-spacing: 0.03em;
   color: rgba(255, 255, 255, 0.5);
@@ -1432,7 +1709,7 @@ body.studio-mode .main {
 }
 
 .export-spec-item .spec-value {
-  font-size: 0.8rem;
+  font-size: 0.78rem;
   font-weight: 700;
   color: #ffffff;
   white-space: nowrap;
@@ -1448,7 +1725,7 @@ body.studio-mode .main {
   position: relative;
   width: 100%;
   background: #000000;
-  border-radius: 8px;
+  border-radius: 6px;
   overflow: hidden;
   border: 1px solid rgba(255, 255, 255, 0.1);
   display: flex;
@@ -1458,28 +1735,27 @@ body.studio-mode .main {
 
 .export-preview-canvas {
   max-width: 100%;
-  max-height: 200px;
+  max-height: 180px;
   display: block;
   object-fit: contain;
 }
 
 .export-canvas-overlay {
   position: absolute;
-  top: 8px;
-  right: 8px;
+  top: 6px;
+  right: 6px;
   display: flex;
-  gap: 6px;
+  gap: 5px;
   pointer-events: none;
 }
 
 .export-fps-pill,
 .export-res-pill {
-  padding: 2px 6px;
-  background: rgba(0, 0, 0, 0.7);
-  backdrop-filter: blur(4px);
+  padding: 2px 5px;
+  background: rgba(0, 0, 0, 0.75);
   border: 1px solid rgba(255, 255, 255, 0.15);
   border-radius: 4px;
-  font-size: 0.65rem;
+  font-size: 0.62rem;
   font-weight: 700;
   color: #fde047;
 }
@@ -1491,11 +1767,11 @@ body.studio-mode .main {
 .export-metrics-strip {
   display: grid;
   grid-template-columns: 1fr 1fr 1fr;
-  gap: 8px;
+  gap: 6px;
   background: rgba(0, 0, 0, 0.3);
   border: 1px solid rgba(255, 255, 255, 0.06);
-  border-radius: 6px;
-  padding: 8px 12px;
+  border-radius: 5px;
+  padding: 6px 10px;
 }
 
 .metric-col {
@@ -1505,14 +1781,606 @@ body.studio-mode .main {
 }
 
 .metric-col .metric-label {
-  font-size: 0.65rem;
+  font-size: 0.62rem;
   color: rgba(255, 255, 255, 0.5);
   font-weight: 600;
 }
 
 .metric-col .metric-val {
-  font-size: 0.76rem;
+  font-size: 0.74rem;
   color: #ffffff;
   font-weight: 700;
+}
+
+/* ---------- Responsive Mobile Refinements ---------- */
+@media (max-width: 640px) {
+  .vn-header {
+    height: 44px;
+    padding: 0 6px;
+    gap: 4px;
+  }
+  .vn-header-left {
+    gap: 4px;
+  }
+  .vn-header-right {
+    gap: 4px;
+  }
+  .vn-icon-btn {
+    width: 30px;
+    height: 30px;
+  }
+  .vn-aspect-select {
+    max-width: 80px;
+    padding: 0 4px 0 20px;
+    font-size: 0.68rem;
+  }
+  .vn-aspect-icon {
+    left: 5px;
+  }
+  .vn-file-badge {
+    max-width: 85px;
+    font-size: 0.65rem;
+    padding: 2px 5px;
+  }
+  .vn-connect-btn {
+    height: 26px;
+    padding: 0 6px;
+    font-size: 0.68rem;
+    gap: 3px;
+  }
+  .vn-export-btn {
+    height: 26px;
+    padding: 0 8px;
+    font-size: 0.7rem;
+    gap: 4px;
+  }
+  .vn-transport-bar {
+    padding: 0 6px;
+  }
+  .vn-timecode-wrap {
+    min-width: 90px;
+  }
+  .vn-time-current {
+    font-size: 0.68rem;
+  }
+  .vn-bottom-bar {
+    height: 46px;
+    padding: 0 2px;
+  }
+  .vn-tool-btn {
+    min-width: 38px;
+    height: 40px;
+    font-size: 0.62rem;
+    padding: 0 3px;
+  }
+}
+
+/* ==========================================================================
+   SVG Optical & Geometric Centering Normalizer
+   ========================================================================== */
+.vn-icon-btn,
+.vn-icon-btn-small,
+.vn-transport-btn,
+.vn-play-master-btn,
+.vn-fs-corner-btn,
+.vn-pill-btn,
+.vn-tool-btn,
+.vn-orig-toggle-chip,
+.vn-sync-pill,
+.vn-mov-btn-chip,
+.vn-mov-btn-primary,
+.vn-mov-close-btn {
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  vertical-align: middle !important;
+  line-height: 1 !important;
+}
+
+.vn-icon-btn svg,
+.vn-icon-btn-small svg,
+.vn-transport-btn svg,
+.vn-play-master-btn svg,
+.vn-fs-corner-btn svg,
+.vn-orig-toggle-chip svg,
+.vn-mov-btn-chip svg,
+.vn-mov-btn-primary svg,
+.vn-mov-close-btn svg {
+  display: block;
+  flex-shrink: 0;
+}
+
+.vn-play-master-btn #studioPlayIcon svg {
+  transform: translateX(1px);
+}
+
+/* ==========================================================================
+   Quick Original English Text Toggle (Transport Bar)
+   ========================================================================== */
+.vn-orig-toggle-chip {
+  height: 24px;
+  padding: 0 8px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  color: #e2e8f0;
+  font-size: 0.68rem;
+  font-weight: 600;
+  cursor: pointer;
+  gap: 5px;
+  transition: all 0.15s ease;
+}
+
+.vn-orig-toggle-chip:hover:not(.disabled) {
+  background: rgba(255, 255, 255, 0.14);
+  border-color: rgba(255, 255, 255, 0.25);
+  color: #ffffff;
+}
+
+.vn-orig-toggle-chip.active {
+  background: rgba(234, 179, 8, 0.2) !important;
+  border-color: #facc15 !important;
+  color: #fef08a !important;
+  box-shadow: 0 0 10px rgba(234, 179, 8, 0.25);
+}
+
+.vn-orig-toggle-chip.disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+  filter: grayscale(0.5);
+}
+
+/* ==========================================================================
+   QuickTime MOV Pre-Import Studio Modal
+   ========================================================================== */
+.vn-mov-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+}
+
+.vn-mov-modal.hidden {
+  display: none !important;
+}
+
+.vn-mov-backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.82);
+  backdrop-filter: blur(8px);
+}
+
+.vn-mov-card {
+  position: relative;
+  z-index: 10;
+  width: 100%;
+  max-width: 960px;
+  max-height: 88vh;
+  background: #111113;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 12px;
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.8), 0 0 1px 1px rgba(255, 255, 255, 0.08);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  animation: vnMovModalPop 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes vnMovModalPop {
+  0% { transform: scale(0.96) translateY(8px); opacity: 0; }
+  100% { transform: scale(1) translateY(0); opacity: 1; }
+}
+
+.vn-mov-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 18px;
+  background: #18181b;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.vn-mov-header-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.vn-mov-type-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 8px;
+  background: rgba(234, 179, 8, 0.18);
+  border: 1px solid rgba(234, 179, 8, 0.4);
+  border-radius: 6px;
+  color: #fde047;
+  font-size: 0.68rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.vn-mov-title-group {
+  display: flex;
+  flex-direction: column;
+}
+
+.vn-mov-title {
+  margin: 0;
+  font-size: 0.88rem;
+  font-weight: 700;
+  color: #f4f4f5;
+}
+
+.vn-mov-meta {
+  font-size: 0.7rem;
+  color: #a1a1aa;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.vn-mov-filename {
+  font-weight: 600;
+  color: #e4e4e7;
+  max-width: 240px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.vn-mov-header-right {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.vn-mov-specs-pill {
+  font-size: 0.68rem;
+  font-weight: 600;
+  padding: 3px 8px;
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: #cbd5e1;
+}
+
+.vn-mov-close-btn {
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
+  background: transparent;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: #a1a1aa;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.vn-mov-close-btn:hover {
+  background: rgba(255, 255, 255, 0.12);
+  color: #ffffff;
+}
+
+.vn-mov-body {
+  display: grid;
+  grid-template-columns: 1.15fr 0.85fr;
+  gap: 16px;
+  padding: 16px;
+  overflow-y: auto;
+  max-height: calc(88vh - 120px);
+}
+
+@media (max-width: 768px) {
+  .vn-mov-body {
+    grid-template-columns: 1fr;
+  }
+}
+
+.vn-mov-player-wrap {
+  width: 100%;
+  aspect-ratio: 16/9;
+  background: #000;
+  border-radius: 8px;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.vn-mov-preview-video {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.vn-mov-trimmer-section {
+  margin-top: 12px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  border-radius: 8px;
+  padding: 10px;
+}
+
+.vn-mov-trimmer-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+  font-size: 0.72rem;
+}
+
+.vn-mov-trim-time {
+  font-weight: 700;
+  color: #fde047;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+}
+
+.vn-mov-trim-dur {
+  color: #a1a1aa;
+  font-size: 0.68rem;
+}
+
+.vn-mov-trim-track {
+  position: relative;
+  height: 32px;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 6px;
+  cursor: pointer;
+  user-select: none;
+  touch-action: none;
+}
+
+.vn-mov-trim-active {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0%;
+  width: 100%;
+  background: rgba(234, 179, 8, 0.25);
+  border-top: 2px solid #eab308;
+  border-bottom: 2px solid #eab308;
+}
+
+.vn-mov-trim-handle {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 14px;
+  background: #eab308;
+  border-radius: 3px;
+  cursor: ew-resize;
+  transform: translateX(-50%);
+  z-index: 10;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.4);
+}
+
+.vn-mov-trim-handle.in-handle { left: 0%; }
+.vn-mov-trim-handle.out-handle { left: 100%; }
+
+.vn-mov-trim-handle .handle-tag {
+  font-size: 0.58rem;
+  font-weight: 900;
+  color: #18181b;
+}
+
+.vn-mov-trim-playhead {
+  position: absolute;
+  top: -4px;
+  bottom: -4px;
+  width: 2px;
+  background: #ef4444;
+  transform: translateX(-50%);
+  z-index: 12;
+  pointer-events: none;
+}
+
+.vn-mov-trim-btns {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 8px;
+  flex-wrap: wrap;
+}
+
+.vn-mov-btn-chip {
+  height: 26px;
+  padding: 0 8px;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 5px;
+  color: #e4e4e7;
+  font-size: 0.68rem;
+  font-weight: 600;
+  cursor: pointer;
+  gap: 4px;
+  transition: all 0.12s ease;
+}
+
+.vn-mov-btn-chip:hover {
+  background: rgba(255, 255, 255, 0.14);
+  border-color: rgba(255, 255, 255, 0.22);
+  color: #ffffff;
+}
+
+.vn-mov-card-panel {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  border-radius: 8px;
+  padding: 12px;
+  margin-bottom: 12px;
+}
+
+.vn-mov-panel-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.vn-mov-panel-icon {
+  color: #fde047;
+  display: flex;
+  align-items: center;
+}
+
+.vn-mov-panel-title {
+  margin: 0;
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: #f4f4f5;
+  flex: 1;
+}
+
+.vn-mov-tracks-container {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 10px;
+}
+
+.vn-mov-track-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.72rem;
+  color: #d4d4d8;
+  background: rgba(255, 255, 255, 0.04);
+  padding: 6px 8px;
+  border-radius: 5px;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.vn-mov-track-num {
+  font-weight: 700;
+  color: #e4e4e7;
+}
+
+.vn-mov-badge-sm {
+  font-size: 0.62rem;
+  font-weight: 700;
+  padding: 2px 6px;
+  border-radius: 4px;
+  background: rgba(234, 179, 8, 0.15);
+  color: #fde047;
+  border: 1px solid rgba(234, 179, 8, 0.3);
+}
+
+.vn-mov-track-desc {
+  font-size: 0.68rem;
+  color: #a1a1aa;
+  margin-left: auto;
+}
+
+.vn-mov-radio-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 10px;
+}
+
+.vn-mov-radio-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.72rem;
+  color: #d4d4d8;
+  cursor: pointer;
+  padding: 4px 6px;
+  border-radius: 4px;
+  transition: background 0.12s ease;
+}
+
+.vn-mov-radio-label:hover {
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.vn-mov-toggle-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding-top: 8px;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.vn-mov-toggle-row .toggle-info {
+  display: flex;
+  flex-direction: column;
+}
+
+.vn-mov-toggle-row .toggle-title {
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: #e4e4e7;
+}
+
+.vn-mov-toggle-row .toggle-desc {
+  font-size: 0.64rem;
+  color: #a1a1aa;
+}
+
+.vn-mov-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 18px;
+  background: #18181b;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.vn-mov-hint {
+  font-size: 0.68rem;
+  color: #71717a;
+}
+
+.vn-mov-footer-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.vn-mov-btn-ghost {
+  height: 32px;
+  padding: 0 12px;
+  border-radius: 6px;
+  background: transparent;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  color: #d4d4d8;
+  font-size: 0.75rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.vn-mov-btn-ghost:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: #ffffff;
+}
+
+.vn-mov-btn-primary {
+  height: 32px;
+  padding: 0 14px;
+  border-radius: 6px;
+  background: #eab308;
+  color: #18181b;
+  font-size: 0.75rem;
+  font-weight: 700;
+  border: none;
+  cursor: pointer;
+  gap: 6px;
+  transition: all 0.15s ease;
+  box-shadow: 0 2px 8px rgba(234, 179, 8, 0.35);
+}
+
+.vn-mov-btn-primary:hover {
+  background: #facc15;
+  transform: translateY(-1px);
 }
 

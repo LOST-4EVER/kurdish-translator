@@ -22,6 +22,7 @@
       this.els = els;
       this.onTimeUpdateCallback = options.onTimeUpdate;
       this.onMetadataLoadedCallback = options.onMetadataLoaded;
+      this.onVideoLoadedCallback = options.onVideoLoaded;
       this._syncRaf = null;
       this._rvfcId = null;
 
@@ -96,7 +97,6 @@
       const loop = () => {
         if (!player || player.paused || player.ended) {
           this._syncRaf = null;
-          this._rvfcId = null;
           return;
         }
         const curMs = (player.currentTime || 0) * 1000;
@@ -106,18 +106,10 @@
           this.onTimeUpdateCallback(curMs, durMs);
         }
 
-        if ('requestVideoFrameCallback' in player) {
-          this._rvfcId = player.requestVideoFrameCallback(loop);
-        } else {
-          this._syncRaf = requestAnimationFrame(loop);
-        }
+        this._syncRaf = requestAnimationFrame(loop);
       };
 
-      if ('requestVideoFrameCallback' in player) {
-        this._rvfcId = player.requestVideoFrameCallback(loop);
-      } else {
-        this._syncRaf = requestAnimationFrame(loop);
-      }
+      this._syncRaf = requestAnimationFrame(loop);
     }
 
     _stopPlaybackSync() {
@@ -177,6 +169,10 @@
         this.els.videoFilename.title = file.name;
       }
 
+      if (typeof this.onVideoLoadedCallback === 'function') {
+        this.onVideoLoadedCallback(file);
+      }
+
       VideoEditorUI.showToast(
         `Loaded video: ${file.name} (${ext.toUpperCase()})`,
         'success',
@@ -209,12 +205,9 @@
 
       if (!player) return;
 
+      // Direct frame-accurate seeking ensures precise subtitle alignment
       if (immediate || !player.seeking) {
-        if ('fastSeek' in player && typeof player.fastSeek === 'function') {
-          player.fastSeek(targetSec);
-        } else {
-          player.currentTime = targetSec;
-        }
+        player.currentTime = targetSec;
       } else {
         // Queue latest seek target if video decoder is busy
         this._queuedSeekSec = targetSec;
@@ -224,11 +217,7 @@
             if (this._queuedSeekSec !== null && this._queuedSeekSec !== undefined) {
               const sec = this._queuedSeekSec;
               this._queuedSeekSec = null;
-              if ('fastSeek' in player && typeof player.fastSeek === 'function') {
-                player.fastSeek(sec);
-              } else {
-                player.currentTime = sec;
-              }
+              player.currentTime = sec;
             }
           }, { passive: true });
         }
@@ -366,13 +355,14 @@
           return;
         }
 
-        // Cinematic gradient
-        const grad = ctx.createLinearGradient(0, 0, canvas.width, canvas.height);
-        const hue = (frame * 0.9) % 360;
-        grad.addColorStop(0, `hsl(${hue}, 50%, 10%)`);
-        grad.addColorStop(1, `hsl(${(hue + 45) % 360}, 55%, 5%)`);
-        ctx.fillStyle = grad;
+        // Clean dark obsidian solid background (No gradients)
+        ctx.fillStyle = '#0f0e17';
         ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+        // Accent card border
+        ctx.strokeStyle = 'rgba(234, 179, 8, 0.4)';
+        ctx.lineWidth = 4;
+        ctx.strokeRect(40, 40, canvas.width - 80, canvas.height - 80);
 
         // Ambient rings
         ctx.strokeStyle = 'rgba(234, 179, 8, 0.25)';

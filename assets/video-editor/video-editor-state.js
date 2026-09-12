@@ -16,12 +16,17 @@
       this.syncOffsetMs = 0;
 
       this.aspectRatio = '16:9';
+      let savedShowOrig = false;
+      try {
+        savedShowOrig = localStorage.getItem('kurdish_translator_studio_show_orig') !== '0';
+      } catch (_) {}
+
       this.overlayConfig = {
         fontSize: '1.25', // rem
         position: 'bottom', // 'bottom' | 'center' | 'top'
         color: '#ffffff',
         bgColor: 'rgba(0, 0, 0, 0.75)',
-        showOrig: false,
+        showOrig: savedShowOrig,
       };
 
       this.undoStack = [];
@@ -125,6 +130,42 @@
       this.cues.forEach((c, idx) => { c.index = idx + 1; });
       this.emit('cuesChange', this.cues);
       return newCue;
+    }
+
+    addCue(startMs, endMs, text = 'نووسینی نوێی کوردی', origText = '') {
+      this.pushUndo();
+      const newCue = {
+        index: this.cues.length + 1,
+        start: Math.max(0, Math.round(startMs)),
+        end: Math.max(startMs + 500, Math.round(endMs || startMs + 2000)),
+        text: text || 'نووسینی نوێی کوردی',
+        origText: origText || '',
+      };
+
+      this.cues.push(newCue);
+      this.cues.sort((a, b) => a.start - b.start);
+      this.cues.forEach((c, idx) => { c.index = idx + 1; });
+      this.emit('cuesChange', this.cues);
+      return newCue;
+    }
+
+    deleteCue(index) {
+      if (index < 0 || index >= this.cues.length) return false;
+      this.pushUndo();
+      this.cues.splice(index, 1);
+      this.cues.forEach((c, idx) => { c.index = idx + 1; });
+      this.emit('cuesChange', this.cues);
+      return true;
+    }
+
+    nudgeCueTiming(index, startDeltaMs = 0, endDeltaMs = 0) {
+      if (index < 0 || index >= this.cues.length) return null;
+      const cue = this.cues[index];
+      this.pushUndo();
+      cue.start = Math.max(0, cue.start + startDeltaMs);
+      cue.end = Math.max(cue.start + 200, cue.end + endDeltaMs);
+      this.emit('cuesChange', this.cues);
+      return cue;
     }
   }
 

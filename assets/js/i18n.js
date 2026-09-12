@@ -51,7 +51,7 @@ const UI_I18N = {
     edTitle: 'Edit subtitles',
     edStatusSynced: 'Synced with the preview — edits apply live',
     edQualityCheck: 'Line-by-Line Kurdish Quality Check',
-    btnFixAllIssues: '⚡ Auto-Polish & Fix Kurdish',
+    btnFixAllIssues: 'Auto-Polish & Fix Kurdish',
     edOriginal: 'Original',
     edOriginalTag: 'Original / English',
     edOriginalSub: 'Show original source text above translation',
@@ -113,7 +113,7 @@ const UI_I18N = {
     tourSkip: 'Skip tour',
     tourGuide: 'Guide',
     tourDisabledTitle: 'Guide is disabled while your file is loaded',
-    liveStreamTitle: '⚡ Streamed Subtitle Cues',
+    liveStreamTitle: 'Streamed Subtitle Cues',
     refresh: 'Refresh',
     refreshTitle: 'Refresh Application',
     forceRefresh: 'Force Refresh',
@@ -129,7 +129,7 @@ const UI_I18N = {
     checkingUpdate: 'Checking for updates…',
     refreshingApp: 'Refreshing application…',
     forceRefreshing: 'Purging cache & hard reloading…',
-    whatsNew: "What's New in v127",
+    whatsNew: "What's New in v132",
     whatsNewSub: 'View latest improvements & features',
     syncGitHub: 'Sync with GitHub',
     syncGitHubSub: 'Fetch latest code & commits',
@@ -205,7 +205,7 @@ const UI_I18N = {
     edTitle: 'دەستکاری ژێرنووس',
     edStatusSynced: 'هاوکات کراوە لەگەڵ پێشاندان - دەستکارییەکان ڕاستەوخۆ جێبەجێ دەبن',
     edQualityCheck: 'پشکنینی دێڕ بە دێڕی کوردی',
-    btnFixAllIssues: '⚡ ڕێکخستن و چاککردنی خێرای هەموو کوردییەکان',
+    btnFixAllIssues: 'ڕێکخستن و چاککردنی خێرای هەموو کوردییەکان',
     edOriginal: 'دەقی سەرەکی',
     edOriginalTag: 'دەقی سەرەکی / ئینگلیزی',
     edOriginalSub: 'پیشاندانی دەقی سەرەکی لەسەرووی وەرگێڕانەکە',
@@ -267,7 +267,7 @@ const UI_I18N = {
     tourSkip: 'تێپەڕاندن',
     tourGuide: 'ڕێبەری بەکارهێنان',
     tourDisabledTitle: 'ڕێبەر بەردەست نییە کاتێک فایلەکەت بارکراوە',
-    liveStreamTitle: '⚡ دێڕە ژێرنووسە ڕەوانکراوەکان',
+    liveStreamTitle: 'دێڕە ژێرنووسە ڕەوانکراوەکان',
     refresh: 'نوێکردنەوە',
     refreshTitle: 'نوێکردنەوەی بەرنامەکە',
     forceRefresh: 'نوێکردنەوەی بەزۆر',
@@ -283,7 +283,7 @@ const UI_I18N = {
     checkingUpdate: 'پشکنین بۆ وەشانی نوێ…',
     refreshingApp: 'لە نوێکردنەوەی بەرنامەکەدایە…',
     forceRefreshing: 'سڕینەوەی کاش و بارکردنەوەی تەواو…',
-    whatsNew: 'نوێکارییەکانی وەشانی ١٢٧',
+    whatsNew: 'نوێکارییەکانی وەشانی ١٣٢',
     whatsNewSub: 'نوێترین تایبەتمەندی و چاکسازییەکان',
     syncGitHub: 'تازەکردنەوە لە گیت‌هەب',
     syncGitHubSub: 'وەرگرتنی نوێترین گۆڕانکاری و کۆد لە گیت‌هەب',
@@ -345,6 +345,6 @@ UI_I18N.getDict = function(lang) {
   return UI_I18N[target] || UI_I18N.en;
 };
 
-if (typeof module !== 'undefined' && module.exports) {
+if (typeof module !== 'undefined' && typeof module.exports !== 'undefined' && typeof window === 'undefined') {
   module.exports = UI_I18N;
 }

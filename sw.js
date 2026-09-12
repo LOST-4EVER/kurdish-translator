@@ -6,7 +6,7 @@
  * (Google's endpoint), so offline mode lets you load files and use the
  * preview player, but translating requires a connection.
  */
-const CACHE = 'kurdish-translator-v127';
+const CACHE = 'kurdish-translator-v132';
 const SHARED_CACHE = 'kurdish-shared-file';
 
 const ASSETS = [
@@ -31,7 +31,10 @@ const ASSETS = [
   './assets/video-editor/video-editor-inspector.js',
   './assets/video-editor/video-editor-popovers.js',
   './assets/video-editor/video-editor-burner.js',
+  './assets/video-editor/mkv-importer.js',
+  './assets/video-editor/mov-importer.js',
   './assets/video-editor/timeline.js',
+  './assets/video-editor/video-editor-bubble.js',
   './assets/video-editor/video-editor.js',
   './assets/js/i18n.js',
   './assets/js/toast.js',
@@ -44,6 +47,9 @@ const ASSETS = [
   './assets/js/app-tour.js',
   './assets/js/app-quality.js',
   './assets/js/app-fullscreen.js',
+  './assets/js/app-storage.js',
+  './assets/js/app-decoder.js',
+  './assets/js/app-editor.js',
   './assets/js/app.js',
   './assets/icons/icon.svg',
   './assets/icons/anime-logo.svg',
@@ -56,7 +62,12 @@ const ASSETS = [
 // Install: pre-cache the app shell.
 self.addEventListener('install', (event) => {
   event.waitUntil(
-    caches.open(CACHE).then((cache) => cache.addAll(ASSETS)).then(() => self.skipWaiting())
+    caches.open(CACHE)
+      .then((cache) => cache.addAll(ASSETS))
+      .catch((err) => {
+        console.error('SW asset pre-cache failed:', err);
+      })
+      .then(() => self.skipWaiting())
   );
 });
 
@@ -85,6 +96,11 @@ self.addEventListener('message', (event) => {
     }).then(() => {
       if (event.ports && event.ports[0]) {
         event.ports[0].postMessage({ success: true });
+      }
+    }).catch((err) => {
+      console.error('Cache clear error:', err);
+      if (event.ports && event.ports[0]) {
+        event.ports[0].postMessage({ success: false, error: err ? err.message : 'Unknown error' });
       }
     });
   } else if (event.data.type === 'GET_VERSION' || event.data === 'GET_VERSION') {

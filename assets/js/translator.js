@@ -58,8 +58,18 @@ const Translator = (() => {
     if (!signal) { setTimeout(resolve, ms); return; }
     if (signal.aborted) { resolve(); return; }
     let timer;
-    const onAbort = () => { clearTimeout(timer); resolve(); };
-    timer = setTimeout(() => { signal.removeEventListener('abort', onAbort); resolve(); }, ms);
+    const cleanup = () => {
+      if (signal) signal.removeEventListener('abort', onAbort);
+    };
+    const onAbort = () => {
+      clearTimeout(timer);
+      cleanup();
+      resolve();
+    };
+    timer = setTimeout(() => {
+      cleanup();
+      resolve();
+    }, ms);
     signal.addEventListener('abort', onAbort, { once: true });
   });
 
@@ -318,6 +328,41 @@ const Translator = (() => {
     [/\bwhat\s+brings\s+you\s+here\b/gi, 'why are you here'],
     [/\bwhat['’]?s\s+the\s+matter\b/gi, 'what is wrong'],
     [/\blong\s+story\s+short\b/gi, 'in brief'],
+    [/\bmake\s+it\s+count\b/gi, 'make it effective'],
+    [/\bwe\s+got\s+company\b/gi, 'enemies are arriving'],
+    [/\bheads\s+up\b/gi, 'be careful'],
+    [/\bstay\s+alert\b/gi, 'stay watchful'],
+    [/\bkeep\s+your\s+eyes\s+peeled\b/gi, 'watch carefully'],
+    [/\btake\s+cover\b/gi, 'protect yourself in shelter'],
+    [/\bget\s+down\b/gi, 'duck down'],
+    [/\bstay\s+low\b/gi, 'stay low down'],
+    [/\bwe['’]?re\s+surrounded\b/gi, 'we are surrounded by enemies'],
+    [/\bno\s+way\s+out\b/gi, 'there is no exit'],
+    [/\bbuy\s+(?:us\s+)?some\s+time\b/gi, 'delay them for time'],
+    [/\bhold\s+them\s+off\b/gi, 'prevent them from advancing'],
+    [/\bgive\s+them\s+hell\b/gi, 'destroy them fiercely'],
+    [/\bstand\s+your\s+ground\b/gi, 'do not retreat'],
+    [/\bnot\s+on\s+my\s+watch\b/gi, 'I will never allow it'],
+    [/\bover\s+my\s+dead\s+body\b/gi, 'never while I live'],
+    [/\bcut\s+the\s+crap\b/gi, 'stop talking nonsense'],
+    [/\bspill\s+it\b/gi, 'say it right now'],
+    [/\bon\s+thin\s+ice\b/gi, 'in great danger'],
+    [/\bcall\s+it\s+a\s+day\b/gi, 'finish work for today'],
+    [/\bcut\s+to\s+the\s+chase\b/gi, 'go straight to the point'],
+    [/\bback\s+to\s+square\s+one\b/gi, 'back to the beginning'],
+    [/\bburning\s+bridges\b/gi, 'destroying all relations'],
+    [/\belephant\s+in\s+the\s+room\b/gi, 'the obvious unmentioned problem'],
+    [/\bplay\s+with\s+fire\b/gi, 'take dangerous risks'],
+    [/\blast\s+straw\b/gi, 'the final unbearable thing'],
+    [/\boff\s+the\s+hook\b/gi, 'free from blame or trouble'],
+    [/\bon\s+cloud\s+nine\b/gi, 'extremely happy'],
+    [/\bonce\s+in\s+a\s+blue\s+moon\b/gi, 'very rarely'],
+    [/\bsee\s+eye\s+to\s+eye\b/gi, 'agree completely'],
+    [/\bspill\s+the\s+tea\b/gi, 'tell all the gossip'],
+    [/\bup\s+in\s+the\s+air\b/gi, 'not yet decided'],
+    [/\bweather\s+the\s+storm\b/gi, 'survive the difficulty'],
+    [/\byou\s+can\s+say\s+that\s+again\b/gi, 'you are totally right'],
+    [/\byour\s+guess\s+is\s+as\s+good\s+as\s+mine\b/gi, 'I know as little as you'],
     [/\bfor\s+(?:god['’]?s|goodness['’]?|heaven['’]?s)\s+sake\b/gi, 'please'],
     [/\brest\s+in\s+peace\b/gi, 'may their soul rest in peace'],
     [/\b(?:i\s+don['’]?t\s+care|who\s+cares)\b/gi, 'it does not matter'],
@@ -1049,4 +1094,4 @@ const Translator = (() => {
   };
 })();
 
-if (typeof module !== 'undefined' && module.exports) module.exports = Translator;
+if (typeof module !== 'undefined' && typeof module.exports !== 'undefined' && typeof window === 'undefined') module.exports = Translator;

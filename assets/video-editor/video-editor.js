@@ -42,13 +42,47 @@
         onTimeUpdate: (curMs) => {
           this._handleVideoTimeUpdate(curMs);
         },
+        onVideoLoaded: (file) => {
+          if (this.timeline) {
+            this.timeline.setHasVideo(true, file ? file.name : 'Video Track');
+          }
+        },
       });
 
       // 3. Initialize Overlay Renderer
-      VideoEditorOverlay.init(this.els);
+      VideoEditorOverlay.init(this.els, {
+        onOverlayClick: () => {
+          const cue = VideoEditorState.activeCue || (this._getNearestCue() && this._getNearestCue().cue);
+          const idx = VideoEditorState.activeCueIndex >= 0 ? VideoEditorState.activeCueIndex : (this._getNearestCue() && this._getNearestCue().index);
+          if (cue && idx >= 0) {
+            VideoEditorBubble.open(cue, idx);
+          }
+        },
+        onPositionChange: (pos) => {
+          if (pos) {
+            VideoEditorUI.showToast(`Subtitle position set to ${pos.xPct}% , ${pos.yPct}%`, 'info');
+          } else {
+            VideoEditorUI.showToast('Subtitle position reset to default bottom', 'info');
+          }
+        },
+      });
       VideoEditorOverlay.applyStyling(VideoEditorState.overlayConfig);
 
-      // 4. Initialize Cue Inspector
+      // 4. Initialize Bubble Editor
+      if (typeof VideoEditorBubble !== 'undefined') {
+        VideoEditorBubble.init(this.els, {
+          onTextChange: (cue, idx, text) => {
+            if (this.timeline) this.timeline.setCues(VideoEditorState.getCues());
+            VideoEditorOverlay.renderActiveCue(cue, VideoEditorState.overlayConfig);
+            VideoEditorOverlay.updateTextShower(cue, idx);
+          },
+          onSplit: (idx) => {
+            this._splitCurrentCue();
+          },
+        });
+      }
+
+      // 5. Initialize Cue Inspector Modal
       VideoEditorInspector.init(this.els, {
         onSave: (idx, updatedCue) => {
           VideoEditorState.updateCue(idx, updatedCue);
@@ -61,7 +95,7 @@
         },
       });
 
-      // 5. Initialize Popovers Manager
+      // 6. Initialize Popovers Manager
       VideoEditorPopovers.init(this.els, {
         onStyleChange: (cfg) => {
           VideoEditorState.setOverlayConfig(cfg);
@@ -80,16 +114,44 @@
         },
       });
 
-      // 6. Initialize Video Burn Engine
+      // 7. Initialize Video Burn Engine
       VideoEditorBurner.init(this.els);
 
-      // 7. Bind Primary UI Events
+      // 8. Bind Primary UI Events
       this._bindEvents();
 
-      // 8. Setup App Cues Availability Watcher
+      // 9. Setup App Cues Availability Watcher
       this._setupFileWatcher();
 
+      // 10. Listen to cues changes to keep Original Text toggle state synchronized
+      VideoEditorState.on('cuesChange', () => this._syncOrigToggleUI());
+      this._syncOrigToggleUI();
+
       this.isInitialized = true;
+    }
+
+    _syncOrigToggleUI() {
+      const cues = VideoEditorState.getCues();
+      const hasTrans = Boolean(cues && cues.length && cues.some((c) => c.origText && c.origText.trim() && c.origText.trim() !== (c.text || '').trim()));
+      const showOrig = Boolean(VideoEditorState.overlayConfig && VideoEditorState.overlayConfig.showOrig);
+
+      if (this.els.quickOrigBtn) {
+        this.els.quickOrigBtn.classList.toggle('disabled', !hasTrans);
+        this.els.quickOrigBtn.classList.toggle('active', hasTrans && showOrig);
+        if (hasTrans) {
+          this.els.quickOrigBtn.title = showOrig
+            ? 'Original text enabled (Click to hide original)'
+            : 'Click to show original text alongside Kurdish';
+        } else {
+          this.els.quickOrigBtn.title = 'Original text is only available for subtitles translated within the app.';
+        }
+      }
+
+      const styleToggle = document.getElementById('studioSubShowOrigToggle');
+      if (styleToggle) {
+        styleToggle.disabled = !hasTrans;
+        styleToggle.checked = hasTrans && showOrig;
+      }
     }
 
     _bindEvents() {
@@ -99,11 +161,43 @@
       }
       if (this.els.helpBtn) {
         this.els.helpBtn.addEventListener('click', () => {
-          VideoEditorUI.showToast(
-            'Shortcuts: Space (Play/Pause), ←/→ (Step 1s), Shift+←/→ (Step 5s), Esc (Exit)',
-            'info',
-            'VN Studio Shortcuts'
-          );
+          if (this.els.helpModal) {
+            this.els.helpModal.classList.remove('hidden');
+          } else {
+            VideoEditorUI.showToast(
+              'Shortcuts: Space (Play/Pause), ←/→ (Step 1s), Shift+←/→ (Step 5s), Esc (Close)',
+              'info',
+              'VN Studio Shortcuts'
+            );
+          }
+        });
+      }
+      if (this.els.helpCloseBtn) {
+        this.els.helpCloseBtn.addEventListener('click', () => {
+          if (this.els.helpModal) this.els.helpModal.classList.add('hidden');
+        });
+      }
+      if (this.els.helpDoneBtn) {
+        this.els.helpDoneBtn.addEventListener('click', () => {
+          if (this.els.helpModal) this.els.helpModal.classList.add('hidden');
+        });
+      }
+
+      // Auxiliary File Inputs
+      if (this.els.musicFileInput) {
+        this.els.musicFileInput.addEventListener('change', (e) => {
+          if (e.target.files && e.target.files[0]) {
+            const musicFile = e.target.files[0];
+            VideoEditorUI.showToast(`Selected audio track: ${musicFile.name}`, 'success');
+          }
+        });
+      }
+      if (this.els.stickerFileInput) {
+        this.els.stickerFileInput.addEventListener('change', (e) => {
+          if (e.target.files && e.target.files[0]) {
+            const stickerFile = e.target.files[0];
+            VideoEditorUI.showToast(`Watermark / sticker ready: ${stickerFile.name}`, 'success');
+          }
         });
       }
 
@@ -121,10 +215,22 @@
       if (this.els.toolVideoChangeBtn && this.els.videoFileInput) {
         this.els.toolVideoChangeBtn.addEventListener('click', () => this.els.videoFileInput.click());
       }
+      const handleIncomingVideo = (file) => {
+        if (!file) return;
+        const isMov = /\.mov$/i.test(file.name) || file.type === 'video/quicktime';
+        const isMkv = /\.mkv$/i.test(file.name) || file.type.includes('matroska');
+        if ((isMkv || isMov) && (window.MkvImporter || window.MovImporter)) {
+          const importer = window.MkvImporter || window.MovImporter;
+          importer.inspectAndShow(file);
+          return;
+        }
+        VideoEditorPlayer.loadVideoFile(file);
+      };
+
       if (this.els.videoFileInput) {
         this.els.videoFileInput.addEventListener('change', (e) => {
           if (e.target.files && e.target.files[0]) {
-            VideoEditorPlayer.loadVideoFile(e.target.files[0]);
+            handleIncomingVideo(e.target.files[0]);
             e.target.value = '';
           }
         });
@@ -152,7 +258,7 @@
           e.stopPropagation();
           if (this.els.videoDropzone) this.els.videoDropzone.classList.remove('drag-over');
           if (e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0]) {
-            VideoEditorPlayer.loadVideoFile(e.dataTransfer.files[0]);
+            handleIncomingVideo(e.dataTransfer.files[0]);
           }
         });
       });
@@ -167,6 +273,33 @@
       // Fullscreen
       if (this.els.fsBtn) {
         this.els.fsBtn.addEventListener('click', () => VideoEditorPlayer.toggleFullscreen());
+      }
+
+      // Quick Original English Text Toggle (Transport Bar)
+      if (this.els.quickOrigBtn) {
+        this.els.quickOrigBtn.addEventListener('click', () => {
+          const cues = VideoEditorState.getCues();
+          const hasTrans = Boolean(cues && cues.length && cues.some((c) => c.origText && c.origText.trim() && c.origText.trim() !== (c.text || '').trim()));
+          if (!hasTrans) {
+            VideoEditorUI.showToast(
+              'Original text is only available for subtitles translated within the app.',
+              'info'
+            );
+            return;
+          }
+          const currentShow = !!(VideoEditorState.overlayConfig && VideoEditorState.overlayConfig.showOrig);
+          const nextShow = !currentShow;
+          VideoEditorState.setOverlayConfig({ showOrig: nextShow });
+          this._syncOrigToggleUI();
+          VideoEditorOverlay.renderActiveCue(VideoEditorState.activeCue, VideoEditorState.overlayConfig);
+          try {
+            localStorage.setItem('kurdish_translator_studio_show_orig', nextShow ? '1' : '0');
+          } catch (_) {}
+          VideoEditorUI.showToast(
+            nextShow ? 'Showing original text alongside Kurdish' : 'Showing Kurdish subtitles only',
+            'info'
+          );
+        });
       }
 
       // Transport Buttons
@@ -188,20 +321,15 @@
         this.els.redoBtn.addEventListener('click', () => this.redo());
       }
 
-      // Text Shower Click -> Inspect
+      // Text Shower Click -> Quick Bubble Editor
       if (this.els.textShowerCard) {
         this.els.textShowerCard.addEventListener('click', () => {
-          if (VideoEditorState.activeCue) {
-            VideoEditorInspector.open(
-              VideoEditorState.activeCue,
-              VideoEditorState.activeCueIndex,
-              VideoEditorState.getCues().length
-            );
+          const cue = VideoEditorState.activeCue || (this._getNearestCue() && this._getNearestCue().cue);
+          const idx = VideoEditorState.activeCueIndex >= 0 ? VideoEditorState.activeCueIndex : (this._getNearestCue() && this._getNearestCue().index);
+          if (cue && idx >= 0) {
+            VideoEditorBubble.open(cue, idx);
           } else {
-            const nearest = this._getNearestCue();
-            if (nearest) {
-              VideoEditorInspector.open(nearest.cue, nearest.index, VideoEditorState.getCues().length);
-            }
+            VideoEditorUI.showToast('No active subtitle. Click + on Kurdish track to create one.', 'info');
           }
         });
       }
@@ -211,10 +339,10 @@
         this.els.toolInspectBtn.addEventListener('click', () => {
           const cue = VideoEditorState.activeCue || (this._getNearestCue() && this._getNearestCue().cue);
           const idx = VideoEditorState.activeCueIndex >= 0 ? VideoEditorState.activeCueIndex : (this._getNearestCue() && this._getNearestCue().index);
-          if (cue) {
-            VideoEditorInspector.open(cue, idx, VideoEditorState.getCues().length);
+          if (cue && idx >= 0) {
+            VideoEditorBubble.open(cue, idx);
           } else {
-            VideoEditorUI.showToast('No cue active to inspect.', 'info');
+            VideoEditorUI.showToast('No cue active to edit. Position playhead and click + on text track.', 'info');
           }
         });
       }
@@ -251,6 +379,9 @@
         });
       }
 
+      // Layout Vertical Resizer
+      this._bindResizer();
+
       // Keyboard Shortcuts
       window.addEventListener('keydown', (e) => {
         if (!this.isStudioActive) return;
@@ -266,15 +397,122 @@
         } else if (e.code === 'ArrowRight') {
           e.preventDefault();
           VideoEditorPlayer.stepSeconds(e.shiftKey ? 5 : 1);
+        } else if (e.code === 'KeyS') {
+          e.preventDefault();
+          this._splitCurrentCue();
         } else if (e.code === 'Escape') {
-          if (VideoEditorInspector.els.cueInfoModal && !VideoEditorInspector.els.cueInfoModal.classList.contains('hidden')) {
+          if (typeof VideoEditorPopovers !== 'undefined' && VideoEditorPopovers.closeAll && Object.values(this.els.popovers || {}).some((p) => p && !p.classList.contains('hidden'))) {
+            VideoEditorPopovers.closeAll();
+          } else if (VideoEditorBubble.isOpen && typeof VideoEditorBubble.isOpen === 'function' && VideoEditorBubble.isOpen()) {
+            VideoEditorBubble.close();
+          } else if (this.els.helpModal && !this.els.helpModal.classList.contains('hidden')) {
+            this.els.helpModal.classList.add('hidden');
+          } else if (VideoEditorInspector.els && VideoEditorInspector.els.cueInfoModal && !VideoEditorInspector.els.cueInfoModal.classList.contains('hidden')) {
             VideoEditorInspector.close();
-          } else if (VideoEditorBurner.els.burnModal && !VideoEditorBurner.els.burnModal.classList.contains('hidden')) {
+          } else if (VideoEditorBurner.els && VideoEditorBurner.els.burnModal && !VideoEditorBurner.els.burnModal.classList.contains('hidden')) {
             VideoEditorBurner.closeModal();
           } else {
             this.exitStudioMode();
           }
         }
+      });
+    }
+
+    _bindResizer() {
+      const resizer = this.els.studioResizerBar;
+      const timelineSection = this.els.timelineSection || document.getElementById('studioTimelineSection');
+      if (!resizer || !timelineSection) return;
+
+      // Restore stored height preference if available
+      try {
+        const savedHeight = localStorage.getItem('vn_studio_timeline_height');
+        if (savedHeight) {
+          const h = parseInt(savedHeight, 10);
+          if (!isNaN(h) && h >= 90 && h <= Math.min(window.innerHeight * 0.65, 450)) {
+            timelineSection.style.height = `${h}px`;
+            timelineSection.style.flex = `0 0 ${h}px`;
+          }
+        }
+      } catch (err) {
+        // Ignore storage access errors
+      }
+
+      let isResizing = false;
+      let startY = 0;
+      let startHeight = 0;
+
+      const onPointerDown = (e) => {
+        isResizing = true;
+        startY = e.clientY;
+        startHeight = timelineSection.getBoundingClientRect().height;
+        resizer.classList.add('is-resizing');
+        document.body.style.cursor = 'row-resize';
+        document.body.style.userSelect = 'none';
+
+        if (resizer.setPointerCapture) {
+          try {
+            resizer.setPointerCapture(e.pointerId);
+          } catch (_) {}
+        }
+        e.preventDefault();
+      };
+
+      const onPointerMove = (e) => {
+        if (!isResizing) return;
+        const dy = startY - e.clientY; // Dragging upwards increases timeline height
+        const targetHeight = startHeight + dy;
+        const minHeight = 90;
+        const maxHeight = Math.max(minHeight, Math.min(window.innerHeight * 0.65, 450));
+        const clampedHeight = Math.max(minHeight, Math.min(targetHeight, maxHeight));
+
+        timelineSection.style.height = `${clampedHeight}px`;
+        timelineSection.style.flex = `0 0 ${clampedHeight}px`;
+
+        if (this.timeline && typeof this.timeline.handleResize === 'function') {
+          this.timeline.handleResize();
+        }
+      };
+
+      const onPointerUp = (e) => {
+        if (!isResizing) return;
+        isResizing = false;
+        resizer.classList.remove('is-resizing');
+        document.body.style.cursor = '';
+        document.body.style.userSelect = '';
+
+        if (resizer.releasePointerCapture) {
+          try {
+            resizer.releasePointerCapture(e.pointerId);
+          } catch (_) {}
+        }
+
+        const finalHeight = timelineSection.getBoundingClientRect().height;
+        try {
+          localStorage.setItem('vn_studio_timeline_height', Math.round(finalHeight));
+        } catch (_) {}
+
+        if (this.timeline && typeof this.timeline.handleResize === 'function') {
+          this.timeline.handleResize();
+        }
+      };
+
+      resizer.addEventListener('pointerdown', onPointerDown);
+      resizer.addEventListener('pointermove', onPointerMove);
+      resizer.addEventListener('pointerup', onPointerUp);
+      resizer.addEventListener('pointercancel', onPointerUp);
+
+      // Double-click to reset to default 148px
+      resizer.addEventListener('dblclick', () => {
+        const defaultHeight = 148;
+        timelineSection.style.height = `${defaultHeight}px`;
+        timelineSection.style.flex = `0 0 ${defaultHeight}px`;
+        try {
+          localStorage.setItem('vn_studio_timeline_height', defaultHeight);
+        } catch (_) {}
+        if (this.timeline && typeof this.timeline.handleResize === 'function') {
+          this.timeline.handleResize();
+        }
+        VideoEditorUI.showToast('Timeline height reset to default', 'info');
       });
     }
 
@@ -350,12 +588,45 @@
           this.seekTo(cue.start);
           VideoEditorOverlay.updateTextShower(cue, idx);
           VideoEditorOverlay.renderActiveCue(cue, VideoEditorState.overlayConfig);
+          VideoEditorBubble.open(cue, idx);
+        },
+        onHeaderClick: (trackType) => {
+          this._handleTrackHeaderClick(trackType);
         },
       });
 
       const cues = VideoEditorState.getCues();
       if (cues.length > 0) {
         this.timeline.setCues(cues);
+      }
+
+      if (VideoEditorPlayer.videoFile) {
+        this.timeline.setHasVideo(true, VideoEditorPlayer.videoFile.name);
+      } else {
+        this.timeline.setHasVideo(false);
+      }
+    }
+
+    _handleTrackHeaderClick(trackType) {
+      if (trackType === 'text') {
+        const curMs = this.els.videoPlayer ? this.els.videoPlayer.currentTime * 1000 : 0;
+        const newCue = VideoEditorState.addCue(curMs, curMs + 2500, 'دەقی ژێرنووسی نوێ');
+        if (this.timeline) this.timeline.setCues(VideoEditorState.getCues());
+        const cues = VideoEditorState.getCues();
+        const idx = cues.findIndex((c) => c === newCue);
+        VideoEditorState.setActiveCue(newCue, idx);
+        VideoEditorOverlay.renderActiveCue(newCue, VideoEditorState.overlayConfig);
+        VideoEditorOverlay.updateTextShower(newCue, idx);
+        VideoEditorBubble.open(newCue, idx);
+        VideoEditorUI.showToast('Added new Kurdish cue at current playhead', 'success');
+      } else if (trackType === 'video') {
+        if (this.els.videoFileInput) this.els.videoFileInput.click();
+      } else if (trackType === 'music') {
+        if (this.els.musicFileInput) this.els.musicFileInput.click();
+      } else if (trackType === 'sticker') {
+        if (this.els.stickerFileInput) this.els.stickerFileInput.click();
+      } else if (trackType === 'audio') {
+        VideoEditorPopovers.toggle('volume');
       }
     }
 

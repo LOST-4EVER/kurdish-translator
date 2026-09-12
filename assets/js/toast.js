@@ -27,6 +27,16 @@ const Toast = (() => {
     editing: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>`,
   };
 
+  function escapeHtml(str) {
+    if (typeof str !== 'string') return '';
+    return str
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#039;');
+  }
+
   /**
    * Show a toast message.
    * @param {string} title
@@ -37,8 +47,8 @@ const Toast = (() => {
     const parent = ensureContainer();
     const duration = options.duration || (type === 'error' ? 4200 : 2800);
 
-    // Limit active toasts to max 2 to prevent stacking and screen clutter
-    while (activeToasts.length >= 2) {
+    // Limit active toasts to max 3 to prevent stacking and screen clutter
+    while (activeToasts.length >= 3) {
       const oldest = activeToasts.shift();
       if (oldest && oldest.dismiss) oldest.dismiss();
     }
@@ -48,17 +58,20 @@ const Toast = (() => {
     if (options.subtext) toastCard.classList.add('has-subtext');
 
     const iconHtml = ICONS[type] || ICONS.info;
+    const safeTitle = escapeHtml(title);
+    const safeSubtext = options.subtext ? escapeHtml(options.subtext) : '';
+    const safeActionLabel = options.actionLabel ? escapeHtml(options.actionLabel) : '';
 
     let actionBtnHtml = '';
-    if (options.actionLabel) {
-      actionBtnHtml = `<button type="button" class="toast-action-btn">${options.actionLabel}</button>`;
+    if (safeActionLabel) {
+      actionBtnHtml = `<button type="button" class="toast-action-btn">${safeActionLabel}</button>`;
     }
 
     toastCard.innerHTML = `
       <div class="toast-icon-wrap">${iconHtml}</div>
       <div class="toast-body">
-        <div class="toast-title">${title}</div>
-        ${options.subtext ? `<div class="toast-subtext">${options.subtext}</div>` : ''}
+        <div class="toast-title">${safeTitle}</div>
+        ${safeSubtext ? `<div class="toast-subtext">${safeSubtext}</div>` : ''}
       </div>
       ${actionBtnHtml}
       <button type="button" class="toast-close-btn" aria-label="Close notification">
@@ -73,6 +86,7 @@ const Toast = (() => {
     let startTime = Date.now();
     let remaining = duration;
     let isDismissed = false;
+    let isPaused = false;
 
     const dismiss = () => {
       if (isDismissed) return;
@@ -91,12 +105,15 @@ const Toast = (() => {
     activeToasts.push(toastHandle);
 
     const startTimer = () => {
+      isPaused = false;
       clearTimeout(dismissTimer);
       startTime = Date.now();
       dismissTimer = setTimeout(dismiss, remaining);
     };
 
     const pauseTimer = () => {
+      if (isPaused) return;
+      isPaused = true;
       clearTimeout(dismissTimer);
       remaining -= Date.now() - startTime;
       if (remaining < 0) remaining = 0;
@@ -144,6 +161,6 @@ const Toast = (() => {
   };
 })();
 
-if (typeof module !== 'undefined' && module.exports) {
+if (typeof module !== 'undefined' && typeof module.exports !== 'undefined' && typeof window === 'undefined') {
   module.exports = Toast;
 }

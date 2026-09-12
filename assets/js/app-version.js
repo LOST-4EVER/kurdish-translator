@@ -3,9 +3,11 @@
  * Exposes AppVersion as a global module.
  */
 const AppVersion = (() => {
-  const APP_VERSION = 'v127';
+  const APP_VERSION = 'v132';
   let isRefreshing = false;
   let hasShownUpdateNotice = false;
+  let hasUpdateAvailable = false;
+  let latestDiscoveredVer = '';
   let lastCheckedTimestamp = Date.now();
   let timeTickerInterval = null;
   let latestGitHubMeta = null;
@@ -15,7 +17,7 @@ const AppVersion = (() => {
       currentVerTag: document.getElementById('currentVerTag'),
       menuVerNum: document.getElementById('menuVerNum'),
       refreshBtn: document.getElementById('refreshBtn'),
-      refreshMenu: document.getElementById('refreshMenu') || document.getElementById('refreshDropdown'),
+      refreshMenu: document.getElementById('refreshDropdown') || document.getElementById('refreshMenu'),
       refreshStatusTxt: document.getElementById('refreshStatusTxt'),
       refreshTimeTxt: document.getElementById('refreshTimeTxt'),
       refreshLiveDot: document.getElementById('refreshLiveDot'),
@@ -40,9 +42,13 @@ const AppVersion = (() => {
 
   function getI18nText(key, fallback) {
     if (typeof UI_I18N !== 'undefined' && UI_I18N.getText) {
-      return UI_I18N.getText(key) || fallback;
+      return UI_I18N.getText(key, fallback) || fallback;
     }
     return fallback;
+  }
+
+  function isKurdish() {
+    return (typeof UI_I18N !== 'undefined' && UI_I18N.getCurrentLang && UI_I18N.getCurrentLang() === 'ckb');
   }
 
   let deferredInstallPrompt = null;
@@ -118,11 +124,8 @@ const AppVersion = (() => {
    * Set up and bind version tags, update banners, and refresh buttons.
    */
   function init() {
-    const els = getElements();
-    if (els.currentVerTag) els.currentVerTag.textContent = APP_VERSION;
-    if (els.menuVerNum) els.menuVerNum.textContent = APP_VERSION;
+    refreshTexts();
 
-    updateNetworkStatus();
     window.addEventListener('online', updateNetworkStatus);
     window.addEventListener('offline', updateNetworkStatus);
 
@@ -133,21 +136,25 @@ const AppVersion = (() => {
     bindRefreshControls();
   }
 
+  function updateTimeText() {
+    const els = getElements();
+    if (!els.refreshTimeTxt) return;
+    const ckb = isKurdish();
+    const sec = Math.floor((Date.now() - lastCheckedTimestamp) / 1000);
+    if (sec < 10) {
+      els.refreshTimeTxt.textContent = ckb ? 'کەمێک پێش ئێستا' : 'Just now';
+    } else if (sec < 60) {
+      els.refreshTimeTxt.textContent = ckb ? `${sec} چرکە لەمەوبەر` : `${sec}s ago`;
+    } else {
+      const min = Math.floor(sec / 60);
+      els.refreshTimeTxt.textContent = ckb ? `${min} خولەک لەمەوبەر` : `${min}m ago`;
+    }
+  }
+
   function startTimeTicker() {
     if (timeTickerInterval) clearInterval(timeTickerInterval);
-    timeTickerInterval = setInterval(() => {
-      const els = getElements();
-      if (!els.refreshTimeTxt) return;
-      const sec = Math.floor((Date.now() - lastCheckedTimestamp) / 1000);
-      if (sec < 10) {
-        els.refreshTimeTxt.textContent = getI18nText('justNow', 'Just now');
-      } else if (sec < 60) {
-        els.refreshTimeTxt.textContent = `${sec}s ago`;
-      } else {
-        const min = Math.floor(sec / 60);
-        els.refreshTimeTxt.textContent = `${min}m ago`;
-      }
-    }, 5000);
+    updateTimeText();
+    timeTickerInterval = setInterval(updateTimeText, 5000);
   }
 
   function updateNetworkStatus() {
@@ -167,13 +174,46 @@ const AppVersion = (() => {
     }
   }
 
+  function refreshTexts() {
+    const els = getElements();
+    const ckb = isKurdish();
+
+    if (els.currentVerTag) els.currentVerTag.textContent = APP_VERSION;
+    if (els.menuVerNum) els.menuVerNum.textContent = APP_VERSION;
+    const changelogVerEl = document.querySelector('.changelog-ver');
+    if (changelogVerEl) changelogVerEl.textContent = `Release ${APP_VERSION}`;
+
+    const whatsNewStrong = els.btnToggleChangelog ? els.btnToggleChangelog.querySelector('strong') : null;
+    if (whatsNewStrong) {
+      whatsNewStrong.textContent = ckb ? `نوێکارییەکانی وەشانی ١٣٢` : `What's New in ${APP_VERSION}`;
+    }
+
+    updateNetworkStatus();
+    updateTimeText();
+
+    if (hasUpdateAvailable) {
+      if (els.refreshStatusTxt) {
+        els.refreshStatusTxt.textContent = `${ckb ? 'وەشانی نوێ بەردەستە' : 'New version available'} (${latestDiscoveredVer || 'v132+'})`;
+        els.refreshStatusTxt.style.color = '#f43f5e';
+      }
+    } else {
+      if (els.refreshStatusTxt) {
+        els.refreshStatusTxt.textContent = getI18nText('appUpToDate', 'App is up to date');
+        els.refreshStatusTxt.style.color = '';
+      }
+    }
+  }
+
   /**
    * Measure latency to Google Translate endpoint or fallback.
    */
   async function measureLatency() {
     const els = getElements();
     if (!navigator.onLine) {
-      if (els.apiLatencyVal) els.apiLatencyVal.textContent = 'Offline';
+      if (els.apiLatencyVal) {
+        els.apiLatencyVal.textContent = isKurdish() ? 'ئۆفلاین' : 'Offline';
+        els.apiLatencyVal.style.color = '#94a3b8';
+      }
       return;
     }
 
@@ -253,7 +293,9 @@ const AppVersion = (() => {
    */
   function showUpdateAvailable(reg, newVerStr) {
     const els = getElements();
-    const verDisplay = newVerStr || 'v127+';
+    hasUpdateAvailable = true;
+    latestDiscoveredVer = newVerStr || 'v132+';
+    const verDisplay = latestDiscoveredVer;
 
     if (els.updateBadgeDot) els.updateBadgeDot.classList.remove('hidden');
     if (els.refreshBtn) els.refreshBtn.classList.add('has-update');
@@ -374,7 +416,7 @@ const AppVersion = (() => {
   async function checkForAppUpdates(manual = false) {
     const els = getElements();
     lastCheckedTimestamp = Date.now();
-    if (els.refreshTimeTxt) els.refreshTimeTxt.textContent = getI18nText('justNow', 'Just now');
+    updateTimeText();
 
     if (els.refreshLiveDot) {
       els.refreshLiveDot.className = 'live-dot checking';
@@ -462,6 +504,7 @@ const AppVersion = (() => {
           Toast.show(`${getI18nText('newVersionAvailable', 'New version available')}: ${serverVer}!`, 'success', 4000);
         }
       } else {
+        hasUpdateAvailable = false;
         if (els.refreshStatusTxt) {
           els.refreshStatusTxt.textContent = getI18nText('appUpToDate', 'App is up to date');
           els.refreshStatusTxt.style.color = '';
@@ -488,6 +531,7 @@ const AppVersion = (() => {
     if (els.refreshBtn) {
       const icon = els.refreshBtn.querySelector('.refresh-icon');
       if (icon) icon.classList.add('spin-refresh');
+      els.refreshBtn.classList.add('spinning');
     }
 
     if (typeof Toast !== 'undefined') {
@@ -516,7 +560,9 @@ const AppVersion = (() => {
     setTimeout(() => {
       if (isRefreshing) return;
       isRefreshing = true;
-      window.location.reload();
+      const url = new URL(window.location.href);
+      url.searchParams.set('_v', Date.now().toString());
+      window.location.href = url.toString();
     }, 350);
   }
 
@@ -524,6 +570,10 @@ const AppVersion = (() => {
    * Perform a force refresh: clear all caches, unregister service workers, and hard-reload.
    */
   async function performForceRefresh(customMsg) {
+    const els = getElements();
+    if (els.refreshBtn) {
+      els.refreshBtn.classList.add('spinning');
+    }
     if (typeof Toast !== 'undefined') {
       Toast.show(customMsg || getI18nText('clearingCache', 'Clearing cache & reloading...'), 'info', 3000);
     }
@@ -543,7 +593,7 @@ const AppVersion = (() => {
 
     setTimeout(() => {
       const url = new URL(window.location.href);
-      url.searchParams.set('_r', Date.now().toString());
+      url.searchParams.set('_force', Date.now().toString());
       window.location.href = url.toString();
     }, 400);
   }
@@ -564,6 +614,7 @@ const AppVersion = (() => {
         } else {
           els.refreshMenu.classList.remove('hidden');
           els.refreshBtn.setAttribute('aria-expanded', 'true');
+          refreshTexts();
           measureLatency();
         }
       });
@@ -615,7 +666,8 @@ const AppVersion = (() => {
     }
 
     if (els.btnToggleChangelog && els.changelogPanel) {
-      els.btnToggleChangelog.addEventListener('click', () => {
+      els.btnToggleChangelog.addEventListener('click', (e) => {
+        e.stopPropagation();
         const isClosed = els.changelogPanel.classList.contains('hidden');
         if (isClosed) {
           els.changelogPanel.classList.remove('hidden');
@@ -651,6 +703,7 @@ const AppVersion = (() => {
   return {
     VERSION: APP_VERSION,
     init,
+    refreshTexts,
     checkForAppUpdates,
     fetchLatestGitHubVersion,
     syncWithGitHub,

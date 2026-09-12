@@ -183,7 +183,57 @@ const SubParser = (() => {
     const out = [];
     for (const c of cues) {
       const text = c.text.join('\n').trim();
-      if (text) out.push({ index: out.length + 1, start: c.start, end: c.end, rawStart: c.rawStart, rawEnd: c.rawEnd, settings: c.settings || '', text });
+      if (text) {
+        let placement = 'bottom';
+        let align = 'center';
+        let fontFamily = null;
+        let color = null;
+
+        // WebVTT settings
+        const settings = c.settings || '';
+        if (settings) {
+          const lineM = settings.match(/line:(-?\d+(?:\.\d+)?%?)/i);
+          if (lineM) {
+            const val = parseFloat(lineM[1]);
+            if (val <= 28) placement = 'top';
+            else if (val >= 38 && val <= 62) placement = 'center';
+          }
+          const alignM = settings.match(/align:(start|left|center|end|right)/i);
+          if (alignM) {
+            const a = alignM[1].toLowerCase();
+            align = a === 'start' ? 'left' : (a === 'end' ? 'right' : a);
+          }
+        }
+
+        // SRT / text inline formatting tags
+        const anM = text.match(/\{\\an([1-9])\}/i) || text.match(/\{\\a([1-9]|1[01])\}/i);
+        if (anM) {
+          const aNum = parseInt(anM[1], 10);
+          if (aNum === 7 || aNum === 8 || aNum === 9 || aNum === 5 || aNum === 6) placement = 'top';
+          else if (aNum === 4 || aNum === 5 || aNum === 6 || aNum === 9 || aNum === 10 || aNum === 11) placement = 'center';
+          if (aNum === 1 || aNum === 4 || aNum === 7) align = 'left';
+          else if (aNum === 3 || aNum === 6 || aNum === 9) align = 'right';
+        }
+
+        const fontM = text.match(/<font\b[^>]*\bface=["']([^"']+)["']/i);
+        if (fontM) fontFamily = fontM[1].trim();
+        const colorM = text.match(/<font\b[^>]*\bcolor=["']([^"']+)["']/i);
+        if (colorM) color = colorM[1].trim();
+
+        out.push({
+          index: out.length + 1,
+          start: c.start,
+          end: c.end,
+          rawStart: c.rawStart,
+          rawEnd: c.rawEnd,
+          settings,
+          text,
+          placement,
+          align,
+          fontFamily,
+          color,
+        });
+      }
     }
     return out;
   }
@@ -193,15 +243,44 @@ const SubParser = (() => {
     const header = [];
     // Fall back to the standard field order when a file omits the Format line.
     let fields = ASS_DEFAULT_ORDER.slice();
+    let styleFields = [];
+    const stylesMap = {};
     const cues = [];
     let inEvents = false;
+    let inStyles = false;
 
     for (const line of content.replace(/\r/g, '').split('\n')) {
       // Blank lines separate sections (and the file's trailing newline leaves
       // one); keep them out of the header so serialization round-trips cleanly.
       if (!line.trim()) continue;
-      if (/^\s*\[Events\]\s*$/i.test(line)) { inEvents = true; header.push(line); continue; }
-      if (/^\s*\[[^\]]+\]\s*$/.test(line)) { inEvents = false; header.push(line); continue; }
+      if (/^\s*\[Events\]\s*$/i.test(line)) { inEvents = true; inStyles = false; header.push(line); continue; }
+      if (/^\s*\[(?:V4\+?\s*Styles|Styles)\]\s*$/i.test(line)) { inStyles = true; inEvents = false; header.push(line); continue; }
+      if (/^\s*\[[^\]]+\]\s*$/.test(line)) { inEvents = false; inStyles = false; header.push(line); continue; }
+
+      if (inStyles) {
+        header.push(line);
+        const sf = line.match(/^\s*Format\s*:\s*(.*)$/i);
+        if (sf) {
+          styleFields = sf[1].split(',').map((s) => s.trim());
+          continue;
+        }
+        const sm = line.match(/^\s*Style\s*:\s*(.*)$/i);
+        if (sm && styleFields.length) {
+          const parts = sm[1].split(',').map((s) => s.trim());
+          const sMap = {};
+          styleFields.forEach((f, idx) => { sMap[f.toLowerCase()] = parts[idx] || ''; });
+          const name = (sMap.name || '').toLowerCase();
+          if (name) {
+            stylesMap[name] = {
+              fontName: sMap.fontname || null,
+              fontSize: sMap.fontsize || null,
+              alignment: parseInt(sMap.alignment, 10) || 2,
+              primaryColor: sMap.primarycolour || null,
+            };
+          }
+        }
+        continue;
+      }
 
       if (!inEvents) { header.push(line); continue; }
 
@@ -228,14 +307,85 @@ const SubParser = (() => {
         // serialization can round-trip them instead of resetting to defaults.
         const extra = {};
         fields.forEach((f, i) => { if (f.toLowerCase() !== 'text') extra[f] = parts[i] ?? ''; });
-        cues.push({ index: cues.length + 1, start: assToMs(t0[1]), end: assToMs(t1[1]), rawStart: t0[1], rawEnd: t1[1], text, extra });
+
+        // Extract style & placement attributes
+        const styleKey = (map.style || 'default').trim().toLowerCase();
+        const styleDef = stylesMap[styleKey] || {};
+
+        let placement = 'bottom';
+        let align = 'center';
+        let fontFamily = styleDef.fontName || null;
+        let fontSize = styleDef.fontSize ? parseFloat(styleDef.fontSize) : null;
+        let color = null;
+        let pos = null;
+
+        // Base alignment from style definition
+        const styleAlign = styleDef.alignment || 2;
+        if (styleAlign === 7 || styleAlign === 8 || styleAlign === 9) placement = 'top';
+        else if (styleAlign === 4 || styleAlign === 5 || styleAlign === 6) placement = 'center';
+        if (styleAlign === 1 || styleAlign === 4 || styleAlign === 7) align = 'left';
+        else if (styleAlign === 3 || styleAlign === 6 || styleAlign === 9) align = 'right';
+
+        // Override tags inside text: {\pos(x,y)}, {\an1-9}, {\fnFont}, {\fsSize}, {\c&H...&}
+        const posM = text.match(/\{\\pos\(\s*(-?\d+(?:\.\d+)?)\s*,\s*(-?\d+(?:\.\d+)?)\s*\)\}/i);
+        if (posM) {
+          pos = { x: parseFloat(posM[1]), y: parseFloat(posM[2]) };
+          placement = 'custom';
+        }
+
+        const anM = text.match(/\{\\an([1-9])\}/i);
+        if (anM) {
+          const aNum = parseInt(anM[1], 10);
+          if (aNum >= 7) placement = 'top';
+          else if (aNum >= 4) placement = 'center';
+          else placement = 'bottom';
+
+          if (aNum === 1 || aNum === 4 || aNum === 7) align = 'left';
+          else if (aNum === 3 || aNum === 6 || aNum === 9) align = 'right';
+          else align = 'center';
+        }
+
+        const fnM = text.match(/\{\\fn([^\}]+)\}/i);
+        if (fnM) fontFamily = fnM[1].trim();
+
+        const fsM = text.match(/\{\\fs(\d+(?:\.\d+)?)\}/i);
+        if (fsM) fontSize = parseFloat(fsM[1]);
+
+        const cM = text.match(/\{\\(?:1c|c)&H([0-9a-fA-F]{6,8})&?\}/i);
+        if (cM) {
+          const hex = cM[1];
+          // In ASS, color is &HBBGGRR&
+          if (hex.length >= 6) {
+            const b = hex.slice(0, 2);
+            const g = hex.slice(2, 4);
+            const r = hex.slice(4, 6);
+            color = `#${r}${g}${b}`;
+          }
+        }
+
+        cues.push({
+          index: cues.length + 1,
+          start: assToMs(t0[1]),
+          end: assToMs(t1[1]),
+          rawStart: t0[1],
+          rawEnd: t1[1],
+          text,
+          extra,
+          placement,
+          align,
+          pos,
+          fontFamily,
+          fontSize,
+          color,
+          style: map.style || '',
+        });
         continue;
       }
 
       header.push(line); // stray event lines (Comment: etc.)
     }
 
-    return { cues, meta: { header, fields } };
+    return { cues, meta: { header, fields, styles: stylesMap } };
   }
 
   // Split ASS Dialogue payload on commas, keeping commas inside {...} and \N intact.
@@ -271,11 +421,44 @@ const SubParser = (() => {
       if (!text) continue;
       // Pipe '|' is MicroDVD's line-break marker; keep control codes {...} as-is.
       text = text.replace(/\|/g, '\n');
+
+      // MicroDVD position {P:x,y}, font {f:name}, size {s:size}, color {c:$bbggrr}
+      let placement = 'bottom';
+      let align = 'center';
+      let pos = null;
+      let fontFamily = null;
+      let fontSize = null;
+      let color = null;
+
+      const posM = text.match(/\{P:(\d+),(\d+)\}/i);
+      if (posM) {
+        pos = { x: parseInt(posM[1], 10), y: parseInt(posM[2], 10) };
+        placement = 'custom';
+      }
+      const fnM = text.match(/\{f:([^}]+)\}/i);
+      if (fnM) fontFamily = fnM[1].trim();
+      const fsM = text.match(/\{s:(\d+)\}/i);
+      if (fsM) fontSize = parseInt(fsM[1], 10);
+      const cM = text.match(/\{c:\$([0-9a-fA-F]{6})\}/i);
+      if (cM) {
+        const hex = cM[1];
+        const b = hex.slice(0, 2);
+        const g = hex.slice(2, 4);
+        const r = hex.slice(4, 6);
+        color = `#${r}${g}${b}`;
+      }
+
       cues.push({
         index: cues.length + 1,
         start: Math.round((Number(m[1]) / fps) * 1000),
         end: Math.round((Number(m[2]) / fps) * 1000),
         text,
+        placement,
+        align,
+        pos,
+        fontFamily,
+        fontSize,
+        color,
       });
     }
     return { cues, meta: { fps } };
@@ -325,7 +508,22 @@ const SubParser = (() => {
       // First non-empty paragraph; a single-language file has exactly one <P>.
       const para = samiParagraphs(m[2])[0];
       if (!para) continue;
-      cues.push({ start, end: 0, text: para });
+
+      const rawBlock = m[2] || '';
+      let fontFamily = null;
+      let color = null;
+      let placement = 'bottom';
+      const fnM = rawBlock.match(/<FONT\b[^>]*\bFACE=["']([^"']+)["']/i);
+      if (fnM) fontFamily = fnM[1].trim();
+      const cM = rawBlock.match(/<FONT\b[^>]*\bCOLOR=["']([^"']+)["']/i);
+      if (cM) color = cM[1].trim();
+      if (/class=["']?[^"'>]*\btop\b/i.test(rawBlock) || /text-align:\s*top/i.test(rawBlock)) {
+        placement = 'top';
+      } else if (/class=["']?[^"'>]*\b(?:mid|center)\b/i.test(rawBlock)) {
+        placement = 'center';
+      }
+
+      cues.push({ start, end: 0, text: para, placement, fontFamily, color });
       prev = cues.length - 1;
     }
     if (prev >= 0 && cues[prev].end === 0) cues[prev].end = cues[prev].start + 3000;
@@ -650,7 +848,10 @@ Style: Top,Noto Naskh Arabic,44,16777215,65535,0,0,-1,0,1,3.2,1.8,8,40,40,35,0,1
     const isSsa = parsed.format === 'ssa';
     const order = (meta.fields && meta.fields.length) ? meta.fields : ASS_DEFAULT_ORDER;
     const lower = order.map((f) => f.toLowerCase());
-    const keyOf = (k) => order[lower.indexOf(k)];
+    const keyOf = (k) => {
+      const idx = lower.indexOf(k);
+      return idx !== -1 ? order[idx] : k;
+    };
 
     let cleanHeader = (meta.header || []).filter((l) => !/^\s*Dialogue\s*:/i.test(l));
     const fmtLine = `Format: ${order.join(', ')}`;
@@ -708,9 +909,12 @@ Style: Top,Noto Naskh Arabic,44,16777215,65535,0,0,-1,0,1,3.2,1.8,8,40,40,35,0,1
   /** Extract vertical placement zone: 'top', 'mid', 'bottom' */
   function getPlacementZone(cue) {
     if (!cue) return 'bottom';
+    if (cue.placement === 'top' || cue.placement === 'mid' || cue.placement === 'center') {
+      return cue.placement === 'center' ? 'mid' : cue.placement;
+    }
     const raw = String(cue.rawText || cue.text || '');
     const settings = String(cue.settings || '');
-    if (/\{\\an[789]\}/i.test(raw) || /\{\\a[567]\}/i.test(raw) || /<top>/i.test(raw) || /line:(?:0|1|2|3|4|5|10|15|20)%/i.test(settings)) {
+    if (/\{\\an[789]\}/i.test(raw) || /\{\\a[567]\}/i.test(raw) || /<top>/i.test(raw) || /line:(?:0|1|2|3|4|5|10|15|20|25)%/i.test(settings)) {
       return 'top';
     }
     if (/\{\\an[456]\}/i.test(raw) || /\{\\a[9]|\\a1[01]\}/i.test(raw) || /<mid>/i.test(raw) || /line:(?:40|45|50|55|60)%/i.test(settings)) {
@@ -820,7 +1024,18 @@ Style: Top,Noto Naskh Arabic,44,16777215,65535,0,0,-1,0,1,3.2,1.8,8,40,40,35,0,1
     });
   }
 
-  return { parse, serialize, fmtSRT, fmtVTT, fmtASS, detect, toMs, splitMs, fixOverlaps, timeShiftCues };
+  function validateCues(cues) {
+    if (!Array.isArray(cues)) return [];
+    return cues.filter((cue) => {
+      if (!cue || typeof cue !== 'object') return false;
+      if (typeof cue.start !== 'number' || isNaN(cue.start) || cue.start < 0) return false;
+      if (typeof cue.end !== 'number' || isNaN(cue.end) || cue.end < cue.start) return false;
+      if (typeof cue.text !== 'string') cue.text = '';
+      return true;
+    });
+  }
+
+  return { parse, serialize, fmtSRT, fmtVTT, fmtASS, detect, toMs, splitMs, fixOverlaps, timeShiftCues, validateCues };
 })();
 
-if (typeof module !== 'undefined' && module.exports) module.exports = SubParser;
+if (typeof module !== 'undefined' && typeof module.exports !== 'undefined' && typeof window === 'undefined') module.exports = SubParser;

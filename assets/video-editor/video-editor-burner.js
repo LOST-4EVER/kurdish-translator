@@ -45,7 +45,7 @@
         if ('gpu' in navigator && navigator.gpu) {
           const adapter = await navigator.gpu.requestAdapter();
           if (adapter) {
-            this.gpuStatus = '⚡ WebGPU Hardware Accelerated';
+            this.gpuStatus = 'WebGPU Hardware Accelerated';
             this.isGpuReady = true;
             this._updateGpuBadge();
             return;
@@ -60,13 +60,13 @@
         if (gl) {
           const debugInfo = gl.getExtension('WEBGL_debug_renderer_info');
           const renderer = debugInfo ? gl.getParameter(debugInfo.UNMASKED_RENDERER_WEBGL) : '';
-          this.gpuStatus = renderer ? `⚡ GPU: ${renderer.split('/')[0].trim()}` : '⚡ GPU Canvas Accelerated';
+          this.gpuStatus = renderer ? `GPU: ${renderer.split('/')[0].trim()}` : 'GPU Canvas Accelerated';
           this.isGpuReady = true;
         } else {
-          this.gpuStatus = '⚡ CPU Canvas Pipeline';
+          this.gpuStatus = 'CPU Canvas Pipeline';
         }
       } catch {
-        this.gpuStatus = '⚡ Hardware Canvas Pipeline';
+        this.gpuStatus = 'Hardware Canvas Pipeline';
       }
       this._updateGpuBadge();
     }
@@ -438,7 +438,7 @@
 
           const scaleFactor = parseFloat(overlayCfg.fontSize || '1.25');
           const baseFontSize = Math.max(20, Math.round(height * 0.045 * scaleFactor));
-          const fontFamily = overlayCfg.fontFamily || '"Noto Naskh Arabic", "Inter", -apple-system, sans-serif';
+          const fontFamily = cue.fontFamily || overlayCfg.fontFamily || '"Noto Naskh Arabic", "Inter", -apple-system, sans-serif';
 
           ctx.font = `bold ${baseFontSize}px ${fontFamily}`;
           ctx.textAlign = 'center';
@@ -447,18 +447,52 @@
           const maxTextWidth = width * 0.85;
           const lines = this.wrapText(ctx, text, maxTextWidth);
           const lineHeight = baseFontSize * 1.35;
-          const totalBoxHeight = lines.length * lineHeight + baseFontSize * 0.6;
 
+          // Check if original English text should be burned alongside Kurdish
+          const hasOrig = Boolean(overlayCfg.showOrig && cue.origText && cue.origText.trim() && cue.origText.trim() !== text.trim());
+          const origFontSize = Math.max(14, Math.round(baseFontSize * 0.72));
+          let origLines = [];
+          let origLineHeight = 0;
+          if (hasOrig) {
+            ctx.font = `500 ${origFontSize}px "Inter", -apple-system, sans-serif`;
+            origLines = this.wrapText(ctx, stripTags(cue.origText), maxTextWidth);
+            origLineHeight = origFontSize * 1.3;
+          }
+
+          const totalBoxHeight = (lines.length * lineHeight) + (origLines.length ? (origLines.length * origLineHeight + baseFontSize * 0.4) : 0) + baseFontSize * 0.6;
+
+          let xCenter = width * 0.5;
           let yCenter = height * 0.88;
-          if (overlayCfg.position === 'top') yCenter = height * 0.12 + totalBoxHeight / 2;
-          else if (overlayCfg.position === 'center') yCenter = height * 0.50;
+          if (cue.pos && typeof cue.pos.x === 'number' && typeof cue.pos.y === 'number') {
+            xCenter = cue.pos.x > 1 ? (cue.pos.x / 1920) * width : cue.pos.x * width;
+            yCenter = cue.pos.y > 1 ? (cue.pos.y / 1080) * height : cue.pos.y * height;
+          } else if (cue.placement === 'top') {
+            yCenter = height * 0.12 + totalBoxHeight / 2;
+          } else if (cue.placement === 'center' || cue.placement === 'mid') {
+            yCenter = height * 0.50;
+          } else if (overlayCfg.customPos && typeof overlayCfg.customPos.xPct === 'number' && typeof overlayCfg.customPos.yPct === 'number') {
+            xCenter = width * (overlayCfg.customPos.xPct / 100);
+            yCenter = height * (overlayCfg.customPos.yPct / 100);
+          } else if (overlayCfg.position === 'top') {
+            yCenter = height * 0.12 + totalBoxHeight / 2;
+          } else if (overlayCfg.position === 'center') {
+            yCenter = height * 0.50;
+          }
 
-          // Compute widest line
+          // Compute widest line across both languages
+          ctx.font = `bold ${baseFontSize}px ${fontFamily}`;
           let maxLineWidth = 0;
           lines.forEach((l) => {
             const w = ctx.measureText(l).width;
             if (w > maxLineWidth) maxLineWidth = w;
           });
+          if (hasOrig) {
+            ctx.font = `500 ${origFontSize}px "Inter", -apple-system, sans-serif`;
+            origLines.forEach((ol) => {
+              const w = ctx.measureText(ol).width;
+              if (w > maxLineWidth) maxLineWidth = w;
+            });
+          }
           const boxWidth = Math.min(width * 0.92, maxLineWidth + baseFontSize * 1.4);
 
           // Background box
@@ -466,22 +500,51 @@
           if (bgColor !== 'transparent') {
             ctx.fillStyle = bgColor;
             ctx.beginPath();
-            ctx.roundRect((width - boxWidth) / 2, yCenter - totalBoxHeight / 2, boxWidth, totalBoxHeight, 10);
+            ctx.roundRect(xCenter - boxWidth / 2, yCenter - totalBoxHeight / 2, boxWidth, totalBoxHeight, 10);
             ctx.fill();
           } else {
-            // Shadow when transparent
             ctx.shadowColor = 'rgba(0, 0, 0, 0.95)';
             ctx.shadowBlur = 8;
             ctx.shadowOffsetX = 0;
             ctx.shadowOffsetY = 2;
           }
 
-          // Subtitle text lines
-          ctx.fillStyle = overlayCfg.color || '#ffffff';
+          // Render primary Kurdish text lines
+          ctx.font = `bold ${baseFontSize}px ${fontFamily}`;
+          ctx.direction = isAr ? 'rtl' : 'ltr';
+          const textColor = cue.color || overlayCfg.color || '#ffffff';
+          const strokeWidth = Math.max(2, Math.round(baseFontSize * 0.12));
           const startY = yCenter - (totalBoxHeight / 2) + baseFontSize * 0.9;
+
           lines.forEach((line, idx) => {
-            ctx.fillText(line, width / 2, startY + idx * lineHeight);
+            const lineY = startY + idx * lineHeight;
+            ctx.lineJoin = 'round';
+            ctx.miterLimit = 2;
+            ctx.lineWidth = strokeWidth;
+            ctx.strokeStyle = '#000000';
+            ctx.strokeText(line, xCenter, lineY);
+            ctx.fillStyle = textColor;
+            ctx.fillText(line, xCenter, lineY);
           });
+
+          // Render original English text if enabled
+          if (hasOrig && origLines.length) {
+            ctx.font = `500 ${origFontSize}px "Inter", -apple-system, sans-serif`;
+            ctx.direction = 'ltr';
+            const origStrokeWidth = Math.max(1.5, Math.round(origFontSize * 0.12));
+            const origStartY = startY + lines.length * lineHeight + origFontSize * 0.2;
+
+            origLines.forEach((oline, oidx) => {
+              const oLineY = origStartY + oidx * origLineHeight;
+              ctx.lineJoin = 'round';
+              ctx.miterLimit = 2;
+              ctx.lineWidth = origStrokeWidth;
+              ctx.strokeStyle = '#000000';
+              ctx.strokeText(oline, xCenter, oLineY);
+              ctx.fillStyle = '#e2e8f0';
+              ctx.fillText(oline, xCenter, oLineY);
+            });
+          }
 
           // Reset shadow
           ctx.shadowColor = 'transparent';

@@ -190,6 +190,9 @@
     if (typeof AppQuality !== 'undefined' && AppQuality.runInspection) {
       AppQuality.runInspection();
     }
+    if (typeof AppVersion !== 'undefined' && AppVersion.refreshTexts) {
+      AppVersion.refreshTexts();
+    }
   }
 
   // ---------- State ----------
@@ -223,8 +226,14 @@
 
   // ---------- Helpers ----------
   const store = {
-    get(key, fallback) { try { const v = localStorage.getItem(key); return v === null ? fallback : v; } catch { return fallback; } },
-    set(key, val) { try { localStorage.setItem(key, val); } catch {} },
+    get(key, fallback) {
+      if (typeof AppStorage !== 'undefined') return AppStorage.get(key, fallback);
+      try { const v = localStorage.getItem(key); return v === null ? fallback : v; } catch { return fallback; }
+    },
+    set(key, val) {
+      if (typeof AppStorage !== 'undefined') return AppStorage.set(key, val);
+      try { localStorage.setItem(key, val); } catch {}
+    },
   };
   let toastTimer;
   function toast(msg, isError = false, subtext = '', options = {}) {
@@ -244,7 +253,11 @@
   }
 
   // Step cards keyed by step name (avoid string-building element lookups).
-  const getStepEl = (s) => els['step' + s[0].toUpperCase() + s.slice(1)] || $(`#step${s[0].toUpperCase() + s.slice(1)}`);
+  const getStepEl = (s) => {
+    if (typeof s !== 'string' || !s) return null;
+    const key = 'step' + s[0].toUpperCase() + s.slice(1);
+    return els[key] || $(`#${key}`);
+  };
   let activeStepName = 'upload';
 
   function showStep(name) {
@@ -1365,6 +1378,9 @@
 
   /** Read a file as text, auto-detecting BOM / UTF-16 / UTF-8 encoding. */
   function readFileAsText(f) {
+    if (typeof AppDecoder !== 'undefined' && AppDecoder.readFileAsText) {
+      return AppDecoder.readFileAsText(f);
+    }
     return new Promise((resolve, reject) => {
       const reader = new FileReader();
       reader.onerror = () => reject(reader.error);
@@ -1377,6 +1393,9 @@
   }
 
   function decodeBytes(bytes) {
+    if (typeof AppDecoder !== 'undefined' && AppDecoder.decodeBytes) {
+      return AppDecoder.decodeBytes(bytes);
+    }
     let encoding = 'utf-8';
     if (bytes.length >= 3 && bytes[0] === 0xef && bytes[1] === 0xbb && bytes[2] === 0xbf) encoding = 'utf-8';
     else if (bytes.length >= 2 && bytes[0] === 0xff && bytes[1] === 0xfe) encoding = 'utf-16le';
@@ -1516,7 +1535,7 @@
 
     if (typeof Toast !== 'undefined') {
       Toast.show(
-        currentUiLang === 'ckb' ? '⚡ وەرگێڕان دەستی پێکرد!' : '⚡ Translation started!',
+        currentUiLang === 'ckb' ? 'وەرگێڕان دەستی پێکرد!' : 'Translation started!',
         'translating',
         { subtext: currentUiLang === 'ckb' ? 'تکایە چاوەڕێ بکە... وەرگێڕانی کوردی لە ئارادایە' : 'Google AI is translating your subtitles to Kurdish Sorani...' }
       );
@@ -1561,7 +1580,7 @@
       if (els.liveOrigCaption && els.liveOrigCaption.classList) els.liveOrigCaption.classList.add('hidden');
       if (els.livePlaceholder && els.livePlaceholder.classList) els.livePlaceholder.classList.remove('hidden');
       if (els.liveTimecode) els.liveTimecode.textContent = '00:00.000';
-      if (els.progressSpeed) els.progressSpeed.textContent = '⚡ Processing…';
+      if (els.progressSpeed) els.progressSpeed.textContent = 'Processing…';
       if (els.liveFeed) els.liveFeed.innerHTML = '';
 
       const startMs = Date.now();
@@ -1574,9 +1593,9 @@
 
         if (els.progressSpeed) {
           if (speed > 0) {
-            els.progressSpeed.textContent = `⚡ ${speed} lines/sec • ~${remainingSec}s left`;
+            els.progressSpeed.textContent = `${speed} lines/sec • ~${remainingSec}s left`;
           } else {
-            els.progressSpeed.textContent = `⚡ Streaming…`;
+            els.progressSpeed.textContent = `Streaming…`;
           }
         }
         if (els.lineCount) els.lineCount.textContent = `${done} / ${total} lines`;
@@ -1600,7 +1619,7 @@
 
       if (typeof Toast !== 'undefined') {
         Toast.success(
-          currentUiLang === 'ckb' ? '🎉 وەرگێڕانەکە بە سەرکەوتوویی تەواو بوو!' : '🎉 Translation Complete!',
+          currentUiLang === 'ckb' ? 'وەرگێڕانەکە بە سەرکەوتوویی تەواو بوو!' : 'Translation Complete!',
           currentUiLang === 'ckb' ? 'ژێرنووسەکەت بە زمانی کوردی ئامادەیە. دەتوانیت دابەزێنیت یان لە پیشاندانی ڕاستەوخۆ تەماشای بکەیت.' : 'Your Kurdish Sorani subtitle is ready. Download it or preview live.',
           currentUiLang === 'ckb' ? 'تەماشاکردن' : 'Preview Subtitles',
           () => switchTab('preview')

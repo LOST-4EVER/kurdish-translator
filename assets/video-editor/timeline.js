@@ -21,6 +21,7 @@
         maxPixelsPerSecond: 240,
         onSeek: null,
         onCueSelect: null,
+        onHeaderClick: null,
       }, options);
 
       this.duration = 0;      // Total duration in ms
@@ -30,6 +31,8 @@
       this.zoom = this.options.pixelsPerSecond;
       this.isDragging = false;
       this.trackWidth = 0;
+      this.hasVideo = false;
+      this.videoName = '';
 
       // Ultra-smooth playhead performance caching
       this._cuePillMap = new Map();
@@ -45,41 +48,27 @@
     _initDOM() {
       this.container.innerHTML = `
         <div class="vn-timeline-wrapper">
-          <!-- Left Track Headers (Directly matching VN Editor with crisp SVG icons) -->
+          <!-- Left Track Headers (Multi-track control column) -->
           <div class="vn-track-headers-col">
-            <div class="vn-track-header-item vn-hdr-music" title="Music & Audio Track">
-              <span class="vn-hdr-icon">
-                <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><path d="M12 3v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z"/></svg>
-              </span>
-              <span class="vn-hdr-plus"><svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></span>
+            <div class="vn-track-header-item vn-hdr-music" title="Audio / Music Track">
+              <span class="vn-hdr-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18V5l12-2v13"></path><circle cx="6" cy="18" r="3"></circle><circle cx="18" cy="16" r="3"></circle></svg></span>
             </div>
-            <div class="vn-track-header-item vn-hdr-text" title="Subtitle / Text Track">
-              <span class="vn-hdr-icon vn-hdr-icon-gold">
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M5 4v3h5.5v12h3V7H19V4z"/></svg>
-              </span>
-              <span class="vn-hdr-plus"><svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></span>
+            <div class="vn-track-header-item vn-hdr-text" title="Subtitle / Kurdish Text Track">
+              <span class="vn-hdr-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg></span>
             </div>
-            <div class="vn-track-header-item vn-hdr-sticker" title="Overlay & Sticker Track">
-              <span class="vn-hdr-icon">
-                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
-              </span>
-              <span class="vn-hdr-plus"><svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></span>
+            <div class="vn-track-header-item vn-hdr-sticker" title="Overlay &amp; Sticker Track">
+              <span class="vn-hdr-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><circle cx="8.5" cy="8.5" r="1.5"></circle><polyline points="21 15 16 10 5 21"></polyline></svg></span>
             </div>
             <div class="vn-track-header-item vn-hdr-video" title="Main Video Track">
-              <span class="vn-hdr-icon">
-                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><rect x="2" y="2" width="20" height="20" rx="2.18" ry="2.18"/><line x1="7" y1="2" x2="7" y2="22"/><line x1="17" y1="2" x2="17" y2="22"/><line x1="2" y1="12" x2="22" y2="12"/></svg>
-              </span>
-              <span class="vn-hdr-plus"><svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></span>
+              <span class="vn-hdr-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="2" width="20" height="20" rx="2.18" ry="2.18"></rect><line x1="7" y1="2" x2="7" y2="22"></line><line x1="17" y1="2" x2="17" y2="22"></line><line x1="2" y1="12" x2="22" y2="12"></line></svg></span>
             </div>
-            <div class="vn-track-header-item vn-hdr-audio" title="Audio Volume">
-              <span class="vn-hdr-icon">
-                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/></svg>
-              </span>
+            <div class="vn-track-header-item vn-hdr-audio" title="Audio Track &amp; Volume">
+              <span class="vn-hdr-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon><path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"></path></svg></span>
             </div>
             <div class="vn-track-header-item vn-hdr-ruler-spacer"></div>
           </div>
 
-          <!-- Timeline Viewport (Scrollable horizontally) -->
+          <!-- Timeline Viewport -->
           <div class="vn-timeline-viewport" tabindex="0" role="slider" aria-label="Video Timeline" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
             <div class="vn-timeline-scroll-canvas">
               <!-- 1. Music Track (Auxiliary) -->
@@ -99,8 +88,13 @@
 
               <!-- 4. Video Track (Filmstrip with yellow clip border) -->
               <div class="vn-lane vn-lane-video">
-                <div class="vn-video-clip-box" id="vnVideoClipBox">
-                  <div class="vn-filmstrip-frames" id="vnFilmstripFrames"></div>
+                <div class="vn-video-empty-track" id="vnVideoEmptyTrack">
+                  <span class="vn-video-empty-track-text">No video loaded · Drag &amp; drop video here or click Video +</span>
+                </div>
+                <div class="vn-video-clip-box hidden" id="vnVideoClipBox">
+                  <div class="vn-filmstrip-frames" id="vnFilmstripFrames">
+                    <span class="vn-clip-title" id="vnClipTitle">Video Track</span>
+                  </div>
                   <div class="vn-clip-handle left-handle"></div>
                   <div class="vn-clip-handle right-handle"></div>
                 </div>
@@ -139,6 +133,8 @@
         scrollCanvas: this.container.querySelector('.vn-timeline-scroll-canvas'),
         cuesLayer: this.container.querySelector('.vn-cues-layer'),
         videoClipBox: this.container.querySelector('#vnVideoClipBox'),
+        videoEmptyTrack: this.container.querySelector('#vnVideoEmptyTrack'),
+        clipTitle: this.container.querySelector('#vnClipTitle'),
         filmstripFrames: this.container.querySelector('#vnFilmstripFrames'),
         audioBarFill: this.container.querySelector('#vnAudioBarFill'),
         rulerCanvas: this.container.querySelector('.vn-ruler-canvas'),
@@ -151,6 +147,23 @@
     }
 
     _bindEvents() {
+      // Track Header Clicks
+      const headers = this.container.querySelectorAll('.vn-track-header-item');
+      headers.forEach((hdr) => {
+        hdr.addEventListener('click', (e) => {
+          e.stopPropagation();
+          let type = null;
+          if (hdr.classList.contains('vn-hdr-music')) type = 'music';
+          else if (hdr.classList.contains('vn-hdr-text')) type = 'text';
+          else if (hdr.classList.contains('vn-hdr-sticker')) type = 'sticker';
+          else if (hdr.classList.contains('vn-hdr-video')) type = 'video';
+          else if (hdr.classList.contains('vn-hdr-audio')) type = 'audio';
+
+          if (type && typeof this.options.onHeaderClick === 'function') {
+            this.options.onHeaderClick(type);
+          }
+        });
+      });
       // Scrubber Interaction (pointer down anywhere on scroll canvas)
       const onPointerDown = (e) => {
         if (e.button !== 0) return; // Left-click only
@@ -314,15 +327,38 @@
       this.setZoom(fitZoom);
     }
 
+    setHasVideo(hasVideo, videoName = '') {
+      this.hasVideo = !!hasVideo;
+      this.videoName = videoName || '';
+      if (this.dom.videoClipBox) {
+        if (this.hasVideo) {
+          this.dom.videoClipBox.classList.remove('hidden');
+          if (this.dom.videoEmptyTrack) this.dom.videoEmptyTrack.classList.add('hidden');
+          if (this.dom.clipTitle) this.dom.clipTitle.textContent = this.videoName || 'Video Track';
+        } else {
+          this.dom.videoClipBox.classList.add('hidden');
+          if (this.dom.videoEmptyTrack) this.dom.videoEmptyTrack.classList.remove('hidden');
+        }
+      }
+      this._updateDimensions();
+    }
+
     _updateDimensions() {
       const durationSeconds = Math.max(1, (this.duration || 10000) / 1000);
-      this.trackWidth = Math.max(this.dom.viewport.clientWidth, durationSeconds * this.zoom);
+      if (this.dom.viewport) {
+        this._cachedViewportWidth = this.dom.viewport.clientWidth;
+      }
+      this.trackWidth = Math.max(this._cachedViewportWidth || 800, durationSeconds * this.zoom);
       this.dom.scrollCanvas.style.width = `${this.trackWidth}px`;
 
-      // Update video clip box width
+      // Update video clip box width only when a video is loaded
       if (this.dom.videoClipBox) {
-        const clipWidth = durationSeconds * this.zoom;
-        this.dom.videoClipBox.style.width = `${clipWidth}px`;
+        if (this.hasVideo) {
+          const clipWidth = durationSeconds * this.zoom;
+          this.dom.videoClipBox.style.width = `${clipWidth}px`;
+        } else {
+          this.dom.videoClipBox.style.width = '0px';
+        }
       }
     }
 
@@ -439,7 +475,12 @@
       if (Math.abs(x - this._lastPlayheadX) >= 0.25) {
         this._lastPlayheadX = x;
         this.dom.needle.style.transform = `translate3d(${x}px, 0, 0)`;
-        this.dom.needleTime.textContent = this.formatTimecode(this.currentTime);
+
+        const roundedSec = Math.floor(this.currentTime / 250);
+        if (roundedSec !== this._lastRoundedSec) {
+          this._lastRoundedSec = roundedSec;
+          this.dom.needleTime.textContent = this.formatTimecode(this.currentTime);
+        }
 
         if (this.duration > 0 && this.dom.audioBarFill) {
           const pct = Math.min(100, (this.currentTime / this.duration) * 100);
@@ -501,12 +542,12 @@
       const currentSec = this.currentTime / 1000;
       const playheadX = currentSec * this.zoom;
       const scrollLeft = this.dom.viewport.scrollLeft;
-      const viewportWidth = this.dom.viewport.clientWidth;
+      const viewportWidth = this._cachedViewportWidth || this.dom.viewport.clientWidth || 800;
 
-      if (playheadX > scrollLeft + viewportWidth - 100) {
-        this.dom.viewport.scrollLeft = playheadX - 100;
-      } else if (playheadX < scrollLeft + 50) {
-        this.dom.viewport.scrollLeft = Math.max(0, playheadX - 50);
+      if (playheadX > scrollLeft + viewportWidth - 80) {
+        this.dom.viewport.scrollLeft = playheadX - 80;
+      } else if (playheadX < scrollLeft + 40) {
+        this.dom.viewport.scrollLeft = Math.max(0, playheadX - 40);
       }
     }
 
@@ -525,6 +566,15 @@
       }
       const mPad = String(m).padStart(2, '0');
       return `${mPad}:${sPad}`;
+    }
+
+    handleResize() {
+      this._updateDimensions();
+      this._renderRuler();
+      if (this.dom && this.dom.scrollCanvas) {
+        this._canvasLeft = this.dom.scrollCanvas.getBoundingClientRect().left;
+      }
+      this._updatePlayhead();
     }
 
     destroy() {

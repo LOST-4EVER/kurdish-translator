@@ -1,21 +1,22 @@
 <!-- ==========================================================================
      VIDEO STUDIO WORKSTATION TEMPLATE
-     VN-Style Zero-Scroll Subtitle Synchronizer & Video Editor
+     Zero-Scroll Subtitle Synchronizer & Video Editor
      ========================================================================== -->
 <div id="tabVideoEditor" class="hidden vn-studio-root">
-  <!-- VN-Style Top Header Bar -->
+  <!-- Top Header Bar -->
   <header class="vn-header" id="studioTopBar">
     <div class="vn-header-left">
       <button type="button" class="vn-icon-btn" id="studioBackBtn" title="Back to main app" aria-label="Back">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M15 18l-6-6 6-6"/></svg>
+        <span><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></svg></span>
       </button>
       <button type="button" class="vn-icon-btn" id="studioHelpBtn" title="Studio shortcuts &amp; tips" aria-label="Help">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+        <span><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"></circle><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"></path><line x1="12" y1="17" x2="12.01" y2="17"></line></svg></span>
       </button>
-      <!-- VN Aspect Ratio Dropdown -->
+      <!-- Aspect Ratio Dropdown -->
       <div class="vn-aspect-dropdown-wrap">
+        <span class="vn-aspect-icon" aria-hidden="true"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><path d="M9 3v18"></path></svg></span>
         <select class="vn-aspect-select" id="studioAspectRatioSel" title="Aspect Ratio">
-          <option value="original">Original ▾</option>
+          <option value="original">Original</option>
           <option value="16:9" selected>16:9 (Cinema)</option>
           <option value="9:16">9:16 (Reels/TikTok)</option>
           <option value="1:1">1:1 (Square)</option>
@@ -23,26 +24,29 @@
           <option value="21:9">21:9 (Ultrawide)</option>
         </select>
       </div>
-      <span class="vn-file-badge" id="studioVideoFilename" title="No video loaded">No video loaded</span>
+      <span class="vn-file-badge" id="studioVideoFilename" title="No video loaded">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="23 7 16 12 23 17 23 7"></polygon><rect x="1" y="5" width="15" height="14" rx="2" ry="2"></rect></svg>
+        <span class="vn-file-name-text">No video loaded</span>
+      </span>
     </div>
 
     <div class="vn-header-right">
-      <!-- Glowing Connect / Apply Subtitles Button -->
+      <!-- Connect / Apply Subtitles Button -->
       <button type="button" class="vn-connect-btn" id="studioApplyCurrentSubsBtn" title="Load Kurdish subtitles from translation tab">
         <span class="vn-connect-pulse"></span>
-        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+        <span><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg></span>
         <span id="studioSubsBadge">Apply Kurdish Subs</span>
       </button>
 
-      <!-- Hidden sub file input for manual file choice -->
+      <!-- Sub file input for manual file choice -->
       <input type="file" id="studioSubFileInput" accept=".srt,.vtt,.ass,.ssa,.sub,.smi" hidden />
       <button type="button" class="vn-icon-btn" id="studioImportSubBtn" title="Import subtitle file (.srt, .vtt, .ass)" aria-label="Import subtitle file">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+        <span><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg></span>
       </button>
 
-      <!-- VN-Style Export / Burn Button -->
+      <!-- Export / Burn Button -->
       <button type="button" class="vn-export-btn" id="studioBurnExportBtn" title="Burn Kurdish subtitles into video &amp; export">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 3v12"/><polyline points="7 8 12 3 17 8"/><rect x="4" y="17" width="16" height="4" rx="1"/></svg>
+        <span><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg></span>
         <span>Export</span>
       </button>
     </div>
@@ -54,43 +58,47 @@
       <!-- Video Element -->
       <video id="studioVideoElement" class="vn-video-element hidden" playsinline></video>
 
+      <!-- Center Snap Guides for Dragging -->
+      <div class="vn-snap-guide vn-snap-x hidden" id="studioSnapGuideX"></div>
+      <div class="vn-snap-guide vn-snap-y hidden" id="studioSnapGuideY"></div>
+
       <!-- Sleek Compact Dropzone when empty -->
       <div class="vn-empty-dropzone" id="studioVideoPlaceholder">
         <div class="vn-empty-box" id="studioVideoDropzone">
-          <svg class="vn-empty-icon" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
-            <rect x="2" y="2" width="20" height="20" rx="3"/>
-            <path d="m10 8 6 4-6 4V8z"/>
-          </svg>
+          <div class="vn-empty-emoji"><svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="2" width="20" height="20" rx="2.18" ry="2.18"></rect><line x1="7" y1="2" x2="7" y2="22"></line><line x1="17" y1="2" x2="17" y2="22"></line><line x1="2" y1="12" x2="22" y2="12"></line></svg></div>
           <h3 class="vn-empty-title">Import Video File</h3>
-          <p class="vn-empty-subtitle">Supports MOV, MP4 &amp; WebM · Processed 100% locally in your browser</p>
+          <p class="vn-empty-subtitle">Supports MP4, MOV, WebM, MKV, AVI · 100% Private in Browser</p>
           <div class="vn-empty-actions">
             <button type="button" class="vn-btn-primary" id="studioBrowseVideoBtn">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+              <span><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path></svg></span>
               <span>Choose Video</span>
             </button>
             <button type="button" class="vn-btn-secondary" id="studioSampleVideoBtn">
-              <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+              <span><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg></span>
               <span>Try Sample Video</span>
             </button>
           </div>
-          <input type="file" id="studioVideoFileInput" accept="video/mp4,video/quicktime,video/webm,.mov,.mp4,.webm" hidden />
+          <input type="file" id="studioVideoFileInput" accept="video/mp4,video/quicktime,video/webm,video/x-matroska,video/x-msvideo,.mov,.mp4,.webm,.mkv,.avi,.m4v" hidden />
         </div>
       </div>
 
-      <!-- Video Subtitle Overlay -->
-      <div class="vn-subtitle-overlay pos-bottom hidden" id="studioSubtitleOverlay">
+      <!-- Video Subtitle Overlay (Clickable & Draggable) -->
+      <div class="vn-subtitle-overlay pos-bottom hidden" id="studioSubtitleOverlay" title="Click to edit · Drag to move">
+        <div class="vn-sub-drag-indicator" title="Drag to reposition">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="5 9 2 12 5 15"></polyline><polyline points="9 5 12 2 15 5"></polyline><polyline points="15 19 12 22 9 19"></polyline><polyline points="19 9 22 12 19 15"></polyline><line x1="2" y1="12" x2="22" y2="12"></line><line x1="12" y1="2" x2="12" y2="22"></line></svg>
+        </div>
         <div class="vn-subtitle-text" id="studioSubtitleText" dir="rtl"></div>
         <div class="vn-subtitle-orig hidden" id="studioSubtitleOrig"></div>
       </div>
 
       <!-- Fullscreen / Expand Button in Corner -->
       <button type="button" class="vn-fs-corner-btn" id="studioFsBtn" title="Fullscreen player" aria-label="Fullscreen">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"/></svg>
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"></path></svg>
       </button>
     </div>
   </section>
 
-  <!-- VN Transport / Control Bar (Right below the video) -->
+  <!-- Transport / Control Bar -->
   <section class="vn-transport-bar">
     <!-- Timecode Display: Current / Total -->
     <div class="vn-timecode-wrap">
@@ -100,27 +108,33 @@
     <!-- Centered Play / Seek Controls -->
     <div class="vn-playback-cluster">
       <button type="button" class="vn-transport-btn" id="studioStepBackBtn" title="Previous cue (←)" aria-label="Previous cue">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M6 6h2v12H6zm3.5 6l8.5 6V6z"/></svg>
+        <span><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="19 20 9 12 19 4 19 20"></polygon><line x1="5" y1="19" x2="5" y2="5"></line></svg></span>
       </button>
       <button type="button" class="vn-play-master-btn" id="studioPlayPauseBtn" title="Play / Pause (Space)" aria-label="Play / Pause">
-        <svg id="studioPlayIcon" width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><polygon points="7 5 19 12 7 19 7 5"/></svg>
-        <svg id="studioPauseIcon" class="hidden" width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="5" width="4" height="14" rx="1"/><rect x="14" y="5" width="4" height="14" rx="1"/></svg>
+        <span id="studioPlayIcon" class="vn-play-icon-wrap"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg></span>
+        <span id="studioPauseIcon" class="vn-pause-icon-wrap hidden"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="6" y="4" width="4" height="16"></rect><rect x="14" y="4" width="4" height="16"></rect></svg></span>
       </button>
       <button type="button" class="vn-transport-btn" id="studioStepForwardBtn" title="Next cue (→)" aria-label="Next cue">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M6 18l8.5-6L6 6v12zM16 6v12h2V6h-2z"/></svg>
+        <span><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 4 15 12 5 20 5 4"></polygon><line x1="19" y1="5" x2="19" y2="19"></line></svg></span>
       </button>
     </div>
 
-    <!-- Right Side: Sync offset, Undo, Redo -->
+    <!-- Right Side: Quick Original Toggle, Sync offset, Undo, Redo -->
     <div class="vn-transport-right">
+      <button type="button" class="vn-orig-toggle-chip disabled" id="studioQuickOrigBtn" title="Toggle original English text alongside Kurdish (only available for translated subtitles)" aria-label="Toggle Original Text">
+        <span class="vn-orig-icon">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="m5 8 6 6M4 14l6-6 2-3M2 5h12M7 2h1M22 22l-5-10-5 10M14 18h6"/></svg>
+        </span>
+        <span class="vn-orig-label">Original</span>
+      </button>
       <button type="button" class="vn-sync-pill" id="studioSyncPillBtn" title="Adjust subtitle sync timing offset">
         <span id="studioSyncOffsetDisplay">0ms</span>
       </button>
       <button type="button" class="vn-icon-btn-small" id="studioUndoBtn" title="Undo change" aria-label="Undo">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M9 14 4 9l5-5"/><path d="M20 20v-7a4 4 0 0 0-4-4H4"/></svg>
+        <span><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="1 4 1 10 7 10"></polyline><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"></path></svg></span>
       </button>
       <button type="button" class="vn-icon-btn-small" id="studioRedoBtn" title="Redo change" aria-label="Redo">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="m15 14 5-5-5-5"/><path d="M4 20v-7a4 4 0 0 1 4-4h12"/></svg>
+        <span><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"></polyline><path d="M20.49 15a9 9 0 1 1-2.13-9.36L23 10"></path></svg></span>
       </button>
     </div>
   </section>
@@ -130,62 +144,169 @@
     <div class="vn-shower-badge" id="studioTextShowerNum">--</div>
     <div class="vn-shower-content" id="studioTextShowerText">No active subtitle · Scrub timeline or play video</div>
     <div class="vn-shower-cps hidden" id="studioTextShowerPace">-- CPS</div>
-    <svg class="vn-shower-chevron" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m9 18 6-6-6-6"/></svg>
+    <span class="vn-shower-chevron"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9 18 15 12 9 6"></polyline></svg></span>
   </section>
 
-  <!-- VN Multi-Track Timeline Section -->
-  <section class="vn-timeline-section">
+  <!-- Interactive Resizer Splitter Bar (Smart Vertical Proportion Controller) -->
+  <div class="vn-studio-resizer vn-resizer-bar" id="studioResizerBar" title="Drag to resize timeline &amp; video stage · Double-click to reset" role="separator" aria-orientation="horizontal" tabindex="0">
+    <div class="vn-resizer-line"></div>
+    <div class="vn-resizer-handle">
+      <span class="vn-resizer-dot"></span>
+      <span class="vn-resizer-dot"></span>
+      <span class="vn-resizer-dot"></span>
+    </div>
+    <div class="vn-resizer-line"></div>
+  </div>
+
+  <!-- Multi-Track Timeline Section -->
+  <section class="vn-timeline-section" id="studioTimelineSection">
     <div id="studioTimelineMount"></div>
   </section>
 
-  <!-- VN Bottom Action Toolbar -->
+  <!-- Bottom Action Toolbar -->
   <footer class="vn-bottom-bar">
     <button type="button" class="vn-tool-btn" id="vnToolStyleBtn" title="Subtitle typography &amp; appearance">
-      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 7V4h16v3"/><path d="M9 20h6"/><path d="M12 4v16"/></svg>
+      <span class="vn-tool-emoji"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 19l7-7 3 3-7 7-3-3z"></path><path d="M18 13l-1.5-7.5L2 2l3.5 14.5L13 18l5-5z"></path></svg></span>
       <span>Style</span>
     </button>
     <button type="button" class="vn-tool-btn" id="vnToolInspectBtn" title="Subtitle text inspector &amp; editor">
-      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"/></svg>
+      <span class="vn-tool-emoji"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg></span>
       <span>Edit</span>
     </button>
     <button type="button" class="vn-tool-btn" id="vnToolSplitBtn" title="Split subtitle cue at current playhead">
-      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="6" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><line x1="20" y1="4" x2="8.12" y2="15.88"/><line x1="14.47" y1="14.48" x2="20" y2="20"/><line x1="8.12" y1="8.12" x2="12" y2="12"/></svg>
+      <span class="vn-tool-emoji"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="6" cy="6" r="3"></circle><circle cx="6" cy="18" r="3"></circle><line x1="20" y1="4" x2="8.12" y2="15.88"></line><line x1="14.47" y1="14.48" x2="20" y2="20"></line><line x1="8.12" y1="8.12" x2="12" y2="12"></line></svg></span>
       <span>Split</span>
     </button>
     <button type="button" class="vn-tool-btn" id="vnToolSyncBtn" title="Subtitle timing sync offset">
-      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+      <span class="vn-tool-emoji"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg></span>
       <span>Sync</span>
     </button>
     <button type="button" class="vn-tool-btn" id="vnToolSpeedBtn" title="Playback Speed">
-      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="m16.2 7.8-2 6.3-6.4 2 2-6.3z"/></svg>
+      <span class="vn-tool-emoji"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"></path></svg></span>
       <span id="vnSpeedLabel">1.0×</span>
     </button>
     <button type="button" class="vn-tool-btn" id="vnToolVolumeBtn" title="Audio volume &amp; mute">
-      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/></svg>
+      <span class="vn-tool-emoji"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon><path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"></path></svg></span>
       <span>Volume</span>
     </button>
+    <button type="button" class="vn-tool-btn" id="vnToolSubToolsBtn" title="Advanced Kurdish Subtitle Tools (Split, Orthography, CPS Audit, Search & Replace)">
+      <span class="vn-tool-emoji"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"></path></svg></span>
+      <span>Tools</span>
+    </button>
     <button type="button" class="vn-tool-btn" id="vnToolVideoChangeBtn" title="Change video file">
-      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="2" width="20" height="20" rx="2.18" ry="2.18"/><line x1="7" y1="2" x2="7" y2="22"/><line x1="17" y1="2" x2="17" y2="22"/><line x1="2" y1="12" x2="22" y2="12"/></svg>
+      <span class="vn-tool-emoji"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="2" width="20" height="20" rx="2.18" ry="2.18"></rect><line x1="7" y1="2" x2="7" y2="22"></line><line x1="17" y1="2" x2="17" y2="22"></line><line x1="2" y1="12" x2="22" y2="12"></line></svg></span>
       <span>Video</span>
     </button>
   </footer>
+
+  <!-- Floating Subtitle Quick Edit Bubble -->
+  <div class="vn-bubble-editor hidden" id="vnSubtitleBubbleEditor">
+    <!-- Bubble Header -->
+    <div class="vn-bubble-header">
+      <div class="vn-bubble-header-left">
+        <span class="vn-bubble-badge" id="vnBubbleCueBadge">Cue #1</span>
+        <span class="vn-bubble-time-tag" id="vnBubbleTimeTag">00:01.200 ➔ 00:04.500</span>
+        <span class="vn-bubble-cps-tag" id="vnBubblePace">12.5 CPS</span>
+      </div>
+      <div class="vn-bubble-header-right">
+        <button type="button" class="vn-bubble-tool-btn" id="vnBubbleNudgeStartMinus" title="Start -100ms">-0.1s</button>
+        <button type="button" class="vn-bubble-tool-btn" id="vnBubbleNudgeEndPlus" title="End +100ms">+0.1s</button>
+        <button type="button" class="vn-bubble-tool-btn" id="vnBubbleSplitBtn" title="Split cue at playhead">Split</button>
+        <button type="button" class="vn-bubble-tool-btn vn-bubble-btn-danger" id="vnBubbleDeleteBtn" title="Delete this cue">Delete</button>
+        <button type="button" class="vn-bubble-close-btn" id="vnBubbleCloseBtn" title="Close editor (Esc)" aria-label="Close">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+        </button>
+      </div>
+    </div>
+
+    <!-- Bubble Body: Kurdish Textarea -->
+    <div class="vn-bubble-body">
+      <textarea class="vn-bubble-textarea" id="vnBubbleTextarea" rows="2" placeholder="دەقی ژێرنووسی کوردی بنووسە..." dir="rtl"></textarea>
+      <div class="vn-bubble-orig-text hidden" id="vnBubbleOrigText"></div>
+    </div>
+
+    <!-- Bubble Footer: Format Toolbar -->
+    <div class="vn-bubble-toolbar">
+      <!-- Font Family -->
+      <div class="vn-bubble-toolbar-group">
+        <span class="vn-bubble-label">Font:</span>
+        <select id="vnBubbleFontFamilySel" class="vn-bubble-select">
+          <option value="'Noto Naskh Arabic', serif">Noto Naskh (Classic)</option>
+          <option value="'Noto Sans Arabic', sans-serif">Noto Sans (Modern)</option>
+          <option value="'Vazirmatn', sans-serif">Vazirmatn (Crisp)</option>
+          <option value="system-ui, sans-serif">System UI</option>
+          <option value="'Inter', sans-serif">Inter</option>
+        </select>
+      </div>
+
+      <!-- Size Chips -->
+      <div class="vn-bubble-toolbar-group">
+        <span class="vn-bubble-label">Size:</span>
+        <div class="vn-bubble-btn-group" id="vnBubbleSizeGroup">
+          <button type="button" class="vn-bubble-chip" data-size="1.0">S</button>
+          <button type="button" class="vn-bubble-chip active" data-size="1.25">M</button>
+          <button type="button" class="vn-bubble-chip" data-size="1.55">L</button>
+          <button type="button" class="vn-bubble-chip" data-size="1.9">XL</button>
+        </div>
+      </div>
+
+      <!-- Placement Chips -->
+      <div class="vn-bubble-toolbar-group">
+        <span class="vn-bubble-label">Pos:</span>
+        <div class="vn-bubble-btn-group" id="vnBubblePosGroup">
+          <button type="button" class="vn-bubble-chip active" data-pos="bottom" title="Bottom">Bot</button>
+          <button type="button" class="vn-bubble-chip" data-pos="center" title="Center">Mid</button>
+          <button type="button" class="vn-bubble-chip" data-pos="top" title="Top">Top</button>
+        </div>
+      </div>
+
+      <!-- Color Swatches -->
+      <div class="vn-bubble-toolbar-group">
+        <span class="vn-bubble-label">Color:</span>
+        <div class="vn-bubble-colors" id="vnBubbleColorGroup">
+          <button type="button" class="vn-color-dot active" data-color="#ffffff" style="background:#ffffff;" title="White"></button>
+          <button type="button" class="vn-color-dot" data-color="#fef08a" style="background:#fef08a;" title="Yellow"></button>
+          <button type="button" class="vn-color-dot" data-color="#a6f4c5" style="background:#a6f4c5;" title="Cyan/Mint"></button>
+          <button type="button" class="vn-color-dot" data-color="#d0bcff" style="background:#d0bcff;" title="Purple"></button>
+          <button type="button" class="vn-color-dot" data-color="#fb923c" style="background:#fb923c;" title="Coral"></button>
+          <button type="button" class="vn-color-dot" data-color="#f472b6" style="background:#f472b6;" title="Pink"></button>
+        </div>
+      </div>
+
+      <!-- Background Box Style -->
+      <div class="vn-bubble-toolbar-group">
+        <span class="vn-bubble-label">Box:</span>
+        <select id="vnBubbleBgSel" class="vn-bubble-select">
+          <option value="rgba(0, 0, 0, 0.75)">Dark Box</option>
+          <option value="rgba(0, 0, 0, 0.45)">Soft Box</option>
+          <option value="transparent">Transparent</option>
+        </select>
+      </div>
+    </div>
+  </div>
+
+  <!-- Auxiliary Inputs -->
+  <input type="file" id="studioMusicFileInput" accept="audio/*" hidden />
+  <input type="file" id="studioStickerFileInput" accept="image/*" hidden />
 
   <!-- Floating Popovers (Style, Sync, Speed, Volume) -->
   <div class="vn-popover hidden" id="vnStylePopover">
     <div class="vn-popover-header">
       <h4>Subtitle Style</h4>
-      <button type="button" class="vn-popover-close" id="vnStyleCloseBtn" aria-label="Close style popover"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg></button>
+      <button type="button" class="vn-popover-close" id="vnStyleCloseBtn" aria-label="Close style popover">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+      </button>
     </div>
     <div class="vn-popover-body">
       <div class="vn-popover-row">
-        <label>Font Family / جۆری فۆنت</label>
+        <label>Font Family / فۆنت</label>
         <select id="studioSubFontFamilySel" class="vn-pop-select">
           <option value="'Noto Naskh Arabic', serif" selected>Noto Naskh Arabic (Classic Kurdish)</option>
           <option value="'Noto Sans Arabic', sans-serif">Noto Sans Arabic (Modern Clean)</option>
           <option value="'Vazirmatn', sans-serif">Vazirmatn (Crisp Display)</option>
-          <option value="system-ui, -apple-system, sans-serif">System UI / Device Native</option>
+          <option value="system-ui, -apple-system, sans-serif">System UI / Native</option>
           <option value="'Inter', sans-serif">Inter (Latin Sans)</option>
-          <option value="monospace">Monospace Code</option>
+          <option value="monospace">Monospace</option>
         </select>
       </div>
       <div class="vn-popover-row">
@@ -234,7 +355,9 @@
   <div class="vn-popover hidden" id="vnSyncPopover">
     <div class="vn-popover-header">
       <h4>Subtitle Sync Offset</h4>
-      <button type="button" class="vn-popover-close" id="vnSyncCloseBtn" aria-label="Close sync popover"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg></button>
+      <button type="button" class="vn-popover-close" id="vnSyncCloseBtn" aria-label="Close sync popover">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+      </button>
     </div>
     <div class="vn-popover-body">
       <div class="vn-sync-display-box" id="studioSyncBigDisplay">0 ms</div>
@@ -252,7 +375,9 @@
   <div class="vn-popover hidden" id="vnSpeedPopover">
     <div class="vn-popover-header">
       <h4>Playback Speed</h4>
-      <button type="button" class="vn-popover-close" id="vnSpeedCloseBtn" aria-label="Close speed popover"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg></button>
+      <button type="button" class="vn-popover-close" id="vnSpeedCloseBtn" aria-label="Close speed popover">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+      </button>
     </div>
     <div class="vn-popover-body">
       <div class="vn-speed-grid">
@@ -269,14 +394,68 @@
   <div class="vn-popover hidden" id="vnVolumePopover">
     <div class="vn-popover-header">
       <h4>Audio Volume</h4>
-      <button type="button" class="vn-popover-close" id="vnVolumeCloseBtn" aria-label="Close volume popover"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg></button>
+      <button type="button" class="vn-popover-close" id="vnVolumeCloseBtn" aria-label="Close volume popover">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+      </button>
     </div>
     <div class="vn-popover-body">
-      <div style="display:flex; align-items:center; gap:12px; margin-top:8px;">
+      <div style="display:flex; align-items:center; gap:10px; margin-top:6px;">
         <button type="button" class="vn-icon-btn" id="studioMuteBtn" title="Mute/Unmute">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"/></svg>
+          <span id="studioMuteEmoji"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon><path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"></path></svg></span>
         </button>
         <input type="range" class="vn-volume-slider" id="studioVolumeSlider" min="0" max="1" step="0.05" value="1" />
+      </div>
+    </div>
+  </div>
+
+  <!-- Subtitle Studio Advanced Tools Popover -->
+  <div class="vn-popover vn-popover-wide hidden" id="vnSubToolsPopover">
+    <div class="vn-popover-header">
+      <h4>Subtitle Tools / ئامرازە پێشکەوتووەکان</h4>
+      <button type="button" class="vn-popover-close" id="vnSubToolsCloseBtn" aria-label="Close tools popover">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+      </button>
+    </div>
+    <div class="vn-popover-body">
+      <!-- Action 1: Auto-Split Long Subtitles -->
+      <div class="vn-popover-action-card">
+        <div class="action-card-text">
+          <span class="action-card-title">Auto-Split Long Lines (دابەشکردنی دێڕە درێژەکان)</span>
+          <span class="action-card-sub">Breaks long single-line subtitles (>38 chars or high CPS) into 2 balanced lines at Kurdish conjunctions</span>
+        </div>
+        <button type="button" class="vn-pop-btn vn-pop-btn-primary" id="btnToolAutoSplit">Auto-Split</button>
+      </div>
+
+      <!-- Action 2: Fix Kurdish Orthography & Punctuation -->
+      <div class="vn-popover-action-card">
+        <div class="action-card-text">
+          <span class="action-card-title">Fix Kurdish Orthography (چاککردنی ڕێنووس)</span>
+          <span class="action-card-sub">Normalizes Arabic characters (ک, ی), reattaches verbal prefixes (دە-, نا-, نە-), and formats Kurdish punctuation</span>
+        </div>
+        <button type="button" class="vn-pop-btn vn-pop-btn-primary" id="btnToolCleanOrthography">Fix All</button>
+      </div>
+
+      <!-- Action 3: Search & Replace -->
+      <div class="vn-popover-action-card" style="flex-direction:column; align-items:stretch; gap:8px;">
+        <span class="action-card-title">Search &amp; Replace (گەڕان و گۆڕین)</span>
+        <div style="display:flex; gap:6px;">
+          <input type="text" id="toolSubSearchInput" placeholder="Find text / وشەی گەڕان..." dir="auto" class="cue-textarea" style="height:32px; padding:4px 8px; font-size:0.8rem;" />
+          <input type="text" id="toolSubReplaceInput" placeholder="Replace with / وشەی نوێ..." dir="auto" class="cue-textarea" style="height:32px; padding:4px 8px; font-size:0.8rem;" />
+          <button type="button" class="vn-pop-btn vn-pop-btn-primary" id="btnToolSearchReplace">Replace</button>
+        </div>
+      </div>
+
+      <!-- Action 4: Shift All Subtitles -->
+      <div class="vn-popover-action-card" style="flex-direction:column; align-items:stretch; gap:8px;">
+        <span class="action-card-title">Time Shift All Subtitles (پێشخستن / دواخستنی کات)</span>
+        <div style="display:flex; align-items:center; gap:8px;">
+          <button type="button" class="vn-pop-btn" id="btnToolShiftMinus500">-500ms</button>
+          <button type="button" class="vn-pop-btn" id="btnToolShiftMinus100">-100ms</button>
+          <input type="number" id="toolSubShiftInput" value="0" step="100" style="width:75px; text-align:center; height:32px; background:rgba(0,0,0,0.5); border:1px solid rgba(255,255,255,0.2); color:#ffffff; border-radius:4px; font-size:0.8rem;" />
+          <button type="button" class="vn-pop-btn" id="btnToolShiftPlus100">+100ms</button>
+          <button type="button" class="vn-pop-btn" id="btnToolShiftPlus500">+500ms</button>
+          <button type="button" class="vn-pop-btn vn-pop-btn-primary" id="btnToolApplyShift">Apply</button>
+        </div>
       </div>
     </div>
   </div>
@@ -287,12 +466,8 @@
   <div class="modal-card studio-modal-card" role="dialog" aria-modal="true" aria-labelledby="cueInfoModalTitle">
     <div class="modal-header">
       <div class="modal-title-group">
-        <span class="modal-title-icon" style="background: rgba(168, 85, 247, 0.15); color: #c084fc;">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <circle cx="12" cy="12" r="10"/>
-            <line x1="12" y1="16" x2="12" y2="12"/>
-            <line x1="12" y1="8" x2="12.01" y2="8"/>
-          </svg>
+        <span class="modal-title-icon" style="background: rgba(168, 85, 247, 0.15); color: #c084fc; font-size: 1.1rem; display: inline-flex; align-items: center; justify-content: center; padding: 4px;">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
         </span>
         <div>
           <h3 class="modal-title" id="cueInfoModalTitle">Subtitle Cue Inspector</h3>
@@ -300,7 +475,7 @@
         </div>
       </div>
       <button type="button" class="modal-close-btn" id="cueInfoCloseBtn" aria-label="Close">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
       </button>
     </div>
 
@@ -344,7 +519,7 @@
       </div>
     </div>
 
-    <div class="modal-footer" style="display: flex; justify-content: space-between; align-items: center;">
+    <div class="modal-footer" style="display: flex; justify-content: space-between; align-items: center; padding: 10px 14px;">
       <button type="button" class="studio-btn-secondary" id="cueInfoJumpBtn">Jump to Cue</button>
       <button type="button" class="studio-btn-primary" id="cueInfoSaveBtn">Save Changes</button>
     </div>
@@ -356,22 +531,19 @@
   <div class="modal-card studio-modal-card studio-export-modal" role="dialog" aria-modal="true" aria-labelledby="studioBurnModalTitle">
     <div class="modal-header">
       <div class="modal-title-group">
-        <span class="modal-title-icon" style="background: rgba(244, 114, 182, 0.15); color: #f472b6;">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
-            <path d="M12 2v8"/>
-            <path d="M4.93 10.93a10 10 0 1 0 14.14 0"/>
-          </svg>
+        <span class="modal-title-icon" style="background: rgba(168, 85, 247, 0.15); color: #c084fc; font-size: 1.1rem; display: inline-flex; align-items: center; justify-content: center; padding: 4px;">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
         </span>
         <div>
           <div style="display:flex; align-items:center; gap:8px;">
             <h3 class="modal-title" id="studioBurnModalTitle">Export &amp; Burn Subtitles into Video</h3>
-            <span class="studio-gpu-badge" id="studioGpuBadge">⚡ GPU Acceleration</span>
+            <span class="studio-gpu-badge" id="studioGpuBadge">GPU Acceleration</span>
           </div>
-          <p class="modal-sub">WebGPU / WebGL2 hardware pipeline · Upscaling · Custom Bitrates · Audio passthrough</p>
+          <p class="modal-sub">WebGPU / WebGL2 Hardware Engine · 100% Client Privacy</p>
         </div>
       </div>
       <button type="button" class="modal-close-btn" id="studioBurnCloseBtn" aria-label="Close">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
       </button>
     </div>
 
@@ -390,8 +562,8 @@
                 <option value="original" selected>Original Quality (Native)</option>
                 <option value="720p">720p HD (1280 × 720)</option>
                 <option value="1080p">1080p Full HD (1920 × 1080)</option>
-                <option value="1440p">1440p 2K Ultra (2560 × 1440 Upscaler)</option>
-                <option value="2160p">2160p 4K Cinema (3840 × 2160 Upscaler)</option>
+                <option value="1440p">1440p 2K Ultra (2560 × 1440)</option>
+                <option value="2160p">2160p 4K Cinema (3840 × 2160)</option>
               </select>
             </div>
           </div>
@@ -412,7 +584,7 @@
                 <option value="custom">Custom Bitrate Slider</option>
               </select>
             </div>
-            <div class="export-slider-row hidden" id="exportCustomBitrateRow" style="margin-top:8px;">
+            <div class="export-slider-row hidden" id="exportCustomBitrateRow" style="margin-top:6px; display:flex; align-items:center; gap:8px;">
               <input type="range" id="exportBitrateSlider" min="1" max="25" step="0.5" value="6" class="vn-volume-slider" style="flex:1;" />
               <span id="exportCustomBitrateNum" style="font-size:0.75rem; color:#fde047; font-weight:700; width:55px; text-align:right;">6.0 Mbps</span>
             </div>
@@ -450,13 +622,13 @@
           </div>
         </div>
 
-        <div class="burn-progress-track" style="background:rgba(255,255,255,0.06); border-radius:8px; height:12px; overflow:hidden; margin-top:14px; margin-bottom:10px;">
-          <div id="studioBurnProgressFill" style="background:linear-gradient(90deg, #a855f7, #f472b6); height:100%; width:0%; transition:width 0.15s ease;"></div>
+        <div class="burn-progress-track" style="background:rgba(255,255,255,0.08); border-radius:6px; height:10px; overflow:hidden; margin-top:12px; margin-bottom:8px;">
+          <div id="studioBurnProgressFill" style="background:#a855f7; height:100%; width:0%; transition:width 0.15s ease;"></div>
         </div>
 
-        <div style="display:flex; justify-content:space-between; font-size:0.85rem; color:var(--text-muted); margin-bottom:12px;">
-          <span id="studioBurnStatusText" style="color:var(--text-primary); font-weight:600;">Encoding video frames...</span>
-          <span id="studioBurnPercentText" style="color:#f472b6; font-weight:700;">0%</span>
+        <div style="display:flex; justify-content:space-between; font-size:0.8rem; margin-bottom:10px;">
+          <span id="studioBurnStatusText" style="color:#ffffff; font-weight:600;">Encoding video frames...</span>
+          <span id="studioBurnPercentText" style="color:#fde047; font-weight:700;">0%</span>
         </div>
 
         <div class="export-metrics-strip">
@@ -476,25 +648,249 @@
       </div>
 
       <!-- Success Download Area -->
-      <div id="studioBurnSuccessArea" class="hidden" style="text-align:center; padding:20px; background:rgba(34,197,94,0.1); border:1px solid rgba(34,197,94,0.3); border-radius:10px; margin-top:14px; margin-bottom:14px;">
-        <div style="display:inline-flex; width:44px; height:44px; border-radius:50%; background:rgba(34,197,94,0.2); color:#4ade80; align-items:center; justify-content:center; margin-bottom:10px;">
-          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"></polyline></svg>
-        </div>
-        <h4 style="color:#4ade80; margin-bottom:4px; font-size:1.05rem;">Video Export &amp; Subtitle Burn Complete!</h4>
-        <p style="font-size:0.85rem; color:rgba(255,255,255,0.7); margin-bottom:14px;" id="exportSuccessDetails">Rendered in high resolution with Sorani Kurdish subtitles.</p>
-        <a id="studioBurnDownloadLink" class="studio-btn-primary" download="video_with_kurdish_subtitles.webm" style="display:inline-flex; align-items:center; gap:8px; text-decoration:none; padding:10px 20px; font-size:0.9rem; background:#22c55e; color:#052e16;">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+      <div id="studioBurnSuccessArea" class="hidden" style="text-align:center; padding:16px; background:#142319; border:1px solid #22c55e; border-radius:8px; margin-top:12px; margin-bottom:12px;">
+        <h4 style="color:#4ade80; margin-bottom:4px; font-size:1rem;">Video Export Complete!</h4>
+        <p style="font-size:0.8rem; color:rgba(255,255,255,0.75); margin-bottom:12px;" id="exportSuccessDetails">Rendered with Sorani Kurdish subtitles.</p>
+        <a id="studioBurnDownloadLink" class="studio-btn-primary" download="video_kurdish_subbed.webm" style="display:inline-flex; align-items:center; gap:6px; text-decoration:none; padding:8px 16px; font-size:0.85rem; background:#22c55e; color:#052e16;">
+          <span><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg></span>
           <span id="exportDownloadBtnText">Download Subbed Video</span>
         </a>
       </div>
     </div>
 
-    <div class="modal-footer" style="display: flex; justify-content: space-between; align-items: center;">
+    <div class="modal-footer" style="display: flex; justify-content: space-between; align-items: center; padding: 10px 14px;">
       <button type="button" class="studio-btn-secondary" id="studioBurnCancelBtn">Cancel</button>
-      <button type="button" class="studio-btn-primary" id="studioBurnStartBtn" style="background:#f472b6; color:#2c0827; padding:9px 18px; font-size:0.85rem; display:inline-flex; align-items:center; gap:6px;">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+      <button type="button" class="studio-btn-primary" id="studioBurnStartBtn" style="background:#a855f7; color:#ffffff; padding:8px 16px; font-size:0.82rem; display:inline-flex; align-items:center; gap:6px;">
         <span id="exportStartBtnText">Start Video Export</span>
       </button>
+    </div>
+  </div>
+</div>
+
+<!-- Video Studio: Help & Keyboard Shortcuts Modal -->
+<div class="modal-backdrop hidden" id="studioHelpModal">
+  <div class="modal-card studio-modal-card" role="dialog" aria-modal="true" aria-labelledby="studioHelpModalTitle">
+    <div class="modal-header">
+      <div class="modal-title-group">
+        <span class="modal-title-icon" style="background: rgba(234, 179, 8, 0.15); color: #fde047; font-size: 1.1rem; display: inline-flex; align-items: center; justify-content: center; padding: 4px;">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"></circle><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"></path><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>
+        </span>
+        <div>
+          <h3 class="modal-title" id="studioHelpModalTitle">Studio Workstation Guide &amp; Shortcuts</h3>
+          <p class="modal-sub">Fast keyboard shortcuts and gesture workflow</p>
+        </div>
+      </div>
+      <button type="button" class="modal-close-btn" id="studioHelpCloseBtn" aria-label="Close">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+      </button>
+    </div>
+
+    <div class="modal-body" style="padding: 12px 14px; max-height: 70vh; overflow-y: auto;">
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 10px;">
+        <div style="background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08); border-radius: 6px; padding: 10px;">
+          <h4 style="color: #fde047; font-size: 0.82rem; margin: 0 0 6px;">Playback Controls</h4>
+          <ul style="font-size: 0.75rem; color: rgba(255,255,255,0.8); margin: 0; padding-left: 18px; line-height: 1.6;">
+            <li><strong>Space</strong>: Play / Pause</li>
+            <li><strong>← / →</strong>: Step back/forward 1 cue (or 1s)</li>
+            <li><strong>Shift + ← / →</strong>: Step 5 seconds</li>
+            <li><strong>J / K / L</strong>: Scrub backward / Pause / Forward</li>
+          </ul>
+        </div>
+
+        <div style="background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08); border-radius: 6px; padding: 10px;">
+          <h4 style="color: #c084fc; font-size: 0.82rem; margin: 0 0 6px;">Quick Editing &amp; Gestures</h4>
+          <ul style="font-size: 0.75rem; color: rgba(255,255,255,0.8); margin: 0; padding-left: 18px; line-height: 1.6;">
+            <li><strong>Click Text on Video</strong>: Open Quick Edit Bubble</li>
+            <li><strong>Click Strip Above Timeline</strong>: Inspect active subtitle</li>
+            <li><strong>Click Timeline Pill</strong>: Seek directly to cue</li>
+            <li><strong>Ctrl + Z / Ctrl + Y</strong>: Undo / Redo changes</li>
+            <li><strong>S</strong>: Split active cue at current playhead</li>
+            <li><strong>Esc</strong>: Close active bubble / popover / modal</li>
+          </ul>
+        </div>
+
+        <div style="background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08); border-radius: 6px; padding: 10px;">
+          <h4 style="color: #4ade80; font-size: 0.82rem; margin: 0 0 6px;">Timeline &amp; Tracks</h4>
+          <ul style="font-size: 0.75rem; color: rgba(255,255,255,0.8); margin: 0; padding-left: 18px; line-height: 1.6;">
+            <li><strong>Ctrl + Mouse Wheel</strong>: Zoom timeline in / out</li>
+            <li><strong>Click &amp; Drag Playhead</strong>: Smooth video scrubbing</li>
+            <li><strong>Subtitles Track Header</strong>: Add new Kurdish cue at playhead</li>
+            <li><strong>Video Track Header</strong>: Choose or swap video file</li>
+            <li><strong>Audio / Watermark Track Header</strong>: Add background audio or watermark</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <div class="modal-footer" style="display: flex; justify-content: flex-end; padding: 10px 14px;">
+      <button type="button" class="studio-btn-primary" id="studioHelpDoneBtn">Got it</button>
+    </div>
+  </div>
+
+  <!-- QuickTime MOV Inspector & Pre-Import Studio Modal -->
+  <div class="vn-modal vn-mov-modal hidden" id="studioMovModal" role="dialog" aria-modal="true" aria-labelledby="movModalTitle">
+    <div class="vn-modal-backdrop vn-mov-backdrop"></div>
+    <div class="vn-modal-card vn-mov-card">
+      <!-- Modal Header -->
+      <div class="vn-mov-header">
+        <div class="vn-mov-header-left">
+          <div class="vn-mov-type-badge">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><polygon points="23 7 16 12 23 17 23 7"></polygon><rect x="1" y="5" width="15" height="14" rx="2" ry="2"></rect></svg>
+            <span>QuickTime MOV</span>
+          </div>
+          <div class="vn-mov-title-group">
+            <h3 class="vn-mov-title" id="movModalTitle">MOV Pre-Import Inspector</h3>
+            <div class="vn-mov-meta">
+              <span id="movModalFileName" class="vn-mov-filename">video.mov</span>
+              <span class="vn-mov-dot">·</span>
+              <span id="movModalFileSize" class="vn-mov-filesize">0 MB</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="vn-mov-header-right">
+          <span class="vn-mov-specs-pill" id="movModalSpecsBadge">ProRes · Multi-Track</span>
+          <button type="button" class="vn-mov-close-btn" id="movModalCloseBtn" title="Close" aria-label="Close">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+          </button>
+        </div>
+      </div>
+
+      <!-- Modal Body (2 Columns) -->
+      <div class="vn-mov-body">
+        <!-- Left: Preview & In/Out Range Trimmer -->
+        <div class="vn-mov-col-left">
+          <div class="vn-mov-player-wrap">
+            <video id="movPreviewPlayer" class="vn-mov-preview-video" playsinline controls></video>
+          </div>
+
+          <!-- Precision Trimmer -->
+          <div class="vn-mov-trimmer-section">
+            <div class="vn-mov-trimmer-header">
+              <div class="vn-mov-trim-time" id="movTrimTimeDisplay">In: 00:00.000 ➔ Out: 00:00.000</div>
+              <div class="vn-mov-trim-dur" id="movTrimRangeDuration">Trimmed: 00:00 (0s)</div>
+            </div>
+
+            <!-- Draggable In/Out Timeline Track -->
+            <div class="vn-mov-trim-track" id="movTrimTrack">
+              <div class="vn-mov-trim-active" id="movTrimActiveBar"></div>
+              <div class="vn-mov-trim-handle in-handle" id="movTrimInHandle" title="Drag In-Point [I]">
+                <span class="handle-tag">I</span>
+              </div>
+              <div class="vn-mov-trim-handle out-handle" id="movTrimOutHandle" title="Drag Out-Point [O]">
+                <span class="handle-tag">O</span>
+              </div>
+              <div class="vn-mov-trim-playhead" id="movTrimPlayhead"></div>
+            </div>
+
+            <!-- Quick In/Out Buttons -->
+            <div class="vn-mov-trim-btns">
+              <button type="button" class="vn-mov-btn-chip" id="movBtnSetIn" title="Set In-Point to current video time [I]">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="5 4 15 12 5 20 5 4"></polygon><line x1="19" y1="5" x2="19" y2="19"></line></svg>
+                <span>Set In [I]</span>
+              </button>
+              <button type="button" class="vn-mov-btn-chip" id="movBtnSetOut" title="Set Out-Point to current video time [O]">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="19 20 9 12 19 4 19 20"></polygon><line x1="5" y1="19" x2="5" y2="5"></line></svg>
+                <span>Set Out [O]</span>
+              </button>
+              <button type="button" class="vn-mov-btn-chip" id="movBtnPlayRange" title="Play trimmed range">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
+                <span>Play Range</span>
+              </button>
+              <button type="button" class="vn-mov-btn-chip" id="movBtnResetTrim" title="Reset to full clip length">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="1 4 1 10 7 10"></polyline><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"></path></svg>
+                <span>Reset</span>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Right: Multi-Audio & Subtitle Track Inspector -->
+        <div class="vn-mov-col-right">
+          <!-- Audio Tracks Routing -->
+          <div class="vn-mov-card-panel">
+            <div class="vn-mov-panel-head">
+              <span class="vn-mov-panel-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon><path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"></path></svg></span>
+              <h4 class="vn-mov-panel-title">Audio Streams &amp; Routing</h4>
+            </div>
+
+            <!-- Detected Audio Streams List -->
+            <div class="vn-mov-tracks-container" id="movAudioTracksList"></div>
+
+            <!-- Mode Selection Radios -->
+            <div class="vn-mov-radio-group">
+              <label class="vn-mov-radio-label">
+                <input type="radio" name="movAudioMode" value="track1" checked />
+                <span class="radio-custom"></span>
+                <span class="radio-text">Track 1: Primary Mix (Default)</span>
+              </label>
+              <label class="vn-mov-radio-label" id="movAudioModeTrack2Wrap">
+                <input type="radio" name="movAudioMode" value="track2" />
+                <span class="radio-custom"></span>
+                <span class="radio-text">Track 2: Isolated Dialogue / Commentary</span>
+              </label>
+              <label class="vn-mov-radio-label" id="movAudioModeMixWrap">
+                <input type="radio" name="movAudioMode" value="mix" />
+                <span class="radio-custom"></span>
+                <span class="radio-text">Dual Audio Mix: Blend Track 1 + Track 2</span>
+              </label>
+              <label class="vn-mov-radio-label">
+                <input type="radio" name="movAudioMode" value="mute" />
+                <span class="radio-custom"></span>
+                <span class="radio-text">Mute Video Audio (Subtitles Only)</span>
+              </label>
+            </div>
+
+            <!-- Dialogue Equalizer Boost -->
+            <div class="vn-mov-toggle-row">
+              <div class="toggle-info">
+                <span class="toggle-title">Vocal Clarity Filter (+3.5dB Speech EQ)</span>
+                <span class="toggle-desc">Enhance Kurdish / English dialogue frequencies for clear listening</span>
+              </div>
+              <label class="vn-switch">
+                <input type="checkbox" id="movDialogueBoostToggle" checked />
+                <span class="vn-slider"></span>
+              </label>
+            </div>
+          </div>
+
+          <!-- Embedded Subtitles Inspector -->
+          <div class="vn-mov-card-panel" id="movSubTracksSection">
+            <div class="vn-mov-panel-head">
+              <span class="vn-mov-panel-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg></span>
+              <h4 class="vn-mov-panel-title">Embedded Subtitles</h4>
+              <span class="vn-mov-badge-sm" id="movSubCuesCountBadge">Tracks Detected</span>
+            </div>
+
+            <div class="vn-mov-tracks-container" id="movSubTracksList"></div>
+
+            <div class="vn-mov-toggle-row">
+              <div class="toggle-info">
+                <span class="toggle-title">Extract Embedded Cues into Studio Timeline</span>
+                <span class="toggle-desc">Automatically populate subtitle track with embedded timing</span>
+              </div>
+              <label class="vn-switch">
+                <input type="checkbox" id="movImportSubsCheckbox" checked />
+                <span class="vn-slider"></span>
+              </label>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Modal Footer -->
+      <div class="vn-mov-footer">
+        <div class="vn-mov-footer-left">
+          <span class="vn-mov-hint">QuickTime MOV configured container will be loaded with frame-accurate sync</span>
+        </div>
+        <div class="vn-mov-footer-right">
+          <button type="button" class="vn-mov-btn-ghost" id="movModalCancelBtn">Cancel</button>
+          <button type="button" class="vn-mov-btn-primary" id="movModalImportBtn">
+            <span>Import Configured MOV to Studio</span>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9 18 15 12 9 6"></polyline></svg>
+          </button>
+        </div>
+      </div>
     </div>
   </div>
 </div>
