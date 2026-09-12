@@ -78,7 +78,7 @@
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
   border: 1px solid var(--md-sys-color-outline-variant);
-  border-radius: var(--md-shape-corner-medium);
+  border-radius: 4px;
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4), 0 2px 6px rgba(0, 0, 0, 0.2);
   color: var(--md-sys-color-on-surface);
   position: relative;
@@ -105,7 +105,7 @@
   place-items: center;
   width: 32px;
   height: 32px;
-  border-radius: var(--md-shape-corner-medium);
+  border-radius: 3px;
   flex-shrink: 0;
   background: rgba(255, 255, 255, 0.08);
 }
@@ -145,7 +145,7 @@
   font-size: 11px;
   font-weight: 700;
   padding: 5px 10px;
-  border-radius: var(--md-shape-corner-full);
+  border-radius: 3px;
   cursor: pointer;
   flex-shrink: 0;
   transition: filter 0.15s ease, transform 0.15s ease;
@@ -161,7 +161,7 @@
   color: var(--md-sys-color-on-surface-variant);
   cursor: pointer;
   padding: 4px;
-  border-radius: 50%;
+  border-radius: 3px;
   display: grid;
   place-items: center;
   flex-shrink: 0;

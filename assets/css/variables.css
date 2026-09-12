@@ -64,21 +64,21 @@
   --red: #f2b8b5;
   --red-soft: rgba(242, 184, 181, 0.12);
 
-  /* Material 3 Shape Tokens - Crisp, modern structured radii */
+  /* Material 3 Shape Tokens - Crisp, modern structured squared radii */
   --md-shape-corner-none: 0px;
-  --md-shape-corner-extra-small: 4px;
-  --md-shape-corner-small: 6px;
-  --md-shape-corner-medium: 8px;
-  --md-shape-corner-large: 12px;
-  --md-shape-corner-extra-large: 16px;
-  --md-shape-corner-full: 8px;
+  --md-shape-corner-extra-small: 2px;
+  --md-shape-corner-small: 3px;
+  --md-shape-corner-medium: 4px;
+  --md-shape-corner-large: 4px;
+  --md-shape-corner-extra-large: 6px;
+  --md-shape-corner-full: 4px;
 
   /* Compatibility radius tokens */
   --radius-sm: var(--md-shape-corner-small);
   --radius-md: var(--md-shape-corner-medium);
   --radius-lg: var(--md-shape-corner-large);
-  --radius-xl: 16px;
-  --radius-full: 8px;
+  --radius-xl: 6px;
+  --radius-full: 4px;
 
   /* Material 3 Elevations */
   --md-elevation-1: 0 1px 3px 1px rgba(0, 0, 0, 0.25), 0 1px 2px 0 rgba(0, 0, 0, 0.3);

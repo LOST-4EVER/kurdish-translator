@@ -120,7 +120,7 @@
 
       let id = 0;
       for (let i = 0; i < length; i++) {
-        id = (id << 8) | view.getUint8(offset + i);
+        id = ((id * 256) + view.getUint8(offset + i)) >>> 0;
       }
 
       return { length, id };

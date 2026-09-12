@@ -36,6 +36,11 @@
       this.isGpuReady = false;
       this.targetBitrate = 6000000; // 6 Mbps default
       this.targetResolution = 'original';
+      this.audioContext = null;
+      this.audioSourceNode = null;
+      this.audioDestNode = null;
+      this.activeStream = null;
+      this.videoFrameCallbackId = null;
 
       this._detectHardwareAcceleration();
     }
@@ -175,12 +180,34 @@
       if (this.burnRecording) {
         this.burnAbort = true;
         this.burnRecording = false;
-        if (this.els.videoPlayer) {
+        if (this.els && this.els.videoPlayer) {
           this.els.videoPlayer.pause();
         }
       }
+      this._cleanupAudioAndStreams();
       if (this.els && this.els.burnModal) {
         this.els.burnModal.classList.add('hidden');
+      }
+    }
+
+    _cleanupAudioAndStreams() {
+      if (this.activeStream) {
+        try {
+          this.activeStream.getTracks().forEach((track) => track.stop());
+        } catch {}
+        this.activeStream = null;
+      }
+      if (this.audioContext && this.audioContext.state !== 'closed') {
+        try {
+          this.audioContext.close();
+        } catch {}
+        this.audioContext = null;
+      }
+      if (this.els && this.els.videoPlayer) {
+        if ('cancelVideoFrameCallback' in this.els.videoPlayer && this.videoFrameCallbackId !== null) {
+          this.els.videoPlayer.cancelVideoFrameCallback(this.videoFrameCallbackId);
+          this.videoFrameCallbackId = null;
+        }
       }
     }
 
@@ -303,16 +330,40 @@
       }
 
       const stream = canvas.captureStream(30);
+      this.activeStream = stream;
 
-      // Add audio track from video if present
+      // Robust audio capture via Web Audio API destination with fallback to captureStream
       try {
-        const audioStream = video.captureStream ? video.captureStream() : (video.mozCaptureStream ? video.mozCaptureStream() : null);
-        if (audioStream) {
-          const audioTracks = audioStream.getAudioTracks();
-          if (audioTracks.length > 0) stream.addTrack(audioTracks[0]);
+        const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+        if (AudioContextClass) {
+          this.audioContext = new AudioContextClass();
+          if (this.audioContext.state === 'suspended') {
+            await this.audioContext.resume();
+          }
+          this.audioDestNode = this.audioContext.createMediaStreamDestination();
+          
+          try {
+            this.audioSourceNode = this.audioContext.createMediaElementSource(video);
+            this.audioSourceNode.connect(this.audioDestNode);
+            this.audioSourceNode.connect(this.audioContext.destination);
+          } catch (srcErr) {
+            console.warn('Audio node connection notice:', srcErr);
+          }
+
+          const audioTracks = this.audioDestNode.stream.getAudioTracks();
+          if (audioTracks.length > 0) {
+            stream.addTrack(audioTracks[0]);
+          }
         }
       } catch (err) {
-        console.warn('Audio track capture notice:', err);
+        console.warn('Web Audio stream setup fallback:', err);
+        try {
+          const directStream = video.captureStream ? video.captureStream() : (video.mozCaptureStream ? video.mozCaptureStream() : null);
+          if (directStream) {
+            const tracks = directStream.getAudioTracks();
+            if (tracks.length > 0) stream.addTrack(tracks[0]);
+          }
+        } catch (e) {}
       }
 
       // Determine best supported MIME type
@@ -326,7 +377,7 @@
       ];
       let selectedMime = 'video/webm';
       for (const mime of mimeTypes) {
-        if (MediaRecorder.isTypeSupported(mime)) {
+        if (typeof MediaRecorder !== 'undefined' && MediaRecorder.isTypeSupported(mime)) {
           selectedMime = mime;
           break;
         }
@@ -357,6 +408,8 @@
 
       recorder.onstop = () => {
         this.burnRecording = false;
+        this._cleanupAudioAndStreams();
+
         if (this.els.burnActionBtn) {
           this.els.burnActionBtn.disabled = false;
           this.els.burnActionBtn.classList.add('hidden');
@@ -500,7 +553,11 @@
           if (bgColor !== 'transparent') {
             ctx.fillStyle = bgColor;
             ctx.beginPath();
-            ctx.roundRect(xCenter - boxWidth / 2, yCenter - totalBoxHeight / 2, boxWidth, totalBoxHeight, 10);
+            if (typeof ctx.roundRect === 'function') {
+              ctx.roundRect(xCenter - boxWidth / 2, yCenter - totalBoxHeight / 2, boxWidth, totalBoxHeight, 4);
+            } else {
+              ctx.rect(xCenter - boxWidth / 2, yCenter - totalBoxHeight / 2, boxWidth, totalBoxHeight);
+            }
             ctx.fill();
           } else {
             ctx.shadowColor = 'rgba(0, 0, 0, 0.95)';
@@ -568,10 +625,18 @@
         if (this.els.exportMetricElapsed) this.els.exportMetricElapsed.textContent = formatTime(elapsedSec);
         if (this.els.exportMetricEta) this.els.exportMetricEta.textContent = formatTime(etaSec);
 
-        requestAnimationFrame(drawBurnFrame);
+        if ('requestVideoFrameCallback' in video) {
+          this.videoFrameCallbackId = video.requestVideoFrameCallback(drawBurnFrame);
+        } else {
+          requestAnimationFrame(drawBurnFrame);
+        }
       };
 
-      requestAnimationFrame(drawBurnFrame);
+      if ('requestVideoFrameCallback' in video) {
+        this.videoFrameCallbackId = video.requestVideoFrameCallback(drawBurnFrame);
+      } else {
+        requestAnimationFrame(drawBurnFrame);
+      }
     }
   }
 

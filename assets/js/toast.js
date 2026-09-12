@@ -41,11 +41,20 @@ const Toast = (() => {
    * Show a toast message.
    * @param {string} title
    * @param {string} [type='info'] - 'info' | 'success' | 'error' | 'warning' | 'translating' | 'editing'
-   * @param {object} [options] - { subtext, duration, actionLabel, onAction }
+   * @param {object|number} [options] - { subtext, duration, actionLabel, onAction } or duration in ms
    */
   function show(title, type = 'info', options = {}) {
     const parent = ensureContainer();
-    const duration = options.duration || (type === 'error' ? 4200 : 2800);
+    
+    // Normalize options (supports number for duration, or options object)
+    let opts = {};
+    if (typeof options === 'number') {
+      opts = { duration: options };
+    } else if (typeof options === 'object' && options !== null) {
+      opts = { ...options };
+    }
+
+    const duration = opts.duration || (type === 'error' ? 4500 : 3000);
 
     // Limit active toasts to max 3 to prevent stacking and screen clutter
     while (activeToasts.length >= 3) {
@@ -55,12 +64,12 @@ const Toast = (() => {
 
     const toastCard = document.createElement('div');
     toastCard.className = `toast-card toast-${type}`;
-    if (options.subtext) toastCard.classList.add('has-subtext');
+    if (opts.subtext) toastCard.classList.add('has-subtext');
 
     const iconHtml = ICONS[type] || ICONS.info;
-    const safeTitle = escapeHtml(title);
-    const safeSubtext = options.subtext ? escapeHtml(options.subtext) : '';
-    const safeActionLabel = options.actionLabel ? escapeHtml(options.actionLabel) : '';
+    const safeTitle = escapeHtml(String(title || ''));
+    const safeSubtext = opts.subtext ? escapeHtml(String(opts.subtext)) : '';
+    const safeActionLabel = opts.actionLabel ? escapeHtml(String(opts.actionLabel)) : '';
 
     let actionBtnHtml = '';
     if (safeActionLabel) {
@@ -98,10 +107,10 @@ const Toast = (() => {
       toastCard.classList.add('dismissing');
       setTimeout(() => {
         if (toastCard.parentNode) toastCard.parentNode.removeChild(toastCard);
-      }, 220);
+      }, 240);
     };
 
-    const toastHandle = { dismiss };
+    const toastHandle = { dismiss, card: toastCard };
     activeToasts.push(toastHandle);
 
     const startTimer = () => {
@@ -121,14 +130,16 @@ const Toast = (() => {
 
     toastCard.addEventListener('mouseenter', pauseTimer);
     toastCard.addEventListener('mouseleave', startTimer);
+    toastCard.addEventListener('touchstart', pauseTimer, { passive: true });
+    toastCard.addEventListener('touchend', startTimer, { passive: true });
 
     const closeBtn = toastCard.querySelector('.toast-close-btn');
     if (closeBtn) closeBtn.addEventListener('click', dismiss);
 
     const actionBtn = toastCard.querySelector('.toast-action-btn');
-    if (actionBtn && typeof options.onAction === 'function') {
+    if (actionBtn && typeof opts.onAction === 'function') {
       actionBtn.addEventListener('click', () => {
-        options.onAction();
+        opts.onAction();
         dismiss();
       });
     }
@@ -146,11 +157,31 @@ const Toast = (() => {
   }
 
   function success(title, subtext, actionLabel, onAction) {
+    if (typeof subtext === 'object' && subtext !== null) {
+      return show(title, 'success', subtext);
+    }
     return show(title, 'success', { subtext, actionLabel, onAction });
   }
 
   function error(title, subtext, actionLabel, onAction) {
+    if (typeof subtext === 'object' && subtext !== null) {
+      return show(title, 'error', { duration: 4800, ...subtext });
+    }
     return show(title, 'error', { subtext, actionLabel, onAction, duration: 4800 });
+  }
+
+  function warning(title, subtext, options) {
+    if (typeof subtext === 'object' && subtext !== null) {
+      return show(title, 'warning', subtext);
+    }
+    return show(title, 'warning', { subtext, ...(typeof options === 'object' ? options : {}) });
+  }
+
+  function info(title, subtext, options) {
+    if (typeof subtext === 'object' && subtext !== null) {
+      return show(title, 'info', subtext);
+    }
+    return show(title, 'info', { subtext, ...(typeof options === 'object' ? options : {}) });
   }
 
   return {
@@ -158,6 +189,8 @@ const Toast = (() => {
     dismissAll,
     success,
     error,
+    warning,
+    info,
   };
 })();
 
