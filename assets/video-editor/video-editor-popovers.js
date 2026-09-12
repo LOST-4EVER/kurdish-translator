@@ -281,8 +281,11 @@
           }
           const updated = cues.map((c) => ({
             ...c,
-            startTime: Math.max(0, (c.startTime || 0) + shiftMs),
-            endTime: Math.max(100, (c.endTime || 0) + shiftMs),
+            start: Math.max(0, (c.start !== undefined ? c.start : (c.startTime || 0)) + shiftMs),
+            end: Math.max(100, (c.end !== undefined ? c.end : (c.endTime || 0)) + shiftMs),
+            rawStart: null,
+            rawEnd: null,
+            _shifted: true,
           }));
           VideoEditorState.setCues(updated);
           VideoEditorUI.showToast(`Shifted all subtitles by ${shiftMs > 0 ? '+' : ''}${shiftMs}ms`, 'success');
