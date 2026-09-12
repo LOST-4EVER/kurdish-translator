@@ -2284,11 +2284,11 @@
     els.previewBtn.addEventListener('click', () => switchTab('preview'));
 
     const launchVideoStudioWithSubs = () => {
-      switchTab('videoEditor');
-      if (typeof VideoEditor !== 'undefined' && VideoEditor.enterStudioMode) {
-        VideoEditor.enterStudioMode();
+      switchTab('video-editor');
+      if (typeof VideoStudio !== 'undefined' && VideoStudio.enterStudioMode) {
+        VideoStudio.enterStudioMode(currentActiveTab);
         if (workCues && workCues.length) {
-          VideoEditor.applyCurrentSubtitles(true);
+          VideoStudio.applyCurrentAppSubtitles();
         }
       }
     };

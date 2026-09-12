@@ -25,12 +25,13 @@
         fontSize: '1.25', // rem
         position: 'bottom', // 'bottom' | 'center' | 'top'
         color: '#ffffff',
-        bgColor: 'rgba(0, 0, 0, 0.75)',
+        bgColor: 'transparent',
         showOrig: savedShowOrig,
       };
 
       this.undoStack = [];
       this.redoStack = [];
+      this.maxHistorySteps = 1000;
       this.listeners = {};
     }
 
@@ -50,10 +51,28 @@
       }
     }
 
+    canUndo() {
+      return this.undoStack.length > 0;
+    }
+
+    canRedo() {
+      return this.redoStack.length > 0;
+    }
+
+    _emitHistoryChange() {
+      this.emit('undoRedoChange', {
+        canUndo: this.canUndo(),
+        canRedo: this.canRedo(),
+        undoCount: this.undoStack.length,
+        redoCount: this.redoStack.length,
+      });
+    }
+
     setCues(newCues, recordHistory = true) {
       if (recordHistory) this.pushUndo();
       this.cues = Array.isArray(newCues) ? newCues.map((c) => ({ ...c })) : [];
       this.emit('cuesChange', this.cues);
+      this._emitHistoryChange();
     }
 
     getCues() {
@@ -77,31 +96,86 @@
     }
 
     pushUndo() {
-      this.undoStack.push(JSON.stringify(this.cues));
-      if (this.undoStack.length > 35) this.undoStack.shift();
+      const snapshot = {
+        cues: JSON.stringify(this.cues),
+        activeCueIndex: this.activeCueIndex,
+      };
+      this.undoStack.push(snapshot);
+      if (this.undoStack.length > this.maxHistorySteps) this.undoStack.shift();
       this.redoStack = [];
+      this._emitHistoryChange();
     }
 
     undo() {
       if (!this.undoStack.length) return false;
-      this.redoStack.push(JSON.stringify(this.cues));
-      this.cues = JSON.parse(this.undoStack.pop());
+      const currentSnapshot = {
+        cues: JSON.stringify(this.cues),
+        activeCueIndex: this.activeCueIndex,
+      };
+      this.redoStack.push(currentSnapshot);
+
+      const targetSnapshot = this.undoStack.pop();
+      this.cues = JSON.parse(targetSnapshot.cues);
+      if (typeof targetSnapshot.activeCueIndex === 'number' && targetSnapshot.activeCueIndex >= 0 && targetSnapshot.activeCueIndex < this.cues.length) {
+        this.activeCueIndex = targetSnapshot.activeCueIndex;
+        this.activeCue = this.cues[this.activeCueIndex];
+      }
       this.emit('cuesChange', this.cues);
+      this._emitHistoryChange();
       return true;
     }
 
     redo() {
       if (!this.redoStack.length) return false;
-      this.undoStack.push(JSON.stringify(this.cues));
-      this.cues = JSON.parse(this.redoStack.pop());
+      const currentSnapshot = {
+        cues: JSON.stringify(this.cues),
+        activeCueIndex: this.activeCueIndex,
+      };
+      this.undoStack.push(currentSnapshot);
+
+      const targetSnapshot = this.redoStack.pop();
+      this.cues = JSON.parse(targetSnapshot.cues);
+      if (typeof targetSnapshot.activeCueIndex === 'number' && targetSnapshot.activeCueIndex >= 0 && targetSnapshot.activeCueIndex < this.cues.length) {
+        this.activeCueIndex = targetSnapshot.activeCueIndex;
+        this.activeCue = this.cues[this.activeCueIndex];
+      }
       this.emit('cuesChange', this.cues);
+      this._emitHistoryChange();
       return true;
     }
 
-    updateCue(index, updatedCue) {
+    updateCue(index, updatedCue, recordHistory = true) {
       if (index >= 0 && index < this.cues.length) {
-        this.pushUndo();
+        if (recordHistory) this.pushUndo();
         this.cues[index] = { ...this.cues[index], ...updatedCue };
+        if (this.activeCueIndex === index) {
+          this.activeCue = this.cues[index];
+        }
+        this.emit('cuesChange', this.cues);
+      }
+    }
+
+    updateCueText(index, newText) {
+      if (index >= 0 && index < this.cues.length) {
+        if (this.cues[index].text === newText) return;
+        this.pushUndo();
+        this.cues[index] = { ...this.cues[index], text: newText };
+        if (this.activeCueIndex === index) {
+          this.activeCue = this.cues[index];
+        }
+        this.emit('cuesChange', this.cues);
+      }
+    }
+
+    updateCueTiming(index, newStartMs, newEndMs, recordHistory = true) {
+      if (index >= 0 && index < this.cues.length) {
+        if (recordHistory) this.pushUndo();
+        const start = Math.max(0, Math.round(newStartMs));
+        const end = Math.max(start + 100, Math.round(newEndMs));
+        this.cues[index] = { ...this.cues[index], start, end };
+        if (this.activeCueIndex === index) {
+          this.activeCue = this.cues[index];
+        }
         this.emit('cuesChange', this.cues);
       }
     }

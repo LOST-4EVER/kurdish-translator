@@ -78,17 +78,21 @@ const AppDecoder = (() => {
       }
     }
 
-    // Default UTF-8 with fatal fallback
+    // Default UTF-8 with fatal fallback for Kurdish / Arabic Windows-1256
     try {
-      return new TextDecoder('utf-8', { fatal: true }).decode(bytes);
+      return new TextDecoder('utf-8', { fatal: true }).decode(bytes).replace(/^\uFEFF/, '');
     } catch (e) {
-      // Fallback for non-standard Latin/ISO-8859-1 encodings
-      return new TextDecoder('iso-8859-1').decode(bytes);
+      try {
+        return new TextDecoder('windows-1256').decode(bytes).replace(/^\uFEFF/, '');
+      } catch (e2) {
+        return new TextDecoder('utf-8').decode(bytes).replace(/^\uFEFF/, '');
+      }
     }
   }
 
   return {
     readTextFile,
+    readFileAsText: readTextFile,
     decodeBytes,
   };
 })();

@@ -1,6 +1,6 @@
 # 🎬 Kurdî Subtitle Translator | وەرگێڕی پێشکەوتووی ژێرنووسی کوردی
 
-[![Version v132](https://img.shields.io/badge/Version-v132-7c5cfc?style=flat-square&logo=github)](https://LOST-4EVER.github.io/kurdish-translator/)
+[![Version v138](https://img.shields.io/badge/Version-v138-7c5cfc?style=flat-square&logo=github)](https://LOST-4EVER.github.io/kurdish-translator/)
 [![Progressive Web App](https://img.shields.io/badge/PWA-Installable%20%26%20Offline-0ea5e9?style=flat-square&logo=pwa&logoColor=white)](https://LOST-4EVER.github.io/kurdish-translator/)
 [![Target Kurdish Sorani](https://img.shields.io/badge/Target%20Language-Kurdish%20Sorani%20(ckb)-fbbf24?style=flat-square)](https://LOST-4EVER.github.io/kurdish-translator/)
 [![100% Client-Side](https://img.shields.io/badge/Privacy-100%25%20In--Browser-10b981?style=flat-square&logoColor=white)](https://LOST-4EVER.github.io/kurdish-translator/)
@@ -26,6 +26,7 @@ A state-of-the-art, 100% client-side subtitle translation and fansubbing suite d
 10. [Architecture & Source Structure](#-architecture--source-structure)
 11. [Keyboard Shortcuts Cheat Sheet](#-keyboard-shortcuts-cheat-sheet)
 12. [Local Development & Deployment](#-local-development--deployment)
+13. [Release History & Changelog](#-release-history--changelog)
 
 ---
 
@@ -216,6 +217,20 @@ node --check assets/js/parser.js && node --check assets/js/translator-dict.js &&
 1. Push changes to the `main` branch.
 2. Under repository **Settings &rarr; Pages**, select **Deploy from a branch** (`main` / root).
 3. The app is immediately live at `https://<username>.github.io/<repository-name>/`.
+
+---
+
+## 📜 Release History & Changelog
+
+### 🚀 Version v138 (Current)
+- **Default Transparent Subtitle Backgrounds:** Updated subtitle overlays, cinema player, and canvas burner to default to transparent backgrounds with high-contrast text outlines and drop shadows for clean viewing.
+- **Video Studio Aspect Ratio & Container Query Scaling:** Native video resolution auto-probing defaulting to Original aspect ratio with responsive container query (`cqi`) typography scaling.
+- **Subtitle Parser & Decoder Improvements:**
+  - Enhanced `.ass`/`.ssa` dialogue field splitting across 9 comma fields while preserving commas inside dialogue text, converting `\N` tags to linebreaks.
+  - MicroDVD (`.sub`) and SAMI (`.smi`) control tag cleaning.
+  - MKV EBML binary demuxer and QuickTime MOV subtitle stream extraction fixes.
+  - `AppDecoder` auto-detection for Windows-1256 (Kurdish/Arabic) encodings and BOM handling.
+- **PWA v138 Engine Upgrade:** Upgraded `sw.js` cache version (`kurdish-translator-v138`), instant offline precache, latency diagnostic engine, and GitHub sync options.
 
 ---
 

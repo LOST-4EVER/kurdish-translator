@@ -38,20 +38,64 @@
       const guideX = document.getElementById('studioSnapGuideX');
       const guideY = document.getElementById('studioSnapGuideY');
 
+      const activePointers = new Map();
+
+      const getTouchCentroid = (e) => {
+        if (e && e.touches && e.touches.length >= 2) {
+          return {
+            x: (e.touches[0].clientX + e.touches[1].clientX) / 2,
+            y: (e.touches[0].clientY + e.touches[1].clientY) / 2,
+            count: e.touches.length
+          };
+        }
+        if (activePointers.size >= 2) {
+          let sumX = 0;
+          let sumY = 0;
+          activePointers.forEach((p) => {
+            sumX += p.x;
+            sumY += p.y;
+          });
+          return {
+            x: sumX / activePointers.size,
+            y: sumY / activePointers.size,
+            count: activePointers.size
+          };
+        }
+        return null;
+      };
+
       const onPointerDown = (e) => {
-        // Only left click or touch
         if (e.button !== undefined && e.button !== 0) return;
         e.stopPropagation();
 
-        this._isDragging = true;
-        this._hasMoved = false;
-        this._startX = e.clientX;
-        this._startY = e.clientY;
+        activePointers.set(e.pointerId, { x: e.clientX, y: e.clientY, type: e.pointerType });
+
+        const isTouchDevice = e.pointerType === 'touch' || (e.touches && e.touches.length > 0);
+        const centroid = getTouchCentroid(e);
+
+        // Touch devices strictly require 2 fingers / 2 hands to initiate text moving
+        if (isTouchDevice) {
+          if (!centroid) {
+            // Single finger tap/touch - don't drag text, prepare for click selection
+            this._isDragging = false;
+            this._hasMoved = false;
+            return;
+          }
+          this._isDragging = true;
+          this._hasMoved = true;
+          this._startX = centroid.x;
+          this._startY = centroid.y;
+        } else {
+          // Desktop / Mouse: standard drag or Shift/Ctrl drag
+          this._isDragging = true;
+          this._hasMoved = false;
+          this._startX = e.clientX;
+          this._startY = e.clientY;
+        }
 
         const vpRect = viewport.getBoundingClientRect();
         const cRect = container.getBoundingClientRect();
 
-        // Calculate current center percentage relative to viewport
         const cCenterX = cRect.left + cRect.width / 2;
         const cCenterY = cRect.top + cRect.height / 2;
         this._startXPct = Math.min(95, Math.max(5, ((cCenterX - vpRect.left) / vpRect.width) * 100));
@@ -65,10 +109,31 @@
       };
 
       const onPointerMove = (e) => {
+        if (activePointers.has(e.pointerId)) {
+          activePointers.set(e.pointerId, { x: e.clientX, y: e.clientY, type: e.pointerType });
+        }
+
+        const isTouchDevice = e.pointerType === 'touch' || (e.touches && e.touches.length > 0);
+        const centroid = getTouchCentroid(e);
+
+        if (isTouchDevice && !centroid) {
+          // If 2-finger touch released down to 1 finger during drag, stop dragging
+          if (this._isDragging) {
+            this._isDragging = false;
+            container.classList.remove('is-dragging');
+            if (guideX) guideX.classList.add('hidden');
+            if (guideY) guideY.classList.add('hidden');
+          }
+          return;
+        }
+
         if (!this._isDragging) return;
 
-        const dx = e.clientX - this._startX;
-        const dy = e.clientY - this._startY;
+        const currentX = centroid ? centroid.x : e.clientX;
+        const currentY = centroid ? centroid.y : e.clientY;
+
+        const dx = currentX - this._startX;
+        const dy = currentY - this._startY;
 
         if (!this._hasMoved && Math.hypot(dx, dy) > 4) {
           this._hasMoved = true;
@@ -83,14 +148,12 @@
         let rawXPct = this._startXPct + (dx / vpRect.width) * 100;
         let rawYPct = this._startYPct + (dy / vpRect.height) * 100;
 
-        // Snapping logic: Snap to center horizontal (50%) within 2.5%
         let isSnappedX = false;
         if (Math.abs(rawXPct - 50) < 2.5) {
           rawXPct = 50;
           isSnappedX = true;
         }
 
-        // Snap to center vertical (50%), bottom (88%), top (12%)
         let isSnappedY = false;
         if (Math.abs(rawYPct - 50) < 2.5) {
           rawYPct = 50;
@@ -113,7 +176,6 @@
           else guideY.classList.add('hidden');
         }
 
-        // Clamp between 6% and 94%
         this._currentXPct = Math.min(94, Math.max(6, rawXPct));
         this._currentYPct = Math.min(94, Math.max(6, rawYPct));
 
@@ -125,7 +187,18 @@
       };
 
       const onPointerUp = (e) => {
-        if (!this._isDragging) return;
+        activePointers.delete(e.pointerId);
+
+        if (!this._isDragging && !this._hasMoved) {
+          // Single-finger tap: open quick editor bubble
+          if (typeof this.options.onOverlayClick === 'function') {
+            this.options.onOverlayClick();
+          }
+          return;
+        }
+
+        if (activePointers.size > 0 && (e.pointerType === 'touch' || e.touches?.length)) return;
+
         this._isDragging = false;
         container.classList.remove('is-dragging');
 
@@ -139,7 +212,6 @@
         } catch (_) {}
 
         if (this._hasMoved) {
-          // Drag finished: save custom position into overlayConfig
           const customPos = {
             xPct: Math.round(this._currentXPct * 10) / 10,
             yPct: Math.round(this._currentYPct * 10) / 10
@@ -151,15 +223,11 @@
           if (typeof this.options.onPositionChange === 'function') {
             this.options.onPositionChange(customPos);
           }
-        } else {
-          // Click/Tap without drag: open quick editor bubble!
-          if (typeof this.options.onOverlayClick === 'function') {
-            this.options.onOverlayClick();
-          }
         }
       };
 
       const onPointerCancel = (e) => {
+        activePointers.delete(e.pointerId);
         this._isDragging = false;
         this._hasMoved = false;
         container.classList.remove('is-dragging');
@@ -235,7 +303,13 @@
           container.style.transform = '';
           container.classList.remove('pos-bottom', 'pos-top');
           container.classList.add('pos-center');
-        } else if (!config.customPos) {
+        } else if (config.customPos && typeof config.customPos.xPct === 'number' && typeof config.customPos.yPct === 'number') {
+          container.style.left = `${config.customPos.xPct}%`;
+          container.style.top = `${config.customPos.yPct}%`;
+          container.style.bottom = 'auto';
+          container.style.transform = 'translate(-50%, -50%)';
+          container.classList.remove('pos-bottom', 'pos-center', 'pos-top');
+        } else {
           container.style.left = '50%';
           container.style.top = '';
           container.style.bottom = '';
@@ -247,12 +321,13 @@
 
       // Cue-specific font and color
       if (textEl) {
-        textEl.style.fontFamily = cue.fontFamily || config.fontFamily || "'Noto Naskh Arabic', serif";
+        textEl.style.fontFamily = cue.fontFamily || config.fontFamily || "'Noto Naskh Arabic', 'Vazirmatn', sans-serif";
         textEl.style.color = cue.color || config.color || '#ffffff';
         if (cue.fontSize) {
-          textEl.style.fontSize = `${Math.max(1, cue.fontSize / 18)}rem`;
+          textEl.style.fontSize = `clamp(0.85rem, ${(cue.fontSize / 18) * 3.2}cqi, 4.5rem)`;
         } else {
-          textEl.style.fontSize = `${config.fontSize || '1.25'}rem`;
+          const baseRem = parseFloat(config.fontSize) || 1.25;
+          textEl.style.fontSize = `clamp(0.85rem, ${baseRem * 3.2}cqi, 4.5rem)`;
         }
       }
 
@@ -294,15 +369,16 @@
         }
       }
 
-      textEl.style.fontSize = `${config.fontSize || '1.25'}rem`;
+      const baseRem = parseFloat(config.fontSize) || 1.25;
+      textEl.style.fontSize = `clamp(0.85rem, ${baseRem * 3.2}cqi, 4.5rem)`;
       if (config.fontFamily) {
         textEl.style.fontFamily = config.fontFamily;
       }
       textEl.style.color = config.color || '#ffffff';
-      container.style.backgroundColor = config.bgColor || 'rgba(0, 0, 0, 0.75)';
+      container.style.backgroundColor = config.bgColor || 'transparent';
 
       if (origEl) {
-        origEl.style.fontSize = `${Math.max(0.75, (parseFloat(config.fontSize) || 1.25) * 0.72)}rem`;
+        origEl.style.fontSize = `clamp(0.65rem, ${baseRem * 2.3}cqi, 3rem)`;
       }
     }
 

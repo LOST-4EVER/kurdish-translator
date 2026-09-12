@@ -164,25 +164,45 @@
           }
         });
       });
-      // Scrubber Interaction (pointer down anywhere on scroll canvas)
+
+      // Cache container left offset
+      const updateCanvasBounds = () => {
+        if (this.dom && this.dom.scrollCanvas) {
+          const rect = this.dom.scrollCanvas.getBoundingClientRect();
+          this._canvasLeft = rect.left;
+        }
+      };
+
+      const getPointerX = (evt) => {
+        if (!evt) return 0;
+        if (typeof evt.clientX === 'number' && evt.clientX > 0) return evt.clientX;
+        if (evt.touches && evt.touches[0] && typeof evt.touches[0].clientX === 'number') return evt.touches[0].clientX;
+        if (evt.changedTouches && evt.changedTouches[0] && typeof evt.changedTouches[0].clientX === 'number') return evt.changedTouches[0].clientX;
+        return evt.clientX || 0;
+      };
+
+      // Scrubber Interaction (pointer down on needle, ruler, or canvas)
       const onPointerDown = (e) => {
-        if (e.button !== 0) return; // Left-click only
+        if (e.button !== undefined && e.button !== 0) return; // Primary pointer/touch only
         this.isDragging = true;
-        this.dom.viewport.setPointerCapture(e.pointerId);
+        this._lastPointerX = getPointerX(e);
+        try {
+          this.dom.viewport.setPointerCapture(e.pointerId);
+        } catch (_) {}
 
-        // Cache canvas left position on gesture start to prevent reflow during drag
-        const rect = this.dom.scrollCanvas.getBoundingClientRect();
-        this._canvasLeft = rect.left;
-
+        updateCanvasBounds();
         this._handleScrubEvent(e);
+        this._startEdgeAutoScroll();
 
         const onPointerMove = (moveEvent) => {
           if (!this.isDragging) return;
+          this._lastPointerX = getPointerX(moveEvent);
           this._handleScrubEvent(moveEvent);
         };
 
         const onPointerUp = (upEvent) => {
           this.isDragging = false;
+          this._stopEdgeAutoScroll();
           try {
             this.dom.viewport.releasePointerCapture(upEvent.pointerId);
           } catch {}
@@ -202,16 +222,27 @@
         this.dom.viewport.addEventListener('pointercancel', onPointerUp);
       };
 
+      if (this.dom.needle) {
+        this.dom.needle.addEventListener('pointerdown', (e) => {
+          e.stopPropagation();
+          onPointerDown(e);
+        });
+      }
+
       this.dom.scrollCanvas.addEventListener('pointerdown', (e) => {
         // If clicked on a cue block, let the cue click handler handle selection
         if (e.target.closest('.vn-cue-pill')) return;
         onPointerDown(e);
       });
 
-      // Update cached canvas bounds on scroll or resize
+      // Update ruler position on viewport scroll (zero-cost virtualized ruler)
+      let scrollRaf = null;
       this.dom.viewport.addEventListener('scroll', () => {
-        if (this.dom.scrollCanvas) {
-          this._canvasLeft = this.dom.scrollCanvas.getBoundingClientRect().left;
+        if (!scrollRaf) {
+          scrollRaf = requestAnimationFrame(() => {
+            scrollRaf = null;
+            this._renderRuler();
+          });
         }
       }, { passive: true });
 
@@ -230,7 +261,8 @@
           this.dom.hoverIndicator.classList.add('hidden');
           return;
         }
-        const clientX = e.clientX - (this._canvasLeft || this.dom.scrollCanvas.getBoundingClientRect().left);
+        const viewportRect = this.dom.viewport.getBoundingClientRect();
+        const clientX = (e.clientX - viewportRect.left) + this.dom.viewport.scrollLeft;
         if (clientX < 0 || clientX > this.trackWidth) {
           this.dom.hoverIndicator.classList.add('hidden');
           return;
@@ -250,24 +282,81 @@
         new ResizeObserver(() => {
           this._updateDimensions();
           this._renderRuler();
-          if (this.dom.scrollCanvas) {
-            this._canvasLeft = this.dom.scrollCanvas.getBoundingClientRect().left;
-          }
+          updateCanvasBounds();
         }).observe(this.dom.viewport);
       }
     }
 
-    _handleScrubEvent(e) {
-      if (this._canvasLeft === undefined || this._canvasLeft === null) {
-        this._canvasLeft = this.dom.scrollCanvas.getBoundingClientRect().left;
+    _startEdgeAutoScroll() {
+      if (this._edgeScrollRaf) return;
+      const loop = () => {
+        if (!this.isDragging || this._lastPointerX === undefined) {
+          this._stopEdgeAutoScroll();
+          return;
+        }
+        const viewportRect = this.dom.viewport.getBoundingClientRect();
+        const relX = this._lastPointerX - viewportRect.left;
+        const edgeThreshold = 48;
+        let deltaScroll = 0;
+
+        if (relX < edgeThreshold && this.dom.viewport.scrollLeft > 0) {
+          const factor = (edgeThreshold - relX) / edgeThreshold;
+          deltaScroll = -Math.round(factor * 20);
+        } else if (relX > viewportRect.width - edgeThreshold) {
+          const maxScroll = Math.max(0, this.trackWidth - viewportRect.width);
+          if (this.dom.viewport.scrollLeft < maxScroll) {
+            const factor = (relX - (viewportRect.width - edgeThreshold)) / edgeThreshold;
+            deltaScroll = Math.round(factor * 20);
+          }
+        }
+
+        if (deltaScroll !== 0) {
+          this.dom.viewport.scrollLeft += deltaScroll;
+          const clientX = (this._lastPointerX - viewportRect.left) + this.dom.viewport.scrollLeft;
+          const targetTimeMs = Math.max(0, Math.min(this.duration || Infinity, (clientX / this.zoom) * 1000));
+          this.setTime(targetTimeMs, true);
+
+          this._pendingSeekTime = targetTimeMs;
+          if (!this._pendingSeekRaf) {
+            this._pendingSeekRaf = requestAnimationFrame(() => {
+              this._pendingSeekRaf = null;
+              if (this._pendingSeekTime !== null && typeof this.options.onSeek === 'function') {
+                this.options.onSeek(this._pendingSeekTime);
+                this._pendingSeekTime = null;
+              }
+            });
+          }
+        }
+        this._edgeScrollRaf = requestAnimationFrame(loop);
+      };
+      this._edgeScrollRaf = requestAnimationFrame(loop);
+    }
+
+    _stopEdgeAutoScroll() {
+      if (this._edgeScrollRaf) {
+        cancelAnimationFrame(this._edgeScrollRaf);
+        this._edgeScrollRaf = null;
       }
-      const clientX = e.clientX - this._canvasLeft;
+    }
+
+    _handleScrubEvent(e) {
+      if (!e) return;
+      const getPointerX = (evt) => {
+        if (!evt) return 0;
+        if (typeof evt.clientX === 'number' && evt.clientX > 0) return evt.clientX;
+        if (evt.touches && evt.touches[0] && typeof evt.touches[0].clientX === 'number') return evt.touches[0].clientX;
+        if (evt.changedTouches && evt.changedTouches[0] && typeof evt.changedTouches[0].clientX === 'number') return evt.changedTouches[0].clientX;
+        return evt.clientX || 0;
+      };
+      const viewportRect = this.dom.viewport.getBoundingClientRect();
+      const relativeX = getPointerX(e) - viewportRect.left;
+      const clientX = relativeX + this.dom.viewport.scrollLeft;
       const targetTimeMs = Math.max(0, Math.min(this.duration || Infinity, (clientX / this.zoom) * 1000));
 
-      // 1. Update playhead needle visually immediately at 120Hz/60Hz with zero layout thrashing
+      // 1. Update playhead needle visually immediately at 60/120Hz
       this.setTime(targetTimeMs, true);
 
-      // 2. Throttle video element seek via RAF to avoid choking video decoders during rapid mouse moves
+      // 2. Throttle video element seek via RAF to avoid choking video decoders
       this._pendingSeekTime = targetTimeMs;
       if (!this._pendingSeekRaf) {
         this._pendingSeekRaf = requestAnimationFrame(() => {
@@ -367,17 +456,24 @@
       if (!canvas) return;
 
       const dpr = window.devicePixelRatio || 1;
-      const width = this.trackWidth;
+      const scrollLeft = (this.dom.viewport ? this.dom.viewport.scrollLeft : 0) || 0;
+      const viewportWidth = (this._cachedViewportWidth || (this.dom.viewport ? this.dom.viewport.clientWidth : 800)) || 800;
+
+      // Virtualized viewport-window rendering for ultra-fast zero-lag 60fps performance
+      const canvasWidth = Math.min(this.trackWidth, viewportWidth + 300);
       const height = 22;
 
-      canvas.width = width * dpr;
+      canvas.width = canvasWidth * dpr;
       canvas.height = height * dpr;
-      canvas.style.width = `${width}px`;
+      canvas.style.width = `${canvasWidth}px`;
       canvas.style.height = `${height}px`;
+      canvas.style.position = 'absolute';
+      canvas.style.left = `${scrollLeft}px`;
+      canvas.style.top = '0';
 
       const ctx = canvas.getContext('2d');
       ctx.scale(dpr, dpr);
-      ctx.clearRect(0, 0, width, height);
+      ctx.clearRect(0, 0, canvasWidth, height);
 
       // Determine tick intervals (e.g. 20:16, 20:18 with small dots like VN)
       let majorInterval = 2; // default 2 seconds
@@ -390,14 +486,17 @@
       }
 
       const totalSec = Math.ceil(this.duration / 1000);
+      const startSec = Math.max(0, Math.floor((scrollLeft - 20) / this.zoom));
+      const endSec = Math.min(totalSec, Math.ceil((scrollLeft + canvasWidth + 20) / this.zoom));
 
       ctx.fillStyle = 'rgba(255, 255, 255, 0.45)';
       ctx.font = '10px "Inter", -apple-system, sans-serif';
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
 
-      for (let s = 0; s <= totalSec; s += 1) {
-        const x = s * this.zoom;
+      for (let s = startSec; s <= endSec; s += 1) {
+        const x = (s * this.zoom) - scrollLeft;
+        if (x < -20 || x > canvasWidth + 20) continue;
         const isMajor = s % majorInterval === 0;
 
         if (isMajor) {
@@ -444,19 +543,112 @@
         const cleanText = (cue.text || '').replace(/<[^>]+>/g, '').replace(/\{[^}]*\}/g, '').trim();
 
         pill.innerHTML = `
+          <div class="vn-cue-handle left-handle" data-handle="left" title="Drag to trim start time"></div>
           <div class="vn-cue-pill-inner">
             <span class="vn-cue-text">${cleanText}</span>
           </div>
+          <div class="vn-cue-handle right-handle" data-handle="right" title="Drag to trim end time"></div>
         `;
         pill.title = `#${idx + 1} [${this.formatTimecode(cue.start)} ➔ ${this.formatTimecode(cue.end)}]: ${cleanText}`;
 
-        pill.addEventListener('click', (e) => {
+        let isDraggingPill = false;
+        let startX = 0;
+        let handleType = 'move';
+        let origStart = cue.start;
+        let origEnd = cue.end;
+
+        pill.addEventListener('pointerdown', (e) => {
+          if (e.button !== 0) return;
+          e.stopPropagation();
+
+          const handleEl = e.target.closest('.vn-cue-handle');
+          handleType = handleEl ? handleEl.dataset.handle : 'move';
+          startX = e.clientX;
+          origStart = cue.start;
+          origEnd = cue.end;
+          isDraggingPill = false;
+
+          const onPointerMove = (moveEvent) => {
+            const dx = moveEvent.clientX - startX;
+            if (!isDraggingPill && Math.abs(dx) > 3) {
+              isDraggingPill = true;
+              pill.classList.add('is-dragging');
+              try { pill.setPointerCapture(moveEvent.pointerId); } catch (_) {}
+            }
+            if (!isDraggingPill) return;
+
+            const deltaSec = dx / this.zoom;
+            const deltaMs = deltaSec * 1000;
+
+            let newStart = origStart;
+            let newEnd = origEnd;
+
+            if (handleType === 'left') {
+              newStart = Math.max(0, Math.min(origEnd - 100, origStart + deltaMs));
+            } else if (handleType === 'right') {
+              newEnd = Math.max(origStart + 100, Math.min(this.duration || Infinity, origEnd + deltaMs));
+            } else {
+              const dur = origEnd - origStart;
+              newStart = Math.max(0, origStart + deltaMs);
+              newEnd = newStart + dur;
+              if (this.duration && newEnd > this.duration) {
+                newEnd = this.duration;
+                newStart = Math.max(0, newEnd - dur);
+              }
+            }
+
+            const leftPx = (newStart / 1000) * this.zoom;
+            const widthPx = Math.max(12, ((newEnd - newStart) / 1000) * this.zoom);
+            pill.style.left = `${leftPx}px`;
+            pill.style.width = `${widthPx}px`;
+
+            cue._tempStart = newStart;
+            cue._tempEnd = newEnd;
+          };
+
+          const onPointerUp = (upEvent) => {
+            pill.removeEventListener('pointermove', onPointerMove);
+            pill.removeEventListener('pointerup', onPointerUp);
+            pill.removeEventListener('pointercancel', onPointerUp);
+            pill.classList.remove('is-dragging');
+            try {
+              if (pill.hasPointerCapture(upEvent.pointerId)) {
+                pill.releasePointerCapture(upEvent.pointerId);
+              }
+            } catch (_) {}
+
+            if (isDraggingPill) {
+              const finalStart = cue._tempStart !== undefined ? cue._tempStart : cue.start;
+              const finalEnd = cue._tempEnd !== undefined ? cue._tempEnd : cue.end;
+              delete cue._tempStart;
+              delete cue._tempEnd;
+
+              if (window.VideoEditorState) {
+                window.VideoEditorState.updateCueTiming(idx, finalStart, finalEnd);
+              }
+            } else {
+              // Simple click: select & seek playhead
+              this.activeCueIndex = idx;
+              this.setTime(cue.start, true);
+              this._updateActiveCue();
+              if (typeof this.options.onCueSelect === 'function') {
+                this.options.onCueSelect(cue, idx);
+              }
+            }
+          };
+
+          pill.addEventListener('pointermove', onPointerMove);
+          pill.addEventListener('pointerup', onPointerUp);
+          pill.addEventListener('pointercancel', onPointerUp);
+        });
+
+        pill.addEventListener('dblclick', (e) => {
           e.stopPropagation();
           this.activeCueIndex = idx;
           this.setTime(cue.start, true);
           this._updateActiveCue();
-          if (typeof this.options.onCueSelect === 'function') {
-            this.options.onCueSelect(cue, idx);
+          if (typeof this.options.onCueDoubleClick === 'function') {
+            this.options.onCueDoubleClick(cue, idx);
           }
         });
 
@@ -544,9 +736,9 @@
       const scrollLeft = this.dom.viewport.scrollLeft;
       const viewportWidth = this._cachedViewportWidth || this.dom.viewport.clientWidth || 800;
 
-      if (playheadX > scrollLeft + viewportWidth - 80) {
-        this.dom.viewport.scrollLeft = playheadX - 80;
-      } else if (playheadX < scrollLeft + 40) {
+      if (playheadX > scrollLeft + viewportWidth - 50) {
+        this.dom.viewport.scrollLeft = Math.max(0, playheadX - Math.round(viewportWidth * 0.25));
+      } else if (playheadX < scrollLeft) {
         this.dom.viewport.scrollLeft = Math.max(0, playheadX - 40);
       }
     }

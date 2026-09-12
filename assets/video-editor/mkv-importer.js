@@ -451,14 +451,32 @@
 
       // Clean ASS or SRT subtitle lines
       let cleanText = text;
-      if (cleanText.startsWith('Dialogue:') || cleanText.includes(',,')) {
-        // ASS dialogue formatting: Read last field after 9 commas
-        const parts = cleanText.split(',');
-        if (parts.length >= 10) {
-          cleanText = parts.slice(9).join(',');
+      if (cleanText.startsWith('Dialogue:')) {
+        let commaCount = 0;
+        let splitIdx = -1;
+        let depth = 0;
+        for (let i = 0; i < cleanText.length; i++) {
+          const ch = cleanText[i];
+          if (ch === '{') depth++;
+          else if (ch === '}') depth = Math.max(0, depth - 1);
+          else if (ch === ',' && depth === 0) {
+            commaCount++;
+            if (commaCount === 9) {
+              splitIdx = i;
+              break;
+            }
+          }
+        }
+        if (splitIdx !== -1) {
+          cleanText = cleanText.substring(splitIdx + 1);
         }
       }
-      cleanText = cleanText.replace(/\{[^}]*\}/g, '').replace(/\\N/gi, '\n').replace(/<[^>]+>/g, '').trim();
+      cleanText = cleanText
+        .replace(/\{[^}]*\}/g, '')
+        .replace(/\\N/gi, '\n')
+        .replace(/\\n/gi, '\n')
+        .replace(/<[^>]+>/g, '')
+        .trim();
 
       if (cleanText) {
         const cueList = info.subtitleTracksMap.get(trackNum) || [];

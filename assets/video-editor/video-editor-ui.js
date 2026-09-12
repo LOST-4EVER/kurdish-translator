@@ -99,6 +99,7 @@
         btnImportSubFile: $('#studioImportSubBtn'),
         subFileInput: $('#studioSubFileInput'),
         btnBurnExport: $('#studioBurnExportBtn'),
+        moreBtn: $('#studioMoreBtn'),
 
         // Player Stage & Viewport
         playerStage: $('#studioPlayerStage'),
@@ -160,7 +161,15 @@
           speed: $('#vnSpeedPopover'),
           volume: $('#vnVolumePopover'),
           tools: $('#vnSubToolsPopover'),
+          more: $('#vnMoreMenuPopover'),
         },
+
+        // Mobile More Menu Controls
+        closeMorePop: $('#vnMoreCloseBtn'),
+        moreImportSubBtn: $('#vnMoreImportSubBtn'),
+        moreChangeVideoBtn: $('#vnMoreChangeVideoBtn'),
+        moreSampleVideoBtn: $('#vnMoreSampleVideoBtn'),
+        moreHelpBtn: $('#vnMoreHelpBtn'),
 
         // Sub Tools Controls
         closeSubToolsPop: $('#vnSubToolsCloseBtn'),
@@ -280,6 +289,60 @@
         helpModal: $('#studioHelpModal'),
         helpCloseBtn: $('#studioHelpCloseBtn'),
         helpDoneBtn: $('#studioHelpDoneBtn'),
+
+        // Export Tabs & Subtitle Only Export
+        exportTabVideoBtn: $('#exportTabVideoBtn'),
+        exportTabSubBtn: $('#exportTabSubBtn'),
+        exportSubOnlyArea: $('#exportSubOnlyArea'),
+        studioSubExportFormatSel: $('#studioSubExportFormatSel'),
+        studioSubExportEncodingSel: $('#studioSubExportEncodingSel'),
+        studioDirectSubDownloadBtn: $('#studioDirectSubDownloadBtn'),
+        exportModalFooter: $('#exportModalFooter'),
+
+        // Quick Open-up Panel
+        quickPanel: $('#vnQuickTextPanel'),
+        quickBackdrop: $('#vnQuickBackdrop'),
+        quickCueBadge: $('#vnQuickCueBadge'),
+        quickTimeTag: $('#vnQuickTimeTag'),
+        quickDurTag: $('#vnQuickDurTag'),
+        quickPace: $('#vnQuickPace'),
+        quickPrevBtn: $('#vnQuickPrevBtn'),
+        quickPlayBtn: $('#vnQuickPlayBtn'),
+        quickNextBtn: $('#vnQuickNextBtn'),
+        quickNudgeMinus: $('#vnQuickNudgeMinus'),
+        quickNudgePlus: $('#vnQuickNudgePlus'),
+        quickUndoBtn: $('#vnQuickUndoBtn'),
+        quickRedoBtn: $('#vnQuickRedoBtn'),
+        quickDoneBtn: $('#vnQuickDoneBtn'),
+        quickTextarea: $('#vnQuickTextarea'),
+        quickKurdishBar: $('#vnQuickKurdishBar'),
+        quickKurdishChips: $('#vnQuickKurdishChips'),
+        quickFixOrthographyBtn: $('#vnQuickFixOrthographyBtn'),
+        quickInsertBreakBtn: $('#vnQuickInsertBreakBtn'),
+        quickOrigBox: $('#vnQuickOrigBox'),
+        quickOrigText: $('#vnQuickOrigText'),
+        quickCopyOrigBtn: $('#vnQuickCopyOrigBtn'),
+        quickSplitBtn: $('#vnQuickSplitBtn'),
+        quickDeleteBtn: $('#vnQuickDeleteBtn'),
+        quickTimingToggleBtn: $('#vnQuickTimingToggleBtn'),
+        quickStyleToggleBtn: $('#vnQuickStyleToggleBtn'),
+        quickCharCount: $('#vnQuickCharCount'),
+        quickTimingTray: $('#vnQuickTimingTray'),
+        quickStartMinus500: $('#vnQuickStartMinus500'),
+        quickStartMinus100: $('#vnQuickStartMinus100'),
+        quickStartVal: $('#vnQuickStartVal'),
+        quickStartPlus100: $('#vnQuickStartPlus100'),
+        quickStartPlus500: $('#vnQuickStartPlus500'),
+        quickEndMinus500: $('#vnQuickEndMinus500'),
+        quickEndMinus100: $('#vnQuickEndMinus100'),
+        quickEndVal: $('#vnQuickEndVal'),
+        quickEndPlus100: $('#vnQuickEndPlus100'),
+        quickEndPlus500: $('#vnQuickEndPlus500'),
+        quickFormatTray: $('#vnQuickFormatTray'),
+        quickFontFamilySel: $('#vnQuickFontFamilySel'),
+        quickSizeGroup: $('#vnQuickSizeGroup'),
+        quickColorGroup: $('#vnQuickColorGroup'),
+        quickBgSel: $('#vnQuickBgSel'),
       };
       return this.els;
     }
@@ -306,8 +369,8 @@
       </button>
       <div class="vn-aspect-dropdown-wrap">
         <select class="vn-aspect-select" id="studioAspectRatioSel" title="Aspect Ratio">
-          <option value="original">Original ▾</option>
-          <option value="16:9" selected>16:9 (Cinema)</option>
+          <option value="original" selected>Original ▾</option>
+          <option value="16:9">16:9 (Cinema)</option>
           <option value="9:16">9:16 (Reels/TikTok)</option>
           <option value="1:1">1:1 (Square)</option>
           <option value="4:3">4:3 (TV)</option>
@@ -486,9 +549,9 @@
       <div class="vn-popover-row">
         <label>Background</label>
         <select id="studioSubBgSel" class="vn-pop-select">
-          <option value="rgba(0, 0, 0, 0.75)" selected>Dark Box</option>
+          <option value="transparent" selected>Transparent (Shadow only)</option>
+          <option value="rgba(0, 0, 0, 0.75)">Dark Box</option>
           <option value="rgba(0, 0, 0, 0.45)">Soft Box</option>
-          <option value="transparent">Transparent (Shadow only)</option>
         </select>
       </div>
       <div class="vn-popover-row">

@@ -52,11 +52,7 @@
       // 3. Initialize Overlay Renderer
       VideoEditorOverlay.init(this.els, {
         onOverlayClick: () => {
-          const cue = VideoEditorState.activeCue || (this._getNearestCue() && this._getNearestCue().cue);
-          const idx = VideoEditorState.activeCueIndex >= 0 ? VideoEditorState.activeCueIndex : (this._getNearestCue() && this._getNearestCue().index);
-          if (cue && idx >= 0) {
-            VideoEditorBubble.open(cue, idx);
-          }
+          this._openQuickTextEditor();
         },
         onPositionChange: (pos) => {
           if (pos) {
@@ -68,13 +64,35 @@
       });
       VideoEditorOverlay.applyStyling(VideoEditorState.overlayConfig);
 
-      // 4. Initialize Bubble Editor
+      // 4. Initialize Bubble & Quick Open-up Panel Editors
       if (typeof VideoEditorBubble !== 'undefined') {
         VideoEditorBubble.init(this.els, {
           onTextChange: (cue, idx, text) => {
             if (this.timeline) this.timeline.setCues(VideoEditorState.getCues());
             VideoEditorOverlay.renderActiveCue(cue, VideoEditorState.overlayConfig);
             VideoEditorOverlay.updateTextShower(cue, idx);
+          },
+          onSplit: (idx) => {
+            this._splitCurrentCue();
+          },
+        });
+      }
+
+      if (typeof VideoEditorQuickPanel !== 'undefined') {
+        VideoEditorQuickPanel.init(this.els, {
+          onTextChange: (cue, idx, text) => {
+            if (this.timeline) this.timeline.setCues(VideoEditorState.getCues());
+            VideoEditorOverlay.renderActiveCue(cue, VideoEditorState.overlayConfig);
+            VideoEditorOverlay.updateTextShower(cue, idx);
+          },
+          onSeek: (timeMs) => {
+            this.seekTo(timeMs);
+          },
+          onPlayCue: (cue) => {
+            if (cue) {
+              this.seekTo(cue.start);
+              VideoEditorPlayer.play();
+            }
           },
           onSplit: (idx) => {
             this._splitCurrentCue();
@@ -321,29 +339,17 @@
         this.els.redoBtn.addEventListener('click', () => this.redo());
       }
 
-      // Text Shower Click -> Quick Bubble Editor
+      // Text Shower Click -> Quick Open-up Panel
       if (this.els.textShowerCard) {
         this.els.textShowerCard.addEventListener('click', () => {
-          const cue = VideoEditorState.activeCue || (this._getNearestCue() && this._getNearestCue().cue);
-          const idx = VideoEditorState.activeCueIndex >= 0 ? VideoEditorState.activeCueIndex : (this._getNearestCue() && this._getNearestCue().index);
-          if (cue && idx >= 0) {
-            VideoEditorBubble.open(cue, idx);
-          } else {
-            VideoEditorUI.showToast('No active subtitle. Click + on Kurdish track to create one.', 'info');
-          }
+          this._openQuickTextEditor();
         });
       }
 
       // Toolbar Edit / Inspect Button
       if (this.els.toolInspectBtn) {
         this.els.toolInspectBtn.addEventListener('click', () => {
-          const cue = VideoEditorState.activeCue || (this._getNearestCue() && this._getNearestCue().cue);
-          const idx = VideoEditorState.activeCueIndex >= 0 ? VideoEditorState.activeCueIndex : (this._getNearestCue() && this._getNearestCue().index);
-          if (cue && idx >= 0) {
-            VideoEditorBubble.open(cue, idx);
-          } else {
-            VideoEditorUI.showToast('No cue active to edit. Position playhead and click + on text track.', 'info');
-          }
+          this._openQuickTextEditor();
         });
       }
 
@@ -382,26 +388,72 @@
       // Layout Vertical Resizer
       this._bindResizer();
 
+      // Video Error Overlay Action Buttons
+      const errBrowseBtn = document.getElementById('studioVideoErrBrowseBtn');
+      const errSampleBtn = document.getElementById('studioVideoErrSampleBtn');
+      if (errBrowseBtn && this.els.videoFileInput) {
+        errBrowseBtn.addEventListener('click', () => this.els.videoFileInput.click());
+      }
+      if (errSampleBtn) {
+        errSampleBtn.addEventListener('click', () => {
+          VideoEditorPlayer.hideErrorOverlay();
+          VideoEditorPlayer.generateSampleVideo();
+        });
+      }
+
       // Keyboard Shortcuts
       window.addEventListener('keydown', (e) => {
         if (!this.isStudioActive) return;
         const tag = (e.target.tagName || '').toLowerCase();
         if (tag === 'input' || tag === 'textarea' || tag === 'select') return;
 
-        if (e.code === 'Space') {
+        // Timeline & Global Undo / Redo
+        if ((e.ctrlKey || e.metaKey) && (e.key === 'z' || e.key === 'Z') && !e.shiftKey) {
+          e.preventDefault();
+          this.undo();
+        } else if (((e.ctrlKey || e.metaKey) && (e.key === 'y' || e.key === 'Y')) || ((e.ctrlKey || e.metaKey) && e.shiftKey && (e.key === 'z' || e.key === 'Z'))) {
+          e.preventDefault();
+          this.redo();
+        } else if (e.code === 'Space' || e.code === 'KeyK') {
           e.preventDefault();
           VideoEditorPlayer.togglePlay();
+        } else if (e.code === 'KeyJ') {
+          e.preventDefault();
+          VideoEditorPlayer.stepSeconds(-1);
+        } else if (e.code === 'KeyL') {
+          e.preventDefault();
+          VideoEditorPlayer.stepSeconds(1);
         } else if (e.code === 'ArrowLeft') {
           e.preventDefault();
-          VideoEditorPlayer.stepSeconds(e.shiftKey ? -5 : -1);
+          VideoEditorPlayer.stepSeconds(e.shiftKey ? -5 : -0.2);
         } else if (e.code === 'ArrowRight') {
           e.preventDefault();
-          VideoEditorPlayer.stepSeconds(e.shiftKey ? 5 : 1);
-        } else if (e.code === 'KeyS') {
+          VideoEditorPlayer.stepSeconds(e.shiftKey ? 5 : 0.2);
+        } else if (e.code === 'ArrowUp') {
+          e.preventDefault();
+          this._stepCue(-1);
+        } else if (e.code === 'ArrowDown') {
+          e.preventDefault();
+          this._stepCue(1);
+        } else if (e.code === 'BracketLeft') {
+          e.preventDefault();
+          this._trimActiveCueStart();
+        } else if (e.code === 'BracketRight') {
+          e.preventDefault();
+          this._trimActiveCueEnd();
+        } else if (e.code === 'Delete' || e.code === 'Backspace') {
+          e.preventDefault();
+          this._deleteCurrentCue();
+        } else if (e.code === 'KeyS' || e.code === 'KeyC') {
           e.preventDefault();
           this._splitCurrentCue();
+        } else if (e.code === 'KeyE') {
+          e.preventDefault();
+          this._openQuickTextEditor();
         } else if (e.code === 'Escape') {
-          if (typeof VideoEditorPopovers !== 'undefined' && VideoEditorPopovers.closeAll && Object.values(this.els.popovers || {}).some((p) => p && !p.classList.contains('hidden'))) {
+          if (typeof VideoEditorQuickPanel !== 'undefined' && VideoEditorQuickPanel.isOpen && VideoEditorQuickPanel.isOpen()) {
+            VideoEditorQuickPanel.close();
+          } else if (typeof VideoEditorPopovers !== 'undefined' && VideoEditorPopovers.closeAll && Object.values(this.els.popovers || {}).some((p) => p && !p.classList.contains('hidden'))) {
             VideoEditorPopovers.closeAll();
           } else if (VideoEditorBubble.isOpen && typeof VideoEditorBubble.isOpen === 'function' && VideoEditorBubble.isOpen()) {
             VideoEditorBubble.close();
@@ -416,6 +468,20 @@
           }
         }
       });
+    }
+
+    _openQuickTextEditor(targetCue = null, targetIdx = -1) {
+      const cue = targetCue || VideoEditorState.activeCue || (this._getNearestCue() && this._getNearestCue().cue);
+      const idx = targetIdx >= 0 ? targetIdx : (VideoEditorState.activeCueIndex >= 0 ? VideoEditorState.activeCueIndex : (this._getNearestCue() && this._getNearestCue().index));
+      if (cue && idx >= 0) {
+        if (typeof VideoEditorQuickPanel !== 'undefined' && VideoEditorQuickPanel.open) {
+          VideoEditorQuickPanel.open(cue, idx);
+        } else if (typeof VideoEditorBubble !== 'undefined' && VideoEditorBubble.open) {
+          VideoEditorBubble.open(cue, idx);
+        }
+      } else {
+        VideoEditorUI.showToast('No active subtitle. Click + on Kurdish track to create one.', 'info');
+      }
     }
 
     _bindResizer() {
@@ -588,7 +654,13 @@
           this.seekTo(cue.start);
           VideoEditorOverlay.updateTextShower(cue, idx);
           VideoEditorOverlay.renderActiveCue(cue, VideoEditorState.overlayConfig);
-          VideoEditorBubble.open(cue, idx);
+        },
+        onCueDoubleClick: (cue, idx) => {
+          VideoEditorState.setActiveCue(cue, idx);
+          this.seekTo(cue.start);
+          VideoEditorOverlay.updateTextShower(cue, idx);
+          VideoEditorOverlay.renderActiveCue(cue, VideoEditorState.overlayConfig);
+          this._openQuickTextEditor(cue, idx);
         },
         onHeaderClick: (trackType) => {
           this._handleTrackHeaderClick(trackType);
@@ -731,6 +803,56 @@
       }
     }
 
+    _trimActiveCueStart() {
+      const cue = VideoEditorState.activeCue;
+      const idx = VideoEditorState.activeCueIndex;
+      if (!cue || idx < 0) {
+        VideoEditorUI.showToast('Select a subtitle cue to trim start time.', 'info');
+        return;
+      }
+      const player = this.els.videoPlayer;
+      if (!player) return;
+      const currentMs = Math.round(player.currentTime * 1000 + VideoEditorState.syncOffsetMs);
+      if (currentMs >= cue.end - 100) {
+        VideoEditorUI.showToast('Start time cannot be after end time.', 'warning');
+        return;
+      }
+      VideoEditorState.updateCueTiming(idx, currentMs, cue.end);
+      if (this.timeline) this.timeline.setCues(VideoEditorState.getCues());
+      VideoEditorUI.showToast(`Trimmed start to ${VideoEditorPlayer.formatTime(currentMs)} [`, 'success');
+    }
+
+    _trimActiveCueEnd() {
+      const cue = VideoEditorState.activeCue;
+      const idx = VideoEditorState.activeCueIndex;
+      if (!cue || idx < 0) {
+        VideoEditorUI.showToast('Select a subtitle cue to trim end time.', 'info');
+        return;
+      }
+      const player = this.els.videoPlayer;
+      if (!player) return;
+      const currentMs = Math.round(player.currentTime * 1000 + VideoEditorState.syncOffsetMs);
+      if (currentMs <= cue.start + 100) {
+        VideoEditorUI.showToast('End time cannot be before start time.', 'warning');
+        return;
+      }
+      VideoEditorState.updateCueTiming(idx, cue.start, currentMs);
+      if (this.timeline) this.timeline.setCues(VideoEditorState.getCues());
+      VideoEditorUI.showToast(`Trimmed end to ${VideoEditorPlayer.formatTime(currentMs)} ]`, 'success');
+    }
+
+    _deleteCurrentCue() {
+      const idx = VideoEditorState.activeCueIndex;
+      if (idx < 0) {
+        VideoEditorUI.showToast('Select a cue to delete.', 'info');
+        return;
+      }
+      VideoEditorState.deleteCue(idx);
+      if (this.timeline) this.timeline.setCues(VideoEditorState.getCues());
+      VideoEditorOverlay.clearOverlay();
+      VideoEditorUI.showToast('Deleted subtitle cue', 'info');
+    }
+
     undo() {
       if (VideoEditorState.undo()) {
         if (this.timeline) this.timeline.setCues(VideoEditorState.getCues());
@@ -784,8 +906,8 @@
       }
     }
 
-    _checkAndSyncSubtitlesQuietly() {
-      if (VideoEditorState.getCues().length > 0) return;
+    _checkAndSyncSubtitlesQuietly(force = false) {
+      if (!force && VideoEditorState.getCues().length > 0) return;
       if (window._getAppWorkCues && typeof window._getAppWorkCues === 'function') {
         const appCues = window._getAppWorkCues();
         if (appCues && appCues.length > 0) {
@@ -801,9 +923,15 @@
     async importSubtitleFile(file) {
       if (!file) return;
       try {
-        const text = await file.text();
+        let text = '';
+        if (typeof AppDecoder !== 'undefined' && AppDecoder.readTextFile) {
+          text = await AppDecoder.readTextFile(file);
+        } else {
+          text = await file.text();
+        }
         if (typeof SubParser !== 'undefined') {
-          const parsed = SubParser.parse(text);
+          const ext = file.name ? file.name.split('.').pop() : null;
+          const parsed = SubParser.parse(text, ext);
           if (parsed && parsed.cues && parsed.cues.length > 0) {
             VideoEditorState.setCues(parsed.cues);
             if (this.timeline) this.timeline.setCues(parsed.cues);

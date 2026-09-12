@@ -58,20 +58,42 @@
         if (this.onMetadataLoadedCallback && durMs > 0) {
           this.onMetadataLoadedCallback(durMs);
         }
+
+        // Hide loading overlay and calculate video specs badge & native aspect ratio
+        this.hideLoadingOverlay();
+        this.hideErrorOverlay();
+        this._updateSpecsBadge();
+
+        const selRatio = this.els.aspectRatioSel ? this.els.aspectRatioSel.value : 'original';
+        this.setAspectRatio(selRatio || 'original');
       };
 
       player.addEventListener('loadedmetadata', updateMeta);
       player.addEventListener('durationchange', updateMeta);
-      player.addEventListener('canplay', updateMeta);
+      player.addEventListener('canplay', () => {
+        updateMeta();
+        this.hideLoadingOverlay();
+      });
+
+      player.addEventListener('waiting', () => {
+        if (!player.paused && !player.ended) {
+          this.showLoadingOverlay('Buffering...', 'Fetching media stream frames');
+        }
+      });
+
+      player.addEventListener('playing', () => {
+        this.hideLoadingOverlay();
+      });
 
       player.onerror = () => {
         const err = player.error;
         console.warn('Video element playback error:', err);
+        this.hideLoadingOverlay();
         if (this.videoFile) {
-          VideoEditorUI.showToast(
-            'Unable to decode video stream in this browser.',
-            'error',
-            'Try MP4 (H.264 / AAC) or WebM.'
+          const ext = '.' + (this.videoFile.name || '').split('.').pop().toUpperCase();
+          this.showErrorOverlay(
+            `Unable to decode video (${ext})`,
+            'This video format or audio codec is not supported by your browser engine. Try converted MP4 (H.264 / AAC) or WebM.'
           );
         }
       };
@@ -87,6 +109,58 @@
           }
         }
       });
+    }
+
+    showLoadingOverlay(title = 'Loading Video...', sub = 'Decoding media stream & metadata') {
+      const overlay = document.getElementById('studioVideoLoadingOverlay');
+      const t = document.getElementById('studioVideoLoadingText');
+      const s = document.getElementById('studioVideoLoadingSub');
+      if (t && title) t.textContent = title;
+      if (s && sub) s.textContent = sub;
+      if (overlay) overlay.classList.remove('hidden');
+    }
+
+    hideLoadingOverlay() {
+      const overlay = document.getElementById('studioVideoLoadingOverlay');
+      if (overlay) overlay.classList.add('hidden');
+    }
+
+    showErrorOverlay(title, msg) {
+      const overlay = document.getElementById('studioVideoErrorOverlay');
+      const t = document.getElementById('studioVideoErrorTitle');
+      const m = document.getElementById('studioVideoErrorMsg');
+      if (t && title) t.textContent = title;
+      if (m && msg) m.textContent = msg;
+      if (overlay) overlay.classList.remove('hidden');
+    }
+
+    hideErrorOverlay() {
+      const overlay = document.getElementById('studioVideoErrorOverlay');
+      if (overlay) overlay.classList.add('hidden');
+    }
+
+    _updateSpecsBadge() {
+      const player = this.els.videoPlayer;
+      const badge = document.getElementById('studioVideoSpecsBadge');
+      const resSpan = document.getElementById('studioVideoSpecRes');
+      const fmtSpan = document.getElementById('studioVideoSpecFmt');
+      if (!player || !badge || !resSpan || !fmtSpan) return;
+
+      const w = player.videoWidth;
+      const h = player.videoHeight;
+      if (w > 0 && h > 0) {
+        let label = `${h}p`;
+        if (h >= 2160 || w >= 3840) label = '4K UHD';
+        else if (h >= 1440) label = '1440p';
+        else if (h >= 1080) label = '1080p Full HD';
+        else if (h >= 720) label = '720p HD';
+        else label = `${w}x${h}`;
+
+        const fileExt = (this.videoFile ? this.videoFile.name.split('.').pop() : 'video').toUpperCase();
+        resSpan.textContent = label;
+        fmtSpan.textContent = fileExt;
+        badge.classList.remove('hidden');
+      }
     }
 
     _startPlaybackSync() {
@@ -147,6 +221,9 @@
       if (this.videoUrl) {
         URL.revokeObjectURL(this.videoUrl);
       }
+
+      this.hideErrorOverlay();
+      this.showLoadingOverlay('Loading Video...', `Decoding ${file.name} (${ext.toUpperCase()})`);
 
       this.videoFile = file;
       this.videoUrl = URL.createObjectURL(file);
@@ -249,7 +326,17 @@
 
     setAspectRatio(ratio) {
       if (!this.els.viewportWrapper) return;
-      this.els.viewportWrapper.setAttribute('data-ratio', ratio);
+      const player = this.els.videoPlayer;
+      if (ratio === 'original' || ratio === 'auto') {
+        if (player && player.videoWidth > 0 && player.videoHeight > 0) {
+          this.els.viewportWrapper.style.setProperty('--vn-video-aspect', `${player.videoWidth} / ${player.videoHeight}`);
+        } else {
+          this.els.viewportWrapper.style.setProperty('--vn-video-aspect', '16 / 9');
+        }
+        this.els.viewportWrapper.setAttribute('data-ratio', 'original');
+      } else {
+        this.els.viewportWrapper.setAttribute('data-ratio', ratio);
+      }
     }
 
     toggleFullscreen() {

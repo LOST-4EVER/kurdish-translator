@@ -61,6 +61,12 @@
           this.toggle('tools', this.els.toolSubToolsBtn);
         });
       }
+      if (this.els.moreBtn) {
+        this.els.moreBtn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          this.toggle('more', this.els.moreBtn);
+        });
+      }
 
       // Close buttons inside popovers
       if (this.els.closeStylePop) this.els.closeStylePop.addEventListener('click', () => this.closeAll());
@@ -68,10 +74,37 @@
       if (this.els.closeSpeedPop) this.els.closeSpeedPop.addEventListener('click', () => this.closeAll());
       if (this.els.closeVolumePop) this.els.closeVolumePop.addEventListener('click', () => this.closeAll());
       if (this.els.closeSubToolsPop) this.els.closeSubToolsPop.addEventListener('click', () => this.closeAll());
+      if (this.els.closeMorePop) this.els.closeMorePop.addEventListener('click', () => this.closeAll());
+
+      // Mobile More Menu Actions
+      if (this.els.moreImportSubBtn) {
+        this.els.moreImportSubBtn.addEventListener('click', () => {
+          this.closeAll();
+          if (this.els.subFileInput) this.els.subFileInput.click();
+        });
+      }
+      if (this.els.moreChangeVideoBtn) {
+        this.els.moreChangeVideoBtn.addEventListener('click', () => {
+          this.closeAll();
+          if (this.els.videoFileInput) this.els.videoFileInput.click();
+        });
+      }
+      if (this.els.moreSampleVideoBtn) {
+        this.els.moreSampleVideoBtn.addEventListener('click', () => {
+          this.closeAll();
+          if (this.els.btnSampleVideo) this.els.btnSampleVideo.click();
+        });
+      }
+      if (this.els.moreHelpBtn) {
+        this.els.moreHelpBtn.addEventListener('click', () => {
+          this.closeAll();
+          if (this.els.helpModal) this.els.helpModal.classList.remove('hidden');
+        });
+      }
 
       // Click outside to dismiss popovers
       document.addEventListener('click', (e) => {
-        if (this.activePopover && !e.target.closest('.vn-popover') && !e.target.closest('.vn-tool-btn') && !e.target.closest('#studioSyncPillBtn')) {
+        if (this.activePopover && !e.target.closest('.vn-popover') && !e.target.closest('.vn-tool-btn') && !e.target.closest('#studioSyncPillBtn') && !e.target.closest('#studioMoreBtn')) {
           this.closeAll();
         }
       });
@@ -86,7 +119,7 @@
             fontSize: this.els.subFontSel ? this.els.subFontSel.value : '1.25',
             position: this.els.subPosSel ? this.els.subPosSel.value : 'bottom',
             color: this.els.subColorSel ? this.els.subColorSel.value : '#ffffff',
-            bgColor: this.els.subBgSel ? this.els.subBgSel.value : 'rgba(0, 0, 0, 0.75)',
+            bgColor: this.els.subBgSel ? this.els.subBgSel.value : 'transparent',
             showOrig: this.els.subShowOrigToggle ? this.els.subShowOrigToggle.checked : false,
           });
         }

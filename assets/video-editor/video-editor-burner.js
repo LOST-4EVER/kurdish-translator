@@ -142,29 +142,104 @@
           this.updateEstimatedSpecs();
         });
       }
+
+      // Export Mode Tabs
+      if (this.els.exportTabVideoBtn) {
+        this.els.exportTabVideoBtn.addEventListener('click', () => this.switchExportTab('video'));
+      }
+      if (this.els.exportTabSubBtn) {
+        this.els.exportTabSubBtn.addEventListener('click', () => this.switchExportTab('subtitle'));
+      }
+
+      // Direct Subtitle File Download
+      if (this.els.studioDirectSubDownloadBtn) {
+        this.els.studioDirectSubDownloadBtn.addEventListener('click', () => this.downloadSubtitleFile());
+      }
+    }
+
+    switchExportTab(mode) {
+      if (!this.els) return;
+      const isVideo = mode === 'video';
+
+      if (this.els.exportTabVideoBtn) {
+        this.els.exportTabVideoBtn.style.background = isVideo ? '#a855f7' : 'rgba(255,255,255,0.08)';
+        this.els.exportTabVideoBtn.style.color = isVideo ? '#ffffff' : 'rgba(255,255,255,0.7)';
+      }
+      if (this.els.exportTabSubBtn) {
+        this.els.exportTabSubBtn.style.background = !isVideo ? '#a855f7' : 'rgba(255,255,255,0.08)';
+        this.els.exportTabSubBtn.style.color = !isVideo ? '#ffffff' : 'rgba(255,255,255,0.7)';
+      }
+
+      if (this.els.exportSubOnlyArea) {
+        this.els.exportSubOnlyArea.classList.toggle('hidden', isVideo);
+      }
+      if (this.els.exportConfigArea) {
+        this.els.exportConfigArea.classList.toggle('hidden', !isVideo);
+      }
+      if (this.els.exportModalFooter) {
+        this.els.exportModalFooter.style.display = isVideo ? 'flex' : 'none';
+      }
+    }
+
+    downloadSubtitleFile() {
+      const cues = window.VideoEditorState ? window.VideoEditorState.getCues() : [];
+      if (!cues || !cues.length) {
+        VideoEditorUI.showToast('No subtitles available to download.', 'warning');
+        return;
+      }
+
+      const format = this.els.studioSubExportFormatSel ? this.els.studioSubExportFormatSel.value : 'srt';
+      const encoding = this.els.studioSubExportEncodingSel ? this.els.studioSubExportEncodingSel.value : 'utf-8';
+
+      let serialized = '';
+      if (typeof SubParser !== 'undefined' && SubParser.serialize) {
+        serialized = SubParser.serialize(cues, format);
+      } else {
+        serialized = cues.map((c, i) => `${i + 1}\n${formatTime(c.start / 1000)},000 --> ${formatTime(c.end / 1000)},000\n${c.text}\n`).join('\n');
+      }
+
+      let blobData = [serialized];
+      if (encoding === 'utf-8-bom') {
+        blobData = ['\uFEFF' + serialized];
+      }
+
+      const blob = new Blob(blobData, { type: 'text/plain;charset=utf-8' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      const baseName = (window.VideoEditorPlayer && window.VideoEditorPlayer.videoFile && window.VideoEditorPlayer.videoFile.name)
+        ? window.VideoEditorPlayer.videoFile.name.replace(/\.[^/.]+$/, '')
+        : 'subtitles';
+      link.download = `${baseName}.ckb.${format}`;
+      link.href = url;
+      document.body.appendChild(link);
+      link.click();
+      setTimeout(() => {
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
+      }, 100);
+
+      VideoEditorUI.showToast(`Downloaded Kurdish subtitles as .${format}`, 'success');
+      this.closeModal();
     }
 
     openModal(hasVideo, cuesCount) {
-      if (!hasVideo) {
-        VideoEditorUI.showToast('Please import a video file first to export.', 'info');
-        return;
-      }
-      if (!cuesCount) {
-        VideoEditorUI.showToast('No subtitles loaded. Click "Apply Kurdish Subs" first.', 'info');
-        return;
-      }
-
       if (this.els && this.els.burnModal) {
         this.els.burnModal.classList.remove('hidden');
         this.burnRecording = false;
         this.burnAbort = false;
 
+        // If no video is present, default to Subtitle File Export tab
+        if (!hasVideo) {
+          this.switchExportTab('subtitle');
+        } else {
+          this.switchExportTab('video');
+        }
+
         // Reset UI stages
-        if (this.els.exportConfigArea) this.els.exportConfigArea.classList.remove('hidden');
         if (this.els.exportStageArea) this.els.exportStageArea.classList.add('hidden');
         if (this.els.burnSuccessArea) this.els.burnSuccessArea.classList.add('hidden');
         if (this.els.burnActionBtn) {
-          this.els.burnActionBtn.disabled = false;
+          this.els.burnActionBtn.disabled = !hasVideo;
           this.els.burnActionBtn.classList.remove('hidden');
           if (this.els.exportStartBtnText) this.els.exportStartBtnText.textContent = 'Start Video Export';
         }
@@ -549,7 +624,7 @@
           const boxWidth = Math.min(width * 0.92, maxLineWidth + baseFontSize * 1.4);
 
           // Background box
-          const bgColor = overlayCfg.bgColor || 'rgba(0, 0, 0, 0.75)';
+          const bgColor = overlayCfg.bgColor || 'transparent';
           if (bgColor !== 'transparent') {
             ctx.fillStyle = bgColor;
             ctx.beginPath();

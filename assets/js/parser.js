@@ -363,13 +363,16 @@ const SubParser = (() => {
           }
         }
 
+        const cleanText = normalizeTextForStandard(text, true);
+
         cues.push({
           index: cues.length + 1,
           start: assToMs(t0[1]),
           end: assToMs(t1[1]),
           rawStart: t0[1],
           rawEnd: t1[1],
-          text,
+          text: cleanText || text,
+          rawAssText: text,
           extra,
           placement,
           align,
@@ -448,11 +451,20 @@ const SubParser = (() => {
         color = `#${r}${g}${b}`;
       }
 
+      const cleanText = text
+        .replace(/\{[PfsYc]:[^}]*\}/gi, '')
+        .replace(/\{y:i\}/gi, '')
+        .replace(/\{y:b\}/gi, '')
+        .replace(/\{y:u\}/gi, '')
+        .replace(/\{[^{}]*\}/g, '')
+        .trim();
+
       cues.push({
         index: cues.length + 1,
         start: Math.round((Number(m[1]) / fps) * 1000),
         end: Math.round((Number(m[2]) / fps) * 1000),
-        text,
+        text: cleanText || text,
+        rawSubText: text,
         placement,
         align,
         pos,
