@@ -83,6 +83,10 @@
       if (helpModal && !$('#studioHelpModal')) {
         document.body.appendChild(helpModal);
       }
+      const movModal = temp.querySelector('#studioMovModal');
+      if (movModal && !$('#studioMovModal')) {
+        document.body.appendChild(movModal);
+      }
     }
 
     _initElements() {
@@ -236,6 +240,7 @@
         burnPercentText: $('#studioBurnPercentText'),
         burnSuccessArea: $('#studioBurnSuccessArea'),
         burnDownloadLink: $('#studioBurnDownloadLink'),
+        burnShareBtn: $('#studioBurnShareBtn'),
         burnActionBtn: $('#studioBurnStartBtn'),
         burnCancelBtn: $('#studioBurnCancelBtn'),
 
@@ -297,6 +302,7 @@
         studioSubExportFormatSel: $('#studioSubExportFormatSel'),
         studioSubExportEncodingSel: $('#studioSubExportEncodingSel'),
         studioDirectSubDownloadBtn: $('#studioDirectSubDownloadBtn'),
+        studioDirectSubShareBtn: $('#studioDirectSubShareBtn'),
         exportModalFooter: $('#exportModalFooter'),
 
         // Quick Open-up Panel
@@ -314,6 +320,7 @@
         quickUndoBtn: $('#vnQuickUndoBtn'),
         quickRedoBtn: $('#vnQuickRedoBtn'),
         quickDoneBtn: $('#vnQuickDoneBtn'),
+        quickKurdishToggleBtn: $('#vnQuickKurdishToggleBtn'),
         quickTextarea: $('#vnQuickTextarea'),
         quickKurdishBar: $('#vnQuickKurdishBar'),
         quickKurdishChips: $('#vnQuickKurdishChips'),

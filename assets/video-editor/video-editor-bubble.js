@@ -353,12 +353,23 @@
         });
       }
 
+      // Kurdish Bar Toggle Button
+      if (this.els.quickKurdishToggleBtn && this.els.quickKurdishBar) {
+        this.els.quickKurdishToggleBtn.addEventListener('click', () => {
+          const isHidden = this.els.quickKurdishBar.classList.toggle('hidden');
+          this.els.quickKurdishToggleBtn.classList.toggle('active', !isHidden);
+        });
+      }
+
       // Kurdish Character Chips Click
       if (this.els.quickKurdishBar) {
         this.els.quickKurdishBar.addEventListener('click', (e) => {
           const chip = e.target.closest('.vn-kurdish-chip');
           if (chip && chip.dataset.char) {
             e.preventDefault();
+            if (typeof navigator !== 'undefined' && 'vibrate' in navigator) {
+              try { navigator.vibrate(10); } catch (_) {}
+            }
             this._insertTextAtCursor(chip.dataset.char);
           }
         });

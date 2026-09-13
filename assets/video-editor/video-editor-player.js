@@ -38,10 +38,16 @@
       const onPlayStart = () => {
         this._updatePlayIcon(true);
         this._startPlaybackSync();
+        if (window.VideoEditorHardware) {
+          window.VideoEditorHardware.requestWakeLock('playback');
+        }
       };
       const onPlayStop = () => {
         this._updatePlayIcon(false);
         this._stopPlaybackSync();
+        if (window.VideoEditorHardware) {
+          window.VideoEditorHardware.releaseWakeLock('playback');
+        }
       };
 
       player.addEventListener('play', onPlayStart);
@@ -304,6 +310,9 @@
     stepSeconds(delta) {
       if (!this.els.videoPlayer) return;
       const targetSec = Math.max(0, this.els.videoPlayer.currentTime + delta);
+      if (window.VideoEditorHardware) {
+        window.VideoEditorHardware.haptic(10);
+      }
       this.seekTo(targetSec * 1000);
     }
 

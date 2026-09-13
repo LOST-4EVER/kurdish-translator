@@ -286,6 +286,11 @@
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><polyline points="23 4 23 10 17 10"></polyline><path d="M20.49 15a9 9 0 1 1-2.13-9.36L23 10"></path></svg>
           </button>
           <span class="vn-quick-divider"></span>
+          <!-- Kurdish Helper Bar Toggle -->
+          <button type="button" class="vn-quick-icon-btn active" id="vnQuickKurdishToggleBtn" title="Toggle Kurdish Letters &amp; Orthography Bar (تەختەکلیلی کوردی)" aria-label="Toggle Kurdish Bar">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 7V4h16v3M9 20h6M12 4v16"></path></svg>
+          </button>
+          <span class="vn-quick-divider"></span>
           <!-- Done / Save Button -->
           <button type="button" class="vn-quick-done-btn" id="vnQuickDoneBtn" title="Done (Esc / Ctrl+Enter)" aria-label="Done">
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"></polyline></svg>
@@ -299,7 +304,7 @@
         <textarea class="vn-quick-textarea" id="vnQuickTextarea" rows="3" placeholder="دەقی کوردی بۆ ئەم ژێرنووسە لێرە بنووسە..." dir="rtl"></textarea>
 
         <!-- Kurdish Special Characters & Quick Formatting Helper Bar -->
-        <div class="vn-quick-kurdish-bar hidden" id="vnQuickKurdishBar">
+        <div class="vn-quick-kurdish-bar" id="vnQuickKurdishBar">
           <div class="vn-quick-char-chips" id="vnQuickKurdishChips" title="Click to insert Kurdish letter at cursor">
             <button type="button" class="vn-kurdish-chip" data-char="ێ">ێ</button>
             <button type="button" class="vn-kurdish-chip" data-char="ۆ">ۆ</button>
@@ -772,10 +777,16 @@
               </select>
             </div>
           </div>
-          <button type="button" class="studio-btn-primary" id="studioDirectSubDownloadBtn" style="background:#22c55e; color:#052e16; font-weight:700; width:100%; justify-content:center; padding:9px 16px; font-size:0.82rem; display:flex; align-items:center; gap:6px;">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
-            <span>Download Subtitle File Now</span>
-          </button>
+          <div style="display:flex; gap:8px; margin-top:6px;">
+            <button type="button" class="studio-btn-primary" id="studioDirectSubDownloadBtn" style="background:#22c55e; color:#052e16; font-weight:700; flex:1; justify-content:center; padding:9px 16px; font-size:0.82rem; display:flex; align-items:center; gap:6px;">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+              <span>Download Subtitles</span>
+            </button>
+            <button type="button" class="studio-btn-secondary" id="studioDirectSubShareBtn" style="border:1px solid rgba(34,197,94,0.4); color:#4ade80; font-weight:700; padding:9px 14px; font-size:0.82rem; display:flex; align-items:center; gap:6px;">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="18" cy="5" r="3"></circle><circle cx="6" cy="12" r="3"></circle><circle cx="18" cy="19" r="3"></circle><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"></line><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"></line></svg>
+              <span>Share</span>
+            </button>
+          </div>
         </div>
       </div>
 
@@ -882,10 +893,16 @@
       <div id="studioBurnSuccessArea" class="hidden" style="text-align:center; padding:16px; background:#142319; border:1px solid #22c55e; border-radius:8px; margin-top:12px; margin-bottom:12px;">
         <h4 style="color:#4ade80; margin-bottom:4px; font-size:1rem;">Video Export Complete!</h4>
         <p style="font-size:0.8rem; color:rgba(255,255,255,0.75); margin-bottom:12px;" id="exportSuccessDetails">Rendered with Sorani Kurdish subtitles.</p>
-        <a id="studioBurnDownloadLink" class="studio-btn-primary" download="video_kurdish_subbed.webm" style="display:inline-flex; align-items:center; gap:6px; text-decoration:none; padding:8px 16px; font-size:0.85rem; background:#22c55e; color:#052e16;">
-          <span><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg></span>
-          <span id="exportDownloadBtnText">Download Subbed Video</span>
-        </a>
+        <div style="display:inline-flex; flex-wrap:wrap; gap:8px; justify-content:center; align-items:center;">
+          <a id="studioBurnDownloadLink" class="studio-btn-primary" download="video_kurdish_subbed.webm" style="display:inline-flex; align-items:center; gap:6px; text-decoration:none; padding:8px 16px; font-size:0.85rem; background:#22c55e; color:#052e16;">
+            <span><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg></span>
+            <span id="exportDownloadBtnText">Download Subbed Video</span>
+          </a>
+          <button type="button" id="studioBurnShareBtn" class="studio-btn-secondary" style="display:inline-flex; align-items:center; gap:6px; padding:8px 16px; font-size:0.85rem; border:1px solid rgba(74,222,128,0.4); color:#4ade80;">
+            <span><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="18" cy="5" r="3"></circle><circle cx="6" cy="12" r="3"></circle><circle cx="18" cy="19" r="3"></circle><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"></line><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"></line></svg></span>
+            <span id="exportShareBtnText">Share Video</span>
+          </button>
+        </div>
       </div>
     </div>
 
@@ -957,8 +974,9 @@
       <button type="button" class="studio-btn-primary" id="studioHelpDoneBtn">Got it</button>
     </div>
   </div>
+</div>
 
-  <!-- QuickTime MOV Inspector & Pre-Import Studio Modal -->
+  <!-- QuickTime MOV & MKV Inspector & Pre-Import Studio Modal -->
   <div class="vn-modal vn-mov-modal hidden" id="studioMovModal" role="dialog" aria-modal="true" aria-labelledby="movModalTitle">
     <div class="vn-modal-backdrop vn-mov-backdrop"></div>
     <div class="vn-modal-card vn-mov-card">
@@ -1124,4 +1142,3 @@
       </div>
     </div>
   </div>
-</div>

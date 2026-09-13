@@ -9,7 +9,63 @@
   'use strict';
 
   const hasArabic = (str) => /[\u0600-\u06FF\u0750-\u077F\uFB50-\uFDFF\uFE70-\uFEFF]/.test(str || '');
-  const stripTags = (str) => (str || '').replace(/<[^>]+>/g, '').replace(/\{[^}]*\}/g, '').trim();
+  const stripTags = (str) => {
+    if (!str) return '';
+    return str
+      .replace(/\\N/g, '\n')
+      .replace(/\\n/g, '\n')
+      .replace(/\\h/g, ' ')
+      .replace(/<br\s*\/?>/gi, '\n')
+      .replace(/<[^>]+>/g, '')
+      .replace(/\{[^}]*\}/g, '')
+      .trim();
+  };
+
+  const extractPlacement = (cue) => {
+    if (!cue) return { vAlign: 'bottom', hAlign: 'center', pos: null };
+    const raw = cue.rawText || cue.text || '';
+    const settings = cue.settings || '';
+
+    let vAlign = 'bottom';
+    let hAlign = 'center';
+    let pos = null;
+
+    if (cue.placement === 'top' || cue.placement === 'mid' || cue.placement === 'center') {
+      vAlign = cue.placement === 'center' ? 'mid' : cue.placement;
+    }
+    if (cue.align) {
+      hAlign = cue.align;
+    }
+
+    const posMatch = raw.match(/\{\\pos\(\s*([0-9.]+)\s*,\s*([0-9.]+)\s*\)\}/i);
+    const anMatch = raw.match(/\{\\an(\d)\}/i);
+
+    if (posMatch) {
+      const x = parseFloat(posMatch[1]);
+      const y = parseFloat(posMatch[2]);
+      pos = {
+        xPct: x > 1 ? (x / 1920) : (x / 100),
+        yPct: y > 1 ? (y / 1080) : (y / 100),
+      };
+      if (y < 260) vAlign = 'top';
+      else if (y > 540) vAlign = 'bottom';
+      else vAlign = 'mid';
+    } else if (anMatch) {
+      const num = parseInt(anMatch[1], 10);
+      if (num >= 7 && num <= 9) vAlign = 'top';
+      else if (num >= 4 && num <= 6) vAlign = 'mid';
+      else vAlign = 'bottom';
+
+      if (num === 1 || num === 4 || num === 7) hAlign = 'left';
+      else if (num === 3 || num === 6 || num === 9) hAlign = 'right';
+      else hAlign = 'center';
+    }
+
+    if (/align:(?:left|start)/i.test(settings)) hAlign = 'left';
+    else if (/align:(?:right|end)/i.test(settings)) hAlign = 'right';
+
+    return { vAlign, hAlign, pos };
+  };
 
   const formatTime = (seconds) => {
     if (isNaN(seconds) || seconds < 0) return '00:00';
@@ -151,9 +207,15 @@
         this.els.exportTabSubBtn.addEventListener('click', () => this.switchExportTab('subtitle'));
       }
 
-      // Direct Subtitle File Download
+      // Direct Subtitle File Download & Share
       if (this.els.studioDirectSubDownloadBtn) {
         this.els.studioDirectSubDownloadBtn.addEventListener('click', () => this.downloadSubtitleFile());
+      }
+      if (this.els.studioDirectSubShareBtn) {
+        this.els.studioDirectSubShareBtn.addEventListener('click', () => this.shareSubtitleFile());
+      }
+      if (this.els.burnShareBtn) {
+        this.els.burnShareBtn.addEventListener('click', () => this.shareBurnedVideo());
       }
     }
 
@@ -222,6 +284,69 @@
       this.closeModal();
     }
 
+    async shareSubtitleFile() {
+      const cues = window.VideoEditorState ? window.VideoEditorState.getCues() : [];
+      if (!cues || !cues.length) {
+        VideoEditorUI.showToast('No subtitles available to share.', 'warning');
+        return;
+      }
+
+      const format = this.els.studioSubExportFormatSel ? this.els.studioSubExportFormatSel.value : 'srt';
+      let serialized = '';
+      if (typeof SubParser !== 'undefined' && SubParser.serialize) {
+        serialized = SubParser.serialize(cues, format);
+      } else {
+        serialized = cues.map((c, i) => `${i + 1}\n${formatTime(c.start / 1000)},000 --> ${formatTime(c.end / 1000)},000\n${c.text}\n`).join('\n');
+      }
+
+      const baseName = (window.VideoEditorPlayer && window.VideoEditorPlayer.videoFile && window.VideoEditorPlayer.videoFile.name)
+        ? window.VideoEditorPlayer.videoFile.name.replace(/\.[^/.]+$/, '')
+        : 'subtitles';
+      const fileName = `${baseName}.ckb.${format}`;
+      const file = new File([serialized], fileName, { type: 'text/plain;charset=utf-8' });
+
+      if (window.VideoEditorHardware && window.VideoEditorHardware.canShare({ files: [file] })) {
+        try {
+          await window.VideoEditorHardware.share({
+            files: [file],
+            title: fileName,
+            text: 'Translated Kurdish Sorani Subtitle File',
+          });
+          VideoEditorUI.showToast('Subtitle file shared successfully!', 'success');
+        } catch (err) {
+          if (err && err.name !== 'AbortError') {
+            this.downloadSubtitleFile();
+          }
+        }
+      } else {
+        this.downloadSubtitleFile();
+      }
+    }
+
+    async shareBurnedVideo() {
+      if (!this._lastExportedBlob || !this._lastExportedName) {
+        VideoEditorUI.showToast('No rendered video ready to share.', 'warning');
+        return;
+      }
+      const file = new File([this._lastExportedBlob], this._lastExportedName, { type: this._lastExportedBlob.type || 'video/mp4' });
+      if (window.VideoEditorHardware && window.VideoEditorHardware.canShare({ files: [file] })) {
+        try {
+          await window.VideoEditorHardware.share({
+            files: [file],
+            title: this._lastExportedName,
+            text: 'Kurdish Subtitled Video from Kurdish Subtitle Translator Studio',
+          });
+          VideoEditorUI.showToast('Video shared successfully!', 'success');
+        } catch (err) {
+          if (err && err.name !== 'AbortError') {
+            VideoEditorUI.showToast('Sharing cancelled. Use download button instead.', 'info');
+          }
+        }
+      } else {
+        if (this.els.burnDownloadLink) this.els.burnDownloadLink.click();
+      }
+    }
+
     openModal(hasVideo, cuesCount) {
       if (this.els && this.els.burnModal) {
         this.els.burnModal.classList.remove('hidden');
@@ -233,6 +358,22 @@
           this.switchExportTab('subtitle');
         } else {
           this.switchExportTab('video');
+        }
+
+        // Display detected device hardware concurrency and specs
+        if (this.els.exportGpuBadge && window.VideoEditorHardware) {
+          this.els.exportGpuBadge.textContent = window.VideoEditorHardware.getHardwareDescription();
+        }
+
+        // Low battery notification for heavy video renders
+        if (window.VideoEditorHardware) {
+          const batt = window.VideoEditorHardware.getBatteryInfo();
+          if (batt && !batt.charging && batt.level < 15) {
+            VideoEditorUI.showToast(
+              `Battery is low (${batt.level}%). Consider plugging in device before exporting video.`,
+              'warning'
+            );
+          }
         }
 
         // Reset UI stages
@@ -258,6 +399,9 @@
         if (this.els && this.els.videoPlayer) {
           this.els.videoPlayer.pause();
         }
+      }
+      if (window.VideoEditorHardware) {
+        window.VideoEditorHardware.releaseWakeLock('export');
       }
       this._cleanupAudioAndStreams();
       if (this.els && this.els.burnModal) {
@@ -381,6 +525,10 @@
       if (this.els.burnSuccessArea) this.els.burnSuccessArea.classList.add('hidden');
       if (this.els.burnActionBtn) this.els.burnActionBtn.disabled = true;
 
+      if (window.VideoEditorHardware) {
+        window.VideoEditorHardware.requestWakeLock('export');
+      }
+
       const { width, height } = this.computeDimensions();
 
       if (this.els.exportResPill) {
@@ -484,6 +632,9 @@
       recorder.onstop = () => {
         this.burnRecording = false;
         this._cleanupAudioAndStreams();
+        if (window.VideoEditorHardware) {
+          window.VideoEditorHardware.releaseWakeLock('export');
+        }
 
         if (this.els.burnActionBtn) {
           this.els.burnActionBtn.disabled = false;
@@ -504,6 +655,9 @@
         const originalName = VideoEditorPlayer.videoFile ? VideoEditorPlayer.videoFile.name.replace(/\.[^/.]+$/, '') : 'video';
         const exportName = `${originalName}.kurdish.subbed.${ext}`;
 
+        this._lastExportedBlob = blob;
+        this._lastExportedName = exportName;
+
         if (this.els.burnDownloadLink) {
           this.els.burnDownloadLink.href = url;
           this.els.burnDownloadLink.download = exportName;
@@ -517,6 +671,9 @@
 
         if (this.els.burnSuccessArea) this.els.burnSuccessArea.classList.remove('hidden');
         if (this.els.burnStatusText) this.els.burnStatusText.textContent = 'Export completed!';
+        if (window.VideoEditorHardware) {
+          window.VideoEditorHardware.haptic('success');
+        }
         VideoEditorUI.showToast('Video export finished successfully!', 'success');
       };
 
@@ -589,22 +746,29 @@
 
           const totalBoxHeight = (lines.length * lineHeight) + (origLines.length ? (origLines.length * origLineHeight + baseFontSize * 0.4) : 0) + baseFontSize * 0.6;
 
+          const placementInfo = extractPlacement(cue);
           let xCenter = width * 0.5;
           let yCenter = height * 0.88;
-          if (cue.pos && typeof cue.pos.x === 'number' && typeof cue.pos.y === 'number') {
+
+          if (placementInfo.pos) {
+            xCenter = width * placementInfo.pos.xPct;
+            yCenter = height * placementInfo.pos.yPct;
+          } else if (cue.pos && typeof cue.pos.x === 'number' && typeof cue.pos.y === 'number') {
             xCenter = cue.pos.x > 1 ? (cue.pos.x / 1920) * width : cue.pos.x * width;
             yCenter = cue.pos.y > 1 ? (cue.pos.y / 1080) * height : cue.pos.y * height;
-          } else if (cue.placement === 'top') {
+          } else if (placementInfo.vAlign === 'top' || cue.placement === 'top' || overlayCfg.position === 'top') {
             yCenter = height * 0.12 + totalBoxHeight / 2;
-          } else if (cue.placement === 'center' || cue.placement === 'mid') {
+          } else if (placementInfo.vAlign === 'mid' || cue.placement === 'center' || cue.placement === 'mid' || overlayCfg.position === 'center') {
             yCenter = height * 0.50;
           } else if (overlayCfg.customPos && typeof overlayCfg.customPos.xPct === 'number' && typeof overlayCfg.customPos.yPct === 'number') {
             xCenter = width * (overlayCfg.customPos.xPct / 100);
             yCenter = height * (overlayCfg.customPos.yPct / 100);
-          } else if (overlayCfg.position === 'top') {
-            yCenter = height * 0.12 + totalBoxHeight / 2;
-          } else if (overlayCfg.position === 'center') {
-            yCenter = height * 0.50;
+          }
+
+          if (placementInfo.hAlign === 'left') {
+            xCenter = width * 0.25;
+          } else if (placementInfo.hAlign === 'right') {
+            xCenter = width * 0.75;
           }
 
           // Compute widest line across both languages

@@ -947,9 +947,11 @@
     }
   }
 
-  // Export as MovImporter and MkvImporter for seamless universal usage
+  // Export as MkvImporter and MediaContainerImporter; preserve dedicated MovImporter
   const manager = new MediaContainerImporterManager();
-  window.MovImporter = manager;
   window.MkvImporter = manager;
   window.MediaContainerImporter = manager;
+  if (!window.MovImporter) {
+    window.MovImporter = manager;
+  }
 })();

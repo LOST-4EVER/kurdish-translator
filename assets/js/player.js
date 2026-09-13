@@ -259,14 +259,15 @@ const SubtitlePlayer = (() => {
     return active;
   }
 
-  /** Extract vertical and horizontal placement from subtitle tags or settings (ASS {\anX}, {\aX}, WebVTT line/align). */
+  /** Extract vertical and horizontal placement from subtitle tags or settings (ASS {\anX}, {\aX}, WebVTT line/align, {\pos}). */
   function getCuePlacement(cue, lineText) {
-    if (!cue && !lineText) return { vAlign: 'bottom', hAlign: 'center' };
+    if (!cue && !lineText) return { vAlign: 'bottom', hAlign: 'center', pos: null };
     const raw = lineText !== undefined ? String(lineText) : (cue ? (cue.rawText || cue.text || '') : '');
     const settings = (cue && cue.settings) || '';
 
     let vAlign = 'bottom';
     let hAlign = 'center';
+    let pos = null;
 
     if (cue && (cue.placement === 'top' || cue.placement === 'mid' || cue.placement === 'center')) {
       vAlign = cue.placement === 'center' ? 'mid' : cue.placement;
@@ -279,7 +280,21 @@ const SubtitlePlayer = (() => {
     const anMatch = raw.match(/\{\\an(\d)\}/i);
     const aMatch = raw.match(/\{\\a(\d+)\}/i);
     const posMatch = raw.match(/\{\\pos\(\s*([0-9.]+)\s*,\s*([0-9.]+)\s*\)\}/i);
-    if (anMatch) {
+    if (posMatch) {
+      const x = parseFloat(posMatch[1]);
+      const y = parseFloat(posMatch[2]);
+      pos = {
+        xPct: x > 1 ? (x / 1920) : (x / 100),
+        yPct: y > 1 ? (y / 1080) : (y / 100),
+      };
+      if (y < 260) vAlign = 'top';
+      else if (y > 540) vAlign = 'bottom';
+      else vAlign = 'mid';
+
+      if (x < 420) hAlign = 'left';
+      else if (x > 860) hAlign = 'right';
+      else hAlign = 'center';
+    } else if (anMatch) {
       const num = parseInt(anMatch[1], 10);
       if (num >= 7 && num <= 9) vAlign = 'top';
       else if (num >= 4 && num <= 6) vAlign = 'mid';
@@ -297,16 +312,6 @@ const SubtitlePlayer = (() => {
       if (num === 1 || num === 5 || num === 9) hAlign = 'left';
       else if (num === 3 || num === 7 || num === 11) hAlign = 'right';
       else hAlign = 'center';
-    } else if (posMatch) {
-      const x = parseFloat(posMatch[1]);
-      const y = parseFloat(posMatch[2]);
-      if (y < 260) vAlign = 'top';
-      else if (y > 540) vAlign = 'bottom';
-      else vAlign = 'mid';
-
-      if (x < 420) hAlign = 'left';
-      else if (x > 860) hAlign = 'right';
-      else hAlign = 'center';
     } else if (/<top>/i.test(raw) || /line:(?:0|1|2|3|4|5|10|15|20)%/i.test(settings) || /line:[0-3]\b/i.test(settings)) {
       vAlign = 'top';
     } else if (/<mid>/i.test(raw) || /line:(?:40|45|50|55|60)%/i.test(settings)) {
@@ -318,7 +323,7 @@ const SubtitlePlayer = (() => {
     else if (/align:(?:right|end)/i.test(settings)) hAlign = 'right';
     else if (/align:(?:center|middle)/i.test(settings)) hAlign = 'center';
 
-    return { vAlign, hAlign };
+    return { vAlign, hAlign, pos };
   }
 
   function formatSubtitleHtml(text) {
@@ -376,6 +381,8 @@ const SubtitlePlayer = (() => {
     zoneTop.innerHTML = '';
     zoneMid.innerHTML = '';
     zoneBottom.innerHTML = '';
+    const oldAbs = screenEl.querySelectorAll('.screen-text.pos-abs');
+    oldAbs.forEach((el) => el.remove());
 
     if (!activeList || !activeList.length) {
       return;
@@ -404,8 +411,17 @@ const SubtitlePlayer = (() => {
           if (c.fontFamily) span.style.fontFamily = c.fontFamily;
           if (c.color) span.style.color = c.color;
 
-          const targetZone = placement.vAlign === 'top' ? zoneTop : (placement.vAlign === 'mid' ? zoneMid : zoneBottom);
-          targetZone.appendChild(span);
+          if (placement.pos) {
+            span.classList.add('pos-abs');
+            span.style.position = 'absolute';
+            span.style.left = `${Math.round(placement.pos.xPct * 100)}%`;
+            span.style.top = `${Math.round(placement.pos.yPct * 100)}%`;
+            span.style.transform = 'translate(-50%, -50%)';
+            screenEl.appendChild(span);
+          } else {
+            const targetZone = placement.vAlign === 'top' ? zoneTop : (placement.vAlign === 'mid' ? zoneMid : zoneBottom);
+            targetZone.appendChild(span);
+          }
         });
       } else {
         const plainText = clean.replace(/<[^>]+>/g, '').replace(/\{[^}]*\}/g, '').trim();
@@ -422,8 +438,17 @@ const SubtitlePlayer = (() => {
           if (c.fontFamily) span.style.fontFamily = c.fontFamily;
           if (c.color) span.style.color = c.color;
 
-          const targetZone = placement.vAlign === 'top' ? zoneTop : (placement.vAlign === 'mid' ? zoneMid : zoneBottom);
-          targetZone.appendChild(span);
+          if (placement.pos) {
+            span.classList.add('pos-abs');
+            span.style.position = 'absolute';
+            span.style.left = `${Math.round(placement.pos.xPct * 100)}%`;
+            span.style.top = `${Math.round(placement.pos.yPct * 100)}%`;
+            span.style.transform = 'translate(-50%, -50%)';
+            screenEl.appendChild(span);
+          } else {
+            const targetZone = placement.vAlign === 'top' ? zoneTop : (placement.vAlign === 'mid' ? zoneMid : zoneBottom);
+            targetZone.appendChild(span);
+          }
         }
       }
     });

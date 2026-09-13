@@ -105,6 +105,13 @@
   display: none !important;
 }
 
+.screen-text.pos-abs {
+  position: absolute !important;
+  z-index: 10 !important;
+  max-width: 90% !important;
+  pointer-events: none;
+}
+
 .caption-updated {
   animation: captionPop 0.22s cubic-bezier(0.16, 1, 0.3, 1) both;
 }

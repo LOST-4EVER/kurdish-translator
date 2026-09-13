@@ -1,6 +1,6 @@
 # 🎬 Kurdî Subtitle Translator | وەرگێڕی پێشکەوتووی ژێرنووسی کوردی
 
-[![Version v138](https://img.shields.io/badge/Version-v138-7c5cfc?style=flat-square&logo=github)](https://LOST-4EVER.github.io/kurdish-translator/)
+[![Version v139](https://img.shields.io/badge/Version-v139-7c5cfc?style=flat-square&logo=github)](https://LOST-4EVER.github.io/kurdish-translator/)
 [![Progressive Web App](https://img.shields.io/badge/PWA-Installable%20%26%20Offline-0ea5e9?style=flat-square&logo=pwa&logoColor=white)](https://LOST-4EVER.github.io/kurdish-translator/)
 [![Target Kurdish Sorani](https://img.shields.io/badge/Target%20Language-Kurdish%20Sorani%20(ckb)-fbbf24?style=flat-square)](https://LOST-4EVER.github.io/kurdish-translator/)
 [![100% Client-Side](https://img.shields.io/badge/Privacy-100%25%20In--Browser-10b981?style=flat-square&logoColor=white)](https://LOST-4EVER.github.io/kurdish-translator/)
@@ -222,7 +222,25 @@ node --check assets/js/parser.js && node --check assets/js/translator-dict.js &&
 
 ## 📜 Release History & Changelog
 
-### 🚀 Version v138 (Current)
+### 🚀 Version v139 (Current)
+- **Advanced Command-Pattern Undo / Redo:** Granular, reversible command architecture for subtitle editing (`UPDATE_TEXT`, `UPDATE_TIMING`, `SPLIT_CUE`, `DELETE_CUE`, `ADD_CUE`, `MERGE_CUES`, `SHIFT_ALL`) eliminating laggy monolithic state clones.
+- **Hardware & PWA Capabilities Integration (`video-editor-hardware.js`):**
+  - **Screen WakeLock API:** Automatically keeps the screen awake during video playback and hardware subtitle burning to prevent sleep timeouts.
+  - **Tactile Haptic Feedback API:** Physical device vibration for seeking snaps, cue cuts, timeline splits, character insertions, and export completions.
+  - **Hardware Concurrency & Battery Guard:** Device CPU core detection and battery level monitoring with low-battery alerts prior to video encoding.
+  - **Native Web Share API:** 1-click sharing of exported Kurdish subbed videos and translated subtitle files directly to Telegram, WhatsApp, Discord, or AirDrop.
+- **Full Subtitle Placement & Tag Extraction:**
+  - Dynamic positioning for ASS/SSA alignment tags (`{\an1}` through `{\an9}`, `{\a1}` through `{\a11}`) and exact coordinates (`{\pos(x, y)}`).
+  - Seamless subtitle placement parity across Preview Player, Video Studio Overlays, and Hardware Video Burner.
+- **Quick-Text Editing & Kurdish Virtual Helper Bar:**
+  - Floating and docked quick-text editing panels with real-time Characters-Per-Second (CPS) pacing badges, line/character count diagnostics, and playback controls.
+  - Toggleable Kurdish Sorani character bar (`ڕ`, `ڵ`, `ێ`, `ۆ`, `ە`, `ڤ`, `ژ`, `پ`, `چ`, `گ`, `،`, `؛`, `؟`) with haptic touch insertion.
+- **MKV & MOV Demuxer Hardening:**
+  - Resolved export collisions in Matroska binary demuxer and QuickTime MOV atom parser.
+  - Exposed modular global parsers (`QuickTimeAtomParser`) for standalone inspection.
+- **Export Suite Enhancements:** Direct multi-format subtitle file exporter (.srt, .vtt, .ass, .sub, .smi) with UTF-8 and UTF-8-BOM encodings alongside high-speed video burning.
+
+### 📦 Version v138
 - **Default Transparent Subtitle Backgrounds:** Updated subtitle overlays, cinema player, and canvas burner to default to transparent backgrounds with high-contrast text outlines and drop shadows for clean viewing.
 - **Video Studio Aspect Ratio & Container Query Scaling:** Native video resolution auto-probing defaulting to Original aspect ratio with responsive container query (`cqi`) typography scaling.
 - **Subtitle Parser & Decoder Improvements:**

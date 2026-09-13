@@ -786,5 +786,6 @@
     }
   }
 
+  window.QuickTimeAtomParser = QuickTimeAtomParser;
   window.MovImporter = new MovImporterManager();
 })();

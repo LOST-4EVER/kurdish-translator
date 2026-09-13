@@ -7,7 +7,82 @@
   'use strict';
 
   const hasArabic = (str) => /[\u0600-\u06FF\u0750-\u077F\uFB50-\uFDFF\uFE70-\uFEFF]/.test(str || '');
-  const stripTags = (str) => (str || '').replace(/<[^>]+>/g, '').replace(/\{[^}]*\}/g, '').trim();
+  const stripTags = (str) => {
+    if (!str) return '';
+    return str
+      .replace(/\\N/g, '\n')
+      .replace(/\\n/g, '\n')
+      .replace(/\\h/g, ' ')
+      .replace(/<br\s*\/?>/gi, '\n')
+      .replace(/<[^>]+>/g, '')
+      .replace(/\{[^}]*\}/g, '')
+      .trim();
+  };
+
+  const extractPlacement = (cue, lineText) => {
+    if (!cue && !lineText) return { vAlign: 'bottom', hAlign: 'center', pos: null };
+    const raw = lineText !== undefined ? String(lineText) : (cue ? (cue.rawText || cue.text || '') : '');
+    const settings = (cue && cue.settings) || '';
+
+    let vAlign = 'bottom';
+    let hAlign = 'center';
+    let pos = null;
+
+    if (cue && (cue.placement === 'top' || cue.placement === 'mid' || cue.placement === 'center')) {
+      vAlign = cue.placement === 'center' ? 'mid' : cue.placement;
+    }
+    if (cue && cue.align) {
+      hAlign = cue.align;
+    }
+
+    const posMatch = raw.match(/\{\\pos\(\s*([0-9.]+)\s*,\s*([0-9.]+)\s*\)\}/i);
+    const anMatch = raw.match(/\{\\an(\d)\}/i);
+    const aMatch = raw.match(/\{\\a(\d+)\}/i);
+
+    if (posMatch) {
+      const x = parseFloat(posMatch[1]);
+      const y = parseFloat(posMatch[2]);
+      pos = {
+        xPct: x > 1 ? Math.min(95, Math.max(5, (x / 1920) * 100)) : (x * 100),
+        yPct: y > 1 ? Math.min(95, Math.max(5, (y / 1080) * 100)) : (y * 100),
+      };
+      if (y < 260) vAlign = 'top';
+      else if (y > 540) vAlign = 'bottom';
+      else vAlign = 'mid';
+
+      if (x < 420) hAlign = 'left';
+      else if (x > 860) hAlign = 'right';
+      else hAlign = 'center';
+    } else if (anMatch) {
+      const num = parseInt(anMatch[1], 10);
+      if (num >= 7 && num <= 9) vAlign = 'top';
+      else if (num >= 4 && num <= 6) vAlign = 'mid';
+      else vAlign = 'bottom';
+
+      if (num === 1 || num === 4 || num === 7) hAlign = 'left';
+      else if (num === 3 || num === 6 || num === 9) hAlign = 'right';
+      else hAlign = 'center';
+    } else if (aMatch) {
+      const num = parseInt(aMatch[1], 10);
+      if (num >= 5 && num <= 7) vAlign = 'top';
+      else if (num >= 9 && num <= 11) vAlign = 'mid';
+      else vAlign = 'bottom';
+
+      if (num === 1 || num === 5 || num === 9) hAlign = 'left';
+      else if (num === 3 || num === 7 || num === 11) hAlign = 'right';
+      else hAlign = 'center';
+    } else if (/<top>/i.test(raw) || /line:(?:0|1|2|3|4|5|10|15|20)%/i.test(settings) || /line:[0-3]\b/i.test(settings)) {
+      vAlign = 'top';
+    } else if (/<mid>/i.test(raw) || /line:(?:40|45|50|55|60)%/i.test(settings)) {
+      vAlign = 'mid';
+    }
+
+    if (/align:(?:left|start)/i.test(settings)) hAlign = 'left';
+    else if (/align:(?:right|end)/i.test(settings)) hAlign = 'right';
+    else if (/align:(?:center|middle)/i.test(settings)) hAlign = 'center';
+
+    return { vAlign, hAlign, pos };
+  };
 
   class VideoEditorOverlayRenderer {
     constructor() {
@@ -278,10 +353,17 @@
 
       const container = this.els.videoOverlayContainer;
       const textEl = this.els.videoOverlayText;
+      const placement = extractPlacement(cue);
 
       // Handle format-specific or cue-specific placement (from ASS, VTT, SUB, SAMI)
       if (container && !this._isDragging) {
-        if (cue.pos && typeof cue.pos.x === 'number' && typeof cue.pos.y === 'number') {
+        if (placement.pos) {
+          container.style.left = `${placement.pos.xPct}%`;
+          container.style.top = `${placement.pos.yPct}%`;
+          container.style.bottom = 'auto';
+          container.style.transform = 'translate(-50%, -50%)';
+          container.classList.remove('pos-bottom', 'pos-center', 'pos-top');
+        } else if (cue.pos && typeof cue.pos.x === 'number' && typeof cue.pos.y === 'number') {
           const xPct = cue.pos.x > 1 ? Math.min(95, Math.max(5, (cue.pos.x / 1920) * 100)) : (cue.pos.x * 100);
           const yPct = cue.pos.y > 1 ? Math.min(95, Math.max(5, (cue.pos.y / 1080) * 100)) : (cue.pos.y * 100);
           container.style.left = `${xPct}%`;
@@ -289,18 +371,20 @@
           container.style.bottom = 'auto';
           container.style.transform = 'translate(-50%, -50%)';
           container.classList.remove('pos-bottom', 'pos-center', 'pos-top');
-        } else if (cue.placement === 'top') {
-          container.style.left = '50%';
+        } else if (placement.vAlign === 'top') {
+          container.style.left = placement.hAlign === 'left' ? '8%' : (placement.hAlign === 'right' ? 'auto' : '50%');
+          container.style.right = placement.hAlign === 'right' ? '8%' : 'auto';
           container.style.top = '';
           container.style.bottom = '';
-          container.style.transform = '';
+          container.style.transform = placement.hAlign === 'center' ? 'translateX(-50%)' : 'none';
           container.classList.remove('pos-bottom', 'pos-center');
           container.classList.add('pos-top');
-        } else if (cue.placement === 'center' || cue.placement === 'mid') {
-          container.style.left = '50%';
+        } else if (placement.vAlign === 'mid') {
+          container.style.left = placement.hAlign === 'left' ? '8%' : (placement.hAlign === 'right' ? 'auto' : '50%');
+          container.style.right = placement.hAlign === 'right' ? '8%' : 'auto';
           container.style.top = '';
           container.style.bottom = '';
-          container.style.transform = '';
+          container.style.transform = placement.hAlign === 'center' ? 'translate(-50%, -50%)' : 'translateY(-50%)';
           container.classList.remove('pos-bottom', 'pos-top');
           container.classList.add('pos-center');
         } else if (config.customPos && typeof config.customPos.xPct === 'number' && typeof config.customPos.yPct === 'number') {
@@ -310,13 +394,18 @@
           container.style.transform = 'translate(-50%, -50%)';
           container.classList.remove('pos-bottom', 'pos-center', 'pos-top');
         } else {
-          container.style.left = '50%';
+          container.style.left = placement.hAlign === 'left' ? '8%' : (placement.hAlign === 'right' ? 'auto' : '50%');
+          container.style.right = placement.hAlign === 'right' ? '8%' : 'auto';
           container.style.top = '';
           container.style.bottom = '';
-          container.style.transform = '';
+          container.style.transform = placement.hAlign === 'center' ? 'translateX(-50%)' : 'none';
           container.classList.remove('pos-bottom', 'pos-center', 'pos-top');
           container.classList.add(`pos-${config.position || 'bottom'}`);
         }
+      }
+
+      if (textEl) {
+        textEl.style.textAlign = placement.hAlign;
       }
 
       // Cue-specific font and color
