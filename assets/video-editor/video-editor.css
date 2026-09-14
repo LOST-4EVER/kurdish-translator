@@ -420,10 +420,106 @@ body.studio-mode {
   height: 100%;
   object-fit: contain;
   display: block;
+  image-rendering: -webkit-optimize-contrast;
+  image-rendering: high-quality;
+  transform: translateZ(0);
+  will-change: transform;
+  backface-visibility: hidden;
+  cursor: pointer;
 }
 
 .vn-video-element.hidden {
   display: none !important;
+}
+
+/* Gesture Visual Feedback Ripples & Seek HUD */
+.vn-gesture-ripple {
+  position: absolute;
+  pointer-events: none;
+  z-index: 45;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  background: rgba(18, 16, 27, 0.85);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border: 1px solid rgba(250, 204, 21, 0.5);
+  color: #fde047;
+  border-radius: 50%;
+  width: 68px;
+  height: 68px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.6), 0 0 20px rgba(234, 179, 8, 0.35);
+  transform: translate(-50%, -50%) scale(0.6);
+  opacity: 0;
+  animation: vnRipplePop 0.65s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.vn-gesture-ripple.center-action {
+  top: 50%;
+  left: 50%;
+  width: 76px;
+  height: 76px;
+  border-radius: 50%;
+}
+
+.vn-gesture-ripple.side-action {
+  width: 84px;
+  height: 84px;
+  border-radius: 50%;
+  font-family: ui-monospace, SFMono-Regular, monospace;
+  font-size: 0.82rem;
+  font-weight: 800;
+}
+
+@keyframes vnRipplePop {
+  0% {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(0.6);
+  }
+  25% {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1.08);
+  }
+  50% {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(1.22);
+  }
+}
+
+/* Touch Scrubbing Live HUD */
+.vn-touch-scrub-hud {
+  position: absolute;
+  top: 24px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 50;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 18px;
+  background: rgba(15, 14, 23, 0.92);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(250, 204, 21, 0.6);
+  border-radius: 9999px;
+  color: #ffffff;
+  font-family: ui-monospace, SFMono-Regular, monospace;
+  font-size: 0.84rem;
+  font-weight: 700;
+  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.75);
+  pointer-events: none;
+  animation: vnFadeInFast 0.15s ease-out;
+}
+
+.vn-touch-scrub-delta {
+  color: #facc15;
+  font-weight: 800;
 }
 
 /* Video Placeholder / Import Box */
@@ -775,14 +871,52 @@ body.studio-mode {
 }
 
 .vn-subtitle-orig {
+  display: block;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   font-size: 0.82rem;
-  color: rgba(255, 255, 255, 0.75);
-  margin-top: 3px;
-  font-style: italic;
+  line-height: 1.35;
+  color: #e2e8f0;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.95), 0 0 3px rgba(0, 0, 0, 0.95), 1px 1px 2px #000;
+  margin-top: 4px;
+  padding-top: 3px;
+  border-top: 1px solid rgba(255, 255, 255, 0.22);
+  font-style: normal;
+  text-align: center;
+  direction: ltr;
 }
 
 .vn-subtitle-orig.hidden {
   display: none !important;
+}
+
+.vn-shower-kurdish {
+  font-weight: 500;
+  line-height: 1.3;
+}
+
+.vn-shower-orig {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.76rem;
+  color: rgba(226, 232, 240, 0.78);
+  margin-top: 2px;
+  font-family: 'Inter', -apple-system, sans-serif;
+}
+
+.vn-shower-orig-tag {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.62rem;
+  font-weight: 700;
+  padding: 1px 4px;
+  border-radius: 4px;
+  background: rgba(234, 179, 8, 0.25);
+  color: #fef08a;
+  border: 1px solid rgba(234, 179, 8, 0.4);
+  letter-spacing: 0.04em;
+  line-height: 1;
 }
 
 .vn-fs-corner-btn {
@@ -1092,17 +1226,20 @@ body.studio-mode {
   border-bottom: 1px solid rgba(255, 255, 255, 0.08);
   box-sizing: border-box;
   transition: height 0.05s ease-out;
+  overscroll-behavior: none !important;
 }
 
 #studioTimelineMount {
   width: 100%;
   height: 100%;
+  overscroll-behavior: none !important;
 }
 
 .vn-timeline-wrapper {
   display: flex;
   width: 100%;
   height: 100%;
+  overscroll-behavior: none !important;
 }
 
 /* Left Track Headers (Multi-track control column) */
@@ -1164,6 +1301,8 @@ body.studio-mode {
   overflow-y: hidden;
   position: relative;
   outline: none;
+  overscroll-behavior: contain !important;
+  touch-action: pan-x;
 }
 
 .vn-timeline-viewport::-webkit-scrollbar {
@@ -1544,18 +1683,18 @@ body.studio-mode {
 /* ---------- Floating Popovers (Above Bottom Bar) ---------- */
 .vn-popover {
   position: absolute;
-  bottom: 48px;
+  bottom: 52px;
   left: 50%;
   transform: translateX(-50%);
-  width: 90%;
-  max-width: 350px;
-  max-height: calc(100vh - 100px);
+  width: 92%;
+  max-width: 360px;
+  max-height: min(440px, calc(100vh - 160px));
   overflow-y: auto;
   overflow-x: hidden;
-  background: #1a1823;
-  border: 1px solid rgba(255, 255, 255, 0.15);
-  border-radius: 8px;
-  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.8);
+  background: #171520;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 10px;
+  box-shadow: 0 12px 36px rgba(0, 0, 0, 0.85);
   z-index: 50;
   box-sizing: border-box;
 }
@@ -1564,11 +1703,76 @@ body.studio-mode {
   display: none !important;
 }
 
+.vn-popover-volume {
+  width: 300px !important;
+  max-width: calc(100vw - 20px) !important;
+}
+
+.vn-vol-preset-btn {
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  color: rgba(255, 255, 255, 0.8);
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.vn-vol-preset-btn:hover {
+  background: rgba(255, 255, 255, 0.15);
+  color: #ffffff;
+}
+
+.vn-vol-preset-btn.active {
+  background: rgba(192, 132, 252, 0.22);
+  border-color: #c084fc;
+  color: #e9d5ff;
+  font-weight: 700;
+}
+
+/* Subtitle Toolkit Segmented Tabs */
+.vn-tools-tab-bar {
+  display: flex;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.vn-tools-tab-bar::-webkit-scrollbar {
+  display: none;
+}
+
+.vn-tools-tab-btn {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 8px;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 5px;
+  color: rgba(255, 255, 255, 0.65);
+  font-size: 0.7rem;
+  font-weight: 500;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.15s ease;
+}
+
+.vn-tools-tab-btn:hover {
+  background: rgba(255, 255, 255, 0.08);
+  color: #ffffff;
+}
+
+.vn-tools-tab-btn.active {
+  background: rgba(234, 179, 8, 0.18);
+  border-color: rgba(234, 179, 8, 0.4);
+  color: #fde047;
+  font-weight: 600;
+}
+
 .vn-popover-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 7px 10px;
+  padding: 8px 12px;
   border-bottom: 1px solid rgba(255, 255, 255, 0.08);
 }
 
@@ -1600,7 +1804,7 @@ body.studio-mode {
 }
 
 .vn-popover-wide {
-  width: 380px !important;
+  width: 400px !important;
   max-width: calc(100vw - 20px) !important;
 }
 
@@ -1910,27 +2114,165 @@ body.studio-mode {
 
 .studio-export-modal {
   max-width: 560px;
-  width: 94%;
+  width: 95%;
+  border: 1px solid rgba(168, 85, 247, 0.25);
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.65), 0 0 30px rgba(168, 85, 247, 0.12);
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.export-modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 16px;
+  background: #191624;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.07);
+  gap: 12px;
+}
+
+.export-modal-header .modal-title-group {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  flex: 1;
+}
+
+.export-title-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  background: rgba(168, 85, 247, 0.16);
+  color: #c084fc;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.modal-title-text-wrap {
+  min-width: 0;
+  flex: 1;
+}
+
+.studio-export-modal .modal-title {
+  font-size: 1.02rem;
+  font-weight: 700;
+  color: #ffffff;
+  margin: 0 0 2px 0;
+  overflow-wrap: normal;
+  word-break: normal;
+  white-space: nowrap;
+  letter-spacing: -0.01em;
+}
+
+.studio-export-modal .modal-sub {
+  font-size: 0.74rem;
+  color: rgba(255, 255, 255, 0.65);
+  margin: 0;
+  line-height: 1.35;
+  white-space: normal;
+}
+
+/* Hardware Acceleration & Engine Status Strip */
+.export-hw-bar {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  padding: 7px 16px;
+  background: rgba(0, 0, 0, 0.35);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.export-hw-inner {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  max-width: 100%;
+}
+
+.export-hw-icon {
+  color: #4ade80;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
 }
 
 .studio-gpu-badge {
   display: inline-flex;
   align-items: center;
-  gap: 4px;
+  gap: 5px;
   background: rgba(74, 222, 128, 0.12);
   color: #4ade80;
-  border: 1px solid rgba(74, 222, 128, 0.25);
-  font-size: 0.66rem;
+  border: 1px solid rgba(74, 222, 128, 0.28);
+  font-size: 0.68rem;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 6px;
+  white-space: normal;
+  word-break: break-word;
+  line-height: 1.3;
+}
+
+/* Export Mode Selector Tabs */
+.studio-export-tabs {
+  display: flex;
+  gap: 8px;
+  padding: 8px 14px;
+  background: rgba(10, 10, 16, 0.45);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.studio-tab-btn {
+  flex: 1;
+  padding: 8px 12px;
+  border-radius: 7px;
+  font-size: 0.76rem;
+  font-weight: 600;
+  background: rgba(255, 255, 255, 0.06);
+  color: rgba(255, 255, 255, 0.72);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  transition: all 0.18s ease;
+  min-height: 38px;
+}
+
+.studio-tab-btn:hover {
+  background: rgba(255, 255, 255, 0.12);
+  color: #ffffff;
+}
+
+.studio-tab-btn.active {
+  background: #9333ea !important;
+  color: #ffffff !important;
+  border-color: rgba(168, 85, 247, 0.5) !important;
+  box-shadow: 0 2px 8px rgba(147, 51, 234, 0.35);
   font-weight: 700;
-  padding: 2px 7px;
-  border-radius: 9999px;
-  white-space: nowrap;
+}
+
+@media (max-width: 480px) {
+  .studio-export-tabs {
+    padding: 6px 10px;
+    gap: 6px;
+  }
+  .studio-tab-btn {
+    padding: 7px 8px;
+    font-size: 0.72rem;
+    gap: 4px;
+  }
 }
 
 .export-modal-body {
   padding: 14px 16px;
   overflow-y: auto;
   flex: 1 1 auto;
+  max-height: 65vh;
 }
 
 .export-form-grid {

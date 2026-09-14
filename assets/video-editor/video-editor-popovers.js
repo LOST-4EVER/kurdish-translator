@@ -190,17 +190,74 @@
           const val = parseFloat(e.target.value);
           if (this.els.videoPlayer) {
             this.els.videoPlayer.volume = val;
-            this.els.videoPlayer.muted = false;
+            this.els.videoPlayer.muted = (val === 0);
           }
+          this._updateVolumeUI(val, val === 0);
         };
         this.els.volumeSlider.addEventListener('input', updateVol);
         this.els.volumeSlider.addEventListener('change', updateVol);
       }
+
       if (this.els.muteToggle) {
         this.els.muteToggle.addEventListener('click', () => {
           if (!this.els.videoPlayer) return;
-          this.els.videoPlayer.muted = !this.els.videoPlayer.muted;
-          this.els.muteToggle.classList.toggle('active', this.els.videoPlayer.muted);
+          const isMuted = !this.els.videoPlayer.muted;
+          this.els.videoPlayer.muted = isMuted;
+          const currentVol = isMuted ? 0 : (this.els.videoPlayer.volume || 1);
+          if (this.els.volumeSlider) {
+            this.els.volumeSlider.value = isMuted ? 0 : currentVol;
+          }
+          this._updateVolumeUI(currentVol, isMuted);
+        });
+      }
+
+      // Volume Quick Presets
+      const volPresetBtns = document.querySelectorAll('.vn-vol-preset-btn');
+      volPresetBtns.forEach((btn) => {
+        btn.addEventListener('click', (e) => {
+          const targetVol = parseFloat(e.currentTarget.getAttribute('data-vol'));
+          if (isNaN(targetVol)) return;
+          if (this.els.videoPlayer) {
+            if (targetVol === 0) {
+              this.els.videoPlayer.muted = true;
+            } else {
+              this.els.videoPlayer.muted = false;
+              this.els.videoPlayer.volume = targetVol;
+            }
+          }
+          if (this.els.volumeSlider) {
+            this.els.volumeSlider.value = targetVol;
+          }
+          this._updateVolumeUI(targetVol, targetVol === 0);
+        });
+      });
+
+      // Subtitle Tools Tab Navigation
+      if (this.els.subToolsTabBar) {
+        this.els.subToolsTabBar.addEventListener('click', (e) => {
+          const btn = e.target.closest('.vn-tools-tab-btn');
+          if (!btn) return;
+          const targetTab = btn.getAttribute('data-tab');
+          if (!targetTab) return;
+
+          // Update active button
+          this.els.subToolsTabBar.querySelectorAll('.vn-tools-tab-btn').forEach((b) => {
+            b.classList.toggle('active', b === btn);
+          });
+
+          // Show targeted panel
+          const panels = {
+            orthography: document.getElementById('vnToolsPanelOrthography'),
+            split: document.getElementById('vnToolsPanelSplit'),
+            search: document.getElementById('vnToolsPanelSearch'),
+            shift: document.getElementById('vnToolsPanelShift'),
+          };
+
+          Object.keys(panels).forEach((key) => {
+            if (panels[key]) {
+              panels[key].classList.toggle('hidden', key !== targetTab);
+            }
+          });
         });
       }
 
@@ -413,10 +470,12 @@
           this.els.toolSubShiftInput.value = cur + delta;
         }
       };
+      if (this.els.btnToolShiftMinus1000) this.els.btnToolShiftMinus1000.addEventListener('click', () => shiftToolsOffset(-1000));
       if (this.els.btnToolShiftMinus500) this.els.btnToolShiftMinus500.addEventListener('click', () => shiftToolsOffset(-500));
       if (this.els.btnToolShiftMinus100) this.els.btnToolShiftMinus100.addEventListener('click', () => shiftToolsOffset(-100));
       if (this.els.btnToolShiftPlus100) this.els.btnToolShiftPlus100.addEventListener('click', () => shiftToolsOffset(100));
       if (this.els.btnToolShiftPlus500) this.els.btnToolShiftPlus500.addEventListener('click', () => shiftToolsOffset(500));
+      if (this.els.btnToolShiftPlus1000) this.els.btnToolShiftPlus1000.addEventListener('click', () => shiftToolsOffset(1000));
       if (this.els.btnToolApplyShift) {
         this.els.btnToolApplyShift.addEventListener('click', () => {
           const shiftMs = parseInt(this.els.toolSubShiftInput ? this.els.toolSubShiftInput.value : '0', 10) || 0;
@@ -443,6 +502,29 @@
       }
     }
 
+    _updateVolumeUI(vol, isMuted) {
+      const pct = isMuted ? 0 : Math.round(vol * 100);
+      if (this.els.volumePercentBadge) {
+        this.els.volumePercentBadge.textContent = `${pct}%`;
+      }
+      if (this.els.muteToggle) {
+        this.els.muteToggle.classList.toggle('active', isMuted);
+        const muteSpan = document.getElementById('studioMuteEmoji');
+        if (muteSpan) {
+          if (isMuted || pct === 0) {
+            muteSpan.innerHTML = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="1" y1="1" x2="23" y2="23"></line><path d="M9 9v3a3 3 0 0 0 5.12 2.12M15 9.34V4a3 3 0 0 0-5.94-.6"></path><path d="M17 16.95A7 7 0 0 1 5 12v-2m14 0v2a7 7 0 0 1-.11 1.23"></path><line x1="12" y1="19" x2="12" y2="23"></line><line x1="8" y1="23" x2="16" y2="23"></line></svg>`;
+          } else {
+            muteSpan.innerHTML = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon><path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"></path></svg>`;
+          }
+        }
+      }
+      // Update preset buttons active state
+      document.querySelectorAll('.vn-vol-preset-btn').forEach((btn) => {
+        const pVol = parseFloat(btn.getAttribute('data-vol'));
+        btn.classList.toggle('active', !isMuted && Math.abs(pVol - vol) < 0.05);
+      });
+    }
+
     updateSpeedDisplay(rate) {
       const speedChips = document.querySelectorAll('.vn-speed-chip');
       speedChips.forEach((c) => {
@@ -462,6 +544,34 @@
         popover.classList.remove('hidden');
         if (triggerBtn) triggerBtn.classList.add('active');
         this.activePopover = name;
+        this._positionPopover(popover, triggerBtn, name);
+      }
+    }
+
+    _positionPopover(popover, triggerBtn, name) {
+      if (!popover) return;
+      const root = document.querySelector('.vn-studio-root') || document.body;
+      const rootRect = root.getBoundingClientRect();
+
+      // Top popover (e.g. More menu) handles its own top styling
+      if (popover.classList.contains('vn-popover-top')) return;
+
+      if (triggerBtn) {
+        const btnRect = triggerBtn.getBoundingClientRect();
+        const btnCenter = btnRect.left + btnRect.width / 2 - rootRect.left;
+        const popoverWidth = popover.offsetWidth || 300;
+        
+        let left = btnCenter - popoverWidth / 2;
+        // Clamp within margins
+        left = Math.max(10, Math.min(rootRect.width - popoverWidth - 10, left));
+        
+        popover.style.left = `${left}px`;
+        popover.style.transform = 'none';
+        popover.style.bottom = '52px';
+      } else {
+        popover.style.left = '50%';
+        popover.style.transform = 'translateX(-50%)';
+        popover.style.bottom = '52px';
       }
     }
 

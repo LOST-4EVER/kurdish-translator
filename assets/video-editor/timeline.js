@@ -259,14 +259,28 @@
         }
       }, { passive: true });
 
-      // Mouse wheel zoom with Ctrl/Cmd or horizontal scroll
+      // Mouse wheel zoom with Ctrl/Cmd or horizontal timeline scrolling (prevents scrolling outside the timeline)
       this.dom.viewport.addEventListener('wheel', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
         if (e.ctrlKey || e.metaKey) {
-          e.preventDefault();
           const factor = e.deltaY < 0 ? 1.15 : 0.85;
           this.setZoom(this.zoom * factor);
+        } else {
+          // Translate vertical or horizontal wheel delta strictly into timeline horizontal scrolling
+          const delta = Math.abs(e.deltaX) > Math.abs(e.deltaY) ? e.deltaX : e.deltaY;
+          this.dom.viewport.scrollLeft += delta;
         }
       }, { passive: false });
+
+      // Prevent outer page scrolling from wheel gestures inside the timeline container
+      if (this.container) {
+        this.container.addEventListener('wheel', (e) => {
+          if (!e.target.closest('.vn-popover') && !e.target.closest('.vn-quick-panel')) {
+            e.stopPropagation();
+          }
+        }, { passive: true });
+      }
 
       // Hover indicator
       this.dom.viewport.addEventListener('pointermove', (e) => {

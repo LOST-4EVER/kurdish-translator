@@ -23,6 +23,7 @@ const SubtitlePlayer = (() => {
   let cursor = -1;      // cached cue index from the last cueAt() lookup
   let fontScale = 1;    // font scale multiplier
   let currentAspectRatio = '16:9';
+  let showOrig = false;
 
   const el = {};
 
@@ -440,7 +441,6 @@ const SubtitlePlayer = (() => {
 
           if (placement.pos) {
             span.classList.add('pos-abs');
-            span.style.position = 'absolute';
             span.style.left = `${Math.round(placement.pos.xPct * 100)}%`;
             span.style.top = `${Math.round(placement.pos.yPct * 100)}%`;
             span.style.transform = 'translate(-50%, -50%)';
@@ -448,6 +448,16 @@ const SubtitlePlayer = (() => {
           } else {
             const targetZone = placement.vAlign === 'top' ? zoneTop : (placement.vAlign === 'mid' ? zoneMid : zoneBottom);
             targetZone.appendChild(span);
+          }
+
+          // Check if original English/source text should be displayed alongside Kurdish
+          const hasOrig = Boolean(showOrig && c.origText && c.origText.trim() && c.origText.trim() !== clean.trim());
+          if (hasOrig) {
+            const origSpan = document.createElement('span');
+            origSpan.className = 'screen-text-orig';
+            origSpan.textContent = c.origText.replace(/<[^>]+>/g, '').replace(/\{[^}]*\}/g, '').trim();
+            origSpan.setAttribute('dir', 'ltr');
+            span.appendChild(origSpan);
           }
         }
       }
@@ -597,6 +607,17 @@ const SubtitlePlayer = (() => {
     fitText();
   }
 
+  /** Toggle or set original source language display */
+  function setShowOrig(val) {
+    showOrig = Boolean(val);
+    refresh(true);
+    fitText();
+  }
+
+  function getShowOrig() {
+    return showOrig;
+  }
+
   return {
     init,
     load,
@@ -612,6 +633,8 @@ const SubtitlePlayer = (() => {
     fitText,
     setFontScale,
     setAspectRatio,
+    setShowOrig,
+    getShowOrig,
     formatSubtitleHtml,
     getCuePlacement,
     get aspectRatio() { return currentAspectRatio; },

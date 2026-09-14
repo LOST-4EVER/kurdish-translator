@@ -178,6 +178,7 @@
 
         // Sub Tools Controls
         closeSubToolsPop: $('#vnSubToolsCloseBtn'),
+        subToolsTabBar: $('#vnSubToolsTabBar'),
         btnToolAutoSplit: $('#btnToolAutoSplit'),
         btnToolCleanOrthography: $('#btnToolCleanOrthography'),
         toolSubSearchInput: $('#toolSubSearchInput'),
@@ -188,11 +189,13 @@
         subSearchMatchCounter: $('#subSearchMatchCounter'),
         subSearchMatchPreviewArea: $('#subSearchMatchPreviewArea'),
         btnToolSearchReplace: $('#btnToolSearchReplace'),
+        btnToolShiftMinus1000: $('#btnToolShiftMinus1000'),
         btnToolShiftMinus500: $('#btnToolShiftMinus500'),
         btnToolShiftMinus100: $('#btnToolShiftMinus100'),
         toolSubShiftInput: $('#toolSubShiftInput'),
         btnToolShiftPlus100: $('#btnToolShiftPlus100'),
         btnToolShiftPlus500: $('#btnToolShiftPlus500'),
+        btnToolShiftPlus1000: $('#btnToolShiftPlus1000'),
         btnToolApplyShift: $('#btnToolApplyShift'),
 
         // Style Popover Controls
@@ -218,6 +221,7 @@
 
         // Volume Popover Controls
         volumeSlider: $('#studioVolumeSlider'),
+        volumePercentBadge: $('#vnVolumePercentBadge'),
         muteToggle: $('#studioMuteBtn'),
         closeVolumePop: $('#vnVolumeCloseBtn'),
 

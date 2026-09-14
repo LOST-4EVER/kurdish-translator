@@ -174,6 +174,18 @@
           window._updateAppWorkCues(currentCues, false);
         }
       });
+
+      // 11. Centralized listener for overlayConfigChange
+      VideoEditorState.on('overlayConfigChange', (cfg) => {
+        this._syncOrigToggleUI();
+        VideoEditorOverlay.applyStyling(cfg);
+        const activeCue = VideoEditorState.activeCue;
+        const activeIdx = VideoEditorState.activeCueIndex;
+        if (activeCue && activeIdx >= 0) {
+          VideoEditorOverlay.renderActiveCue(activeCue, cfg);
+          VideoEditorOverlay.updateTextShower(activeCue, activeIdx);
+        }
+      });
       this._syncOrigToggleUI();
 
       this.isInitialized = true;
@@ -843,6 +855,7 @@
 
       this._initTimeline();
       this._checkAndSyncSubtitlesQuietly();
+      this._syncOrigToggleUI();
 
       if (this.timeline && this.els.videoPlayer && this.els.videoPlayer.duration) {
         this.timeline.setDuration(this.els.videoPlayer.duration * 1000);
@@ -893,17 +906,46 @@
 
     _stepCue(direction) {
       const cues = VideoEditorState.getCues();
-      if (!cues.length) return;
+      const player = this.els.videoPlayer;
+      const curMs = (player ? player.currentTime * 1000 : 0) + VideoEditorState.syncOffsetMs;
+      const durMs = (player && player.duration) ? player.duration * 1000 : 0;
 
-      const curMs = (this.els.videoPlayer ? this.els.videoPlayer.currentTime * 1000 : 0) + VideoEditorState.syncOffsetMs;
+      if (window.VideoEditorHardware) {
+        window.VideoEditorHardware.haptic(12);
+      }
+
+      if (!cues || !cues.length) {
+        // If no cues exist, step playhead by 2 seconds
+        const stepAmount = 2000;
+        const targetMs = Math.max(0, durMs > 0 ? Math.min(durMs, curMs + direction * stepAmount) : curMs + direction * stepAmount);
+        this.seekTo(targetMs);
+        return;
+      }
+
       if (direction > 0) {
-        const next = cues.find((c) => c.start > curMs + 100);
-        if (next) this.seekTo(next.start);
+        const next = cues.find((c) => c.start > curMs + 80);
+        if (next) {
+          this.seekTo(next.start);
+        } else {
+          const lastCue = cues[cues.length - 1];
+          if (curMs < lastCue.end) {
+            this.seekTo(lastCue.end);
+          } else {
+            const targetMs = Math.max(0, durMs > 0 ? Math.min(durMs, curMs + 2000) : curMs + 2000);
+            this.seekTo(targetMs);
+          }
+        }
       } else {
-        const prevs = cues.filter((c) => c.start < curMs - 100);
+        const prevs = cues.filter((c) => c.start < curMs - 120);
         if (prevs.length > 0) {
           const prev = prevs[prevs.length - 1];
           this.seekTo(prev.start);
+        } else {
+          if (curMs > 0 && cues[0].start < curMs) {
+            this.seekTo(cues[0].start);
+          } else {
+            this.seekTo(Math.max(0, curMs - 2000));
+          }
         }
       }
     }

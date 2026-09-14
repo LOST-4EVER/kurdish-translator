@@ -2338,13 +2338,17 @@
     // Editor toggles.
     if (els.showOrigToggle) {
       els.showOrigToggle.addEventListener('change', () => {
-        store.set('showOrig', els.showOrigToggle.checked ? '1' : '0');
+        const isChecked = els.showOrigToggle.checked;
+        store.set('showOrig', isChecked ? '1' : '0');
         if (els.editorList) {
-          els.editorList.classList.toggle('hide-orig', !els.showOrigToggle.checked);
+          els.editorList.classList.toggle('hide-orig', !isChecked);
         }
         document.querySelectorAll('.ed-orig-box').forEach((b) => {
-          b.classList.toggle('hidden', !els.showOrigToggle.checked);
+          b.classList.toggle('hidden', !isChecked);
         });
+        if (typeof SubtitlePlayer !== 'undefined' && SubtitlePlayer.setShowOrig) {
+          SubtitlePlayer.setShowOrig(isChecked);
+        }
       });
     }
 
@@ -2565,6 +2569,9 @@
       els.showOrigToggle.checked = store.get('showOrig', '1') === '1';
       if (els.editorList) {
         els.editorList.classList.toggle('hide-orig', !els.showOrigToggle.checked);
+      }
+      if (typeof SubtitlePlayer !== 'undefined' && SubtitlePlayer.setShowOrig) {
+        SubtitlePlayer.setShowOrig(els.showOrigToggle.checked);
       }
     }
     if (els.showTimeToggle) {

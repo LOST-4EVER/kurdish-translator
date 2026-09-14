@@ -1,7 +1,7 @@
 /**
- * video-editor-player.js — HTML5 Video Player Controller & Transport for Video Studio.
- * Manages video loading (MOV, MP4, WebM), playhead seeking, aspect ratios,
- * and high-performance synthetic test streams.
+ * video-editor-player.js — High-Performance HTML5 Video Player & Gesture Engine for Video Studio.
+ * Features frame-accurate playback, requestVideoFrameCallback hardware sync,
+ * multi-touch gestures (tap-to-play, double-tap seek, touch-scrubbing), and pristine video quality.
  */
 (() => {
   'use strict';
@@ -13,9 +13,18 @@
       this.els = null;
       this.onTimeUpdateCallback = null;
       this.onMetadataLoadedCallback = null;
+      this.onVideoLoadedCallback = null;
       this.currentPlaybackRate = 1.0;
-      this._queuedSeekSec = null;
-      this._seekHandlerBound = false;
+      this._syncRaf = null;
+      this._rvfcId = null;
+      this._lastSyncedMs = -1;
+      this._tapTimer = null;
+      this._lastTapTime = 0;
+      this._lastTapPos = { x: 0, y: 0 };
+      this._isScrubbingTouch = false;
+      this._touchStartX = 0;
+      this._touchStartTimeMs = 0;
+      this._touchScrubHud = null;
     }
 
     init(els, options = {}) {
@@ -23,10 +32,9 @@
       this.onTimeUpdateCallback = options.onTimeUpdate;
       this.onMetadataLoadedCallback = options.onMetadataLoaded;
       this.onVideoLoadedCallback = options.onVideoLoaded;
-      this._syncRaf = null;
-      this._rvfcId = null;
 
       this._bindPlayerEvents();
+      this._bindGestureAndTouchSystem();
       this._bindFullscreenHud();
     }
 
@@ -69,14 +77,6 @@
         }
       });
 
-      stage.addEventListener('dblclick', (e) => {
-        // Only toggle fullscreen if not clicking directly on overlay text or buttons
-        if (e.target.closest('#studioSubtitleOverlay') || e.target.closest('.vn-fs-hud') || e.target.closest('.vn-fs-corner-btn')) {
-          return;
-        }
-        this.toggleFullscreen();
-      });
-
       // HUD Buttons
       const hudPlayBtn = document.getElementById('studioFsHudPlayBtn');
       if (hudPlayBtn) {
@@ -91,9 +91,7 @@
       if (hudBackBtn) {
         hudBackBtn.addEventListener('click', (e) => {
           e.stopPropagation();
-          if (this.els.videoPlayer) {
-            this.seekTo(Math.max(0, (this.els.videoPlayer.currentTime - 5) * 1000));
-          }
+          this.stepSeconds(-5);
           this._showFsHud();
         });
       }
@@ -102,10 +100,7 @@
       if (hudFwdBtn) {
         hudFwdBtn.addEventListener('click', (e) => {
           e.stopPropagation();
-          if (this.els.videoPlayer) {
-            const maxMs = (this.els.videoPlayer.duration || 0) * 1000;
-            this.seekTo(Math.min(maxMs, (this.els.videoPlayer.currentTime + 5) * 1000));
-          }
+          this.stepSeconds(5);
           this._showFsHud();
         });
       }
@@ -137,8 +132,6 @@
     _bindPlayerEvents() {
       const player = this.els.videoPlayer;
       if (!player) return;
-
-      player.addEventListener('click', () => this.togglePlay());
 
       const onPlayStart = () => {
         this._updatePlayIcon(true);
@@ -202,7 +195,6 @@
         this.hideLoadingOverlay();
         if (this.videoFile) {
           const ext = '.' + (this.videoFile.name || '').split('.').pop().toLowerCase();
-          // If MKV or WebM-compatible container failed on first try, attempt re-blobbing with video/webm mime
           if ((ext === '.mkv' || ext === '.webm') && !this._mkvFallbackAttempted) {
             this._mkvFallbackAttempted = true;
             try {
@@ -221,7 +213,7 @@
         }
       };
 
-      // Standard timeupdate fallback for low-spec devices
+      // Standard fallback timeupdate
       player.addEventListener('timeupdate', () => {
         if (!this._syncRaf && !this._rvfcId) {
           const curMs = (player.currentTime || 0) * 1000;
@@ -232,6 +224,188 @@
           }
         }
       });
+    }
+
+    /**
+     * Unified Gesture Engine:
+     * - Single click / tap on video: Play/Pause toggle with center animated ripple
+     * - Double tap Left (x < 35%): Rewind 5s (-5s ripple)
+     * - Double tap Right (x > 65%): Forward 5s (+5s ripple)
+     * - Double tap Center (35% - 65%): Toggle Fullscreen
+     * - Horizontal touch drag: Live playhead scrubbing with HUD preview
+     */
+    _bindGestureAndTouchSystem() {
+      const viewport = this.els.viewportWrapper || document.getElementById('studioViewportWrapper');
+      const stage = this.els.playerStage || document.getElementById('studioPlayerStage');
+      if (!viewport) return;
+
+      const handlePointerOrClick = (e) => {
+        // Ignore clicks on subtitle overlay, HUD, or corner buttons
+        if (
+          e.target.closest('#studioSubtitleOverlay') ||
+          e.target.closest('.vn-fs-hud') ||
+          e.target.closest('.vn-fs-corner-btn') ||
+          e.target.closest('.vn-empty-dropzone') ||
+          e.target.closest('.vn-video-error-overlay') ||
+          e.target.closest('.vn-video-loading-overlay')
+        ) {
+          return;
+        }
+
+        const rect = viewport.getBoundingClientRect();
+        if (!rect.width || !rect.height) return;
+
+        const clientX = e.clientX !== undefined ? e.clientX : (e.touches && e.touches[0] ? e.touches[0].clientX : rect.left + rect.width / 2);
+        const clientY = e.clientY !== undefined ? e.clientY : (e.touches && e.touches[0] ? e.touches[0].clientY : rect.top + rect.height / 2);
+        const relX = (clientX - rect.left) / rect.width;
+
+        const now = performance.now();
+        const timeSinceLastTap = now - this._lastTapTime;
+        const distFromLastTap = Math.hypot(clientX - this._lastTapPos.x, clientY - this._lastTapPos.y);
+
+        if (timeSinceLastTap < 320 && distFromLastTap < 45) {
+          // Double tap detected!
+          if (this._tapTimer) {
+            clearTimeout(this._tapTimer);
+            this._tapTimer = null;
+          }
+          this._lastTapTime = 0;
+
+          if (relX < 0.35) {
+            // Left double-tap: Rewind 5s
+            this.stepSeconds(-5);
+            this._showGestureRipple('rewind', clientX, clientY, '-5s');
+          } else if (relX > 0.65) {
+            // Right double-tap: Forward 5s
+            this.stepSeconds(5);
+            this._showGestureRipple('forward', clientX, clientY, '+5s');
+          } else {
+            // Center double-tap: Fullscreen
+            this.toggleFullscreen();
+            this._showGestureRipple('center', clientX, clientY);
+          }
+        } else {
+          // First tap: set timer for single tap action
+          this._lastTapTime = now;
+          this._lastTapPos = { x: clientX, y: clientY };
+
+          if (this._tapTimer) clearTimeout(this._tapTimer);
+          this._tapTimer = setTimeout(() => {
+            this._tapTimer = null;
+            this.togglePlay();
+          }, 240);
+        }
+      };
+
+      viewport.addEventListener('click', handlePointerOrClick);
+
+      // Touch horizontal scrub listener
+      viewport.addEventListener('touchstart', (e) => {
+        if (e.touches.length !== 1) return;
+        if (e.target.closest('#studioSubtitleOverlay') || e.target.closest('.vn-fs-hud') || e.target.closest('.vn-fs-corner-btn')) return;
+
+        this._isScrubbingTouch = false;
+        this._touchStartX = e.touches[0].clientX;
+        this._touchStartTimeMs = this.els.videoPlayer ? this.els.videoPlayer.currentTime * 1000 : 0;
+      }, { passive: true });
+
+      viewport.addEventListener('touchmove', (e) => {
+        if (e.touches.length !== 1) return;
+        if (!this.els.videoPlayer || !this.els.videoPlayer.duration) return;
+
+        const dx = e.touches[0].clientX - this._touchStartX;
+        if (!this._isScrubbingTouch && Math.abs(dx) > 18) {
+          this._isScrubbingTouch = true;
+          if (this._tapTimer) {
+            clearTimeout(this._tapTimer);
+            this._tapTimer = null;
+          }
+        }
+
+        if (this._isScrubbingTouch) {
+          const rect = viewport.getBoundingClientRect();
+          const durMs = this.els.videoPlayer.duration * 1000;
+          const deltaSec = (dx / rect.width) * Math.min(60, durMs / 1000);
+          const targetMs = Math.max(0, Math.min(durMs, this._touchStartTimeMs + deltaSec * 1000));
+
+          this._updateTouchScrubHud(targetMs, deltaSec);
+          this.seekTo(targetMs, true);
+        }
+      }, { passive: true });
+
+      const onTouchEnd = () => {
+        if (this._isScrubbingTouch) {
+          this._isScrubbingTouch = false;
+          this._hideTouchScrubHud();
+        }
+      };
+
+      viewport.addEventListener('touchend', onTouchEnd, { passive: true });
+      viewport.addEventListener('touchcancel', onTouchEnd, { passive: true });
+    }
+
+    _showGestureRipple(type, clientX, clientY, text = '') {
+      const viewport = this.els.viewportWrapper || document.getElementById('studioViewportWrapper');
+      if (!viewport) return;
+
+      const ripple = document.createElement('div');
+      ripple.className = `vn-gesture-ripple ${type === 'center' ? 'center-action' : 'side-action'}`;
+
+      const rect = viewport.getBoundingClientRect();
+      const left = clientX - rect.left;
+      const top = clientY - rect.top;
+
+      ripple.style.left = `${left}px`;
+      ripple.style.top = `${top}px`;
+
+      if (type === 'rewind') {
+        ripple.innerHTML = `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><polyline points="11 17 6 12 11 7"></polyline><polyline points="18 17 13 12 18 7"></polyline></svg><span>${text}</span>`;
+      } else if (type === 'forward') {
+        ripple.innerHTML = `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><polyline points="13 17 18 12 13 7"></polyline><polyline points="6 17 11 12 6 7"></polyline></svg><span>${text}</span>`;
+      } else if (type === 'play') {
+        ripple.innerHTML = `<svg width="28" height="28" viewBox="0 0 24 24" fill="currentColor"><polygon points="6 3 20 12 6 21 6 3"></polygon></svg>`;
+      } else if (type === 'pause') {
+        ripple.innerHTML = `<svg width="28" height="28" viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="4" width="4" height="16"></rect><rect x="14" y="4" width="4" height="16"></rect></svg>`;
+      } else {
+        ripple.innerHTML = `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"></path></svg>`;
+      }
+
+      viewport.appendChild(ripple);
+      setTimeout(() => {
+        if (ripple.parentNode) ripple.parentNode.removeChild(ripple);
+      }, 700);
+
+      if (window.VideoEditorHardware) {
+        window.VideoEditorHardware.haptic(15);
+      }
+    }
+
+    _updateTouchScrubHud(targetMs, deltaSec) {
+      const viewport = this.els.viewportWrapper || document.getElementById('studioViewportWrapper');
+      if (!viewport) return;
+
+      if (!this._touchScrubHud) {
+        this._touchScrubHud = document.createElement('div');
+        this._touchScrubHud.className = 'vn-touch-scrub-hud';
+        viewport.appendChild(this._touchScrubHud);
+      }
+
+      const sign = deltaSec >= 0 ? '+' : '';
+      const formattedTime = this.formatTime(targetMs, false);
+      this._touchScrubHud.innerHTML = `
+        <span class="vn-touch-scrub-delta">${sign}${deltaSec.toFixed(1)}s</span>
+        <span>·</span>
+        <span>${formattedTime}</span>
+      `;
+    }
+
+    _hideTouchScrubHud() {
+      if (this._touchScrubHud) {
+        if (this._touchScrubHud.parentNode) {
+          this._touchScrubHud.parentNode.removeChild(this._touchScrubHud);
+        }
+        this._touchScrubHud = null;
+      }
     }
 
     showLoadingOverlay(title = 'Loading Video...', sub = 'Decoding media stream & metadata') {
@@ -274,9 +448,9 @@
       if (w > 0 && h > 0) {
         let label = `${h}p`;
         if (h >= 2160 || w >= 3840) label = '4K UHD';
-        else if (h >= 1440) label = '1440p';
-        else if (h >= 1080) label = '1080p Full HD';
-        else if (h >= 720) label = '720p HD';
+        else if (h >= 1440 || w >= 2560) label = '1440p QHD';
+        else if (h >= 1080 || w >= 1920) label = '1080p FHD';
+        else if (h >= 720 || w >= 1280) label = '720p HD';
         else label = `${w}x${h}`;
 
         const fileExt = (this.videoFile ? this.videoFile.name.split('.').pop() : 'video').toUpperCase();
@@ -291,22 +465,39 @@
       const player = this.els.videoPlayer;
       if (!player) return;
 
-      const loop = () => {
+      const syncTick = () => {
         if (!player || player.paused || player.ended) {
-          this._syncRaf = null;
+          this._stopPlaybackSync();
           return;
         }
+
         const curMs = (player.currentTime || 0) * 1000;
         const durMs = (player.duration || 0) * 1000;
-        this.updateTimeDisplay(curMs, durMs);
-        if (this.onTimeUpdateCallback) {
-          this.onTimeUpdateCallback(curMs, durMs);
+
+        // Only trigger update if time progressed by >= 10ms to prevent redundant DOM thrashing
+        if (Math.abs(curMs - this._lastSyncedMs) >= 10) {
+          this._lastSyncedMs = curMs;
+          this.updateTimeDisplay(curMs, durMs);
+          if (this.onTimeUpdateCallback) {
+            this.onTimeUpdateCallback(curMs, durMs);
+          }
         }
 
-        this._syncRaf = requestAnimationFrame(loop);
+        // Hardware video frame callback where supported (Chrome/Edge/Safari 15.4+)
+        if ('requestVideoFrameCallback' in player) {
+          this._rvfcId = player.requestVideoFrameCallback(() => {
+            syncTick();
+          });
+        } else {
+          this._syncRaf = requestAnimationFrame(syncTick);
+        }
       };
 
-      this._syncRaf = requestAnimationFrame(loop);
+      if ('requestVideoFrameCallback' in player) {
+        this._rvfcId = player.requestVideoFrameCallback(() => syncTick());
+      } else {
+        this._syncRaf = requestAnimationFrame(syncTick);
+      }
     }
 
     _stopPlaybackSync() {
@@ -317,7 +508,7 @@
       if (this._rvfcId && this.els.videoPlayer && 'cancelVideoFrameCallback' in this.els.videoPlayer) {
         try {
           this.els.videoPlayer.cancelVideoFrameCallback(this._rvfcId);
-        } catch {}
+        } catch (_) {}
         this._rvfcId = null;
       }
     }
@@ -339,7 +530,7 @@
       this._mkvFallbackAttempted = false;
       const player = this.els.videoPlayer;
       if (player) {
-        try { player.pause(); } catch {}
+        try { player.pause(); } catch (_) {}
       }
 
       if (this.videoUrl) {
@@ -382,64 +573,72 @@
       return true;
     }
 
+    play() {
+      const player = this.els.videoPlayer;
+      if (!player) return Promise.resolve();
+      return player.play().catch((err) => {
+        console.warn('Playback prevented:', err);
+      });
+    }
+
+    pause() {
+      const player = this.els.videoPlayer;
+      if (!player) return;
+      player.pause();
+    }
+
     togglePlay() {
       const player = this.els.videoPlayer;
       if (!player) return;
 
+      const viewport = this.els.viewportWrapper || document.getElementById('studioViewportWrapper');
+      const rect = viewport ? viewport.getBoundingClientRect() : { left: 0, top: 0, width: 200, height: 200 };
+      const centerX = rect.left + rect.width / 2;
+      const centerY = rect.top + rect.height / 2;
+
       if (player.paused || player.ended) {
-        player.play().catch((err) => console.warn('Playback prevented:', err));
+        player.play().then(() => {
+          this._showGestureRipple('play', centerX, centerY);
+        }).catch((err) => {
+          console.warn('Playback prevented:', err);
+        });
       } else {
         player.pause();
+        this._showGestureRipple('pause', centerX, centerY);
       }
     }
 
     seekTo(timeMs, immediate = false) {
       const player = this.els.videoPlayer;
-      const targetSec = Math.max(0, timeMs / 1000);
       const durMs = (player && player.duration) ? player.duration * 1000 : 0;
+      const clampedMs = Math.max(0, durMs > 0 ? Math.min(durMs, timeMs) : timeMs);
+      const targetSec = clampedMs / 1000;
 
       // Latency-free instant UI and subtitle update
-      this.updateTimeDisplay(timeMs, durMs);
+      this.updateTimeDisplay(clampedMs, durMs);
       if (this.onTimeUpdateCallback) {
-        this.onTimeUpdateCallback(timeMs, durMs);
+        this.onTimeUpdateCallback(clampedMs, durMs);
       }
 
       if (!player) return;
 
-      // Direct frame-accurate seeking ensures precise subtitle alignment
-      if (immediate) {
+      // Direct frame-accurate seeking
+      try {
         player.currentTime = targetSec;
-      } else if (typeof player.fastSeek === 'function') {
-        try {
-          player.fastSeek(targetSec);
-        } catch (_) {
-          player.currentTime = targetSec;
-        }
-      } else if (!player.seeking) {
-        player.currentTime = targetSec;
-      } else {
-        // Queue latest seek target if video decoder is busy
-        this._queuedSeekSec = targetSec;
-        if (!this._seekHandlerBound) {
-          this._seekHandlerBound = true;
-          player.addEventListener('seeked', () => {
-            if (this._queuedSeekSec !== null && this._queuedSeekSec !== undefined) {
-              const sec = this._queuedSeekSec;
-              this._queuedSeekSec = null;
-              player.currentTime = sec;
-            }
-          }, { passive: true });
-        }
-      }
+      } catch (_) {}
     }
 
     stepSeconds(delta) {
-      if (!this.els.videoPlayer) return;
-      const targetSec = Math.max(0, this.els.videoPlayer.currentTime + delta);
+      const player = this.els.videoPlayer;
+      if (!player) return;
+      const curMs = (player.currentTime || 0) * 1000;
+      const durMs = (player.duration || 0) * 1000;
+      const targetMs = Math.max(0, Math.min(durMs || Infinity, curMs + delta * 1000));
+
       if (window.VideoEditorHardware) {
-        window.VideoEditorHardware.haptic(10);
+        window.VideoEditorHardware.haptic(12);
       }
-      this.seekTo(targetSec * 1000);
+      this.seekTo(targetMs);
     }
 
     setPlaybackRate(rate) {
@@ -477,10 +676,18 @@
     toggleFullscreen() {
       const stage = this.els.playerStage;
       if (!stage) return;
-      if (!document.fullscreenElement) {
-        stage.requestFullscreen().catch(() => {});
+      if (!document.fullscreenElement && !document.webkitFullscreenElement) {
+        if (stage.requestFullscreen) {
+          stage.requestFullscreen().catch(() => {});
+        } else if (stage.webkitRequestFullscreen) {
+          stage.webkitRequestFullscreen();
+        }
       } else {
-        document.exitFullscreen().catch(() => {});
+        if (document.exitFullscreen) {
+          document.exitFullscreen().catch(() => {});
+        } else if (document.webkitExitFullscreen) {
+          document.webkitExitFullscreen();
+        }
       }
     }
 
@@ -527,16 +734,18 @@
     }
 
     /**
-     * Generate a lightweight client-side Canvas video for instant testing.
+     * Generate a crisp 1080p canvas video stream for zero-latency testing.
      */
     generateSampleVideo() {
       const canvas = document.createElement('canvas');
-      canvas.width = 1280;
-      canvas.height = 720;
-      const ctx = canvas.getContext('2d');
+      canvas.width = 1920;
+      canvas.height = 1080;
+      const ctx = canvas.getContext('2d', { alpha: false });
+      ctx.imageSmoothingEnabled = true;
+      ctx.imageSmoothingQuality = 'high';
 
-      const stream = canvas.captureStream(30);
-      const durationMs = 12000;
+      const stream = canvas.captureStream(60);
+      const durationMs = 15000;
       const startTime = performance.now();
 
       // Audio Tone
@@ -547,33 +756,37 @@
         const dest = audioCtx.createMediaStreamDestination();
         osc = audioCtx.createOscillator();
         const gain = audioCtx.createGain();
-        gain.gain.value = 0.05;
+        gain.gain.value = 0.04;
         osc.frequency.setValueAtTime(440, audioCtx.currentTime);
         osc.connect(gain);
         gain.connect(dest);
         osc.start();
         const audioTrack = dest.stream.getAudioTracks()[0];
         if (audioTrack) stream.addTrack(audioTrack);
-      } catch {}
+      } catch (_) {}
 
       const chunks = [];
       let mimeType = 'video/webm;codecs=vp9';
       if (!MediaRecorder.isTypeSupported(mimeType)) mimeType = 'video/webm';
 
-      const rec = new MediaRecorder(stream, { mimeType });
+      const rec = new MediaRecorder(stream, {
+        mimeType,
+        videoBitsPerSecond: 12000000 // 12 Mbps crystal clear
+      });
+
       rec.ondataavailable = (e) => {
         if (e.data && e.data.size > 0) chunks.push(e.data);
       };
 
       rec.onstop = () => {
         if (osc) {
-          try { osc.stop(); } catch {}
+          try { osc.stop(); } catch (_) {}
         }
         if (audioCtx) {
-          try { audioCtx.close(); } catch {}
+          try { audioCtx.close(); } catch (_) {}
         }
         const blob = new Blob(chunks, { type: 'video/webm' });
-        const sampleFile = new File([blob], 'sample_kurdish_preview.webm', { type: 'video/webm' });
+        const sampleFile = new File([blob], 'sample_kurdish_preview_1080p.webm', { type: 'video/webm' });
         this.loadVideoFile(sampleFile);
       };
 
@@ -588,44 +801,61 @@
           return;
         }
 
-        // Clean dark obsidian solid background (No gradients)
-        ctx.fillStyle = '#0f0e17';
+        // Crisp obsidian solid background
+        ctx.fillStyle = '#0a0910';
         ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-        // Accent card border
-        ctx.strokeStyle = 'rgba(234, 179, 8, 0.4)';
-        ctx.lineWidth = 4;
-        ctx.strokeRect(40, 40, canvas.width - 80, canvas.height - 80);
+        // Grid accents
+        ctx.strokeStyle = 'rgba(255, 255, 255, 0.03)';
+        ctx.lineWidth = 1;
+        const step = 80;
+        for (let x = 0; x < canvas.width; x += step) {
+          ctx.beginPath();
+          ctx.moveTo(x, 0);
+          ctx.lineTo(x, canvas.height);
+          ctx.stroke();
+        }
+        for (let y = 0; y < canvas.height; y += step) {
+          ctx.beginPath();
+          ctx.moveTo(0, y);
+          ctx.lineTo(canvas.width, y);
+          ctx.stroke();
+        }
 
-        // Ambient rings
-        ctx.strokeStyle = 'rgba(234, 179, 8, 0.25)';
-        ctx.lineWidth = 3;
+        // Crisp accent border
+        ctx.strokeStyle = 'rgba(234, 179, 8, 0.5)';
+        ctx.lineWidth = 6;
+        ctx.strokeRect(60, 60, canvas.width - 120, canvas.height - 120);
+
+        // Animated orbital circles
+        ctx.strokeStyle = 'rgba(234, 179, 8, 0.35)';
+        ctx.lineWidth = 4;
         ctx.beginPath();
-        const cx = canvas.width / 2 + Math.sin(frame * 0.04) * 60;
-        const cy = canvas.height / 2 + Math.cos(frame * 0.04) * 30;
-        ctx.arc(cx, cy, 150, 0, Math.PI * 2);
+        const cx = canvas.width / 2 + Math.sin(frame * 0.03) * 90;
+        const cy = canvas.height / 2 + Math.cos(frame * 0.03) * 45;
+        ctx.arc(cx, cy, 220, 0, Math.PI * 2);
         ctx.stroke();
 
-        // Titles
+        // High contrast typography
         ctx.fillStyle = '#ffffff';
-        ctx.font = 'bold 38px "Inter", sans-serif';
+        ctx.font = 'bold 54px "Inter", sans-serif';
         ctx.textAlign = 'center';
-        ctx.fillText('VN Subtitle Studio Preview', canvas.width / 2, canvas.height / 2 - 25);
+        ctx.fillText('Kurdish Subtitle Studio · 1080p 60fps', canvas.width / 2, canvas.height / 2 - 40);
 
-        ctx.font = '24px "Noto Naskh Arabic", sans-serif';
+        ctx.font = 'bold 36px "Noto Naskh Arabic", sans-serif';
         ctx.fillStyle = '#fde047';
-        ctx.fillText('تاقیکردنەوەی ڤیدیۆ و هاوتاکردنی ژێرنووسی کوردی', canvas.width / 2, canvas.height / 2 + 25);
+        ctx.fillText('تاقیکردنەوەی کوالێتی بەرز و هاوتاکردنی دەقی کوردی سۆرانی', canvas.width / 2, canvas.height / 2 + 35);
 
-        const sec = (elapsed / 1000).toFixed(1);
-        ctx.font = '16px monospace';
-        ctx.fillStyle = 'rgba(255, 255, 255, 0.7)';
-        ctx.fillText(`TIME: ${sec}s / ${(durationMs / 1000).toFixed(0)}s`, canvas.width / 2, canvas.height / 2 + 75);
+        const sec = (elapsed / 1000).toFixed(2);
+        ctx.font = '700 24px monospace';
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.85)';
+        ctx.fillText(`PLAYHEAD: ${sec}s / ${(durationMs / 1000).toFixed(1)}s · 1920×1080`, canvas.width / 2, canvas.height / 2 + 105);
 
         requestAnimationFrame(render);
       };
 
       requestAnimationFrame(render);
-      VideoEditorUI.showToast('Rendering cinematic sample video...', 'info');
+      VideoEditorUI.showToast('Rendering crystal-clear 1080p sample video...', 'info');
     }
   }
 

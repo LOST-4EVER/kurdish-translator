@@ -224,12 +224,12 @@
       const isVideo = mode === 'video';
 
       if (this.els.exportTabVideoBtn) {
-        this.els.exportTabVideoBtn.style.background = isVideo ? '#a855f7' : 'rgba(255,255,255,0.08)';
-        this.els.exportTabVideoBtn.style.color = isVideo ? '#ffffff' : 'rgba(255,255,255,0.7)';
+        this.els.exportTabVideoBtn.classList.toggle('active', isVideo);
+        this.els.exportTabVideoBtn.removeAttribute('style');
       }
       if (this.els.exportTabSubBtn) {
-        this.els.exportTabSubBtn.style.background = !isVideo ? '#a855f7' : 'rgba(255,255,255,0.08)';
-        this.els.exportTabSubBtn.style.color = !isVideo ? '#ffffff' : 'rgba(255,255,255,0.7)';
+        this.els.exportTabSubBtn.classList.toggle('active', !isVideo);
+        this.els.exportTabSubBtn.removeAttribute('style');
       }
 
       if (this.els.exportSubOnlyArea) {
@@ -489,22 +489,29 @@
     }
 
     wrapText(ctx, text, maxWidth) {
-      const words = text.split(/\s+/);
+      if (!text) return [];
+      const paragraphs = text.split('\n');
       const lines = [];
-      let currentLine = '';
 
-      for (let i = 0; i < words.length; i++) {
-        const word = words[i];
-        const testLine = currentLine ? `${currentLine} ${word}` : word;
-        const width = ctx.measureText(testLine).width;
-        if (width < maxWidth || !currentLine) {
-          currentLine = testLine;
-        } else {
-          lines.push(currentLine);
-          currentLine = word;
+      for (const para of paragraphs) {
+        const trimmed = para.trim();
+        if (!trimmed) continue;
+        const words = trimmed.split(/\s+/);
+        let currentLine = '';
+
+        for (let i = 0; i < words.length; i++) {
+          const word = words[i];
+          const testLine = currentLine ? `${currentLine} ${word}` : word;
+          const width = ctx.measureText(testLine).width;
+          if (width <= maxWidth || !currentLine) {
+            currentLine = testLine;
+          } else {
+            lines.push(currentLine);
+            currentLine = word;
+          }
         }
+        if (currentLine) lines.push(currentLine);
       }
-      if (currentLine) lines.push(currentLine);
       return lines;
     }
 
@@ -529,6 +536,13 @@
       if (!cues || !cues.length) {
         VideoEditorUI.showToast('No subtitle cues available to export. Please load or translate subtitles first.', 'warning');
         return;
+      }
+
+      // Ensure fonts are loaded before capturing frames to prevent font pop
+      if (document.fonts && document.fonts.ready) {
+        try {
+          await document.fonts.ready;
+        } catch {}
       }
 
       this.burnRecording = true;
@@ -573,6 +587,16 @@
       const stream = canvas.captureStream(30);
       this.activeStream = stream;
 
+      // Audio state preservation
+      const originalMuted = video.muted;
+      const originalVolume = video.volume;
+      const originalPlaybackRate = video.playbackRate;
+
+      // Temporarily unmute and set full volume for clean recording
+      video.muted = false;
+      video.volume = 1.0;
+      video.playbackRate = 1.0;
+
       // Robust audio capture via Web Audio API destination with fallback to captureStream
       try {
         const AudioContextClass = window.AudioContext || window.webkitAudioContext;
@@ -615,12 +639,13 @@
 
       // Determine best supported MIME type
       const mimeTypes = [
+        'video/mp4;codecs=avc1.42E01E,mp4a.40.2',
+        'video/mp4;codecs=avc1,mp4a.40.2',
+        'video/mp4',
         'video/webm;codecs=vp9,opus',
         'video/webm;codecs=vp8,opus',
         'video/webm;codecs=h264,opus',
-        'video/webm',
-        'video/mp4;codecs=avc1,mp4a.40.2',
-        'video/mp4'
+        'video/webm'
       ];
       let selectedMime = 'video/webm';
       for (const mime of mimeTypes) {
@@ -653,7 +678,12 @@
       const totalDuration = (video.duration && !isNaN(video.duration) && video.duration > 0) ? video.duration : 1;
       const totalEstimatedFrames = Math.max(1, Math.round(totalDuration * 30));
 
-      recorder.onstop = () => {
+      const finalizeRecording = () => {
+        // Restore original video playback properties
+        video.muted = originalMuted;
+        video.volume = originalVolume;
+        video.playbackRate = originalPlaybackRate;
+
         this.burnRecording = false;
         if (this.els.exportStageArea) this.els.exportStageArea.classList.remove('active-rendering');
         this._cleanupAudioAndStreams();
@@ -702,6 +732,20 @@
         VideoEditorUI.showToast('Video export finished successfully!', 'success');
       };
 
+      recorder.onstop = finalizeRecording;
+
+      // Handle video ended event cleanly
+      const onEnded = () => {
+        video.removeEventListener('ended', onEnded);
+        if (recorder.state !== 'inactive') {
+          try {
+            if (recorder.requestData) recorder.requestData();
+          } catch {}
+          recorder.stop();
+        }
+      };
+      video.addEventListener('ended', onEnded);
+
       recorder.start(500);
 
       // Seek to start and play
@@ -714,12 +758,14 @@
 
       const drawBurnFrame = () => {
         if (!this.burnRecording || this.burnAbort) {
+          video.removeEventListener('ended', onEnded);
           if (recorder.state !== 'inactive') recorder.stop();
           video.pause();
           return;
         }
 
         if (video.ended || video.currentTime >= totalDuration - 0.05) {
+          video.removeEventListener('ended', onEnded);
           if (recorder.state !== 'inactive') recorder.stop();
           video.pause();
           return;

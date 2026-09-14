@@ -146,22 +146,22 @@
         activePointers.set(e.pointerId, { x: e.clientX, y: e.clientY, type: e.pointerType });
 
         const isTouchDevice = e.pointerType === 'touch' || (e.touches && e.touches.length > 0);
+        const isHandleTouch = Boolean(e.target && e.target.closest('.vn-sub-drag-indicator'));
         const centroid = getTouchCentroid(e);
 
-        // Touch devices strictly require 2 fingers / 2 hands to initiate text moving
         if (isTouchDevice) {
-          if (!centroid) {
-            // Single finger tap/touch - don't drag text, prepare for click selection
+          if (!centroid && !isHandleTouch) {
+            // Single finger tap/touch on text - prepare for quick editor open
             this._isDragging = false;
             this._hasMoved = false;
             return;
           }
           this._isDragging = true;
-          this._hasMoved = true;
-          this._startX = centroid.x;
-          this._startY = centroid.y;
+          this._hasMoved = isHandleTouch;
+          this._startX = centroid ? centroid.x : e.clientX;
+          this._startY = centroid ? centroid.y : e.clientY;
         } else {
-          // Desktop / Mouse: standard drag or Shift/Ctrl drag
+          // Desktop / Mouse
           this._isDragging = true;
           this._hasMoved = false;
           this._startX = e.clientX;
@@ -478,8 +478,17 @@
         const text = stripTags(cue.text || '');
         if (this.els.textShowerNum) this.els.textShowerNum.textContent = `#${idx + 1}`;
         if (this.els.textShowerText) {
-          this.els.textShowerText.textContent = text;
-          this.els.textShowerText.setAttribute('dir', hasArabic(text) ? 'rtl' : 'ltr');
+          const cfg = (window.VideoEditorState && window.VideoEditorState.overlayConfig) || {};
+          const hasOrig = Boolean(cfg.showOrig && cue.origText && cue.origText.trim() && cue.origText.trim() !== text.trim());
+          if (hasOrig) {
+            const safeText = text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+            const safeOrig = stripTags(cue.origText).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+            this.els.textShowerText.innerHTML = `<div class="vn-shower-kurdish" dir="${hasArabic(text) ? 'rtl' : 'ltr'}">${safeText}</div><div class="vn-shower-orig" dir="ltr"><span class="vn-shower-orig-tag">EN</span> <span>${safeOrig}</span></div>`;
+            this.els.textShowerText.removeAttribute('dir');
+          } else {
+            this.els.textShowerText.textContent = text;
+            this.els.textShowerText.setAttribute('dir', hasArabic(text) ? 'rtl' : 'ltr');
+          }
         }
 
         // Reading Pace
