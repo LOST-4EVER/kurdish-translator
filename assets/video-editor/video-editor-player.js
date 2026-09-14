@@ -27,6 +27,111 @@
       this._rvfcId = null;
 
       this._bindPlayerEvents();
+      this._bindFullscreenHud();
+    }
+
+    _bindFullscreenHud() {
+      const stage = this.els.playerStage;
+      if (!stage) return;
+
+      this._fsHudIdleTimer = null;
+
+      const onFsChange = () => {
+        const isFs = Boolean(document.fullscreenElement || document.webkitFullscreenElement);
+        stage.classList.toggle('is-fullscreen', isFs);
+
+        const fsBtn = this.els.fsBtn || document.getElementById('studioFsBtn');
+        if (fsBtn) {
+          if (isFs) {
+            fsBtn.innerHTML = '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 3v3a2 2 0 0 1-2 2H3m18 0h-3a2 2 0 0 1-2-2V3m0 18v-3a2 2 0 0 1 2-2h3M3 16h3a2 2 0 0 1 2 2v3"></path></svg>';
+            fsBtn.setAttribute('title', 'Exit Fullscreen (Esc)');
+          } else {
+            fsBtn.innerHTML = '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"></path></svg>';
+            fsBtn.setAttribute('title', 'Fullscreen player (F)');
+          }
+        }
+
+        const hud = document.getElementById('studioFsControlsHud');
+        if (hud) {
+          hud.classList.toggle('hidden', !isFs);
+          if (isFs) {
+            this._showFsHud();
+          }
+        }
+      };
+
+      document.addEventListener('fullscreenchange', onFsChange);
+      document.addEventListener('webkitfullscreenchange', onFsChange);
+
+      stage.addEventListener('mousemove', () => {
+        if (document.fullscreenElement || document.webkitFullscreenElement) {
+          this._showFsHud();
+        }
+      });
+
+      stage.addEventListener('dblclick', (e) => {
+        // Only toggle fullscreen if not clicking directly on overlay text or buttons
+        if (e.target.closest('#studioSubtitleOverlay') || e.target.closest('.vn-fs-hud') || e.target.closest('.vn-fs-corner-btn')) {
+          return;
+        }
+        this.toggleFullscreen();
+      });
+
+      // HUD Buttons
+      const hudPlayBtn = document.getElementById('studioFsHudPlayBtn');
+      if (hudPlayBtn) {
+        hudPlayBtn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          this.togglePlay();
+          this._showFsHud();
+        });
+      }
+
+      const hudBackBtn = document.getElementById('studioFsHudBackBtn');
+      if (hudBackBtn) {
+        hudBackBtn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          if (this.els.videoPlayer) {
+            this.seekTo(Math.max(0, (this.els.videoPlayer.currentTime - 5) * 1000));
+          }
+          this._showFsHud();
+        });
+      }
+
+      const hudFwdBtn = document.getElementById('studioFsHudFwdBtn');
+      if (hudFwdBtn) {
+        hudFwdBtn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          if (this.els.videoPlayer) {
+            const maxMs = (this.els.videoPlayer.duration || 0) * 1000;
+            this.seekTo(Math.min(maxMs, (this.els.videoPlayer.currentTime + 5) * 1000));
+          }
+          this._showFsHud();
+        });
+      }
+
+      const hudExitBtn = document.getElementById('studioFsHudExitBtn');
+      if (hudExitBtn) {
+        hudExitBtn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          this.toggleFullscreen();
+        });
+      }
+    }
+
+    _showFsHud() {
+      const hud = document.getElementById('studioFsControlsHud');
+      if (!hud) return;
+      hud.classList.remove('hidden', 'hud-idle');
+
+      if (this._fsHudIdleTimer) {
+        clearTimeout(this._fsHudIdleTimer);
+      }
+      this._fsHudIdleTimer = setTimeout(() => {
+        if (document.fullscreenElement || document.webkitFullscreenElement) {
+          hud.classList.add('hud-idle');
+        }
+      }, 2600);
     }
 
     _bindPlayerEvents() {
@@ -96,10 +201,22 @@
         console.warn('Video element playback error:', err);
         this.hideLoadingOverlay();
         if (this.videoFile) {
-          const ext = '.' + (this.videoFile.name || '').split('.').pop().toUpperCase();
+          const ext = '.' + (this.videoFile.name || '').split('.').pop().toLowerCase();
+          // If MKV or WebM-compatible container failed on first try, attempt re-blobbing with video/webm mime
+          if ((ext === '.mkv' || ext === '.webm') && !this._mkvFallbackAttempted) {
+            this._mkvFallbackAttempted = true;
+            try {
+              if (this.videoUrl) URL.revokeObjectURL(this.videoUrl);
+              const webmBlob = new Blob([this.videoFile], { type: 'video/webm' });
+              this.videoUrl = URL.createObjectURL(webmBlob);
+              player.src = this.videoUrl;
+              player.load();
+              return;
+            } catch (_) {}
+          }
           this.showErrorOverlay(
-            `Unable to decode video (${ext})`,
-            'This video format or audio codec is not supported by your browser engine. Try converted MP4 (H.264 / AAC) or WebM.'
+            `Unable to decode video (${ext.toUpperCase()})`,
+            'This video format or audio codec is not supported natively by your browser engine. Try converted MP4 (H.264 / AAC) or WebM.'
           );
         }
       };
@@ -219,6 +336,7 @@
       }
 
       this._stopPlaybackSync();
+      this._mkvFallbackAttempted = false;
       const player = this.els.videoPlayer;
       if (player) {
         try { player.pause(); } catch {}
@@ -289,7 +407,15 @@
       if (!player) return;
 
       // Direct frame-accurate seeking ensures precise subtitle alignment
-      if (immediate || !player.seeking) {
+      if (immediate) {
+        player.currentTime = targetSec;
+      } else if (typeof player.fastSeek === 'function') {
+        try {
+          player.fastSeek(targetSec);
+        } catch (_) {
+          player.currentTime = targetSec;
+        }
+      } else if (!player.seeking) {
         player.currentTime = targetSec;
       } else {
         // Queue latest seek target if video decoder is busy
@@ -363,13 +489,24 @@
         this.els.playIcon.classList.toggle('hidden', isPlaying);
         this.els.pauseIcon.classList.toggle('hidden', !isPlaying);
       }
+      const hudPlay = document.querySelector('.vn-fs-hud-play-icon');
+      const hudPause = document.querySelector('.vn-fs-hud-pause-icon');
+      if (hudPlay && hudPause) {
+        hudPlay.classList.toggle('hidden', isPlaying);
+        hudPause.classList.toggle('hidden', !isPlaying);
+      }
     }
 
     updateTimeDisplay(currentMs, totalMs) {
+      const curStr = this.formatTime(currentMs, false);
+      const totStr = this.formatTime(totalMs, false);
+      const formatted = `${curStr} / ${totStr}`;
       if (this.els.timeDisplay) {
-        const curStr = this.formatTime(currentMs, false);
-        const totStr = this.formatTime(totalMs, false);
-        this.els.timeDisplay.textContent = `${curStr} / ${totStr}`;
+        this.els.timeDisplay.textContent = formatted;
+      }
+      const hudTime = document.getElementById('studioFsHudTime');
+      if (hudTime) {
+        hudTime.textContent = formatted;
       }
     }
 

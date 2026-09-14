@@ -21,6 +21,10 @@
         maxPixelsPerSecond: 240,
         onSeek: null,
         onCueSelect: null,
+        onCueDoubleClick: null,
+        onCueEdit: null,
+        onCueDelete: null,
+        onCueSplit: null,
         onHeaderClick: null,
       }, options);
 
@@ -38,8 +42,12 @@
       this._cuePillMap = new Map();
       this._canvasLeft = 0;
       this._lastPlayheadX = -1;
+      this._lastRoundedSec = -1;
+      this._lastIntPct = -1;
       this._pendingSeekRaf = null;
       this._pendingSeekTime = null;
+      this._holdPopupEl = null;
+      this._activeHoldPill = null;
 
       this._initDOM();
       this._bindEvents();
@@ -185,6 +193,10 @@
       const onPointerDown = (e) => {
         if (e.button !== undefined && e.button !== 0) return; // Primary pointer/touch only
         this.isDragging = true;
+        if (this.dom.needle) this.dom.needle.classList.add('dragging');
+        if (window.VideoEditorHardware && window.VideoEditorHardware.haptic) {
+          window.VideoEditorHardware.haptic(15);
+        }
         this._lastPointerX = getPointerX(e);
         try {
           this.dom.viewport.setPointerCapture(e.pointerId);
@@ -202,6 +214,7 @@
 
         const onPointerUp = (upEvent) => {
           this.isDragging = false;
+          if (this.dom.needle) this.dom.needle.classList.remove('dragging');
           this._stopEdgeAutoScroll();
           try {
             this.dom.viewport.releasePointerCapture(upEvent.pointerId);
@@ -210,9 +223,9 @@
           this.dom.viewport.removeEventListener('pointerup', onPointerUp);
           this.dom.viewport.removeEventListener('pointercancel', onPointerUp);
 
-          // Flush any final seek immediately on release
+          // Flush any final seek immediately on release with immediate precision
           if (this._pendingSeekTime !== null && typeof this.options.onSeek === 'function') {
-            this.options.onSeek(this._pendingSeekTime);
+            this.options.onSeek(this._pendingSeekTime, true);
             this._pendingSeekTime = null;
           }
         };
@@ -276,6 +289,37 @@
       this.dom.viewport.addEventListener('pointerleave', () => {
         this.dom.hoverIndicator.classList.add('hidden');
       });
+
+      // Connect subtitle track header directly to subtitle file picker
+      const subHeader = this.container.querySelector('.vn-hdr-text');
+      if (subHeader) {
+        subHeader.style.cursor = 'pointer';
+        subHeader.setAttribute('title', 'Import subtitle file (.srt, .vtt, .ass)');
+        subHeader.addEventListener('click', (e) => {
+          e.stopPropagation();
+          const subInput = document.getElementById('studioSubFileInput');
+          if (subInput) subInput.click();
+        });
+      }
+
+      // Global outside dismiss handler for hold popup
+      const dismissHoldPopup = (e) => {
+        if (!this._holdPopupEl) return;
+        if (e && e.target && (e.target.closest('.vn-cue-hold-popup') || e.target.closest('.vn-cue-pill.hold-active'))) {
+          return;
+        }
+        this._hideCueHoldPopup();
+      };
+
+      document.addEventListener('pointerdown', dismissHoldPopup, true);
+      document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && this._holdPopupEl) {
+          this._hideCueHoldPopup();
+        }
+      });
+      this.dom.viewport.addEventListener('scroll', () => {
+        if (this._holdPopupEl) this._hideCueHoldPopup();
+      }, { passive: true });
 
       // Resize observer
       if (window.ResizeObserver) {
@@ -553,9 +597,19 @@
 
         let isDraggingPill = false;
         let startX = 0;
+        let startY = 0;
         let handleType = 'move';
         let origStart = cue.start;
         let origEnd = cue.end;
+        let holdTimer = null;
+        let holdTriggered = false;
+
+        const clearHoldTimer = () => {
+          if (holdTimer) {
+            clearTimeout(holdTimer);
+            holdTimer = null;
+          }
+        };
 
         pill.addEventListener('pointerdown', (e) => {
           if (e.button !== 0) return;
@@ -564,14 +618,36 @@
           const handleEl = e.target.closest('.vn-cue-handle');
           handleType = handleEl ? handleEl.dataset.handle : 'move';
           startX = e.clientX;
+          startY = e.clientY;
           origStart = cue.start;
           origEnd = cue.end;
           isDraggingPill = false;
+          holdTriggered = false;
+
+          clearHoldTimer();
+          // Start long-press hold timer (420ms) if not clicking a trim handle
+          if (!handleEl) {
+            holdTimer = setTimeout(() => {
+              if (isDraggingPill) return;
+              holdTriggered = true;
+              if (window.VideoEditorHardware && window.VideoEditorHardware.haptic) {
+                window.VideoEditorHardware.haptic(25);
+              }
+              this._showCueHoldPopup(cue, idx, pill);
+            }, 420);
+          }
 
           const onPointerMove = (moveEvent) => {
             const dx = moveEvent.clientX - startX;
-            if (!isDraggingPill && Math.abs(dx) > 3) {
+            const dy = moveEvent.clientY - startY;
+
+            if (Math.abs(dx) > 4 || Math.abs(dy) > 4) {
+              clearHoldTimer();
+            }
+
+            if (!isDraggingPill && Math.abs(dx) > 4) {
               isDraggingPill = true;
+              this._hideCueHoldPopup();
               pill.classList.add('is-dragging');
               try { pill.setPointerCapture(moveEvent.pointerId); } catch (_) {}
             }
@@ -607,6 +683,7 @@
           };
 
           const onPointerUp = (upEvent) => {
+            clearHoldTimer();
             pill.removeEventListener('pointermove', onPointerMove);
             pill.removeEventListener('pointerup', onPointerUp);
             pill.removeEventListener('pointercancel', onPointerUp);
@@ -616,6 +693,10 @@
                 pill.releasePointerCapture(upEvent.pointerId);
               }
             } catch (_) {}
+
+            if (holdTriggered) {
+              return;
+            }
 
             if (isDraggingPill) {
               const finalStart = cue._tempStart !== undefined ? cue._tempStart : cue.start;
@@ -642,8 +723,19 @@
           pill.addEventListener('pointercancel', onPointerUp);
         });
 
+        pill.addEventListener('contextmenu', (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          clearHoldTimer();
+          if (window.VideoEditorHardware && window.VideoEditorHardware.haptic) {
+            window.VideoEditorHardware.haptic(25);
+          }
+          this._showCueHoldPopup(cue, idx, pill);
+        });
+
         pill.addEventListener('dblclick', (e) => {
           e.stopPropagation();
+          clearHoldTimer();
           this.activeCueIndex = idx;
           this.setTime(cue.start, true);
           this._updateActiveCue();
@@ -659,6 +751,112 @@
       layer.appendChild(frag);
     }
 
+    _showCueHoldPopup(cue, idx, pill) {
+      this._hideCueHoldPopup();
+      if (!cue || !pill || !this.dom.scrollCanvas) return;
+
+      this._activeHoldPill = pill;
+      pill.classList.add('hold-active');
+
+      const popup = document.createElement('div');
+      popup.className = 'vn-cue-hold-popup';
+      popup.id = 'vnCueHoldPopup';
+
+      const isArabic = /[\u0600-\u06FF\u0750-\u077F\uFB50-\uFDFF\uFE70-\uFEFF]/.test(cue.text || '');
+      const cleanText = (cue.text || '').replace(/<[^>]+>/g, '').replace(/\{[^}]*\}/g, '').trim();
+
+      popup.innerHTML = `
+        <div class="vn-hold-popup-header">
+          <span class="vn-hold-popup-tag">#${idx + 1}</span>
+          <span class="vn-hold-popup-time">${this.formatTimecode(cue.start, false)} ➔ ${this.formatTimecode(cue.end, false)}</span>
+        </div>
+        <div class="vn-hold-popup-text" dir="${isArabic ? 'rtl' : 'ltr'}">${cleanText || '—'}</div>
+        <div class="vn-hold-popup-actions">
+          <button type="button" class="vn-hold-btn vn-hold-btn-edit" data-action="edit" title="Edit subtitle text">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
+            <span>Edit</span>
+          </button>
+          <button type="button" class="vn-hold-btn vn-hold-btn-split" data-action="split" title="Split cue at current playhead">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="6" cy="6" r="3"></circle><circle cx="6" cy="18" r="3"></circle><line x1="20" y1="4" x2="8.12" y2="15.88"></line><line x1="14.47" y1="14.48" x2="20" y2="20"></line><line x1="8.12" y1="8.12" x2="12" y2="12"></line></svg>
+            <span>Split</span>
+          </button>
+          <button type="button" class="vn-hold-btn vn-hold-btn-delete" data-action="delete" title="Delete subtitle cue">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></svg>
+            <span>Delete</span>
+          </button>
+        </div>
+      `;
+
+      // Mount into scrollCanvas for native scrolling synchronization
+      this.dom.scrollCanvas.appendChild(popup);
+      this._holdPopupEl = popup;
+
+      // Calculate anchor positioning
+      const viewportRect = this.dom.viewport.getBoundingClientRect();
+      const pillRect = pill.getBoundingClientRect();
+      const scrollCanvasRect = this.dom.scrollCanvas.getBoundingClientRect();
+
+      const pillLeftInCanvas = pillRect.left - scrollCanvasRect.left;
+      const pillTopInCanvas = pillRect.top - scrollCanvasRect.top;
+      const popupWidth = popup.offsetWidth || 192;
+      const popupHeight = popup.offsetHeight || 98;
+
+      let targetLeft = pillLeftInCanvas + (pillRect.width / 2) - (popupWidth / 2);
+      // Clamp horizontally within viewport
+      const minLeft = this.dom.viewport.scrollLeft + 8;
+      const maxLeft = this.dom.viewport.scrollLeft + viewportRect.width - popupWidth - 8;
+      targetLeft = Math.max(minLeft, Math.min(maxLeft, targetLeft));
+
+      let targetTop = pillTopInCanvas - popupHeight - 8;
+      if (targetTop < 4) {
+        targetTop = pillTopInCanvas + pillRect.height + 8;
+        popup.classList.add('placement-bottom');
+      } else {
+        popup.classList.add('placement-top');
+      }
+
+      popup.style.left = `${Math.round(targetLeft)}px`;
+      popup.style.top = `${Math.round(targetTop)}px`;
+
+      // Prevent click inside from closing immediately
+      popup.addEventListener('pointerdown', (e) => e.stopPropagation());
+
+      popup.querySelectorAll('.vn-hold-btn').forEach((btn) => {
+        btn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          const action = btn.dataset.action;
+          this._hideCueHoldPopup();
+
+          if (action === 'edit') {
+            if (typeof this.options.onCueEdit === 'function') {
+              this.options.onCueEdit(cue, idx);
+            }
+          } else if (action === 'delete') {
+            if (typeof this.options.onCueDelete === 'function') {
+              this.options.onCueDelete(cue, idx);
+            }
+          } else if (action === 'split') {
+            if (typeof this.options.onCueSplit === 'function') {
+              this.options.onCueSplit(cue, idx);
+            }
+          }
+        });
+      });
+    }
+
+    _hideCueHoldPopup() {
+      if (this._holdPopupEl) {
+        if (this._holdPopupEl.parentNode) {
+          this._holdPopupEl.parentNode.removeChild(this._holdPopupEl);
+        }
+        this._holdPopupEl = null;
+      }
+      if (this._activeHoldPill) {
+        this._activeHoldPill.classList.remove('hold-active');
+        this._activeHoldPill = null;
+      }
+    }
+
     _updatePlayhead() {
       const currentSec = this.currentTime / 1000;
       const x = currentSec * this.zoom;
@@ -668,10 +866,14 @@
         this._lastPlayheadX = x;
         this.dom.needle.style.transform = `translate3d(${x}px, 0, 0)`;
 
-        const roundedSec = Math.floor(this.currentTime / 250);
-        if (roundedSec !== this._lastRoundedSec) {
-          this._lastRoundedSec = roundedSec;
-          this.dom.needleTime.textContent = this.formatTimecode(this.currentTime);
+        if (this.isDragging) {
+          this.dom.needleTime.textContent = this.formatTimecode(this.currentTime, true);
+        } else {
+          const roundedSec = Math.floor(this.currentTime / 100);
+          if (roundedSec !== this._lastRoundedSec) {
+            this._lastRoundedSec = roundedSec;
+            this.dom.needleTime.textContent = this.formatTimecode(this.currentTime, false);
+          }
         }
 
         if (this.duration > 0 && this.dom.audioBarFill) {

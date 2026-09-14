@@ -3,7 +3,7 @@
  * Exposes AppVersion as a global module.
  */
 const AppVersion = (() => {
-  const APP_VERSION = 'v139';
+  const APP_VERSION = 'v143';
   let isRefreshing = false;
   let hasShownUpdateNotice = false;
   let hasUpdateAvailable = false;
@@ -193,7 +193,7 @@ const AppVersion = (() => {
 
     if (hasUpdateAvailable) {
       if (els.refreshStatusTxt) {
-        els.refreshStatusTxt.textContent = `${ckb ? 'وەشانی نوێ بەردەستە' : 'New version available'} (${latestDiscoveredVer || 'v138+'})`;
+        els.refreshStatusTxt.textContent = `${ckb ? 'وەشانی نوێ بەردەستە' : 'New version available'} (${latestDiscoveredVer || 'v140+'})`;
         els.refreshStatusTxt.style.color = '#f43f5e';
       }
     } else {
@@ -294,7 +294,7 @@ const AppVersion = (() => {
   function showUpdateAvailable(reg, newVerStr) {
     const els = getElements();
     hasUpdateAvailable = true;
-    latestDiscoveredVer = newVerStr || 'v138+';
+    latestDiscoveredVer = newVerStr || 'v140+';
     const verDisplay = latestDiscoveredVer;
 
     if (els.updateBadgeDot) els.updateBadgeDot.classList.remove('hidden');

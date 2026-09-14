@@ -107,12 +107,16 @@
       <div class="vn-empty-dropzone" id="studioVideoPlaceholder">
         <div class="vn-empty-box" id="studioVideoDropzone">
           <div class="vn-empty-emoji"><svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="2" width="20" height="20" rx="2.18" ry="2.18"></rect><line x1="7" y1="2" x2="7" y2="22"></line><line x1="17" y1="2" x2="17" y2="22"></line><line x1="2" y1="12" x2="22" y2="12"></line></svg></div>
-          <h3 class="vn-empty-title">Import Video File</h3>
-          <p class="vn-empty-subtitle">Supports MP4, MOV, WebM, MKV, AVI · 100% Private in Browser</p>
+          <h3 class="vn-empty-title">Import Video &amp; Subtitles</h3>
+          <p class="vn-empty-subtitle">Supports MP4, MOV, WebM, MKV, AVI &amp; Subtitles (SRT, VTT, ASS) · Drag &amp; Drop Anywhere</p>
           <div class="vn-empty-actions">
             <button type="button" class="vn-btn-primary" id="studioBrowseVideoBtn">
               <span><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path></svg></span>
               <span>Choose Video</span>
+            </button>
+            <button type="button" class="vn-btn-secondary" id="studioBrowseSubDropzoneBtn" title="Load subtitle file (.srt, .vtt, .ass)">
+              <span><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg></span>
+              <span>Import Subtitles</span>
             </button>
             <button type="button" class="vn-btn-secondary" id="studioSampleVideoBtn">
               <span><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg></span>
@@ -136,6 +140,24 @@
       <button type="button" class="vn-fs-corner-btn" id="studioFsBtn" title="Fullscreen player" aria-label="Fullscreen">
         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"></path></svg>
       </button>
+
+      <!-- Fullscreen HUD Floating Controls -->
+      <div class="vn-fs-hud hidden" id="studioFsControlsHud">
+        <button type="button" class="vn-fs-hud-btn" id="studioFsHudPlayBtn" title="Play / Pause (Space)" aria-label="Play / Pause">
+          <svg class="vn-fs-hud-play-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
+          <svg class="vn-fs-hud-pause-icon hidden" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="6" y="4" width="4" height="16"></rect><rect x="14" y="4" width="4" height="16"></rect></svg>
+        </button>
+        <button type="button" class="vn-fs-hud-btn" id="studioFsHudBackBtn" title="Rewind 5s (←)" aria-label="Rewind 5s">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="11 17 6 12 11 7"></polyline><polyline points="18 17 13 12 18 7"></polyline></svg>
+        </button>
+        <div class="vn-fs-hud-time" id="studioFsHudTime">00:00 / 00:00</div>
+        <button type="button" class="vn-fs-hud-btn" id="studioFsHudFwdBtn" title="Forward 5s (→)" aria-label="Forward 5s">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="13 17 18 12 13 7"></polyline><polyline points="6 17 11 12 6 7"></polyline></svg>
+        </button>
+        <button type="button" class="vn-fs-hud-btn" id="studioFsHudExitBtn" title="Exit Fullscreen (Esc or F)" aria-label="Exit Fullscreen">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 3v3a2 2 0 0 1-2 2H3m18 0h-3a2 2 0 0 1-2-2V3m0 18v-3a2 2 0 0 1 2-2h3M3 16h3a2 2 0 0 1 2 2v3"></path></svg>
+        </button>
+      </div>
     </div>
   </section>
 
@@ -295,6 +317,10 @@
           <button type="button" class="vn-quick-done-btn" id="vnQuickDoneBtn" title="Done (Esc / Ctrl+Enter)" aria-label="Done">
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"></polyline></svg>
             <span>Done</span>
+          </button>
+          <!-- Explicit Close Button -->
+          <button type="button" class="vn-quick-close-btn" id="vnQuickCloseBtn" title="Close and Save (Esc)" aria-label="Close">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
           </button>
         </div>
       </div>
@@ -584,13 +610,45 @@
         <button type="button" class="vn-pop-btn vn-pop-btn-primary" id="btnToolCleanOrthography">Fix All</button>
       </div>
 
-      <!-- Action 3: Search & Replace -->
-      <div class="vn-popover-action-card" style="flex-direction:column; align-items:stretch; gap:8px;">
-        <span class="action-card-title">Search &amp; Replace (گەڕان و گۆڕین)</span>
-        <div style="display:flex; gap:6px;">
-          <input type="text" id="toolSubSearchInput" placeholder="Find text / وشەی گەڕان..." dir="auto" class="cue-textarea" style="height:32px; padding:4px 8px; font-size:0.8rem;" />
-          <input type="text" id="toolSubReplaceInput" placeholder="Replace with / وشەی نوێ..." dir="auto" class="cue-textarea" style="height:32px; padding:4px 8px; font-size:0.8rem;" />
-          <button type="button" class="vn-pop-btn vn-pop-btn-primary" id="btnToolSearchReplace">Replace</button>
+      <!-- Action 3: Advanced Search & Replace -->
+      <div class="vn-popover-action-card" style="flex-direction:column; align-items:stretch; gap:10px; background: rgba(0,0,0,0.25); border: 1px solid rgba(255,255,255,0.08); padding: 10px; border-radius: 8px;">
+        <div style="display:flex; justify-content:space-between; align-items:center;">
+          <span class="action-card-title" style="display:flex; align-items:center; gap:6px;">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+            Advanced Find &amp; Replace (گەڕان و گۆڕین)
+          </span>
+          <span id="subSearchMatchCounter" class="cue-badge-pill" style="font-size:0.7rem; display:none;">0 matches</span>
+        </div>
+
+        <div style="display:flex; flex-direction:column; gap:6px;">
+          <div style="display:flex; gap:6px;">
+            <input type="text" id="toolSubSearchInput" placeholder="Find word / وشەی گەڕان..." dir="auto" class="cue-textarea" style="height:34px; padding:6px 10px; font-size:0.82rem; flex:1;" />
+            <input type="text" id="toolSubReplaceInput" placeholder="Replace with / وشەی نوێ..." dir="auto" class="cue-textarea" style="height:34px; padding:6px 10px; font-size:0.82rem; flex:1;" />
+          </div>
+
+          <div style="display:flex; flex-wrap:wrap; justify-content:space-between; align-items:center; gap:8px; background:rgba(0,0,0,0.2); padding:6px 8px; border-radius:6px; font-size:0.74rem;">
+            <div style="display:flex; align-items:center; gap:12px;">
+              <label style="display:flex; align-items:center; gap:4px; cursor:pointer; color:rgba(255,255,255,0.85);">
+                <input type="checkbox" id="toolSubWholeWords" style="accent-color:#eab308;" />
+                <span>Whole Words (\b)</span>
+              </label>
+              <label style="display:flex; align-items:center; gap:4px; cursor:pointer; color:rgba(255,255,255,0.85);">
+                <input type="checkbox" id="toolSubMatchCase" style="accent-color:#eab308;" />
+                <span>Match Case</span>
+              </label>
+            </div>
+            <div style="display:flex; align-items:center; gap:6px;">
+              <select id="toolSubSearchScope" class="export-select" style="height:28px; padding:2px 6px; font-size:0.72rem; width:130px;">
+                <option value="all" selected>All Cues (کشت)</option>
+                <option value="active">Active Cue Only</option>
+              </select>
+              <button type="button" class="vn-pop-btn vn-pop-btn-primary" id="btnToolSearchReplace" style="height:28px; padding:0 12px; font-size:0.75rem;">Replace All</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Live Match Cards List showing Original & Kurdish Text below -->
+        <div id="subSearchMatchPreviewArea" class="hidden" style="max-height: 180px; overflow-y: auto; background: rgba(0,0,0,0.4); border: 1px solid rgba(255,255,255,0.1); border-radius: 6px; padding: 6px; display: flex; flex-direction: column; gap: 6px;">
         </div>
       </div>
 
@@ -865,7 +923,7 @@
         </div>
 
         <div class="burn-progress-track" style="background:rgba(255,255,255,0.08); border-radius:6px; height:10px; overflow:hidden; margin-top:12px; margin-bottom:8px;">
-          <div id="studioBurnProgressFill" style="background:#a855f7; height:100%; width:0%; transition:width 0.15s ease;"></div>
+          <div id="studioBurnProgressFill" class="burn-progress-fill-glow" style="height:100%; width:0%; transition:width 0.15s ease;"></div>
         </div>
 
         <div style="display:flex; justify-content:space-between; font-size:0.8rem; margin-bottom:10px;">
@@ -1133,6 +1191,9 @@
           <span class="vn-mov-hint">QuickTime MOV configured container will be loaded with frame-accurate sync</span>
         </div>
         <div class="vn-mov-footer-right">
+          <button type="button" class="vn-mov-btn-ghost hidden" id="movImportSubsOnlyBtn" style="border: 1px solid rgba(250, 204, 21, 0.45); color: #facc15;">
+            <span>Load Subtitles Only</span>
+          </button>
           <button type="button" class="vn-mov-btn-ghost" id="movModalCancelBtn">Cancel</button>
           <button type="button" class="vn-mov-btn-primary" id="movModalImportBtn">
             <span>Import Configured MOV to Studio</span>

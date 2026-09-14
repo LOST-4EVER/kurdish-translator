@@ -406,6 +406,9 @@
       if (this.els.quickDoneBtn) {
         this.els.quickDoneBtn.addEventListener('click', () => this.close());
       }
+      if (this.els.quickCloseBtn) {
+        this.els.quickCloseBtn.addEventListener('click', () => this.close());
+      }
       if (this.els.quickBackdrop) {
         this.els.quickBackdrop.addEventListener('click', () => this.close());
       }
@@ -590,6 +593,14 @@
     }
 
     close() {
+      if (this.currentIndex >= 0 && this.els && this.els.quickTextarea && window.VideoEditorState) {
+        const text = this.els.quickTextarea.value;
+        window.VideoEditorState.updateCueText(this.currentIndex, text);
+        if (typeof this.options.onTextChange === 'function') {
+          const currentCue = window.VideoEditorState.cues[this.currentIndex] || this.currentCue;
+          this.options.onTextChange(currentCue, this.currentIndex, text);
+        }
+      }
       if (this.els && this.els.quickPanel) {
         this.els.quickPanel.classList.add('hidden');
       }

@@ -254,8 +254,50 @@
         });
       }
 
-      // Drag and drop video on dropzone and entire player stage
-      const dropTargets = [this.els.videoDropzone, this.els.playerStage, this.els.viewportWrapper].filter(Boolean);
+      // Handle drop of video, subtitle files, or both together
+      const subExtensions = ['.srt', '.vtt', '.ass', '.ssa', '.sub', '.smi', '.txt'];
+      const videoExtensions = ['.mov', '.mp4', '.webm', '.m4v', '.mkv', '.avi', '.ts'];
+
+      const handleDroppedFiles = (fileList) => {
+        if (!fileList || !fileList.length) return;
+        const files = Array.from(fileList);
+
+        const videoFile = files.find((f) => {
+          const ext = '.' + (f.name || '').split('.').pop().toLowerCase();
+          return (f.type && f.type.startsWith('video/')) || videoExtensions.includes(ext);
+        });
+
+        const subFile = files.find((f) => {
+          const ext = '.' + (f.name || '').split('.').pop().toLowerCase();
+          return subExtensions.includes(ext);
+        });
+
+        if (videoFile) {
+          handleIncomingVideo(videoFile);
+        }
+        if (subFile) {
+          this.importSubtitleFile(subFile);
+        }
+        if (!videoFile && !subFile && files[0]) {
+          const first = files[0];
+          if (first.size > 20 * 1024 * 1024) {
+            handleIncomingVideo(first);
+          } else {
+            this.importSubtitleFile(first);
+          }
+        }
+      };
+
+      // Drag and drop video and subtitle files across dropzone, stage, timeline, and studio
+      const dropTargets = [
+        this.els.videoDropzone,
+        this.els.playerStage,
+        this.els.viewportWrapper,
+        this.els.timelineSection,
+        document.getElementById('studioTimelineMount'),
+        this.els.tabVideoEditor
+      ].filter(Boolean);
+
       dropTargets.forEach((target) => {
         ['dragenter', 'dragover'].forEach((eventName) => {
           target.addEventListener(eventName, (e) => {
@@ -275,8 +317,8 @@
           e.preventDefault();
           e.stopPropagation();
           if (this.els.videoDropzone) this.els.videoDropzone.classList.remove('drag-over');
-          if (e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0]) {
-            handleIncomingVideo(e.dataTransfer.files[0]);
+          if (e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files.length) {
+            handleDroppedFiles(e.dataTransfer.files);
           }
         });
       });
@@ -285,6 +327,13 @@
       if (this.els.btnSampleVideo) {
         this.els.btnSampleVideo.addEventListener('click', () => {
           VideoEditorPlayer.generateSampleVideo();
+        });
+      }
+
+      // Empty Dropzone Subtitle Import Button
+      if (this.els.btnBrowseSubDropzone) {
+        this.els.btnBrowseSubDropzone.addEventListener('click', () => {
+          if (this.els.subFileInput) this.els.subFileInput.click();
         });
       }
 
@@ -371,6 +420,7 @@
         this.els.subFileInput.addEventListener('change', (e) => {
           if (e.target.files && e.target.files[0]) {
             this.importSubtitleFile(e.target.files[0]);
+            e.target.value = '';
           }
         });
       }
@@ -662,6 +712,29 @@
           VideoEditorOverlay.renderActiveCue(cue, VideoEditorState.overlayConfig);
           this._openQuickTextEditor(cue, idx);
         },
+        onCueEdit: (cue, idx) => {
+          VideoEditorState.setActiveCue(cue, idx);
+          this.seekTo(cue.start);
+          VideoEditorOverlay.updateTextShower(cue, idx);
+          VideoEditorOverlay.renderActiveCue(cue, VideoEditorState.overlayConfig);
+          this._openQuickTextEditor(cue, idx);
+        },
+        onCueDelete: (cue, idx) => {
+          if (idx < 0) return;
+          const success = VideoEditorState.deleteCue(idx);
+          if (success !== false) {
+            const updatedCues = VideoEditorState.getCues();
+            if (this.timeline) this.timeline.setCues(updatedCues);
+            const activeCue = VideoEditorState.activeCue;
+            const activeIdx = VideoEditorState.activeCueIndex;
+            VideoEditorOverlay.renderActiveCue(activeCue, VideoEditorState.overlayConfig);
+            VideoEditorOverlay.updateTextShower(activeCue, activeIdx, this._getNearestCue());
+            VideoEditorUI.showToast(`ژێرنووس سڕایەوە (#${idx + 1})`, 'info', 'Cue Removed');
+          }
+        },
+        onCueSplit: (cue, idx) => {
+          this._splitCueAtIndex(idx);
+        },
         onHeaderClick: (trackType) => {
           this._handleTrackHeaderClick(trackType);
         },
@@ -689,7 +762,7 @@
         VideoEditorState.setActiveCue(newCue, idx);
         VideoEditorOverlay.renderActiveCue(newCue, VideoEditorState.overlayConfig);
         VideoEditorOverlay.updateTextShower(newCue, idx);
-        VideoEditorBubble.open(newCue, idx);
+        this._openQuickTextEditor(newCue, idx);
         VideoEditorUI.showToast('Added new Kurdish cue at current playhead', 'success');
       } else if (trackType === 'video') {
         if (this.els.videoFileInput) this.els.videoFileInput.click();
@@ -699,6 +772,24 @@
         if (this.els.stickerFileInput) this.els.stickerFileInput.click();
       } else if (trackType === 'audio') {
         VideoEditorPopovers.toggle('volume');
+      }
+    }
+
+    _splitCueAtIndex(idx) {
+      const cues = VideoEditorState.getCues();
+      if (idx < 0 || idx >= cues.length) return;
+      const targetCue = cues[idx];
+      const curMs = this.els.videoPlayer ? Math.round(this.els.videoPlayer.currentTime * 1000) : Math.round((targetCue.start + targetCue.end) / 2);
+      let splitPoint = curMs;
+      if (splitPoint <= targetCue.start + 200 || splitPoint >= targetCue.end - 200) {
+        splitPoint = Math.round((targetCue.start + targetCue.end) / 2);
+      }
+      const newCue = VideoEditorState.splitCue(idx, splitPoint);
+      if (newCue) {
+        if (this.timeline) this.timeline.setCues(VideoEditorState.getCues());
+        VideoEditorOverlay.renderActiveCue(newCue, VideoEditorState.overlayConfig);
+        VideoEditorOverlay.updateTextShower(newCue, idx + 1);
+        VideoEditorUI.showToast(`ژێرنووس لەت کرا (#${idx + 1} & #${idx + 2})`, 'success', 'Cue Split');
       }
     }
 
@@ -934,10 +1025,22 @@
           const parsed = SubParser.parse(text, ext);
           if (parsed && parsed.cues && parsed.cues.length > 0) {
             VideoEditorState.setCues(parsed.cues);
-            if (this.timeline) this.timeline.setCues(parsed.cues);
+            if (this.timeline) {
+              this.timeline.setCues(parsed.cues);
+              // If video duration is 0 or unset, adapt timeline duration to last cue
+              if (!this.timeline.duration || this.timeline.duration === 0) {
+                const maxEnd = Math.max(...parsed.cues.map((c) => c.end || 0));
+                if (maxEnd > 0) {
+                  this.timeline.setDuration(maxEnd + 3000);
+                  this.timeline.zoomToFit();
+                }
+              }
+            }
             if (this.els.appliedSubsBadge) {
               this.els.appliedSubsBadge.textContent = `${parsed.cues.length} Cues`;
             }
+            const curMs = VideoEditorPlayer.currentTimeMs || 0;
+            this._handleVideoTimeUpdate(curMs);
             VideoEditorUI.showToast(`Imported ${parsed.cues.length} cues from ${file.name}`, 'success');
             return;
           }

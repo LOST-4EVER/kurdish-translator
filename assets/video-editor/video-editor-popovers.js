@@ -259,12 +259,113 @@
         });
       }
 
-      // Subtitle Tools: Search & Replace
+      // Subtitle Tools: Advanced Search & Replace
+      const updateSearchPreview = () => {
+        const searchVal = this.els.toolSubSearchInput ? this.els.toolSubSearchInput.value : '';
+        const replaceVal = this.els.toolSubReplaceInput ? this.els.toolSubReplaceInput.value : '';
+        const wholeWords = this.els.toolSubWholeWords ? this.els.toolSubWholeWords.checked : false;
+        const matchCase = this.els.toolSubMatchCase ? this.els.toolSubMatchCase.checked : false;
+        const scope = this.els.toolSubSearchScope ? this.els.toolSubSearchScope.value : 'all';
+
+        const counterEl = this.els.subSearchMatchCounter;
+        const previewArea = this.els.subSearchMatchPreviewArea;
+
+        if (!searchVal || !searchVal.trim()) {
+          if (counterEl) { counterEl.style.display = 'none'; }
+          if (previewArea) { previewArea.classList.add('hidden'); previewArea.innerHTML = ''; }
+          return;
+        }
+
+        const cues = VideoEditorState.getCues();
+        if (!cues || !cues.length) return;
+
+        let flags = 'g';
+        if (!matchCase) flags += 'i';
+        let escapedSearch = searchVal.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        if (wholeWords) escapedSearch = `\\b${escapedSearch}\\b`;
+        
+        let regex;
+        try {
+          regex = new RegExp(escapedSearch, flags);
+        } catch (e) {
+          return;
+        }
+
+        const activeCueIndex = VideoEditorState.activeCueIndex;
+        let totalMatches = 0;
+        let matchingCues = [];
+
+        cues.forEach((cue, idx) => {
+          if (scope === 'active' && idx !== activeCueIndex) return;
+
+          const text = cue.text || '';
+          const matches = text.match(regex);
+          if (matches && matches.length > 0) {
+            totalMatches += matches.length;
+            matchingCues.push({ cue, index: idx, matchesCount: matches.length });
+          }
+        });
+
+        if (counterEl) {
+          counterEl.textContent = `${totalMatches} match${totalMatches === 1 ? '' : 'es'} in ${matchingCues.length} cue${matchingCues.length === 1 ? '' : 's'}`;
+          counterEl.style.display = 'inline-block';
+        }
+
+        if (previewArea) {
+          if (matchingCues.length === 0) {
+            previewArea.classList.remove('hidden');
+            previewArea.innerHTML = `<div style="font-size:0.75rem; color:rgba(255,255,255,0.5); text-align:center; padding:8px;">No matches found for "${searchVal}"</div>`;
+            return;
+          }
+
+          previewArea.classList.remove('hidden');
+          previewArea.innerHTML = matchingCues.map(({ cue, index, matchesCount }) => {
+            const timeStr = `${VideoEditorPlayer.formatTime(cue.start)} - ${VideoEditorPlayer.formatTime(cue.end)}`;
+            const highlightedText = (cue.text || '').replace(regex, (m) => `<mark style="background:#facc15; color:#000000; padding:0 2px; border-radius:2px; font-weight:700;">${m}</mark>`);
+            const origBlock = cue.origText ? `<div style="font-size:0.7rem; color:rgba(255,255,255,0.6); font-style:italic; margin-top:2px;">Orig: ${cue.origText}</div>` : '';
+
+            return `
+              <div style="background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.08); padding:6px 8px; border-radius:5px; font-size:0.76rem; display:flex; flex-direction:column; gap:3px;">
+                <div style="display:flex; justify-content:space-between; align-items:center;">
+                  <span class="cue-badge-pill" style="font-size:0.65rem;">Cue #${index + 1} (${timeStr})</span>
+                  <button type="button" class="vn-pop-btn vn-pop-btn-primary btn-replace-single" data-index="${index}" style="height:22px; padding:0 8px; font-size:0.68rem;">Replace</button>
+                </div>
+                <div dir="auto" style="font-family:'Noto Naskh Arabic', sans-serif; line-height:1.4;">${highlightedText}</div>
+                ${origBlock}
+              </div>
+            `;
+          }).join('');
+
+          // Bind individual replace buttons
+          previewArea.querySelectorAll('.btn-replace-single').forEach((btn) => {
+            btn.addEventListener('click', (e) => {
+              const cueIdx = parseInt(e.currentTarget.getAttribute('data-index'), 10);
+              const allCues = VideoEditorState.getCues();
+              if (isNaN(cueIdx) || !allCues[cueIdx]) return;
+
+              const targetCue = allCues[cueIdx];
+              const newText = targetCue.text.replace(regex, replaceVal);
+              const updatedCues = [...allCues];
+              updatedCues[cueIdx] = { ...targetCue, text: newText };
+              VideoEditorState.setCues(updatedCues);
+              VideoEditorUI.showToast(`Replaced in Cue #${cueIdx + 1}`, 'success');
+              updateSearchPreview();
+            });
+          });
+        }
+      };
+
+      if (this.els.toolSubSearchInput) this.els.toolSubSearchInput.addEventListener('input', updateSearchPreview);
+      if (this.els.toolSubReplaceInput) this.els.toolSubReplaceInput.addEventListener('input', updateSearchPreview);
+      if (this.els.toolSubWholeWords) this.els.toolSubWholeWords.addEventListener('change', updateSearchPreview);
+      if (this.els.toolSubMatchCase) this.els.toolSubMatchCase.addEventListener('change', updateSearchPreview);
+      if (this.els.toolSubSearchScope) this.els.toolSubSearchScope.addEventListener('change', updateSearchPreview);
+
       if (this.els.btnToolSearchReplace) {
         this.els.btnToolSearchReplace.addEventListener('click', () => {
-          const searchVal = this.els.toolSubSearchInput ? this.els.toolSubSearchInput.value.trim() : '';
+          const searchVal = this.els.toolSubSearchInput ? this.els.toolSubSearchInput.value : '';
           const replaceVal = this.els.toolSubReplaceInput ? this.els.toolSubReplaceInput.value : '';
-          if (!searchVal) {
+          if (!searchVal || !searchVal.trim()) {
             VideoEditorUI.showToast('Please enter search text', 'info');
             return;
           }
@@ -273,16 +374,32 @@
             VideoEditorUI.showToast('No subtitle cues loaded', 'info');
             return;
           }
+
+          const wholeWords = this.els.toolSubWholeWords ? this.els.toolSubWholeWords.checked : false;
+          const matchCase = this.els.toolSubMatchCase ? this.els.toolSubMatchCase.checked : false;
+          const scope = this.els.toolSubSearchScope ? this.els.toolSubSearchScope.value : 'all';
+
+          let flags = 'g';
+          if (!matchCase) flags += 'i';
+          let escapedSearch = searchVal.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+          if (wholeWords) escapedSearch = `\\b${escapedSearch}\\b`;
+          let regex = new RegExp(escapedSearch, flags);
+
           let replaceCount = 0;
-          const updated = cues.map((c) => {
-            if (!c.text || !c.text.includes(searchVal)) return c;
-            const newText = c.text.replaceAll(searchVal, replaceVal);
+          const activeCueIndex = VideoEditorState.activeCueIndex;
+
+          const updated = cues.map((c, idx) => {
+            if (scope === 'active' && idx !== activeCueIndex) return c;
+            if (!c.text || !regex.test(c.text)) return c;
+            const newText = c.text.replace(regex, replaceVal);
             replaceCount++;
             return { ...c, text: newText };
           });
+
           if (replaceCount > 0) {
             VideoEditorState.setCues(updated);
-            VideoEditorUI.showToast(`Replaced in ${replaceCount} subtitle cue(s)`, 'success');
+            VideoEditorUI.showToast(`Replaced matches in ${replaceCount} subtitle cue(s)`, 'success');
+            updateSearchPreview();
           } else {
             VideoEditorUI.showToast(`"${searchVal}" not found in subtitle cues`, 'info');
           }

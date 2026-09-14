@@ -37,11 +37,15 @@ const Translator = (() => {
   // MyMemory Translation API endpoint
   const MYMEMORY_ENDPOINT = 'https://api.mymemory.translated.net/get';
 
-  const BATCH_LINES = 20;
-  const MAX_CHARS_PER_REQUEST = 1600;
-  const DELAY_MS = 120;
+  const BATCH_LINES = 32;
+  const MAX_CHARS_PER_REQUEST = 2800;
+  const DELAY_MS = 60;
   const MAX_ATTEMPTS = 6;
   const REQUEST_TIMEOUT_MS = 8000;
+
+  // In-memory line translation cache for instant 0ms duplicate resolution
+  const TRANSLATION_CACHE = new Map();
+  const MAX_CACHE_SIZE = 3000;
 
   // Sentinel protecting internal line breaks inside a cue
   const NL_SENTINEL = '§§';
@@ -571,17 +575,24 @@ const Translator = (() => {
     let sawHardFail = false;
     let failedLines = 0;
 
-    // Instant idiomatic lexicon matching for Kurdish subtitles
-    if (tgtLang === 'ckb') {
-      for (let i = 0; i < lines.length; i++) {
-        const raw = lines[i];
-        if (!raw || !raw.trim()) continue;
+    // Instant idiomatic lexicon and translation cache matching
+    for (let i = 0; i < lines.length; i++) {
+      const raw = lines[i];
+      if (!raw || !raw.trim()) continue;
+      const cleanKey = `${srcLang}:${tgtLang}:${raw.trim()}`;
+      if (tgtLang === 'ckb') {
         const matched = lookupLexicon(raw);
         if (matched) {
           results[i] = postprocessSorani(matched, { kurdishDigits: useKurdishDigits });
           lexiconMatchedCount++;
           anyTranslated = true;
+          continue;
         }
+      }
+      if (TRANSLATION_CACHE.has(cleanKey)) {
+        results[i] = TRANSLATION_CACHE.get(cleanKey);
+        lexiconMatchedCount++;
+        anyTranslated = true;
       }
     }
 
@@ -615,6 +626,11 @@ const Translator = (() => {
               : normalizeText(restored, isArabic, useKurdishDigits);
             norm = fixPlacementAndTagOrder(norm, item.raw);
             results[item.index] = norm;
+
+            if (item.raw && item.raw.trim() && TRANSLATION_CACHE.size < MAX_CACHE_SIZE) {
+              const k = `${srcLang}:${tgtLang}:${item.raw.trim()}`;
+              TRANSLATION_CACHE.set(k, norm);
+            }
           });
         } else {
           // Merged batch fallback: translate line-by-line
@@ -629,6 +645,11 @@ const Translator = (() => {
                 : normalizeText(restored, isArabic, useKurdishDigits);
               norm = fixPlacementAndTagOrder(norm, item.raw);
               results[item.index] = norm;
+
+              if (item.raw && item.raw.trim() && TRANSLATION_CACHE.size < MAX_CACHE_SIZE) {
+                const k = `${srcLang}:${tgtLang}:${item.raw.trim()}`;
+                TRANSLATION_CACHE.set(k, norm);
+              }
             } catch {
               results[item.index] = item.raw;
               flags.failedLines++;
@@ -650,6 +671,11 @@ const Translator = (() => {
               : normalizeText(restored, isArabic, useKurdishDigits);
             norm = fixPlacementAndTagOrder(norm, item.raw);
             results[item.index] = norm;
+
+            if (item.raw && item.raw.trim() && TRANSLATION_CACHE.size < MAX_CACHE_SIZE) {
+              const k = `${srcLang}:${tgtLang}:${item.raw.trim()}`;
+              TRANSLATION_CACHE.set(k, norm);
+            }
           } catch {
             results[item.index] = item.raw;
             flags.failedLines++;

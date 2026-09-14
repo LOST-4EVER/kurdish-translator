@@ -53,7 +53,7 @@ const AppEditor = (() => {
 
       if (typeof TranslatorOrthography !== 'undefined' && TranslatorOrthography.checkLineQuality) {
         const qual = TranslatorOrthography.checkLineQuality(text);
-        if (qual.isUnnatural || qual.hasEnglishLeftovers) {
+        if (qual && ((qual.issues && qual.issues.length > 0) || qual.score < 90 || qual.isUnnatural || qual.hasEnglishLeftovers)) {
           nonKurdish++;
           issues++;
         }

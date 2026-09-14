@@ -821,6 +821,8 @@ const TranslatorOrthography = (() => {
   }
 
   return {
+    cleanKurdishText: normalizeSoraniAlphabet,
+    normalizeSoraniPunctuation: normalizeText,
     normalizeDigits,
     normalizeSoraniAlphabet,
     rejoinVerbalAffixes,

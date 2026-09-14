@@ -344,12 +344,12 @@
     }
 
     /**
-     * Extracts embedded subtitle cues from Matroska clusters (reading up to 16MB).
+     * Extracts embedded subtitle cues from Matroska clusters (reading up to 8MB).
      */
     static async _extractSubtitleBlocks(file, info) {
       try {
         const subTrackNumbers = new Set(info.subtitleTracks.map((t) => t.number));
-        const scanSize = Math.min(file.size, 16 * 1024 * 1024);
+        const scanSize = Math.min(file.size, 8 * 1024 * 1024);
         const scanBlob = file.slice(0, scanSize);
         const scanBuffer = await scanBlob.arrayBuffer();
         const view = new DataView(scanBuffer);
@@ -808,21 +808,79 @@
               const langStr = st.language ? st.language.toUpperCase() : 'UND';
 
               el.innerHTML = `
-                <div class="vn-mov-track-row">
+                <div class="vn-mov-track-row" style="display:flex; align-items:center; width:100%; gap:8px;">
                   <span class="vn-mov-track-num">Sub Track ${idx + 1}</span>
                   <span class="vn-mov-badge-sm">${st.codec || 'UTF-8'}</span>
                   <span class="vn-mov-badge-sm">${langStr}</span>
-                  <span class="vn-mov-track-desc">${st.name || 'Captions'} (${cueCountStr})</span>
+                  <span class="vn-mov-track-desc" style="flex:1;">${st.name || 'Captions'} (${cueCountStr})</span>
+                  ${cuesForTrack && cuesForTrack.length ? `
+                    <button type="button" class="vn-btn-secondary vn-btn-extract-track" style="padding:2px 8px; font-size:0.7rem; border-radius:4px; white-space:nowrap; cursor:pointer;">
+                      Load
+                    </button>
+                  ` : ''}
                 </div>
               `;
+
+              const extractBtn = el.querySelector('.vn-btn-extract-track');
+              if (extractBtn && cuesForTrack && cuesForTrack.length) {
+                extractBtn.addEventListener('click', (e) => {
+                  e.stopPropagation();
+                  if (window.VideoEditorState) {
+                    window.VideoEditorState.setCues(cuesForTrack);
+                    if (window.VideoEditor && window.VideoEditor.timeline) {
+                      window.VideoEditor.timeline.setCues(cuesForTrack);
+                      if (!window.VideoEditor.timeline.duration) {
+                        const maxEnd = Math.max(...cuesForTrack.map((c) => c.end || 0));
+                        if (maxEnd > 0) {
+                          window.VideoEditor.timeline.setDuration(maxEnd + 3000);
+                          window.VideoEditor.timeline.zoomToFit();
+                        }
+                      }
+                    }
+                    if (typeof Toast !== 'undefined') {
+                      Toast.show(`Loaded ${cuesForTrack.length} cues from Track #${idx + 1}!`, 'success');
+                    }
+                    this.hideModal();
+                  }
+                });
+              }
+
               subTracksList.appendChild(el);
             });
           }
           if (subCuesCountBadge) {
             subCuesCountBadge.textContent = `${info.subtitleTracks.length} Track(s) Detected`;
           }
+
+          // Dedicated "Load Subtitles Only" Action Button
+          const subsOnlyBtn = document.getElementById('movImportSubsOnlyBtn');
+          const hasCues = info.extractedCues && info.extractedCues.length > 0;
+          if (subsOnlyBtn) {
+            subsOnlyBtn.classList.toggle('hidden', !hasCues);
+            subsOnlyBtn.onclick = () => {
+              if (hasCues && window.VideoEditorState) {
+                window.VideoEditorState.setCues(info.extractedCues);
+                if (window.VideoEditor && window.VideoEditor.timeline) {
+                  window.VideoEditor.timeline.setCues(info.extractedCues);
+                  if (!window.VideoEditor.timeline.duration) {
+                    const maxEnd = Math.max(...info.extractedCues.map((c) => c.end || 0));
+                    if (maxEnd > 0) {
+                      window.VideoEditor.timeline.setDuration(maxEnd + 3000);
+                      window.VideoEditor.timeline.zoomToFit();
+                    }
+                  }
+                }
+                if (typeof Toast !== 'undefined') {
+                  Toast.show(`Imported ${info.extractedCues.length} embedded subtitles from ${info.fileName}!`, 'success');
+                }
+                this.hideModal();
+              }
+            };
+          }
         } else {
           subTracksSection.classList.add('hidden');
+          const subsOnlyBtn = document.getElementById('movImportSubsOnlyBtn');
+          if (subsOnlyBtn) subsOnlyBtn.classList.add('hidden');
         }
       }
     }

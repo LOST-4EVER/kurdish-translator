@@ -510,18 +510,36 @@
 
     async startBurn() {
       const video = this.els.videoPlayer;
-      const cues = VideoEditorState.getCues();
+      let cues = VideoEditorState.getCues();
       const syncOffsetMs = VideoEditorState.syncOffsetMs;
       const overlayCfg = VideoEditorState.overlayConfig || {};
 
-      if (!video || !cues.length) return;
+      if (!video) {
+        VideoEditorUI.showToast('No video loaded to export.', 'error');
+        return;
+      }
+
+      if (!cues || !cues.length) {
+        if (window.VideoStudio && typeof window.VideoStudio._checkAndSyncSubtitlesQuietly === 'function') {
+          window.VideoStudio._checkAndSyncSubtitlesQuietly(true);
+        }
+        cues = VideoEditorState.getCues();
+      }
+
+      if (!cues || !cues.length) {
+        VideoEditorUI.showToast('No subtitle cues available to export. Please load or translate subtitles first.', 'warning');
+        return;
+      }
 
       this.burnRecording = true;
       this.burnAbort = false;
 
       // Switch to rendering stage UI
       if (this.els.exportConfigArea) this.els.exportConfigArea.classList.add('hidden');
-      if (this.els.exportStageArea) this.els.exportStageArea.classList.remove('hidden');
+      if (this.els.exportStageArea) {
+        this.els.exportStageArea.classList.remove('hidden');
+        this.els.exportStageArea.classList.add('active-rendering');
+      }
       if (this.els.burnSuccessArea) this.els.burnSuccessArea.classList.add('hidden');
       if (this.els.burnActionBtn) this.els.burnActionBtn.disabled = true;
 
@@ -559,14 +577,20 @@
       try {
         const AudioContextClass = window.AudioContext || window.webkitAudioContext;
         if (AudioContextClass) {
-          this.audioContext = new AudioContextClass();
+          if (!this.audioContext || this.audioContext.state === 'closed') {
+            this.audioContext = new AudioContextClass();
+          }
           if (this.audioContext.state === 'suspended') {
             await this.audioContext.resume();
           }
           this.audioDestNode = this.audioContext.createMediaStreamDestination();
           
           try {
-            this.audioSourceNode = this.audioContext.createMediaElementSource(video);
+            if (!video._mediaSourceNode) {
+              video._mediaSourceNode = this.audioContext.createMediaElementSource(video);
+            }
+            this.audioSourceNode = video._mediaSourceNode;
+            this.audioSourceNode.disconnect();
             this.audioSourceNode.connect(this.audioDestNode);
             this.audioSourceNode.connect(this.audioContext.destination);
           } catch (srcErr) {
@@ -626,11 +650,12 @@
       let frameCount = 0;
       let lastFpsTime = startTimeMs;
       let fpsFrames = 0;
-      const totalDuration = video.duration || 1;
+      const totalDuration = (video.duration && !isNaN(video.duration) && video.duration > 0) ? video.duration : 1;
       const totalEstimatedFrames = Math.max(1, Math.round(totalDuration * 30));
 
       recorder.onstop = () => {
         this.burnRecording = false;
+        if (this.els.exportStageArea) this.els.exportStageArea.classList.remove('active-rendering');
         this._cleanupAudioAndStreams();
         if (window.VideoEditorHardware) {
           window.VideoEditorHardware.releaseWakeLock('export');
