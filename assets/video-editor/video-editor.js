@@ -68,7 +68,13 @@
       if (typeof VideoEditorBubble !== 'undefined') {
         VideoEditorBubble.init(this.els, {
           onTextChange: (cue, idx, text) => {
-            if (this.timeline) this.timeline.setCues(VideoEditorState.getCues());
+            if (this.timeline) {
+              if (typeof this.timeline.updateCue === 'function') {
+                this.timeline.updateCue(idx, cue);
+              } else {
+                this.timeline.setCues(VideoEditorState.getCues());
+              }
+            }
             VideoEditorOverlay.renderActiveCue(cue, VideoEditorState.overlayConfig);
             VideoEditorOverlay.updateTextShower(cue, idx);
           },
@@ -81,7 +87,13 @@
       if (typeof VideoEditorQuickPanel !== 'undefined') {
         VideoEditorQuickPanel.init(this.els, {
           onTextChange: (cue, idx, text) => {
-            if (this.timeline) this.timeline.setCues(VideoEditorState.getCues());
+            if (this.timeline) {
+              if (typeof this.timeline.updateCue === 'function') {
+                this.timeline.updateCue(idx, cue);
+              } else {
+                this.timeline.setCues(VideoEditorState.getCues());
+              }
+            }
             VideoEditorOverlay.renderActiveCue(cue, VideoEditorState.overlayConfig);
             VideoEditorOverlay.updateTextShower(cue, idx);
           },
@@ -141,8 +153,27 @@
       // 9. Setup App Cues Availability Watcher
       this._setupFileWatcher();
 
-      // 10. Listen to cues changes to keep Original Text toggle state synchronized
-      VideoEditorState.on('cuesChange', () => this._syncOrigToggleUI());
+      // 10. Centralized listener for state cuesChange to keep Timeline, Badges, Overlays, and Main App in sync
+      VideoEditorState.on('cuesChange', (cues) => {
+        const currentCues = cues || VideoEditorState.getCues();
+        this._syncOrigToggleUI();
+        if (this.timeline) {
+          this.timeline.setCues(currentCues);
+        }
+        if (this.els.appliedSubsBadge) {
+          const count = currentCues ? currentCues.length : 0;
+          this.els.appliedSubsBadge.textContent = count > 0 ? `${count} Cues` : 'No Subtitle';
+        }
+        const activeCue = VideoEditorState.activeCue;
+        const activeIdx = VideoEditorState.activeCueIndex;
+        if (activeCue && activeIdx >= 0) {
+          VideoEditorOverlay.renderActiveCue(activeCue, VideoEditorState.overlayConfig);
+          VideoEditorOverlay.updateTextShower(activeCue, activeIdx);
+        }
+        if (typeof window._updateAppWorkCues === 'function') {
+          window._updateAppWorkCues(currentCues, false);
+        }
+      });
       this._syncOrigToggleUI();
 
       this.isInitialized = true;

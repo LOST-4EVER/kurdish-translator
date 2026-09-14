@@ -437,6 +437,44 @@
       this._updateActiveCue();
     }
 
+    updateCue(index, cue) {
+      if (!this.cues || index < 0 || index >= this.cues.length) return;
+      if (cue) {
+        this.cues[index] = { ...this.cues[index], ...cue };
+      }
+      const targetCue = this.cues[index];
+      const pill = this._cuePillMap.get(index);
+      if (pill && targetCue) {
+        const startSec = (targetCue.start || 0) / 1000;
+        const endSec = Math.max(startSec + 0.1, (targetCue.end || (targetCue.start + 1000)) / 1000);
+        const durationSec = endSec - startSec;
+        const leftPx = startSec * this.zoom;
+        const widthPx = Math.max(12, durationSec * this.zoom);
+
+        pill.style.left = `${leftPx}px`;
+        pill.style.width = `${widthPx}px`;
+
+        const cleanText = (targetCue.text || '').replace(/<[^>]+>/g, '').replace(/\{[^}]*\}/g, '').trim();
+        const textSpan = pill.querySelector('.vn-cue-text');
+        if (textSpan) {
+          textSpan.textContent = cleanText;
+        }
+
+        const isArabic = /[\u0600-\u06FF\u0750-\u077F\uFB50-\uFDFF\uFE70-\uFEFF]/.test(targetCue.text || '');
+        pill.classList.toggle('rtl-cue', isArabic);
+        pill.title = `#${index + 1} [${this.formatTimecode(targetCue.start)} ➔ ${this.formatTimecode(targetCue.end)}]: ${cleanText}`;
+      } else {
+        this._renderCues();
+      }
+      this._updateActiveCue();
+    }
+
+    updateCueText(index, text) {
+      if (!this.cues || index < 0 || index >= this.cues.length) return;
+      this.cues[index].text = text;
+      this.updateCue(index, { text });
+    }
+
     setZoom(pixelsPerSecond) {
       const clamped = Math.max(
         this.options.minPixelsPerSecond,

@@ -56,8 +56,16 @@ function extractTranslationFromGoogle(data) {
   return '';
 }
 
+const SERVER_TRANSLATION_CACHE = new Map();
+const MAX_SERVER_CACHE_SIZE = 5000;
+
 async function fetchGoogleTranslate(text, sl = 'auto', tl = 'ckb') {
   if (!text || !text.trim()) return '';
+
+  const cacheKey = `${sl}:${tl}:${text}`;
+  if (SERVER_TRANSLATION_CACHE.has(cacheKey)) {
+    return SERVER_TRANSLATION_CACHE.get(cacheKey);
+  }
 
   const headers = {
     'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
@@ -66,7 +74,7 @@ async function fetchGoogleTranslate(text, sl = 'auto', tl = 'ckb') {
     'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8'
   };
 
-  // 1. Try POST with form-urlencoded body (handles large batches, newlines, delimiters without URL length limits)
+  // 1. Try POST with form-urlencoded body
   const postEndpoints = [
     'https://translate.googleapis.com/translate_a/single',
     'https://clients1.google.com/translate_a/single',
@@ -98,7 +106,12 @@ async function fetchGoogleTranslate(text, sl = 'auto', tl = 'ckb') {
         if (resp.ok) {
           const data = await resp.json();
           const translated = extractTranslationFromGoogle(data);
-          if (translated) return translated;
+          if (translated) {
+            if (SERVER_TRANSLATION_CACHE.size < MAX_SERVER_CACHE_SIZE) {
+              SERVER_TRANSLATION_CACHE.set(cacheKey, translated);
+            }
+            return translated;
+          }
         }
       } catch {}
     }
@@ -123,10 +136,43 @@ async function fetchGoogleTranslate(text, sl = 'auto', tl = 'ckb') {
       if (resp.ok) {
         const data = await resp.json();
         const translated = extractTranslationFromGoogle(data);
-        if (translated) return translated;
+        if (translated) {
+          if (SERVER_TRANSLATION_CACHE.size < MAX_SERVER_CACHE_SIZE) {
+            SERVER_TRANSLATION_CACHE.set(cacheKey, translated);
+          }
+          return translated;
+        }
       }
     } catch {}
   }
+
+  // 3. Fallback to Lingva Translate instances
+  const lingvaInstances = [
+    'https://lingva.ml/api/v1',
+    'https://translate.plausibility.cloud/api/v1',
+    'https://lingva.garudalinux.org/api/v1'
+  ];
+
+  for (const instance of lingvaInstances) {
+    try {
+      const from = sl === 'auto' ? 'auto' : sl;
+      const url = `${instance}/${encodeURIComponent(from)}/${encodeURIComponent(tl)}/${encodeURIComponent(text)}`;
+      const resp = await fetch(url, {
+        method: 'GET',
+        headers: { Accept: 'application/json', 'User-Agent': 'Mozilla/5.0' }
+      });
+      if (resp.ok) {
+        const data = await resp.json();
+        if (data && data.translation) {
+          if (SERVER_TRANSLATION_CACHE.size < MAX_SERVER_CACHE_SIZE) {
+            SERVER_TRANSLATION_CACHE.set(cacheKey, data.translation);
+          }
+          return data.translation;
+        }
+      }
+    } catch {}
+  }
+
   throw new Error('All translation providers failed');
 }
 

@@ -1264,6 +1264,41 @@
     });
   }
 
+  /** Gentle synchronization of cues without destroying editor DOM or undo state if editing in studio */
+  function syncCuesSilently(cues, forceRebuild = false) {
+    if (!Array.isArray(cues)) return;
+    workCues = cues.map((c) => {
+      const copy = { ...c };
+      if (typeof Translator !== 'undefined' && Translator.normalizeForSearch) {
+        copy._normText = Translator.normalizeForSearch(c.text || '');
+      } else {
+        copy._normText = (c.text || '').toLowerCase();
+      }
+      return copy;
+    });
+    baseCues = workCues.map((c) => ({ ...c }));
+    if (typeof SubtitlePlayer !== 'undefined' && SubtitlePlayer.loadCues) {
+      SubtitlePlayer.loadCues(workCues);
+    }
+    if (forceRebuild || !rowEls || rowEls.length !== workCues.length) {
+      buildEditor();
+    } else {
+      workCues.forEach((c, idx) => {
+        const row = rowEls[idx];
+        if (row) {
+          const input = row.querySelector('.ed-input');
+          const val = displayText(c.text);
+          if (input && input.value !== val) {
+            input.value = val;
+            input.setAttribute('dir', dirFor(val));
+            autoGrow(input);
+          }
+        }
+      });
+    }
+    prepareDownload();
+  }
+
   /** Swap in a fresh cue set (original or translated) and rebuild everything. */
   function updateCues(cues) {
     baseCues = cues.map((c) => ({ ...c }));
@@ -2554,9 +2589,9 @@
     window._getAppParsed = () => parsed;
     window._getAppFile = () => file;
     window._getAppFileName = () => (file ? file.name : (parsed && parsed.format ? `subtitles.${parsed.format}` : 'subtitle.srt'));
-    window._updateAppWorkCues = (newCues) => {
+    window._updateAppWorkCues = (newCues, forceRebuild = false) => {
       if (Array.isArray(newCues)) {
-        updateCues(newCues);
+        syncCuesSilently(newCues, forceRebuild);
       }
     };
     window._getAppCurrentStep = () => activeStepName;

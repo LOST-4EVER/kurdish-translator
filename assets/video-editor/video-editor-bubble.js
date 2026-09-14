@@ -34,7 +34,7 @@
           this.currentCue.text = newText;
           
           if (window.VideoEditorState) {
-            window.VideoEditorState.updateCue(this.currentIndex, { text: newText });
+            window.VideoEditorState.updateCueText(this.currentIndex, newText);
           }
 
           this._updateStats();
