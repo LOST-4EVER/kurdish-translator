@@ -242,13 +242,13 @@ const AppQuality = (() => {
       card.dataset.cueIndex = String(item.cueIndex);
       card.dataset.categories = item.categories.join(' ');
 
-      const timeFmt = (typeof SubParser !== 'undefined') ? `${SubParser.fmtSRT(item.start)} ➔ ${SubParser.fmtSRT(item.end)}` : '';
+      const timeFmt = (typeof SubParser !== 'undefined') ? `${SubParser.fmtSRT(item.start)} <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:-1px; margin: 0 3px;"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg> ${SubParser.fmtSRT(item.end)}` : '';
 
       let tagsHtml = item.issues.map((iss) => {
         let tagClass = 'quality-issue-tag';
         if (/overlap|timing|تێکەڵبوونی/i.test(iss)) tagClass += ' warning';
         else if (/character|name|ناو/i.test(iss)) tagClass += ' info';
-        return `<span class="${tagClass}">${iss}</span>`;
+        return `<span class="${tagClass}">${escapeHtml(iss)}</span>`;
       }).join('');
 
       if (item.advancedAlternatives && item.advancedAlternatives.length > 0) {
@@ -266,10 +266,10 @@ const AppQuality = (() => {
             </div>
             <div style="display: flex; flex-wrap: wrap; gap: 0.4rem;">
               ${item.advancedAlternatives.map((alt) => `
-                <button type="button" class="alt-chip-btn" data-cue-index="${item.cueIndex}" data-rep="${alt.kurdish.replace(/"/g, '&quot;')}" style="font-size: 0.8rem; padding: 0.35rem 0.65rem; background: var(--bg-surface, #1e293b); border: 1px solid var(--accent-primary, #6366f1); border-radius: 6px; color: var(--accent-primary, #818cf8); cursor: pointer; display: inline-flex; align-items: center; gap: 0.35rem; transition: all 0.15s ease;">
+                <button type="button" class="alt-chip-btn" data-cue-index="${item.cueIndex}" data-rep="${escapeHtml(alt.kurdish)}" style="font-size: 0.8rem; padding: 0.35rem 0.65rem; background: var(--bg-surface, #1e293b); border: 1px solid var(--accent-primary, #6366f1); border-radius: 6px; color: var(--accent-primary, #818cf8); cursor: pointer; display: inline-flex; align-items: center; gap: 0.35rem; transition: all 0.15s ease;">
                   <span style="font-weight: bold;">+</span>
-                  <span dir="rtl" style="font-weight: 600; font-family: 'Noto Naskh Arabic', sans-serif;">${alt.kurdish}</span>
-                  ${alt.context ? `<span style="font-size: 0.7rem; opacity: 0.75;">(${alt.context})</span>` : ''}
+                  <span dir="rtl" style="font-weight: 600; font-family: 'Noto Naskh Arabic', sans-serif;">${escapeHtml(alt.kurdish)}</span>
+                  ${alt.context ? `<span style="font-size: 0.7rem; opacity: 0.75;">(${escapeHtml(alt.context)})</span>` : ''}
                 </button>
               `).join('')}
             </div>
@@ -329,7 +329,7 @@ const AppQuality = (() => {
           appBridge.applyCueEdit(cIdx, rep);
           btn.style.background = 'var(--accent-primary, #6366f1)';
           btn.style.color = '#fff';
-          btn.textContent = '✓ Applied';
+          btn.innerHTML = `<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="vertical-align:-1px; margin-right:3px;"><polyline points="20 6 9 17 4 12"/></svg>${isCkb ? 'جێبەجێکرا' : 'Applied'}`;
           setTimeout(() => runQualityInspection(), 250);
         }
       });
@@ -348,7 +348,7 @@ const AppQuality = (() => {
             if (typeof appBridge.applyCueEdit === 'function') {
               appBridge.applyCueEdit(cIdx, polished);
             }
-            btn.textContent = '✓ Fixed';
+            btn.innerHTML = `<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="vertical-align:-1px; margin-right:3px;"><polyline points="20 6 9 17 4 12"/></svg>${isCkb ? 'چاککرا' : 'Fixed'}`;
             btn.disabled = true;
             setTimeout(() => runQualityInspection(), 250);
           }

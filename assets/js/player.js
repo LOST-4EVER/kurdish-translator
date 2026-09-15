@@ -521,6 +521,9 @@ const SubtitlePlayer = (() => {
     return res.replace(/\n/g, '<br>');
   }
 
+  const SAFE_FONT_RE = /^[a-zA-Z0-9\s,._\-']+$/;
+  const SAFE_COLOR_RE = /^(#[0-9a-fA-F]{3,8}|rgba?\(\s*\d+\s*,\s*\d+\s*,\s*\d+(?:\s*,\s*[\d.]+\s*)?\)|[a-zA-Z]+)$/;
+
   function renderScreenCues(screenEl, activeList) {
     if (!screenEl) return;
 
@@ -574,8 +577,8 @@ const SubtitlePlayer = (() => {
           if (placement.hAlign === 'left') span.style.alignSelf = 'flex-start';
           else if (placement.hAlign === 'right') span.style.alignSelf = 'flex-end';
           else span.style.alignSelf = 'center';
-          if (c.fontFamily) span.style.fontFamily = c.fontFamily;
-          if (c.color) span.style.color = c.color;
+          if (c.fontFamily && SAFE_FONT_RE.test(c.fontFamily)) span.style.fontFamily = c.fontFamily;
+          if (c.color && SAFE_COLOR_RE.test(c.color)) span.style.color = c.color;
 
           if (placement.pos) {
             span.classList.add('pos-abs');
@@ -601,8 +604,8 @@ const SubtitlePlayer = (() => {
           if (placement.hAlign === 'left') span.style.alignSelf = 'flex-start';
           else if (placement.hAlign === 'right') span.style.alignSelf = 'flex-end';
           else span.style.alignSelf = 'center';
-          if (c.fontFamily) span.style.fontFamily = c.fontFamily;
-          if (c.color) span.style.color = c.color;
+          if (c.fontFamily && SAFE_FONT_RE.test(c.fontFamily)) span.style.fontFamily = c.fontFamily;
+          if (c.color && SAFE_COLOR_RE.test(c.color)) span.style.color = c.color;
 
           if (placement.pos) {
             span.classList.add('pos-abs');

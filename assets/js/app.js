@@ -8,9 +8,9 @@
   // ---------- Constants ----------
   const STEPS = ['upload', 'settings', 'progress', 'done'];
 
-  const ALLOWED_EXT = ['srt', 'vtt', 'ass', 'ssa', 'sub', 'smi'];
-  const LABEL = { srt: 'SRT', vtt: 'VTT', ass: 'ASS', ssa: 'SSA', sub: 'MicroDVD', smi: 'SAMI' };
-  const EXT_BY_FORMAT = { srt: 'srt', vtt: 'vtt', ass: 'ass', ssa: 'ssa', sub: 'sub', smi: 'smi' };
+  const ALLOWED_EXT = ['srt', 'vtt', 'ass', 'ssa', 'sub', 'smi', 'txt'];
+  const LABEL = { srt: 'SRT', vtt: 'VTT', ass: 'ASS', ssa: 'SSA', sub: 'MicroDVD', smi: 'SAMI', txt: 'TXT' };
+  const EXT_BY_FORMAT = { srt: 'srt', vtt: 'vtt', ass: 'ass', ssa: 'ssa', sub: 'sub', smi: 'smi', txt: 'txt' };
   // Per-format MIME so browsers that ignore the `download` attribute fall
   // back to the right extension instead of .txt (text/plain).
   const MIME_BY_FORMAT = {
@@ -20,6 +20,7 @@
     ssa: 'text/x-ssa;charset=utf-8',
     sub: 'application/x-microdvd;charset=utf-8',
     smi: 'application/x-sami;charset=utf-8',
+    txt: 'text/plain;charset=utf-8',
   };
 
   const SOURCE_LANGS = {
@@ -378,7 +379,7 @@
       if (els.liveTimecode && cue) {
         const startStr = typeof SubParser !== 'undefined' ? SubParser.fmtSRT(cue.start) : '00:00';
         const endStr = typeof SubParser !== 'undefined' ? SubParser.fmtSRT(cue.end) : '00:00';
-        els.liveTimecode.textContent = `${startStr} ➔ ${endStr}`;
+        els.liveTimecode.innerHTML = `${startStr} <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:-1px; margin: 0 3px;"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg> ${endStr}`;
       }
     }
 
@@ -600,7 +601,7 @@
       els.edSaveBtn.classList.add('just-saved');
       const textSpan = els.edSaveBtn.querySelector('.btn-text');
       const origText = textSpan ? textSpan.textContent : '';
-      if (textSpan) textSpan.textContent = currentUiLang === 'ckb' ? '✓ پاشەکەوت کرا' : '✓ Saved';
+      if (textSpan) textSpan.innerHTML = `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="vertical-align:-1px; margin-right:3px;"><polyline points="20 6 9 17 4 12"/></svg>${currentUiLang === 'ckb' ? 'پاشەکەوت کرا' : 'Saved'}`;
       setTimeout(() => {
         if (els.edSaveBtn) els.edSaveBtn.classList.remove('just-saved');
         if (textSpan) textSpan.textContent = origText;
@@ -919,7 +920,7 @@
       time.className = 'ed-time';
       const startStr = SubParser.fmtSRT(c.start);
       const endStr = SubParser.fmtSRT(c.end);
-      time.innerHTML = `<span class="ed-time-start">${startStr}</span><span class="ed-time-sep">➔</span><span class="ed-time-end">${endStr}</span>`;
+      time.innerHTML = `<span class="ed-time-start">${startStr}</span><span class="ed-time-sep"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:-1px;"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg></span><span class="ed-time-end">${endStr}</span>`;
       time.classList.toggle('hidden', !showTime);
 
       meta.appendChild(idx);
@@ -1464,12 +1465,20 @@
 
   async function handleFile(f) {
     if (!f) return;
+    if (f.size > 50 * 1024 * 1024) {
+      toast(
+        currentUiLang === 'ckb' ? 'قەبارەی فایلەکە زۆر گەورەیە.' : 'File too large',
+        true,
+        currentUiLang === 'ckb' ? 'تکایە فایلی ژێرنووس بە قەبارەی کەمتر لە 50MB باربکە.' : 'Please upload a subtitle file smaller than 50MB.'
+      );
+      return;
+    }
     const ext = f.name.split('.').pop().toLowerCase();
     if (!ALLOWED_EXT.includes(ext)) {
       toast(
         currentUiLang === 'ckb' ? 'فایلەکە پشتیوانی نەکراوە.' : 'Unsupported file format',
         true,
-        currentUiLang === 'ckb' ? 'تکایە فایلی .SRT, .VTT, .ASS, .SSA, .SUB یان .SMI هەڵبژێرە.' : 'Use .SRT, .VTT, .ASS, .SSA, .SUB or .SMI'
+        currentUiLang === 'ckb' ? 'تکایە فایلی .SRT, .VTT, .ASS, .SSA, .SUB, .SMI یان .TXT هەڵبژێرە.' : 'Use .SRT, .VTT, .ASS, .SSA, .SUB, .SMI or .TXT'
       );
       return;
     }
@@ -2223,7 +2232,8 @@
       els.downloadBtn.classList.add('downloading');
       const textSpan = els.downloadBtn.querySelector('[data-i18n="btnDownload"]');
       const dict = dicts[currentUiLang] || dicts.en;
-      if (textSpan) textSpan.textContent = dict.btnDownloaded || '✓ Saved!';
+      const downloadLabel = (dict.btnDownloaded || 'Saved!').replace(/^[✓✔]\s*/, '');
+      if (textSpan) textSpan.innerHTML = `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="vertical-align:-1px; margin-right:3px;"><polyline points="20 6 9 17 4 12"/></svg>${downloadLabel}`;
       if (typeof Toast !== 'undefined') {
         Toast.success(
           currentUiLang === 'ckb' ? 'فایلەکە دابەزێنرا!' : 'File downloaded!',
@@ -2306,7 +2316,8 @@
         }
         const textSpan = els.copyBtn.querySelector('[data-i18n="btnCopy"]');
         const dict = dicts[currentUiLang] || dicts.en;
-        if (textSpan) textSpan.textContent = dict.btnCopied || '✓ Copied!';
+        const copyLabel = (dict.btnCopied || 'Copied!').replace(/^[✓✔]\s*/, '');
+        if (textSpan) textSpan.innerHTML = `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="vertical-align:-1px; margin-right:3px;"><polyline points="20 6 9 17 4 12"/></svg>${copyLabel}`;
         els.copyBtn.classList.add('copied');
         clearTimeout(copyTimer);
         copyTimer = setTimeout(() => {

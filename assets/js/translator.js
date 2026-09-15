@@ -47,6 +47,15 @@ const Translator = (() => {
   const TRANSLATION_CACHE = new Map();
   const MAX_CACHE_SIZE = 3000;
 
+  function setTranslationCache(k, val) {
+    if (!k) return;
+    if (TRANSLATION_CACHE.size >= MAX_CACHE_SIZE) {
+      const firstKey = TRANSLATION_CACHE.keys().next().value;
+      TRANSLATION_CACHE.delete(firstKey);
+    }
+    TRANSLATION_CACHE.set(k, val);
+  }
+
   // Sentinel protecting internal line breaks inside a cue
   const NL_SENTINEL = '§§';
 
@@ -627,9 +636,9 @@ const Translator = (() => {
             norm = fixPlacementAndTagOrder(norm, item.raw);
             results[item.index] = norm;
 
-            if (item.raw && item.raw.trim() && TRANSLATION_CACHE.size < MAX_CACHE_SIZE) {
+            if (item.raw && item.raw.trim()) {
               const k = `${srcLang}:${tgtLang}:${item.raw.trim()}`;
-              TRANSLATION_CACHE.set(k, norm);
+              setTranslationCache(k, norm);
             }
           });
         } else {
@@ -646,9 +655,9 @@ const Translator = (() => {
               norm = fixPlacementAndTagOrder(norm, item.raw);
               results[item.index] = norm;
 
-              if (item.raw && item.raw.trim() && TRANSLATION_CACHE.size < MAX_CACHE_SIZE) {
+              if (item.raw && item.raw.trim()) {
                 const k = `${srcLang}:${tgtLang}:${item.raw.trim()}`;
-                TRANSLATION_CACHE.set(k, norm);
+                setTranslationCache(k, norm);
               }
             } catch {
               results[item.index] = item.raw;
@@ -672,9 +681,9 @@ const Translator = (() => {
             norm = fixPlacementAndTagOrder(norm, item.raw);
             results[item.index] = norm;
 
-            if (item.raw && item.raw.trim() && TRANSLATION_CACHE.size < MAX_CACHE_SIZE) {
+            if (item.raw && item.raw.trim()) {
               const k = `${srcLang}:${tgtLang}:${item.raw.trim()}`;
-              TRANSLATION_CACHE.set(k, norm);
+              setTranslationCache(k, norm);
             }
           } catch {
             results[item.index] = item.raw;

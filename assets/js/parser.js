@@ -732,7 +732,17 @@ Style: Top,Noto Naskh Arabic,44,16777215,65535,0,0,-1,0,1,3.2,1.8,8,40,40,35,0,1
       .replace(/<i>([\s\S]*?)<\/i>/gi, '{\\i1}$1{\\i0}')
       .replace(/<b>([\s\S]*?)<\/b>/gi, '{\\b1}$1{\\b0}')
       .replace(/<u>([\s\S]*?)<\/u>/gi, '{\\u1}$1{\\u0}')
-      .replace(/<font\s+color=["']#?([0-9a-fA-F]{2})([0-9a-fA-F]{2})([0-9a-fA-F]{2})["']>([\s\S]*?)<\/font>/gi, (m, r, g, b, inner) => {
+      .replace(/<font\s+color=["']#?([0-9a-fA-F]{3}|[0-9a-fA-F]{6})["']>([\s\S]*?)<\/font>/gi, (m, hex, inner) => {
+        let r, g, b;
+        if (hex.length === 3) {
+          r = hex[0] + hex[0];
+          g = hex[1] + hex[1];
+          b = hex[2] + hex[2];
+        } else {
+          r = hex.slice(0, 2);
+          g = hex.slice(2, 4);
+          b = hex.slice(4, 6);
+        }
         return `{\\c&H${b}${g}${r}&}${inner}{\\c}`;
       })
       .replace(/<[^>]+>/g, ''); // strip any remaining non-supported HTML tags
@@ -776,7 +786,17 @@ Style: Top,Noto Naskh Arabic,44,16777215,65535,0,0,-1,0,1,3.2,1.8,8,40,40,35,0,1
       .replace(/<i>([\s\S]*?)<\/i>/gi, '{y:i}$1')
       .replace(/<b>([\s\S]*?)<\/b>/gi, '{y:b}$1')
       .replace(/<u>([\s\S]*?)<\/u>/gi, '{y:u}$1')
-      .replace(/<font\s+color=["']#?([0-9a-fA-F]{2})([0-9a-fA-F]{2})([0-9a-fA-F]{2})["']>([\s\S]*?)<\/font>/gi, (m, r, g, b, inner) => {
+      .replace(/<font\s+color=["']#?([0-9a-fA-F]{3}|[0-9a-fA-F]{6})["']>([\s\S]*?)<\/font>/gi, (m, hex, inner) => {
+        let r, g, b;
+        if (hex.length === 3) {
+          r = hex[0] + hex[0];
+          g = hex[1] + hex[1];
+          b = hex[2] + hex[2];
+        } else {
+          r = hex.slice(0, 2);
+          g = hex.slice(2, 4);
+          b = hex.slice(4, 6);
+        }
         return `{c:$${b}${g}${r}}${inner}`;
       })
       .replace(/<[^>]+>/g, '');

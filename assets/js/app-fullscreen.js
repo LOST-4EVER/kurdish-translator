@@ -50,7 +50,9 @@ const AppFullscreen = (() => {
     return (str || '')
       .replace(/&/g, '&amp;')
       .replace(/</g, '&lt;')
-      .replace(/>/g, '&gt;');
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#039;');
   }
 
   function sanitizeSubtitleHtml(raw) {
@@ -63,7 +65,12 @@ const AppFullscreen = (() => {
       .replace(/&lt;\/b&gt;/gi, '</b>')
       .replace(/&lt;u&gt;/gi, '<u>')
       .replace(/&lt;\/u&gt;/gi, '</u>')
-      .replace(/&lt;font\s+color=['"]?([#a-zA-Z0-9]+)['"]?&gt;/gi, '<span style="color:$1">')
+      .replace(/&lt;font\s+color=(?:&quot;|&#039;|['"])?([#a-zA-Z0-9]+)(?:&quot;|&#039;|['"])?&gt;/gi, (m, color) => {
+        if (/^(#[0-9a-fA-F]{3,8}|[a-zA-Z]+)$/.test(color)) {
+          return `<span style="color:${color}">`;
+        }
+        return '<span>';
+      })
       .replace(/&lt;\/font&gt;/gi, '</span>');
   }
 

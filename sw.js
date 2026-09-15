@@ -6,7 +6,7 @@
  * (Google's endpoint), so offline mode lets you load files and use the
  * preview player, but translating requires a connection.
  */
-const CACHE = 'kurdish-translator-v149';
+const CACHE = 'kurdish-translator-v150';
 const SHARED_CACHE = 'kurdish-shared-file';
 
 const ASSETS = [
@@ -148,6 +148,9 @@ self.addEventListener('fetch', (event) => {
   // Only handle GET.
   if (event.request.method !== 'GET') return;
 
+  // Range requests (e.g. video / audio playback in editor): browser network handles partial responses
+  if (event.request.headers && event.request.headers.has('range')) return;
+
   // Never cache or intercept dynamic backend API proxy requests.
   if (url.pathname.startsWith('/api/')) return;
 
@@ -173,7 +176,7 @@ self.addEventListener('fetch', (event) => {
     event.respondWith(
       fetch(event.request)
         .then((response) => {
-          if (response && response.ok) {
+          if (response && response.ok && response.status === 200) {
             const clone = response.clone();
             caches.open(CACHE).then((cache) => cache.put(event.request, clone));
             return response;
@@ -187,17 +190,25 @@ self.addEventListener('fetch', (event) => {
 
   event.respondWith(
     caches.match(event.request).then((cached) => {
-      // Serve from cache immediately, then refresh it in the background.
-      const fetched = fetch(event.request)
-        .then((response) => {
-          if (response && response.ok) {
-            const clone = response.clone();
-            caches.open(CACHE).then((cache) => cache.put(event.request, clone));
-          }
-          return response;
-        })
-        .catch(() => cached);
-      return cached || fetched;
+      if (cached) {
+        // Stale-while-revalidate: serve cached immediately, update in background
+        fetch(event.request)
+          .then((response) => {
+            if (response && response.ok && response.status === 200) {
+              const clone = response.clone();
+              caches.open(CACHE).then((cache) => cache.put(event.request, clone));
+            }
+          })
+          .catch(() => {});
+        return cached;
+      }
+      return fetch(event.request).then((response) => {
+        if (response && response.ok && response.status === 200) {
+          const clone = response.clone();
+          caches.open(CACHE).then((cache) => cache.put(event.request, clone));
+        }
+        return response;
+      });
     })
   );
 });

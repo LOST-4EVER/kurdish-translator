@@ -58,7 +58,7 @@ const TranslatorOrthography = (() => {
     'ازیکردن', 'ابەری', 'ێپێدراو', 'اوەستاو', 'ەشەکوژ', 'ێژەیی', 'اوانی',
     'ەشپێست', 'ۆمانسی', 'ۆمانتیک', 'ووخێنەر', 'ابەر', 'ێزبەند'
   ];
-  const HEAVY_R_PREFIX_REGEX = new RegExp('(^|\\s)ر(' + HEAVY_R_STEMS.join('|') + ')(?=[\\u0600-\\u06ff]*)(?=\\s|$|[.,!?;:،؛؟])', 'g');
+  const HEAVY_R_PREFIX_REGEX = new RegExp('(^|\\s)ر((?:' + HEAVY_R_STEMS.join('|') + ')[\\u0600-\\u06ff]*)(?=\\s|$|[.,!?;:،؛؟])', 'g');
 
   // Stems for Sorani Kurdish Velarized L (ڵ)
   const VELARIZED_L_STEMS = [

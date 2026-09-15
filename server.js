@@ -107,9 +107,11 @@ async function fetchGoogleTranslate(text, sl = 'auto', tl = 'ckb') {
           const data = await resp.json();
           const translated = extractTranslationFromGoogle(data);
           if (translated) {
-            if (SERVER_TRANSLATION_CACHE.size < MAX_SERVER_CACHE_SIZE) {
-              SERVER_TRANSLATION_CACHE.set(cacheKey, translated);
+            if (SERVER_TRANSLATION_CACHE.size >= MAX_SERVER_CACHE_SIZE) {
+              const firstKey = SERVER_TRANSLATION_CACHE.keys().next().value;
+              SERVER_TRANSLATION_CACHE.delete(firstKey);
             }
+            SERVER_TRANSLATION_CACHE.set(cacheKey, translated);
             return translated;
           }
         }
@@ -137,9 +139,11 @@ async function fetchGoogleTranslate(text, sl = 'auto', tl = 'ckb') {
         const data = await resp.json();
         const translated = extractTranslationFromGoogle(data);
         if (translated) {
-          if (SERVER_TRANSLATION_CACHE.size < MAX_SERVER_CACHE_SIZE) {
-            SERVER_TRANSLATION_CACHE.set(cacheKey, translated);
+          if (SERVER_TRANSLATION_CACHE.size >= MAX_SERVER_CACHE_SIZE) {
+            const firstKey = SERVER_TRANSLATION_CACHE.keys().next().value;
+            SERVER_TRANSLATION_CACHE.delete(firstKey);
           }
+          SERVER_TRANSLATION_CACHE.set(cacheKey, translated);
           return translated;
         }
       }
@@ -164,9 +168,11 @@ async function fetchGoogleTranslate(text, sl = 'auto', tl = 'ckb') {
       if (resp.ok) {
         const data = await resp.json();
         if (data && data.translation) {
-          if (SERVER_TRANSLATION_CACHE.size < MAX_SERVER_CACHE_SIZE) {
-            SERVER_TRANSLATION_CACHE.set(cacheKey, data.translation);
+          if (SERVER_TRANSLATION_CACHE.size >= MAX_SERVER_CACHE_SIZE) {
+            const firstKey = SERVER_TRANSLATION_CACHE.keys().next().value;
+            SERVER_TRANSLATION_CACHE.delete(firstKey);
           }
+          SERVER_TRANSLATION_CACHE.set(cacheKey, data.translation);
           return data.translation;
         }
       }
@@ -250,8 +256,14 @@ const server = http.createServer(async (req, res) => {
     reqUrl = '/index.html';
   }
 
-  const safePath = path.normalize(reqUrl).replace(/^(\.\.[\/\\])+/, '');
-  let filePath = path.join(__dirname, safePath);
+  // Prevent directory traversal attacks
+  const decodedPath = decodeURIComponent(reqUrl);
+  const safePath = path.normalize(decodedPath).replace(/^(\.\.[\/\\])+/, '');
+  let resolvedPath = path.resolve(__dirname, '.' + safePath);
+  if (!resolvedPath.startsWith(path.resolve(__dirname))) {
+    resolvedPath = path.join(__dirname, 'index.html');
+  }
+  let filePath = resolvedPath;
 
   fs.stat(filePath, (err, stats) => {
     if (err || !stats.isFile()) {
@@ -271,7 +283,9 @@ const server = http.createServer(async (req, res) => {
       res.writeHead(200, {
         'Content-Type': contentType,
         'Cache-Control': 'no-cache, no-store, must-revalidate',
-        'Access-Control-Allow-Origin': '*'
+        'Access-Control-Allow-Origin': '*',
+        'X-Content-Type-Options': 'nosniff',
+        'Referrer-Policy': 'strict-origin-when-cross-origin'
       });
       res.end(content);
     });
