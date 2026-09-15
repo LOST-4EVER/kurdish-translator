@@ -339,7 +339,7 @@
 
       const kurdishText = stripTags(cue.text || '');
       this.els.videoOverlayText.textContent = kurdishText;
-      this.els.videoOverlayText.setAttribute('dir', hasArabic(kurdishText) ? 'rtl' : 'ltr');
+      this.els.videoOverlayText.setAttribute('dir', 'ltr');
 
       // Check if original English/source text should be displayed alongside Kurdish
       const hasOrig = Boolean(config && config.showOrig && cue.origText && cue.origText.trim() && cue.origText.trim() !== kurdishText.trim());
@@ -394,13 +394,52 @@
           container.style.transform = 'translate(-50%, -50%)';
           container.classList.remove('pos-bottom', 'pos-center', 'pos-top');
         } else {
-          container.style.left = placement.hAlign === 'left' ? '8%' : (placement.hAlign === 'right' ? 'auto' : '50%');
-          container.style.right = placement.hAlign === 'right' ? '8%' : 'auto';
-          container.style.top = '';
-          container.style.bottom = '';
-          container.style.transform = placement.hAlign === 'center' ? 'translateX(-50%)' : 'none';
-          container.classList.remove('pos-bottom', 'pos-center', 'pos-top');
-          container.classList.add(`pos-${config.position || 'bottom'}`);
+          const pos = config.position || 'bottom';
+          container.classList.remove('pos-bottom', 'pos-center', 'pos-top', 'pos-bottom-left', 'pos-bottom-right', 'pos-top-left', 'pos-top-right');
+          if (pos === 'center') {
+            container.style.left = '50%';
+            container.style.right = 'auto';
+            container.style.top = '50%';
+            container.style.bottom = 'auto';
+            container.style.transform = 'translate(-50%, -50%)';
+          } else if (pos === 'top') {
+            container.style.left = '50%';
+            container.style.right = 'auto';
+            container.style.top = '8%';
+            container.style.bottom = 'auto';
+            container.style.transform = 'translateX(-50%)';
+          } else if (pos === 'top-left') {
+            container.style.left = '8%';
+            container.style.right = 'auto';
+            container.style.top = '8%';
+            container.style.bottom = 'auto';
+            container.style.transform = 'none';
+          } else if (pos === 'top-right') {
+            container.style.left = 'auto';
+            container.style.right = '8%';
+            container.style.top = '8%';
+            container.style.bottom = 'auto';
+            container.style.transform = 'none';
+          } else if (pos === 'bottom-left') {
+            container.style.left = '8%';
+            container.style.right = 'auto';
+            container.style.top = 'auto';
+            container.style.bottom = '8%';
+            container.style.transform = 'none';
+          } else if (pos === 'bottom-right') {
+            container.style.left = 'auto';
+            container.style.right = '8%';
+            container.style.top = 'auto';
+            container.style.bottom = '8%';
+            container.style.transform = 'none';
+          } else {
+            container.style.left = '50%';
+            container.style.right = 'auto';
+            container.style.top = 'auto';
+            container.style.bottom = '8%';
+            container.style.transform = 'translateX(-50%)';
+          }
+          container.classList.add(`pos-${pos}`);
         }
       }
 
@@ -449,13 +488,79 @@
           container.style.transform = 'translate(-50%, -50%)';
           container.classList.remove('pos-bottom', 'pos-center', 'pos-top');
         } else {
-          container.style.left = '50%';
-          container.style.top = '';
-          container.style.bottom = '';
-          container.style.transform = '';
-          container.classList.remove('pos-bottom', 'pos-center', 'pos-top');
-          container.classList.add(`pos-${config.position || 'bottom'}`);
+          const pos = config.position || 'bottom';
+          container.classList.remove('pos-bottom', 'pos-center', 'pos-top', 'pos-bottom-left', 'pos-bottom-right', 'pos-top-left', 'pos-top-right');
+          if (pos === 'center') {
+            container.style.left = '50%';
+            container.style.right = 'auto';
+            container.style.top = '50%';
+            container.style.bottom = 'auto';
+            container.style.transform = 'translate(-50%, -50%)';
+          } else if (pos === 'top') {
+            container.style.left = '50%';
+            container.style.right = 'auto';
+            container.style.top = '8%';
+            container.style.bottom = 'auto';
+            container.style.transform = 'translateX(-50%)';
+          } else if (pos === 'top-left') {
+            container.style.left = '8%';
+            container.style.right = 'auto';
+            container.style.top = '8%';
+            container.style.bottom = 'auto';
+            container.style.transform = 'none';
+          } else if (pos === 'top-right') {
+            container.style.left = 'auto';
+            container.style.right = '8%';
+            container.style.top = '8%';
+            container.style.bottom = 'auto';
+            container.style.transform = 'none';
+          } else if (pos === 'bottom-left') {
+            container.style.left = '8%';
+            container.style.right = 'auto';
+            container.style.top = 'auto';
+            container.style.bottom = '8%';
+            container.style.transform = 'none';
+          } else if (pos === 'bottom-right') {
+            container.style.left = 'auto';
+            container.style.right = '8%';
+            container.style.top = 'auto';
+            container.style.bottom = '8%';
+            container.style.transform = 'none';
+          } else {
+            container.style.left = '50%';
+            container.style.right = 'auto';
+            container.style.top = 'auto';
+            container.style.bottom = '8%';
+            container.style.transform = 'translateX(-50%)';
+          }
+          container.classList.add(`pos-${pos}`);
         }
+      }
+
+      const effect = config.effect || 'shadow';
+      container.classList.remove('effect-shadow', 'effect-outline', 'effect-glow', 'effect-cinema', 'effect-box', 'effect-none');
+      container.classList.add(`effect-${effect}`);
+      if (effect === 'outline') {
+        textEl.style.textShadow = '-1.5px -1.5px 0 #000, 1.5px -1.5px 0 #000, -1.5px 1.5px 0 #000, 1.5px 1.5px 0 #000, 0 2px 4px rgba(0,0,0,0.9)';
+        textEl.style.webkitTextStroke = '1.5px #000000';
+      } else if (effect === 'glow') {
+        textEl.style.textShadow = '0 0 10px rgba(250, 204, 21, 0.85), 0 0 22px rgba(250, 204, 21, 0.5), 0 2px 4px rgba(0,0,0,0.9)';
+        textEl.style.webkitTextStroke = '0px transparent';
+      } else if (effect === 'cinema') {
+        textEl.style.textShadow = '0 3px 6px rgba(0, 0, 0, 0.95), 0 0 12px rgba(0, 0, 0, 0.9), -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000';
+        textEl.style.webkitTextStroke = '1px #000000';
+      } else if (effect === 'box') {
+        textEl.style.textShadow = '0 1px 3px rgba(0, 0, 0, 0.8)';
+        textEl.style.webkitTextStroke = '0px transparent';
+        if (!config.bgColor || config.bgColor === 'transparent') {
+          container.style.backgroundColor = 'rgba(0, 0, 0, 0.78)';
+        }
+      } else if (effect === 'none') {
+        textEl.style.textShadow = 'none';
+        textEl.style.webkitTextStroke = '0px transparent';
+      } else {
+        textEl.style.textShadow = '0 2px 4px rgba(0, 0, 0, 0.95), 0 0 8px rgba(0, 0, 0, 0.9)';
+        textEl.style.webkitTextStroke = '0px transparent';
       }
 
       const baseRem = parseFloat(config.fontSize) || 1.25;
@@ -483,11 +588,11 @@
           if (hasOrig) {
             const safeText = text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
             const safeOrig = stripTags(cue.origText).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-            this.els.textShowerText.innerHTML = `<div class="vn-shower-kurdish" dir="${hasArabic(text) ? 'rtl' : 'ltr'}">${safeText}</div><div class="vn-shower-orig" dir="ltr"><span class="vn-shower-orig-tag">EN</span> <span>${safeOrig}</span></div>`;
-            this.els.textShowerText.removeAttribute('dir');
+            this.els.textShowerText.innerHTML = `<div class="vn-shower-kurdish" dir="ltr">${safeText}</div><div class="vn-shower-orig" dir="ltr"><span class="vn-shower-orig-tag">EN</span> <span>${safeOrig}</span></div>`;
+            this.els.textShowerText.setAttribute('dir', 'ltr');
           } else {
             this.els.textShowerText.textContent = text;
-            this.els.textShowerText.setAttribute('dir', hasArabic(text) ? 'rtl' : 'ltr');
+            this.els.textShowerText.setAttribute('dir', 'ltr');
           }
         }
 
@@ -505,7 +610,7 @@
           if (this.els.textShowerNum) this.els.textShowerNum.textContent = `Next #${nearestCue.index + 1}`;
           if (this.els.textShowerText) {
             this.els.textShowerText.textContent = stripTags(nearestCue.cue.text);
-            this.els.textShowerText.setAttribute('dir', hasArabic(nearestCue.cue.text) ? 'rtl' : 'ltr');
+            this.els.textShowerText.setAttribute('dir', 'ltr');
           }
         } else {
           if (this.els.textShowerNum) this.els.textShowerNum.textContent = 'No Subtitle';

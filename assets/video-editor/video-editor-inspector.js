@@ -79,12 +79,12 @@
 
       const isArabic = hasArabic(cleanText);
       if (this.els.cueInfoScriptVal) {
-        this.els.cueInfoScriptVal.textContent = isArabic ? 'Kurdish Sorani (RTL)' : 'Latin / English (LTR)';
+        this.els.cueInfoScriptVal.textContent = isArabic ? 'Kurdish Sorani' : 'Latin / English';
       }
 
       if (this.els.cueInfoTextInput) {
         this.els.cueInfoTextInput.value = cleanText;
-        this.els.cueInfoTextInput.setAttribute('dir', isArabic ? 'rtl' : 'ltr');
+        this.els.cueInfoTextInput.setAttribute('dir', 'ltr');
       }
 
       if (cue.origText && this.els.cueInfoOrigText) {

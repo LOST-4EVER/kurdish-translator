@@ -643,6 +643,9 @@
       }
     }
     prepareDownload();
+    if (!window._isSyncingFromStudio && typeof window._onAppAllCuesChanged === 'function') {
+      window._onAppAllCuesChanged(workCues);
+    }
   }
 
   /** Write a user edit into a cue: player screen, dirty flag, debounced download. */
@@ -660,6 +663,10 @@
     }
     SubtitlePlayer.updateText(i, stripTags(text));
     dirty = true;
+
+    if (!window._isSyncingFromStudio && typeof window._onAppCueEdit === 'function') {
+      window._onAppCueEdit(i, stripTags(text));
+    }
 
     // Keep the main editor list textarea in sync if not the event target
     const row = rowEls ? rowEls[i] : null;
@@ -1324,6 +1331,9 @@
     prepareDownload();
     updateStatus();
     runQualityInspection();
+    if (!window._isSyncingFromStudio && typeof window._onAppAllCuesChanged === 'function') {
+      window._onAppAllCuesChanged(workCues);
+    }
   }
 
   // ---------- Fullscreen edit mode ----------
@@ -2596,9 +2606,15 @@
     window._getAppParsed = () => parsed;
     window._getAppFile = () => file;
     window._getAppFileName = () => (file ? file.name : (parsed && parsed.format ? `subtitles.${parsed.format}` : 'subtitle.srt'));
+    window._isSyncingFromStudio = false;
     window._updateAppWorkCues = (newCues, forceRebuild = false) => {
       if (Array.isArray(newCues)) {
-        syncCuesSilently(newCues, forceRebuild);
+        window._isSyncingFromStudio = true;
+        try {
+          syncCuesSilently(newCues, forceRebuild);
+        } finally {
+          window._isSyncingFromStudio = false;
+        }
       }
     };
     window._getAppCurrentStep = () => activeStepName;

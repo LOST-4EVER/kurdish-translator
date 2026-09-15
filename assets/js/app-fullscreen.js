@@ -388,18 +388,34 @@ const AppFullscreen = (() => {
     if (els.fsToggleBtn) els.fsToggleBtn.addEventListener('click', () => (fsActive ? exitFs() : enterFs()));
     if (els.fsClose) els.fsClose.addEventListener('click', exitFs);
 
-    // Double tap & single tap gestures on video stage
+    // Enhanced gesture system on fullscreen video stage (prevents click / double-click collision)
     let lastTapTime = 0;
-    let lastTapX = 0;
+    let lastTapPos = { x: 0, y: 0 };
+    let tapTimer = null;
+    let isFsScrubbing = false;
+    let fsTouchStartX = 0;
+    let fsTouchStartMs = 0;
 
     if (els.fsScreen) {
-      els.fsScreen.addEventListener('pointerdown', (e) => {
-        if (e.target.closest('.fs-btn, button, select, input, textarea')) return;
-        const now = Date.now();
+      els.fsScreen.addEventListener('click', (e) => {
+        if (e.target.closest('.fs-btn, button, select, input, textarea, .fs-control-bar, .fs-top-bar')) return;
+        const now = performance.now();
         const rect = els.fsScreen.getBoundingClientRect();
-        const tapXRatio = (e.clientX - rect.left) / rect.width;
+        if (!rect.width) return;
+        const clientX = e.clientX;
+        const clientY = e.clientY;
+        const tapXRatio = (clientX - rect.left) / rect.width;
+        const timeDiff = now - lastTapTime;
+        const dist = Math.hypot(clientX - lastTapPos.x, clientY - lastTapPos.y);
 
-        if (now - lastTapTime < 320 && Math.abs(e.clientX - lastTapX) < 80) {
+        if (timeDiff < 320 && dist < 60) {
+          // Double-tap detected
+          if (tapTimer) {
+            clearTimeout(tapTimer);
+            tapTimer = null;
+          }
+          lastTapTime = 0;
+
           if (tapXRatio < 0.35) {
             if (typeof SubtitlePlayer !== 'undefined') SubtitlePlayer.jump(-5000);
             updateFsScreen();
@@ -409,29 +425,58 @@ const AppFullscreen = (() => {
             updateFsScreen();
             triggerGestureFeedback('forward');
           } else {
-            if (typeof SubtitlePlayer !== 'undefined') SubtitlePlayer.toggle();
-            updateFsScreen();
+            openFsEditor();
           }
-          lastTapTime = 0;
         } else {
           lastTapTime = now;
-          lastTapX = e.clientX;
+          lastTapPos = { x: clientX, y: clientY };
+          if (tapTimer) clearTimeout(tapTimer);
+          tapTimer = setTimeout(() => {
+            tapTimer = null;
+            if (typeof SubtitlePlayer !== 'undefined') {
+              SubtitlePlayer.toggle();
+              updateFsScreen();
+            }
+          }, 230);
         }
       });
 
-      els.fsScreen.addEventListener('click', (e) => {
-        if (e.target.closest('.fs-btn, button, select, input, textarea')) return;
-        // Single click toggles playback
+      // Touch swipe scrubbing in fullscreen
+      els.fsScreen.addEventListener('touchstart', (e) => {
+        if (e.touches.length !== 1) return;
+        isFsScrubbing = false;
+        fsTouchStartX = e.touches[0].clientX;
         if (typeof SubtitlePlayer !== 'undefined') {
-          SubtitlePlayer.toggle();
+          fsTouchStartMs = SubtitlePlayer.getTime();
+        }
+      }, { passive: true });
+
+      els.fsScreen.addEventListener('touchmove', (e) => {
+        if (e.touches.length !== 1 || typeof SubtitlePlayer === 'undefined') return;
+        const dx = e.touches[0].clientX - fsTouchStartX;
+        if (!isFsScrubbing && Math.abs(dx) > 16) {
+          isFsScrubbing = true;
+          if (tapTimer) {
+            clearTimeout(tapTimer);
+            tapTimer = null;
+          }
+        }
+        if (isFsScrubbing) {
+          const rect = els.fsScreen.getBoundingClientRect();
+          const totalMs = SubtitlePlayer.getDuration() || 60000;
+          const scrubSpanSec = Math.min(90, Math.max(15, totalMs / 1000));
+          const deltaSec = (dx / (rect.width || 400)) * scrubSpanSec;
+          const targetMs = Math.max(0, Math.min(totalMs, fsTouchStartMs + (deltaSec * 1000)));
+          SubtitlePlayer.seek(targetMs);
           updateFsScreen();
         }
-      });
+      }, { passive: true });
 
-      els.fsScreen.addEventListener('dblclick', (e) => {
-        if (e.target.closest('.fs-btn, button, select, input, textarea')) return;
-        openFsEditor();
-      });
+      const endFsTouch = () => {
+        isFsScrubbing = false;
+      };
+      els.fsScreen.addEventListener('touchend', endFsTouch, { passive: true });
+      els.fsScreen.addEventListener('touchcancel', endFsTouch, { passive: true });
     }
 
     if (els.fsEditBtn) els.fsEditBtn.addEventListener('click', openFsEditor);

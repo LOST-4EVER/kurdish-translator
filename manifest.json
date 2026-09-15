@@ -67,6 +67,13 @@
       "description": "Open live subtitle player and editor",
       "url": "./#preview",
       "icons": [{ "src": "assets/icons/icon-192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Studio Video Editor",
+      "short_name": "Studio",
+      "description": "Interactive video timeline editor & burner",
+      "url": "./#studio",
+      "icons": [{ "src": "assets/icons/icon-192.png", "sizes": "192x192" }]
     }
   ],
   "icons": [

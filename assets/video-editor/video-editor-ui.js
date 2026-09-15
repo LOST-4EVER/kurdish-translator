@@ -202,6 +202,7 @@
         subFontFamilySel: $('#studioSubFontFamilySel'),
         subFontSel: $('#studioSubFontSel'),
         subPosSel: $('#studioSubPosSel'),
+        subEffectSel: $('#studioSubEffectSel'),
         subColorSel: $('#studioSubColorSel'),
         subBgSel: $('#studioSubBgSel'),
         subShowOrigToggle: $('#studioSubShowOrigToggle'),
@@ -259,6 +260,7 @@
         exportConfigArea: $('#exportConfigArea'),
         exportStageArea: $('#exportStageArea'),
         exportResolutionSel: $('#exportResolutionSel'),
+        exportContainerFormatSel: $('#exportContainerFormatSel'),
         exportBitratePresetSel: $('#exportBitratePresetSel'),
         exportCustomBitrateRow: $('#exportCustomBitrateRow'),
         exportBitrateSlider: $('#exportBitrateSlider'),
@@ -359,6 +361,8 @@
         quickFormatTray: $('#vnQuickFormatTray'),
         quickFontFamilySel: $('#vnQuickFontFamilySel'),
         quickSizeGroup: $('#vnQuickSizeGroup'),
+        quickPosSel: $('#vnQuickPosSel'),
+        quickEffectSel: $('#vnQuickEffectSel'),
         quickColorGroup: $('#vnQuickColorGroup'),
         quickBgSel: $('#vnQuickBgSel'),
       };
@@ -440,7 +444,7 @@
         <div class="vn-sub-drag-indicator" title="Drag to reposition subtitles">
           <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="5 9 2 12 5 15"></polyline><polyline points="9 5 12 2 15 5"></polyline><polyline points="15 19 12 22 9 19"></polyline><polyline points="19 9 22 12 19 15"></polyline><line x1="2" y1="12" x2="22" y2="12"></line><line x1="12" y1="2" x2="12" y2="22"></line></svg>
         </div>
-        <div class="vn-subtitle-text" id="studioSubtitleText" dir="rtl"></div>
+        <div class="vn-subtitle-text" id="studioSubtitleText" dir="ltr"></div>
         <div class="vn-subtitle-orig hidden" id="studioSubtitleOrig"></div>
       </div>
       <div class="vn-snap-guide vn-snap-guide-x hidden" id="studioSnapGuideX"></div>

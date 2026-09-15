@@ -153,6 +153,54 @@
       // 9. Setup App Cues Availability Watcher
       this._setupFileWatcher();
 
+      let isSyncingToApp = false;
+      let isSyncingFromApp = false;
+
+      window._onAppCueEdit = (index, newText) => {
+        if (isSyncingToApp) return;
+        isSyncingFromApp = true;
+        try {
+          if (typeof VideoEditorState !== 'undefined') {
+            const cues = VideoEditorState.getCues();
+            if (cues && cues[index]) {
+              cues[index].text = newText;
+              if (VideoEditorState.activeCueIndex === index) {
+                if (VideoEditorState.activeCue) VideoEditorState.activeCue.text = newText;
+                VideoEditorOverlay.renderActiveCue(cues[index], VideoEditorState.overlayConfig);
+                VideoEditorOverlay.updateTextShower(cues[index], index);
+              }
+              if (this.timeline) {
+                this.timeline.updateCue(index, { text: newText });
+              }
+            }
+          }
+        } finally {
+          isSyncingFromApp = false;
+        }
+      };
+
+      window._onAppAllCuesChanged = (newCues) => {
+        if (isSyncingToApp) return;
+        isSyncingFromApp = true;
+        try {
+          if (typeof VideoEditorState !== 'undefined' && Array.isArray(newCues)) {
+            VideoEditorState.setCues(newCues, false);
+            if (this.timeline) this.timeline.setCues(newCues);
+            if (this.els.appliedSubsBadge) {
+              this.els.appliedSubsBadge.textContent = `${newCues.length} Cues`;
+            }
+            const activeCue = VideoEditorState.activeCue;
+            const activeIdx = VideoEditorState.activeCueIndex;
+            if (activeCue && activeIdx >= 0 && activeIdx < newCues.length) {
+              VideoEditorOverlay.renderActiveCue(newCues[activeIdx], VideoEditorState.overlayConfig);
+              VideoEditorOverlay.updateTextShower(newCues[activeIdx], activeIdx);
+            }
+          }
+        } finally {
+          isSyncingFromApp = false;
+        }
+      };
+
       // 10. Centralized listener for state cuesChange to keep Timeline, Badges, Overlays, and Main App in sync
       VideoEditorState.on('cuesChange', (cues) => {
         const currentCues = cues || VideoEditorState.getCues();
@@ -170,8 +218,13 @@
           VideoEditorOverlay.renderActiveCue(activeCue, VideoEditorState.overlayConfig);
           VideoEditorOverlay.updateTextShower(activeCue, activeIdx);
         }
-        if (typeof window._updateAppWorkCues === 'function') {
-          window._updateAppWorkCues(currentCues, false);
+        if (!isSyncingFromApp && typeof window._updateAppWorkCues === 'function') {
+          isSyncingToApp = true;
+          try {
+            window._updateAppWorkCues(currentCues, false);
+          } finally {
+            isSyncingToApp = false;
+          }
         }
       });
 
@@ -1071,7 +1124,6 @@
     }
 
     _checkAndSyncSubtitlesQuietly(force = false) {
-      if (!force && VideoEditorState.getCues().length > 0) return;
       if (window._getAppWorkCues && typeof window._getAppWorkCues === 'function') {
         const appCues = window._getAppWorkCues();
         if (appCues && appCues.length > 0) {

@@ -158,7 +158,7 @@
       // Populate text
       if (this.els.bubbleTextarea) {
         this.els.bubbleTextarea.value = stripTags(cue.text || '');
-        this.els.bubbleTextarea.setAttribute('dir', hasArabic(cue.text) ? 'rtl' : 'ltr');
+        this.els.bubbleTextarea.setAttribute('dir', 'ltr');
       }
 
       // Original text if present
@@ -528,6 +528,22 @@
         });
       }
 
+      if (this.els.quickPosSel) {
+        this.els.quickPosSel.addEventListener('change', (e) => {
+          if (window.VideoEditorState) {
+            window.VideoEditorState.setOverlayConfig({ position: e.target.value, customPos: null });
+          }
+        });
+      }
+
+      if (this.els.quickEffectSel) {
+        this.els.quickEffectSel.addEventListener('change', (e) => {
+          if (window.VideoEditorState) {
+            window.VideoEditorState.setOverlayConfig({ effect: e.target.value });
+          }
+        });
+      }
+
       if (this.els.quickColorGroup) {
         this.els.quickColorGroup.addEventListener('click', (e) => {
           const dot = e.target.closest('.vn-color-dot');
@@ -564,7 +580,7 @@
 
       if (this.els.quickTextarea) {
         this.els.quickTextarea.value = stripTags(cue.text || '');
-        this.els.quickTextarea.setAttribute('dir', hasArabic(cue.text) ? 'rtl' : 'ltr');
+        this.els.quickTextarea.setAttribute('dir', 'ltr');
       }
 
       if (this.els.quickOrigBox && this.els.quickOrigText) {
@@ -857,6 +873,12 @@
       }
       if (this.els.quickBgSel && cfg.bgColor) {
         this.els.quickBgSel.value = cfg.bgColor;
+      }
+      if (this.els.quickPosSel && cfg.position) {
+        this.els.quickPosSel.value = cfg.position;
+      }
+      if (this.els.quickEffectSel && cfg.effect) {
+        this.els.quickEffectSel.value = cfg.effect;
       }
     }
 

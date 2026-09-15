@@ -1,6 +1,6 @@
 {
   "name": "kurdish-translator",
-  "version": "1.43.0",
+  "version": "1.47.0",
   "description": "Kurdî Subtitle Translator PWA",
   "engines": {
     "node": ">=20.0.0"

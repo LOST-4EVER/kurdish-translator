@@ -20,6 +20,7 @@ const SubtitlePlayer = (() => {
   let onCue = null;     // optional callback when the active cue changes
   let onTime = null;    // optional callback on playback time update tick
   let lastSec = -1;     // last whole second written to the time readout
+  let lastPct = -1;     // last timeline progress percentage written to style
   let cursor = -1;      // cached cue index from the last cueAt() lookup
   let fontScale = 1;    // font scale multiplier
   let currentAspectRatio = '16:9';
@@ -128,6 +129,169 @@ const SubtitlePlayer = (() => {
       });
       ro.observe(el.screen);
     }
+
+    bindScreenGestures();
+  }
+
+  function showScreenRipple(type, clientX, clientY, text = '') {
+    if (!el.screen) return;
+    const rect = el.screen.getBoundingClientRect();
+    if (!rect.width) return;
+
+    const relX = clientX !== undefined ? (clientX - rect.left) : (rect.width / 2);
+    const relY = clientY !== undefined ? (clientY - rect.top) : (rect.height / 2);
+
+    const ripple = document.createElement('div');
+    ripple.className = `player-gesture-ripple ${type === 'play' || type === 'pause' || type === 'fullscreen' ? 'center-action' : 'side-action'}`;
+    ripple.style.left = `${relX}px`;
+    ripple.style.top = `${relY}px`;
+
+    let iconSvg = '';
+    if (type === 'play') {
+      iconSvg = '<svg width="28" height="28" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>';
+    } else if (type === 'pause') {
+      iconSvg = '<svg width="28" height="28" viewBox="0 0 24 24" fill="currentColor"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>';
+    } else if (type === 'rewind') {
+      iconSvg = '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 19 2 12 11 5 11 19"></polygon><polygon points="22 19 13 12 22 5 22 19"></polygon></svg>';
+    } else if (type === 'forward') {
+      iconSvg = '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 19 22 12 13 5 13 19"></polygon><polygon points="2 19 11 12 2 5 2 19"></polygon></svg>';
+    } else if (type === 'fullscreen') {
+      iconSvg = '<svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"/></svg>';
+    }
+
+    ripple.innerHTML = `
+      ${iconSvg}
+      ${text ? `<span class="ripple-label">${text}</span>` : ''}
+    `;
+
+    el.screen.appendChild(ripple);
+    setTimeout(() => {
+      if (ripple && ripple.parentNode) {
+        ripple.parentNode.removeChild(ripple);
+      }
+    }, 620);
+  }
+
+  let screenTapTimer = null;
+  let lastScreenTapTime = 0;
+  let lastScreenTapPos = { x: 0, y: 0 };
+  let isScreenScrubbing = false;
+  let screenTouchStartX = 0;
+  let screenTouchStartMs = 0;
+  let screenScrubHud = null;
+
+  function updateScreenScrubHud(targetMs, deltaSec) {
+    if (!el.screen) return;
+    if (!screenScrubHud) {
+      screenScrubHud = document.createElement('div');
+      screenScrubHud.className = 'player-scrub-hud';
+      el.screen.appendChild(screenScrubHud);
+    }
+    const sign = deltaSec >= 0 ? '+' : '';
+    screenScrubHud.innerHTML = `
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+      <span class="scrub-hud-time">${fmt(targetMs)}</span>
+      <span class="scrub-hud-delta">(${sign}${Math.round(deltaSec)}s)</span>
+    `;
+  }
+
+  function hideScreenScrubHud() {
+    if (screenScrubHud) {
+      if (screenScrubHud.parentNode) screenScrubHud.parentNode.removeChild(screenScrubHud);
+      screenScrubHud = null;
+    }
+  }
+
+  function bindScreenGestures() {
+    if (!el.screen) return;
+
+    el.screen.addEventListener('click', (e) => {
+      // Ignore clicks on buttons, inputs or links
+      if (e.target.closest('button, select, input, textarea, a')) return;
+
+      const rect = el.screen.getBoundingClientRect();
+      if (!rect.width) return;
+      const clientX = e.clientX;
+      const clientY = e.clientY;
+      const relX = (clientX - rect.left) / rect.width;
+
+      const now = performance.now();
+      const timeDiff = now - lastScreenTapTime;
+      const dist = Math.hypot(clientX - lastScreenTapPos.x, clientY - lastScreenTapPos.y);
+
+      if (timeDiff < 320 && dist < 60) {
+        // Double-tap detected
+        if (screenTapTimer) {
+          clearTimeout(screenTapTimer);
+          screenTapTimer = null;
+        }
+        lastScreenTapTime = 0;
+
+        if (relX < 0.35) {
+          jump(-5000);
+          showScreenRipple('rewind', clientX, clientY, '-5s');
+        } else if (relX > 0.65) {
+          jump(5000);
+          showScreenRipple('forward', clientX, clientY, '+5s');
+        } else {
+          if (typeof AppFullscreen !== 'undefined' && AppFullscreen.enterFs) {
+            AppFullscreen.enterFs();
+            showScreenRipple('fullscreen', clientX, clientY);
+          } else {
+            toggle();
+            showScreenRipple(playing ? 'play' : 'pause', clientX, clientY);
+          }
+        }
+      } else {
+        lastScreenTapTime = now;
+        lastScreenTapPos = { x: clientX, y: clientY };
+        if (screenTapTimer) clearTimeout(screenTapTimer);
+        screenTapTimer = setTimeout(() => {
+          screenTapTimer = null;
+          toggle();
+          showScreenRipple(playing ? 'play' : 'pause', clientX, clientY);
+        }, 230);
+      }
+    });
+
+    // Touch horizontal scrub gesture on player screen
+    el.screen.addEventListener('touchstart', (e) => {
+      if (e.touches.length !== 1) return;
+      isScreenScrubbing = false;
+      screenTouchStartX = e.touches[0].clientX;
+      screenTouchStartMs = pos;
+    }, { passive: true });
+
+    el.screen.addEventListener('touchmove', (e) => {
+      if (e.touches.length !== 1 || !total) return;
+      const dx = e.touches[0].clientX - screenTouchStartX;
+
+      if (!isScreenScrubbing && Math.abs(dx) > 16) {
+        isScreenScrubbing = true;
+        if (screenTapTimer) {
+          clearTimeout(screenTapTimer);
+          screenTapTimer = null;
+        }
+      }
+
+      if (isScreenScrubbing) {
+        const rect = el.screen.getBoundingClientRect();
+        const scrubSpanSec = Math.min(90, Math.max(15, total / 1000));
+        const deltaSec = (dx / (rect.width || 400)) * scrubSpanSec;
+        const targetMs = clamp(screenTouchStartMs + (deltaSec * 1000), 0, total);
+        updateScreenScrubHud(targetMs, deltaSec);
+        seek(targetMs);
+      }
+    }, { passive: true });
+
+    const endScreenTouch = () => {
+      if (isScreenScrubbing) {
+        isScreenScrubbing = false;
+        hideScreenScrubHud();
+      }
+    };
+    el.screen.addEventListener('touchend', endScreenTouch, { passive: true });
+    el.screen.addEventListener('touchcancel', endScreenTouch, { passive: true });
   }
 
   /** Start time of the previous/next cue relative to the current position. */
@@ -145,6 +309,7 @@ const SubtitlePlayer = (() => {
     cues = newCues || [];
     cursor = -1;
     lastSec = -1; // a new file must rewrite the time readout even at 0:00
+    lastPct = -1;
     total = cues.reduce((max, c) => Math.max(max, c.end), 0);
     buildTimeline();
     pos = 0;
@@ -506,8 +671,12 @@ const SubtitlePlayer = (() => {
       if (onTime) onTime(pos, total);
     }
     const pct = total ? (pos / total) * 100 : 0;
-    if (el.tlFill) el.tlFill.style.width = `${pct}%`;
-    if (el.tlThumb) el.tlThumb.style.left = `${pct}%`;
+    const roundedPct = Math.round(pct * 100) / 100;
+    if (roundedPct !== lastPct) {
+      lastPct = roundedPct;
+      if (el.tlFill) el.tlFill.style.width = `${roundedPct}%`;
+      if (el.tlThumb) el.tlThumb.style.left = `${roundedPct}%`;
+    }
 
     if (changed && onCue) onCue(primaryCue, primaryIdx, activeList);
   }

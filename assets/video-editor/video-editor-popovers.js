@@ -112,27 +112,33 @@
 
     _bindControls() {
       // Style Controls
-      const emitStyle = () => {
+      const emitStyle = (clearingCustomPos = false) => {
         if (this.onStyleChangeCallback) {
-          this.onStyleChangeCallback({
+          const payload = {
             fontFamily: this.els.subFontFamilySel ? this.els.subFontFamilySel.value : "'Noto Naskh Arabic', serif",
             fontSize: this.els.subFontSel ? this.els.subFontSel.value : '1.25',
             position: this.els.subPosSel ? this.els.subPosSel.value : 'bottom',
+            effect: this.els.subEffectSel ? this.els.subEffectSel.value : 'shadow',
             color: this.els.subColorSel ? this.els.subColorSel.value : '#ffffff',
             bgColor: this.els.subBgSel ? this.els.subBgSel.value : 'transparent',
             showOrig: this.els.subShowOrigToggle ? this.els.subShowOrigToggle.checked : false,
-          });
+          };
+          if (clearingCustomPos) {
+            payload.customPos = null;
+          }
+          this.onStyleChangeCallback(payload);
         }
       };
 
       if (this.els.subFontFamilySel) {
-        this.els.subFontFamilySel.addEventListener('change', emitStyle);
+        this.els.subFontFamilySel.addEventListener('change', () => emitStyle(false));
       }
       if (this.els.subFontSel) {
-        this.els.subFontSel.addEventListener('change', emitStyle);
-        this.els.subFontSel.addEventListener('input', emitStyle);
+        this.els.subFontSel.addEventListener('change', () => emitStyle(false));
+        this.els.subFontSel.addEventListener('input', () => emitStyle(false));
       }
-      if (this.els.subPosSel) this.els.subPosSel.addEventListener('change', emitStyle);
+      if (this.els.subPosSel) this.els.subPosSel.addEventListener('change', () => emitStyle(true));
+      if (this.els.subEffectSel) this.els.subEffectSel.addEventListener('change', () => emitStyle(false));
       if (this.els.subColorSel) {
         this.els.subColorSel.addEventListener('change', emitStyle);
         this.els.subColorSel.addEventListener('input', emitStyle);

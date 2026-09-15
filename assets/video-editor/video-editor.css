@@ -852,9 +852,87 @@ body.studio-mode {
   display: none !important;
 }
 
-.vn-subtitle-overlay.pos-bottom { bottom: 8%; }
-.vn-subtitle-overlay.pos-center { top: 50%; transform: translate(-50%, -50%); }
-.vn-subtitle-overlay.pos-top { top: 8%; }
+.vn-subtitle-overlay.pos-bottom {
+  left: 50%;
+  right: auto;
+  top: auto;
+  bottom: 8%;
+  transform: translateX(-50%);
+}
+.vn-subtitle-overlay.pos-bottom-left {
+  left: 8%;
+  right: auto;
+  top: auto;
+  bottom: 8%;
+  transform: none;
+}
+.vn-subtitle-overlay.pos-bottom-right {
+  left: auto;
+  right: 8%;
+  top: auto;
+  bottom: 8%;
+  transform: none;
+}
+.vn-subtitle-overlay.pos-center {
+  left: 50%;
+  right: auto;
+  top: 50%;
+  bottom: auto;
+  transform: translate(-50%, -50%);
+}
+.vn-subtitle-overlay.pos-top {
+  left: 50%;
+  right: auto;
+  top: 8%;
+  bottom: auto;
+  transform: translateX(-50%);
+}
+.vn-subtitle-overlay.pos-top-left {
+  left: 8%;
+  right: auto;
+  top: 8%;
+  bottom: auto;
+  transform: none;
+}
+.vn-subtitle-overlay.pos-top-right {
+  left: auto;
+  right: 8%;
+  top: 8%;
+  bottom: auto;
+  transform: none;
+}
+
+/* Subtitle Effects */
+.vn-subtitle-overlay.effect-shadow .vn-subtitle-text {
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.95), 0 0 8px rgba(0, 0, 0, 0.9);
+  -webkit-text-stroke: 0px transparent;
+}
+.vn-subtitle-overlay.effect-outline .vn-subtitle-text {
+  text-shadow: -1.5px -1.5px 0 #000, 1.5px -1.5px 0 #000, -1.5px 1.5px 0 #000, 1.5px 1.5px 0 #000, 0 2px 5px rgba(0, 0, 0, 0.9);
+  -webkit-text-stroke: 1.5px #000000;
+}
+.vn-subtitle-overlay.effect-glow .vn-subtitle-text {
+  text-shadow: 0 0 10px rgba(250, 204, 21, 0.85), 0 0 22px rgba(250, 204, 21, 0.5), 0 2px 4px rgba(0, 0, 0, 0.9);
+  -webkit-text-stroke: 0px transparent;
+}
+.vn-subtitle-overlay.effect-cinema .vn-subtitle-text {
+  text-shadow: 0 3px 6px rgba(0, 0, 0, 0.95), 0 0 12px rgba(0, 0, 0, 0.9), -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000;
+  -webkit-text-stroke: 1px #000000;
+}
+.vn-subtitle-overlay.effect-box {
+  background: rgba(0, 0, 0, 0.78) !important;
+  backdrop-filter: blur(4px);
+  padding: 8px 16px;
+  border-radius: 8px;
+}
+.vn-subtitle-overlay.effect-box .vn-subtitle-text {
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.8);
+  -webkit-text-stroke: 0px transparent;
+}
+.vn-subtitle-overlay.effect-none .vn-subtitle-text {
+  text-shadow: none !important;
+  -webkit-text-stroke: 0px transparent !important;
+}
 
 .vn-subtitle-text {
   font-family: "Noto Naskh Arabic", "Inter", sans-serif;
@@ -864,10 +942,13 @@ body.studio-mode {
   color: #ffffff;
   text-shadow: 0 2px 4px rgba(0, 0, 0, 0.9), 0 0 3px rgba(0, 0, 0, 0.95);
   white-space: pre-line;
+  direction: ltr;
+  text-align: center;
 }
 
 .vn-subtitle-text[dir="rtl"] {
-  direction: rtl;
+  direction: ltr;
+  text-align: center;
 }
 
 .vn-subtitle-orig {
@@ -1138,8 +1219,8 @@ body.studio-mode {
 }
 
 .vn-shower-content[dir="rtl"] {
-  direction: rtl;
-  text-align: right;
+  direction: ltr;
+  text-align: left;
 }
 
 .vn-shower-cps {
@@ -1378,16 +1459,42 @@ body.studio-mode {
   z-index: 8;
 }
 
+.vn-cue-pill.snapped {
+  outline: 2px solid #38bdf8;
+  box-shadow: 0 0 12px rgba(56, 189, 248, 0.85), 0 2px 6px rgba(0, 0, 0, 0.5) !important;
+  border-color: #7dd3fc !important;
+}
+
 .vn-cue-handle {
   position: absolute;
   top: 0;
   bottom: 0;
-  width: 6px;
+  width: 7px;
   cursor: ew-resize;
   z-index: 10;
-  background: rgba(255, 255, 255, 0.35);
-  opacity: 0;
-  transition: opacity 0.15s ease, background 0.15s ease;
+  background: rgba(255, 255, 255, 0.4);
+  opacity: 0.35;
+  transition: opacity 0.15s ease, background 0.15s ease, width 0.15s ease;
+  touch-action: none;
+}
+
+/* Invisible extended touch target for mobile/tablet fingertips (min 32px hit area) */
+.vn-cue-handle::before {
+  content: "";
+  position: absolute;
+  top: -6px;
+  bottom: -6px;
+  width: 28px;
+  pointer-events: auto;
+  touch-action: none;
+}
+
+.vn-cue-handle.left-handle::before {
+  left: -12px;
+}
+
+.vn-cue-handle.right-handle::before {
+  right: -12px;
 }
 
 .vn-cue-handle.left-handle {
@@ -1403,12 +1510,17 @@ body.studio-mode {
 }
 
 .vn-cue-pill:hover .vn-cue-handle,
-.vn-cue-pill.is-dragging .vn-cue-handle {
+.vn-cue-pill.is-dragging .vn-cue-handle,
+.vn-cue-pill.active .vn-cue-handle {
   opacity: 1;
+  background: rgba(255, 255, 255, 0.85);
 }
 
-.vn-cue-handle:hover {
+.vn-cue-handle:hover,
+.vn-cue-handle:active {
   background: #ffffff;
+  width: 9px;
+  opacity: 1;
 }
 
 .vn-cue-pill-inner {
@@ -1431,7 +1543,8 @@ body.studio-mode {
 }
 
 .vn-cue-pill.rtl-cue .vn-cue-text {
-  direction: rtl;
+  direction: ltr;
+  text-align: left;
 }
 
 /* Video Empty Track State */
@@ -3313,8 +3426,8 @@ body.studio-mode {
   resize: vertical;
   outline: none;
   transition: border-color 0.15s ease, box-shadow 0.15s ease;
-  direction: rtl;
-  text-align: right;
+  direction: ltr;
+  text-align: left;
 }
 
 .vn-quick-textarea:focus {

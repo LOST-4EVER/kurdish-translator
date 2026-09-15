@@ -264,14 +264,81 @@
         e.preventDefault();
         e.stopPropagation();
         if (e.ctrlKey || e.metaKey) {
+          const viewportRect = this.dom.viewport.getBoundingClientRect();
+          const clientOffset = e.clientX - viewportRect.left;
+          const focalSec = (this.dom.viewport.scrollLeft + clientOffset) / Math.max(1, this.zoom);
           const factor = e.deltaY < 0 ? 1.15 : 0.85;
-          this.setZoom(this.zoom * factor);
+          this.setZoom(this.zoom * factor, focalSec);
         } else {
           // Translate vertical or horizontal wheel delta strictly into timeline horizontal scrolling
           const delta = Math.abs(e.deltaX) > Math.abs(e.deltaY) ? e.deltaX : e.deltaY;
           this.dom.viewport.scrollLeft += delta;
         }
       }, { passive: false });
+
+      // Multi-touch pinch-to-zoom gesture engine
+      let touchPinchActive = false;
+      let initialPinchDist = 0;
+      let initialPinchZoom = this.zoom;
+      let pinchFocalSec = 0;
+      let pinchClientOffset = 0;
+
+      this.dom.viewport.addEventListener('touchstart', (e) => {
+        if (e.touches.length === 2) {
+          touchPinchActive = true;
+          this.isDragging = false;
+          this._stopEdgeAutoScroll();
+          const t1 = e.touches[0];
+          const t2 = e.touches[1];
+          initialPinchDist = Math.hypot(t2.clientX - t1.clientX, t2.clientY - t1.clientY);
+          initialPinchZoom = this.zoom;
+          const viewportRect = this.dom.viewport.getBoundingClientRect();
+          const midX = (t1.clientX + t2.clientX) / 2;
+          pinchClientOffset = midX - viewportRect.left;
+          pinchFocalSec = (this.dom.viewport.scrollLeft + pinchClientOffset) / Math.max(1, this.zoom);
+        }
+      }, { passive: false });
+
+      this.dom.viewport.addEventListener('touchmove', (e) => {
+        if (touchPinchActive && e.touches.length === 2) {
+          e.preventDefault();
+          const t1 = e.touches[0];
+          const t2 = e.touches[1];
+          const currentDist = Math.hypot(t2.clientX - t1.clientX, t2.clientY - t1.clientY);
+          if (initialPinchDist > 8) {
+            const scale = currentDist / initialPinchDist;
+            this.setZoom(initialPinchZoom * scale, pinchFocalSec);
+          }
+        }
+      }, { passive: false });
+
+      const endTouchPinch = () => {
+        touchPinchActive = false;
+      };
+      this.dom.viewport.addEventListener('touchend', endTouchPinch, { passive: true });
+      this.dom.viewport.addEventListener('touchcancel', endTouchPinch, { passive: true });
+
+      // Double-tap on ruler/canvas toggles between fit-to-view and detail zoom
+      let lastRulerTapTime = 0;
+      let lastRulerTapX = 0;
+      if (this.dom.rulerCanvas) {
+        this.dom.rulerCanvas.addEventListener('pointerdown', (e) => {
+          const now = performance.now();
+          if (now - lastRulerTapTime < 340 && Math.abs(e.clientX - lastRulerTapX) < 45) {
+            lastRulerTapTime = 0;
+            if (this.zoom > 50) {
+              this.zoomToFit();
+            } else {
+              const viewportRect = this.dom.viewport.getBoundingClientRect();
+              const focalSec = (this.dom.viewport.scrollLeft + (e.clientX - viewportRect.left)) / Math.max(1, this.zoom);
+              this.setZoom(80, focalSec);
+            }
+          } else {
+            lastRulerTapTime = now;
+            lastRulerTapX = e.clientX;
+          }
+        });
+      }
 
       // Prevent outer page scrolling from wheel gestures inside the timeline container
       if (this.container) {
@@ -474,8 +541,6 @@
           textSpan.textContent = cleanText;
         }
 
-        const isArabic = /[\u0600-\u06FF\u0750-\u077F\uFB50-\uFDFF\uFE70-\uFEFF]/.test(targetCue.text || '');
-        pill.classList.toggle('rtl-cue', isArabic);
         pill.title = `#${index + 1} [${this.formatTimecode(targetCue.start)} ➔ ${this.formatTimecode(targetCue.end)}]: ${cleanText}`;
       } else {
         this._renderCues();
@@ -489,18 +554,31 @@
       this.updateCue(index, { text });
     }
 
-    setZoom(pixelsPerSecond) {
+    setZoom(pixelsPerSecond, focalSec = null) {
+      const oldZoom = this.zoom;
       const clamped = Math.max(
         this.options.minPixelsPerSecond,
         Math.min(this.options.maxPixelsPerSecond, pixelsPerSecond)
       );
-      if (Math.abs(clamped - this.zoom) < 0.5) return;
+      if (Math.abs(clamped - oldZoom) < 0.2) return;
+
+      let focalOffset = 0;
+      if (focalSec !== null && this.dom.viewport) {
+        const currentFocalPx = focalSec * oldZoom;
+        focalOffset = currentFocalPx - this.dom.viewport.scrollLeft;
+      }
+
       this.zoom = clamped;
 
       this._updateDimensions();
       this._renderRuler();
       this._renderCues();
       this._updatePlayhead();
+
+      if (focalSec !== null && this.dom.viewport) {
+        const newFocalPx = focalSec * clamped;
+        this.dom.viewport.scrollLeft = Math.max(0, newFocalPx - focalOffset);
+      }
     }
 
     zoomToFit() {
@@ -633,9 +711,6 @@
         pill.style.left = `${leftPx}px`;
         pill.style.width = `${widthPx}px`;
 
-        const isArabic = /[\u0600-\u06FF\u0750-\u077F\uFB50-\uFDFF\uFE70-\uFEFF]/.test(cue.text || '');
-        if (isArabic) pill.classList.add('rtl-cue');
-
         const cleanText = (cue.text || '').replace(/<[^>]+>/g, '').replace(/\{[^}]*\}/g, '').trim();
 
         pill.innerHTML = `
@@ -727,8 +802,72 @@
 
             const leftPx = (newStart / 1000) * this.zoom;
             const widthPx = Math.max(12, ((newEnd - newStart) / 1000) * this.zoom);
-            pill.style.left = `${leftPx}px`;
-            pill.style.width = `${widthPx}px`;
+
+            // Magnetic snapping against playhead needle and neighboring cues
+            const SNAP_PX = 7;
+            const snapThresholdMs = (SNAP_PX / Math.max(1, this.zoom)) * 1000;
+            const snapTargets = [this.currentTime, 0];
+            if (idx > 0 && this.cues[idx - 1]) {
+              snapTargets.push(this.cues[idx - 1].end);
+            }
+            if (idx < this.cues.length - 1 && this.cues[idx + 1]) {
+              snapTargets.push(this.cues[idx + 1].start);
+            }
+
+            let snapped = false;
+            const checkSnap = (val) => {
+              for (const target of snapTargets) {
+                if (Math.abs(val - target) <= snapThresholdMs) {
+                  return target;
+                }
+              }
+              return val;
+            };
+
+            if (handleType === 'left') {
+              const tentativeStart = checkSnap(newStart);
+              if (tentativeStart !== newStart && tentativeStart < newEnd - 100) {
+                newStart = tentativeStart;
+                snapped = true;
+              }
+            } else if (handleType === 'right') {
+              const tentativeEnd = checkSnap(newEnd);
+              if (tentativeEnd !== newEnd && tentativeEnd > newStart + 100) {
+                newEnd = tentativeEnd;
+                snapped = true;
+              }
+            } else {
+              const dur = newEnd - newStart;
+              const tentativeStart = checkSnap(newStart);
+              if (tentativeStart !== newStart) {
+                newStart = tentativeStart;
+                newEnd = newStart + dur;
+                snapped = true;
+              } else {
+                const tentativeEnd = checkSnap(newEnd);
+                if (tentativeEnd !== newEnd) {
+                  newEnd = tentativeEnd;
+                  newStart = Math.max(0, newEnd - dur);
+                  snapped = true;
+                }
+              }
+            }
+
+            if (snapped && !pill._isSnapped) {
+              pill._isSnapped = true;
+              pill.classList.add('snapped');
+              if (window.VideoEditorHardware && window.VideoEditorHardware.haptic) {
+                window.VideoEditorHardware.haptic(15);
+              }
+            } else if (!snapped && pill._isSnapped) {
+              pill._isSnapped = false;
+              pill.classList.remove('snapped');
+            }
+
+            const finalLeftPx = (newStart / 1000) * this.zoom;
+            const finalWidthPx = Math.max(12, ((newEnd - newStart) / 1000) * this.zoom);
+            pill.style.left = `${finalLeftPx}px`;
+            pill.style.width = `${finalWidthPx}px`;
 
             cue._tempStart = newStart;
             cue._tempEnd = newEnd;
@@ -736,6 +875,8 @@
 
           const onPointerUp = (upEvent) => {
             clearHoldTimer();
+            pill._isSnapped = false;
+            pill.classList.remove('snapped');
             pill.removeEventListener('pointermove', onPointerMove);
             pill.removeEventListener('pointerup', onPointerUp);
             pill.removeEventListener('pointercancel', onPointerUp);
@@ -822,7 +963,7 @@
           <span class="vn-hold-popup-tag">#${idx + 1}</span>
           <span class="vn-hold-popup-time">${this.formatTimecode(cue.start, false)} ➔ ${this.formatTimecode(cue.end, false)}</span>
         </div>
-        <div class="vn-hold-popup-text" dir="${isArabic ? 'rtl' : 'ltr'}">${cleanText || '—'}</div>
+        <div class="vn-hold-popup-text" dir="ltr">${cleanText || '—'}</div>
         <div class="vn-hold-popup-actions">
           <button type="button" class="vn-hold-btn vn-hold-btn-edit" data-action="edit" title="Edit subtitle text">
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
@@ -1024,7 +1165,15 @@
     }
 
     destroy() {
-      this.container.innerHTML = '';
+      this._stopEdgeAutoScroll();
+      if (this._pendingSeekRaf) {
+        cancelAnimationFrame(this._pendingSeekRaf);
+        this._pendingSeekRaf = null;
+      }
+      this._hideCueHoldPopup();
+      if (this.container) {
+        this.container.innerHTML = '';
+      }
     }
   }
 

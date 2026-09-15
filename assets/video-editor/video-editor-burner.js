@@ -169,6 +169,12 @@
         });
       }
 
+      if (this.els.exportContainerFormatSel) {
+        this.els.exportContainerFormatSel.addEventListener('change', () => {
+          this.updateEstimatedSpecs();
+        });
+      }
+
       // Bitrate preset change
       if (this.els.exportBitratePresetSel) {
         this.els.exportBitratePresetSel.addEventListener('change', (e) => {
@@ -637,16 +643,37 @@
         } catch (e) {}
       }
 
-      // Determine best supported MIME type
-      const mimeTypes = [
-        'video/mp4;codecs=avc1.42E01E,mp4a.40.2',
-        'video/mp4;codecs=avc1,mp4a.40.2',
-        'video/mp4',
-        'video/webm;codecs=vp9,opus',
-        'video/webm;codecs=vp8,opus',
-        'video/webm;codecs=h264,opus',
-        'video/webm'
-      ];
+      // Determine best supported MIME type based on container preference
+      const containerPref = (this.els && this.els.exportContainerFormatSel) ? this.els.exportContainerFormatSel.value : 'auto';
+      let mimeTypes = [];
+      if (containerPref === 'mp4') {
+        mimeTypes = [
+          'video/mp4;codecs=avc1.42E01E,mp4a.40.2',
+          'video/mp4;codecs=avc1,mp4a.40.2',
+          'video/mp4',
+          'video/webm;codecs=h264,opus',
+          'video/webm;codecs=vp9,opus',
+          'video/webm'
+        ];
+      } else if (containerPref === 'webm') {
+        mimeTypes = [
+          'video/webm;codecs=vp9,opus',
+          'video/webm;codecs=vp8,opus',
+          'video/webm;codecs=h264,opus',
+          'video/webm',
+          'video/mp4'
+        ];
+      } else {
+        mimeTypes = [
+          'video/mp4;codecs=avc1.42E01E,mp4a.40.2',
+          'video/mp4;codecs=avc1,mp4a.40.2',
+          'video/mp4',
+          'video/webm;codecs=vp9,opus',
+          'video/webm;codecs=vp8,opus',
+          'video/webm;codecs=h264,opus',
+          'video/webm'
+        ];
+      }
       let selectedMime = 'video/webm';
       for (const mime of mimeTypes) {
         if (typeof MediaRecorder !== 'undefined' && MediaRecorder.isTypeSupported(mime)) {
@@ -790,7 +817,6 @@
 
         if (cue) {
           const text = stripTags(cue.text || '');
-          const isAr = hasArabic(text);
 
           const scaleFactor = parseFloat(overlayCfg.fontSize || '1.25');
           const baseFontSize = Math.max(20, Math.round(height * 0.045 * scaleFactor));
@@ -798,7 +824,7 @@
 
           ctx.font = `bold ${baseFontSize}px ${fontFamily}`;
           ctx.textAlign = 'center';
-          ctx.direction = isAr ? 'rtl' : 'ltr';
+          ctx.direction = 'ltr';
 
           const maxTextWidth = width * 0.85;
           const lines = this.wrapText(ctx, text, maxTextWidth);
@@ -817,31 +843,6 @@
 
           const totalBoxHeight = (lines.length * lineHeight) + (origLines.length ? (origLines.length * origLineHeight + baseFontSize * 0.4) : 0) + baseFontSize * 0.6;
 
-          const placementInfo = extractPlacement(cue);
-          let xCenter = width * 0.5;
-          let yCenter = height * 0.88;
-
-          if (placementInfo.pos) {
-            xCenter = width * placementInfo.pos.xPct;
-            yCenter = height * placementInfo.pos.yPct;
-          } else if (cue.pos && typeof cue.pos.x === 'number' && typeof cue.pos.y === 'number') {
-            xCenter = cue.pos.x > 1 ? (cue.pos.x / 1920) * width : cue.pos.x * width;
-            yCenter = cue.pos.y > 1 ? (cue.pos.y / 1080) * height : cue.pos.y * height;
-          } else if (placementInfo.vAlign === 'top' || cue.placement === 'top' || overlayCfg.position === 'top') {
-            yCenter = height * 0.12 + totalBoxHeight / 2;
-          } else if (placementInfo.vAlign === 'mid' || cue.placement === 'center' || cue.placement === 'mid' || overlayCfg.position === 'center') {
-            yCenter = height * 0.50;
-          } else if (overlayCfg.customPos && typeof overlayCfg.customPos.xPct === 'number' && typeof overlayCfg.customPos.yPct === 'number') {
-            xCenter = width * (overlayCfg.customPos.xPct / 100);
-            yCenter = height * (overlayCfg.customPos.yPct / 100);
-          }
-
-          if (placementInfo.hAlign === 'left') {
-            xCenter = width * 0.25;
-          } else if (placementInfo.hAlign === 'right') {
-            xCenter = width * 0.75;
-          }
-
           // Compute widest line across both languages
           ctx.font = `bold ${baseFontSize}px ${fontFamily}`;
           let maxLineWidth = 0;
@@ -858,38 +859,93 @@
           }
           const boxWidth = Math.min(width * 0.92, maxLineWidth + baseFontSize * 1.4);
 
+          const placementInfo = extractPlacement(cue);
+          const pos = overlayCfg.position || 'bottom';
+          let xCenter = width * 0.5;
+          let yCenter = height * 0.88;
+
+          if (placementInfo.pos) {
+            xCenter = width * placementInfo.pos.xPct;
+            yCenter = height * placementInfo.pos.yPct;
+          } else if (cue.pos && typeof cue.pos.x === 'number' && typeof cue.pos.y === 'number') {
+            xCenter = cue.pos.x > 1 ? (cue.pos.x / 1920) * width : cue.pos.x * width;
+            yCenter = cue.pos.y > 1 ? (cue.pos.y / 1080) * height : cue.pos.y * height;
+          } else if (overlayCfg.customPos && typeof overlayCfg.customPos.xPct === 'number' && typeof overlayCfg.customPos.yPct === 'number') {
+            xCenter = width * (overlayCfg.customPos.xPct / 100);
+            yCenter = height * (overlayCfg.customPos.yPct / 100);
+          } else {
+            if (pos === 'top' || pos === 'top-left' || pos === 'top-right' || placementInfo.vAlign === 'top') {
+              yCenter = height * 0.08 + totalBoxHeight / 2;
+            } else if (pos === 'center' || placementInfo.vAlign === 'mid') {
+              yCenter = height * 0.50;
+            } else {
+              yCenter = height * 0.92 - totalBoxHeight / 2;
+            }
+
+            if (pos === 'bottom-left' || pos === 'top-left' || placementInfo.hAlign === 'left') {
+              xCenter = width * 0.08 + boxWidth / 2;
+            } else if (pos === 'bottom-right' || pos === 'top-right' || placementInfo.hAlign === 'right') {
+              xCenter = width * 0.92 - boxWidth / 2;
+            } else {
+              xCenter = width * 0.50;
+            }
+          }
+
+          const effect = overlayCfg.effect || 'shadow';
+          let bgColor = overlayCfg.bgColor || 'transparent';
+          if (effect === 'box' && bgColor === 'transparent') {
+            bgColor = 'rgba(0, 0, 0, 0.78)';
+          }
+
           // Background box
-          const bgColor = overlayCfg.bgColor || 'transparent';
           if (bgColor !== 'transparent') {
             ctx.fillStyle = bgColor;
             ctx.beginPath();
             if (typeof ctx.roundRect === 'function') {
-              ctx.roundRect(xCenter - boxWidth / 2, yCenter - totalBoxHeight / 2, boxWidth, totalBoxHeight, 4);
+              ctx.roundRect(xCenter - boxWidth / 2, yCenter - totalBoxHeight / 2, boxWidth, totalBoxHeight, 6);
             } else {
               ctx.rect(xCenter - boxWidth / 2, yCenter - totalBoxHeight / 2, boxWidth, totalBoxHeight);
             }
             ctx.fill();
-          } else {
+          }
+
+          // Effect-specific shadow setup
+          if (effect === 'glow') {
+            ctx.shadowColor = 'rgba(250, 204, 21, 0.85)';
+            ctx.shadowBlur = Math.round(baseFontSize * 0.55);
+            ctx.shadowOffsetX = 0;
+            ctx.shadowOffsetY = 0;
+          } else if (effect === 'cinema' || effect === 'shadow') {
             ctx.shadowColor = 'rgba(0, 0, 0, 0.95)';
-            ctx.shadowBlur = 8;
+            ctx.shadowBlur = Math.round(baseFontSize * 0.35);
+            ctx.shadowOffsetX = 0;
+            ctx.shadowOffsetY = Math.round(baseFontSize * 0.1);
+          } else if (effect === 'box') {
+            ctx.shadowColor = 'rgba(0, 0, 0, 0.8)';
+            ctx.shadowBlur = 4;
             ctx.shadowOffsetX = 0;
             ctx.shadowOffsetY = 2;
+          } else {
+            ctx.shadowColor = 'transparent';
+            ctx.shadowBlur = 0;
           }
 
           // Render primary Kurdish text lines
           ctx.font = `bold ${baseFontSize}px ${fontFamily}`;
-          ctx.direction = isAr ? 'rtl' : 'ltr';
+          ctx.direction = 'ltr';
           const textColor = cue.color || overlayCfg.color || '#ffffff';
-          const strokeWidth = Math.max(2, Math.round(baseFontSize * 0.12));
+          const strokeWidth = Math.max(2, Math.round(baseFontSize * (effect === 'outline' ? 0.14 : (effect === 'cinema' ? 0.1 : 0.08))));
           const startY = yCenter - (totalBoxHeight / 2) + baseFontSize * 0.9;
 
           lines.forEach((line, idx) => {
             const lineY = startY + idx * lineHeight;
-            ctx.lineJoin = 'round';
-            ctx.miterLimit = 2;
-            ctx.lineWidth = strokeWidth;
-            ctx.strokeStyle = '#000000';
-            ctx.strokeText(line, xCenter, lineY);
+            if (effect === 'outline' || effect === 'cinema') {
+              ctx.lineJoin = 'round';
+              ctx.miterLimit = 2;
+              ctx.lineWidth = strokeWidth;
+              ctx.strokeStyle = '#000000';
+              ctx.strokeText(line, xCenter, lineY);
+            }
             ctx.fillStyle = textColor;
             ctx.fillText(line, xCenter, lineY);
           });

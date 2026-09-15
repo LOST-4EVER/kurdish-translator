@@ -2,7 +2,7 @@
      VIDEO STUDIO WORKSTATION TEMPLATE
      Zero-Scroll Subtitle Synchronizer & Video Editor
      ========================================================================== -->
-<div id="tabVideoEditor" class="hidden vn-studio-root">
+<div id="tabVideoEditor" class="hidden vn-studio-root" dir="ltr">
   <!-- Top Header Bar (Zero-overflow responsive on mobile & desktop) -->
   <header class="vn-header" id="studioTopBar">
     <div class="vn-header-left">
@@ -132,7 +132,7 @@
         <div class="vn-sub-drag-indicator" title="Drag to reposition">
           <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="5 9 2 12 5 15"></polyline><polyline points="9 5 12 2 15 5"></polyline><polyline points="15 19 12 22 9 19"></polyline><polyline points="19 9 22 12 19 15"></polyline><line x1="2" y1="12" x2="22" y2="12"></line><line x1="12" y1="2" x2="12" y2="22"></line></svg>
         </div>
-        <div class="vn-subtitle-text" id="studioSubtitleText" dir="rtl"></div>
+        <div class="vn-subtitle-text" id="studioSubtitleText" dir="ltr"></div>
         <div class="vn-subtitle-orig hidden" id="studioSubtitleOrig"></div>
       </div>
 
@@ -327,7 +327,7 @@
 
       <!-- Main Body: Pure Kurdish Text Editing -->
       <div class="vn-quick-panel-body">
-        <textarea class="vn-quick-textarea" id="vnQuickTextarea" rows="3" placeholder="دەقی کوردی بۆ ئەم ژێرنووسە لێرە بنووسە..." dir="rtl"></textarea>
+        <textarea class="vn-quick-textarea" id="vnQuickTextarea" rows="3" placeholder="دەقی کوردی بۆ ئەم ژێرنووسە لێرە بنووسە..." dir="ltr"></textarea>
 
         <!-- Kurdish Special Characters & Quick Formatting Helper Bar -->
         <div class="vn-quick-kurdish-bar" id="vnQuickKurdishBar">
@@ -449,6 +449,29 @@
           </div>
         </div>
         <div class="vn-quick-tray-item">
+          <label>Position (شوێن):</label>
+          <select id="vnQuickPosSel" class="vn-quick-select">
+            <option value="bottom" selected>Bottom</option>
+            <option value="bottom-left">Bottom Left</option>
+            <option value="bottom-right">Bottom Right</option>
+            <option value="center">Center</option>
+            <option value="top">Top</option>
+            <option value="top-left">Top Left</option>
+            <option value="top-right">Top Right</option>
+          </select>
+        </div>
+        <div class="vn-quick-tray-item">
+          <label>Effect (کاریگەری):</label>
+          <select id="vnQuickEffectSel" class="vn-quick-select">
+            <option value="shadow" selected>Drop Shadow (Cinematic)</option>
+            <option value="outline">Contrast Outline (Stroke)</option>
+            <option value="glow">Soft Glow (Halo)</option>
+            <option value="cinema">Cinema Master (Dual)</option>
+            <option value="box">Translucent Box</option>
+            <option value="none">Clean Text</option>
+          </select>
+        </div>
+        <div class="vn-quick-tray-item">
           <label>Box (پاشبنەما):</label>
           <select id="vnQuickBgSel" class="vn-quick-select">
             <option value="transparent" selected>None (Transparent)</option>
@@ -496,9 +519,24 @@
       <div class="vn-popover-row">
         <label>Position</label>
         <select id="studioSubPosSel" class="vn-pop-select">
-          <option value="bottom" selected>Bottom</option>
+          <option value="bottom" selected>Bottom (Center)</option>
+          <option value="bottom-left">Bottom Left</option>
+          <option value="bottom-right">Bottom Right</option>
           <option value="center">Center</option>
-          <option value="top">Top</option>
+          <option value="top">Top (Center)</option>
+          <option value="top-left">Top Left</option>
+          <option value="top-right">Top Right</option>
+        </select>
+      </div>
+      <div class="vn-popover-row">
+        <label>Subtitle Effect</label>
+        <select id="studioSubEffectSel" class="vn-pop-select">
+          <option value="shadow" selected>Drop Shadow (Cinematic)</option>
+          <option value="outline">Contrast Outline (Stroke)</option>
+          <option value="glow">Soft Glow (Halo)</option>
+          <option value="cinema">Cinema Master (Dual)</option>
+          <option value="box">Translucent Box</option>
+          <option value="none">Clean Text</option>
         </select>
       </div>
       <div class="vn-popover-row">
@@ -821,7 +859,7 @@
         </div>
         <div class="cue-edit-area">
           <label class="cue-input-label" for="cueInfoTextInput">Kurdish Subtitle Dialogue</label>
-          <textarea class="cue-textarea" id="cueInfoTextInput" rows="3" placeholder="Enter Kurdish dialogue text..." dir="rtl"></textarea>
+          <textarea class="cue-textarea" id="cueInfoTextInput" rows="3" placeholder="Enter Kurdish dialogue text..." dir="ltr"></textarea>
         </div>
         <div class="cue-orig-area hidden">
           <label class="cue-input-label">Original Source Line</label>
@@ -956,6 +994,21 @@
             <div class="export-slider-row hidden" id="exportCustomBitrateRow" style="margin-top:6px; display:flex; align-items:center; gap:8px;">
               <input type="range" id="exportBitrateSlider" min="1" max="25" step="0.5" value="6" class="vn-volume-slider" style="flex:1;" />
               <span id="exportCustomBitrateNum" style="font-size:0.75rem; color:#fde047; font-weight:700; width:55px; text-align:right;">6.0 Mbps</span>
+            </div>
+          </div>
+
+          <!-- Video Format Container -->
+          <div class="export-field">
+            <label class="export-label" for="exportContainerFormatSel">
+              <span>Video Container</span>
+              <span class="export-label-hint">MP4 or WebM</span>
+            </label>
+            <div class="export-select-wrap">
+              <select id="exportContainerFormatSel" class="export-select">
+                <option value="auto" selected>Auto Detect (Best Compatibility)</option>
+                <option value="mp4">MP4 (H.264 / AAC)</option>
+                <option value="webm">WebM (VP9 / Opus)</option>
+              </select>
             </div>
           </div>
         </div>
