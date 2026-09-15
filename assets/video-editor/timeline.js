@@ -61,7 +61,7 @@
             <div class="vn-track-header-item vn-hdr-music" title="Audio / Music Track">
               <span class="vn-hdr-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18V5l12-2v13"></path><circle cx="6" cy="18" r="3"></circle><circle cx="18" cy="16" r="3"></circle></svg></span>
             </div>
-            <div class="vn-track-header-item vn-hdr-text" title="Subtitle / Kurdish Text Track">
+            <div class="vn-track-header-item vn-hdr-text" title="Subtitle / Kurdish Text Track (Click to Add Cue)">
               <span class="vn-hdr-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg></span>
             </div>
             <div class="vn-track-header-item vn-hdr-sticker" title="Overlay &amp; Sticker Track">
@@ -110,6 +110,7 @@
 
               <!-- 5. Audio Waveform Lane -->
               <div class="vn-lane vn-lane-audio">
+                <canvas class="vn-audio-waveform-canvas" id="vnAudioWaveformCanvas"></canvas>
                 <div class="vn-audio-bar-fill" id="vnAudioBarFill"></div>
               </div>
 
@@ -144,6 +145,7 @@
         videoEmptyTrack: this.container.querySelector('#vnVideoEmptyTrack'),
         clipTitle: this.container.querySelector('#vnClipTitle'),
         filmstripFrames: this.container.querySelector('#vnFilmstripFrames'),
+        audioWaveformCanvas: this.container.querySelector('#vnAudioWaveformCanvas'),
         audioBarFill: this.container.querySelector('#vnAudioBarFill'),
         rulerCanvas: this.container.querySelector('.vn-ruler-canvas'),
         rulerLane: this.container.querySelector('.vn-lane-ruler'),
@@ -371,15 +373,20 @@
         this.dom.hoverIndicator.classList.add('hidden');
       });
 
-      // Connect subtitle track header directly to subtitle file picker
-      const subHeader = this.container.querySelector('.vn-hdr-text');
-      if (subHeader) {
-        subHeader.style.cursor = 'pointer';
-        subHeader.setAttribute('title', 'Import subtitle file (.srt, .vtt, .ass)');
-        subHeader.addEventListener('click', (e) => {
-          e.stopPropagation();
-          const subInput = document.getElementById('studioSubFileInput');
-          if (subInput) subInput.click();
+      // Double click on empty subtitle lane space to add a new cue at clicked timestamp
+      const subLane = this.container.querySelector('.vn-lane-subtitles');
+      if (subLane) {
+        subLane.addEventListener('dblclick', (e) => {
+          if (e.target.closest('.vn-cue-pill')) return;
+          const rect = this.dom.scrollCanvas ? this.dom.scrollCanvas.getBoundingClientRect() : this.dom.viewport.getBoundingClientRect();
+          const clickX = (e.clientX - rect.left);
+          const clickTimeMs = Math.max(0, Math.min(this.duration || Infinity, (clickX / Math.max(1, this.zoom)) * 1000));
+          if (typeof this.options.onCueAddRequested === 'function') {
+            this.options.onCueAddRequested(clickTimeMs);
+          } else if (typeof this.options.onHeaderClick === 'function') {
+            this.setTime(clickTimeMs, false);
+            this.options.onHeaderClick('text');
+          }
         });
       }
 
@@ -538,7 +545,15 @@
         const cleanText = (targetCue.text || '').replace(/<[^>]+>/g, '').replace(/\{[^}]*\}/g, '').trim();
         const textSpan = pill.querySelector('.vn-cue-text');
         if (textSpan) {
-          textSpan.textContent = cleanText;
+          textSpan.textContent = cleanText || 'نووسینی نوێ';
+        }
+        const durSpan = pill.querySelector('.vn-cue-dur-tag');
+        if (durSpan) {
+          durSpan.textContent = `${durationSec.toFixed(1)}s`;
+        }
+        const idxSpan = pill.querySelector('.vn-cue-idx-tag');
+        if (idxSpan) {
+          idxSpan.textContent = `#${index + 1}`;
         }
 
         pill.title = `#${index + 1} [${this.formatTimecode(targetCue.start)} ➔ ${this.formatTimecode(targetCue.end)}]: ${cleanText}`;
@@ -554,13 +569,25 @@
       this.updateCue(index, { text });
     }
 
+    getMinZoom() {
+      const durationSeconds = Math.max(1, (this.duration || 10000) / 1000);
+      const viewportWidth = Math.max(200, (this.dom.viewport ? this.dom.viewport.clientWidth : 800) - 40);
+      // Min zoom allows fitting the whole media in the viewport (or a sensible floor)
+      const fitZoom = viewportWidth / durationSeconds;
+      return Math.max(0.5, Math.min(fitZoom, 80));
+    }
+
+    getMaxZoom() {
+      const minZoom = this.getMinZoom();
+      return Math.max(minZoom * 6, 240);
+    }
+
     setZoom(pixelsPerSecond, focalSec = null) {
       const oldZoom = this.zoom;
-      const clamped = Math.max(
-        this.options.minPixelsPerSecond,
-        Math.min(this.options.maxPixelsPerSecond, pixelsPerSecond)
-      );
-      if (Math.abs(clamped - oldZoom) < 0.2) return;
+      const minZoom = this.getMinZoom();
+      const maxZoom = this.getMaxZoom();
+      const clamped = Math.max(minZoom, Math.min(maxZoom, pixelsPerSecond));
+      if (Math.abs(clamped - oldZoom) < 0.1) return;
 
       let focalOffset = 0;
       if (focalSec !== null && this.dom.viewport) {
@@ -582,12 +609,25 @@
     }
 
     zoomToFit() {
-      if (!this.duration) return;
-      const availableWidth = this.dom.viewport.clientWidth - 60;
-      if (availableWidth <= 100) return;
-      const durationSeconds = this.duration / 1000;
-      const fitZoom = availableWidth / durationSeconds;
+      const fitZoom = this.getMinZoom();
       this.setZoom(fitZoom);
+      if (this.dom.viewport) {
+        this.dom.viewport.scrollLeft = 0;
+      }
+    }
+
+    zoomIn() {
+      const focalSec = (this.dom.viewport ? this.dom.viewport.scrollLeft + this.dom.viewport.clientWidth / 2 : 0) / Math.max(1, this.zoom);
+      this.setZoom(this.zoom * 1.3, focalSec);
+    }
+
+    zoomOut() {
+      const focalSec = (this.dom.viewport ? this.dom.viewport.scrollLeft + this.dom.viewport.clientWidth / 2 : 0) / Math.max(1, this.zoom);
+      this.setZoom(this.zoom / 1.3, focalSec);
+    }
+
+    resetZoom() {
+      this.zoomToFit();
     }
 
     setHasVideo(hasVideo, videoName = '') {
@@ -606,23 +646,83 @@
       this._updateDimensions();
     }
 
+    setAudioData(audioData) {
+      this.audioData = audioData;
+      this._renderAudioWaveform();
+    }
+
+    _renderAudioWaveform() {
+      const canvas = this.dom.audioWaveformCanvas;
+      if (!canvas) return;
+
+      const durationSeconds = Math.max(1, (this.duration || 10000) / 1000);
+      const width = Math.max(20, Math.round(durationSeconds * this.zoom));
+      const height = 24;
+      const dpr = Math.min(2, window.devicePixelRatio || 1);
+
+      canvas.width = Math.round(width * dpr);
+      canvas.height = Math.round(height * dpr);
+      canvas.style.width = `${width}px`;
+      canvas.style.height = `${height}px`;
+
+      const ctx = canvas.getContext('2d');
+      if (!ctx) return;
+      ctx.scale(dpr, dpr);
+      ctx.clearRect(0, 0, width, height);
+
+      const barWidth = 2;
+      const barGap = 1;
+      const numBars = Math.floor(width / (barWidth + barGap));
+      if (numBars <= 0) return;
+
+      let buckets;
+      if (this.audioData && window.WasmEngine) {
+        buckets = window.WasmEngine.generateWaveformBuckets(this.audioData, numBars);
+      } else {
+        buckets = new Float32Array(numBars);
+        for (let i = 0; i < numBars; i++) {
+          buckets[i] = 0.08 + 0.04 * Math.sin(i * 0.15);
+        }
+      }
+
+      const centerY = height / 2;
+      const grad = ctx.createLinearGradient(0, 0, 0, height);
+      grad.addColorStop(0, '#38bdf8');
+      grad.addColorStop(0.5, '#818cf8');
+      grad.addColorStop(1, '#c084fc');
+
+      ctx.fillStyle = grad;
+
+      for (let i = 0; i < numBars; i++) {
+        const amp = Math.max(0.06, buckets[i] || 0.06);
+        const barH = Math.max(2, Math.round(amp * (height - 6)));
+        const x = i * (barWidth + barGap);
+        const y = centerY - barH / 2;
+        ctx.fillRect(x, y, barWidth, barH);
+      }
+    }
+
     _updateDimensions() {
       const durationSeconds = Math.max(1, (this.duration || 10000) / 1000);
-      if (this.dom.viewport) {
-        this._cachedViewportWidth = this.dom.viewport.clientWidth;
+      const viewportWidth = (this.dom.viewport ? this.dom.viewport.clientWidth : 800) || 800;
+      this._cachedViewportWidth = viewportWidth;
+
+      const contentWidth = Math.round(durationSeconds * this.zoom);
+      this.trackWidth = Math.max(viewportWidth, contentWidth);
+      if (this.dom.scrollCanvas) {
+        this.dom.scrollCanvas.style.width = `${this.trackWidth}px`;
       }
-      this.trackWidth = Math.max(this._cachedViewportWidth || 800, durationSeconds * this.zoom);
-      this.dom.scrollCanvas.style.width = `${this.trackWidth}px`;
 
       // Update video clip box width only when a video is loaded
       if (this.dom.videoClipBox) {
         if (this.hasVideo) {
-          const clipWidth = durationSeconds * this.zoom;
-          this.dom.videoClipBox.style.width = `${clipWidth}px`;
+          this.dom.videoClipBox.style.width = `${contentWidth}px`;
         } else {
           this.dom.videoClipBox.style.width = '0px';
         }
       }
+
+      this._renderAudioWaveform();
     }
 
     _renderRuler() {
@@ -649,17 +749,17 @@
       ctx.scale(dpr, dpr);
       ctx.clearRect(0, 0, canvasWidth, height);
 
-      // Determine tick intervals (e.g. 20:16, 20:18 with small dots like VN)
-      let majorInterval = 2; // default 2 seconds
-      if (this.zoom < 25) {
-        majorInterval = 10;
-      } else if (this.zoom < 45) {
-        majorInterval = 5;
-      } else if (this.zoom > 100) {
-        majorInterval = 1;
+      // Adaptive intervals based on zoom level
+      const intervals = [1, 2, 5, 10, 15, 30, 60, 120, 300, 600, 1800, 3600];
+      let majorInterval = intervals[0];
+      for (let i = 0; i < intervals.length; i++) {
+        if (intervals[i] * this.zoom >= 50) {
+          majorInterval = intervals[i];
+          break;
+        }
       }
 
-      const totalSec = Math.ceil(this.duration / 1000);
+      const totalSec = Math.ceil((this.duration || 10000) / 1000);
       const startSec = Math.max(0, Math.floor((scrollLeft - 20) / this.zoom));
       const endSec = Math.min(totalSec, Math.ceil((scrollLeft + canvasWidth + 20) / this.zoom));
 
@@ -668,7 +768,10 @@
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
 
-      for (let s = startSec; s <= endSec; s += 1) {
+      const step = majorInterval >= 10 ? Math.max(1, Math.floor(majorInterval / 5)) : 1;
+
+      for (let s = startSec - (startSec % step); s <= endSec; s += step) {
+        if (s < 0 || s > totalSec) continue;
         const x = (s * this.zoom) - scrollLeft;
         if (x < -20 || x > canvasWidth + 20) continue;
         const isMajor = s % majorInterval === 0;
@@ -676,8 +779,7 @@
         if (isMajor) {
           const timeStr = this.formatTimecode(s * 1000, false);
           ctx.fillText(timeStr, x, 11);
-        } else {
-          // VN-style subtle dot
+        } else if (this.zoom * step >= 8) {
           ctx.fillStyle = 'rgba(255, 255, 255, 0.2)';
           ctx.beginPath();
           ctx.arc(x, 11, 1.2, 0, Math.PI * 2);
@@ -713,10 +815,13 @@
 
         const cleanText = (cue.text || '').replace(/<[^>]+>/g, '').replace(/\{[^}]*\}/g, '').trim();
 
+        const durText = `${durationSec.toFixed(1)}s`;
         pill.innerHTML = `
           <div class="vn-cue-handle left-handle" data-handle="left" title="Drag to trim start time"></div>
           <div class="vn-cue-pill-inner">
-            <span class="vn-cue-text">${cleanText}</span>
+            <span class="vn-cue-idx-tag">#${idx + 1}</span>
+            <span class="vn-cue-text">${cleanText || 'نووسینی نوێ'}</span>
+            <span class="vn-cue-dur-tag">${durText}</span>
           </div>
           <div class="vn-cue-handle right-handle" data-handle="right" title="Drag to trim end time"></div>
         `;
@@ -1070,11 +1175,12 @@
         }
 
         if (this.duration > 0 && this.dom.audioBarFill) {
-          const pct = Math.min(100, (this.currentTime / this.duration) * 100);
-          const intPct = Math.round(pct);
+          const contentWidth = Math.round((this.duration / 1000) * this.zoom);
+          const fillPx = Math.min(contentWidth, currentSec * this.zoom);
+          this.dom.audioBarFill.style.width = `${fillPx}px`;
+          const intPct = Math.round(Math.min(100, (this.currentTime / this.duration) * 100));
           if (intPct !== this._lastIntPct) {
             this._lastIntPct = intPct;
-            this.dom.audioBarFill.style.width = `${pct}%`;
             this.dom.viewport.setAttribute('aria-valuenow', intPct);
           }
         }

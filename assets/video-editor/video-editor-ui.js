@@ -130,6 +130,9 @@
         quickOrigBtn: $('#studioQuickOrigBtn'),
         syncPillBtn: $('#studioSyncPillBtn'),
         syncOffsetDisplay: $('#studioSyncOffsetDisplay'),
+        zoomOutBtn: $('#studioZoomOutBtn'),
+        zoomFitBtn: $('#studioZoomFitBtn'),
+        zoomInBtn: $('#studioZoomInBtn'),
         undoBtn: $('#studioUndoBtn'),
         redoBtn: $('#studioRedoBtn'),
 
@@ -149,6 +152,7 @@
         timelineContainer: $('#studioTimelineMount'),
 
         // Bottom Toolbar Buttons
+        toolAddCueBtn: $('#vnToolAddCueBtn'),
         toolStyleBtn: $('#vnToolStyleBtn'),
         toolInspectBtn: $('#vnToolInspectBtn'),
         toolSplitBtn: $('#vnToolSplitBtn'),
@@ -261,6 +265,10 @@
         exportStageArea: $('#exportStageArea'),
         exportResolutionSel: $('#exportResolutionSel'),
         exportContainerFormatSel: $('#exportContainerFormatSel'),
+        exportFpsSel: $('#exportFpsSel'),
+        exportFpsVal: $('#exportFpsVal'),
+        exportAudioEnhanceSel: $('#exportAudioEnhanceSel'),
+        exportBurnModeSel: $('#exportBurnModeSel'),
         exportBitratePresetSel: $('#exportBitratePresetSel'),
         exportCustomBitrateRow: $('#exportCustomBitrateRow'),
         exportBitrateSlider: $('#exportBitrateSlider'),

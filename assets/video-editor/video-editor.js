@@ -484,6 +484,30 @@
         this.els.redoBtn.addEventListener('click', () => this.redo());
       }
 
+      // Timeline Zoom Buttons
+      if (this.els.zoomInBtn) {
+        this.els.zoomInBtn.addEventListener('click', () => {
+          if (this.timeline) this.timeline.zoomIn();
+        });
+      }
+      if (this.els.zoomOutBtn) {
+        this.els.zoomOutBtn.addEventListener('click', () => {
+          if (this.timeline) this.timeline.zoomOut();
+        });
+      }
+      if (this.els.zoomFitBtn) {
+        this.els.zoomFitBtn.addEventListener('click', () => {
+          if (this.timeline) this.timeline.zoomToFit();
+        });
+      }
+
+      // Toolbar Add Cue Button
+      if (this.els.toolAddCueBtn) {
+        this.els.toolAddCueBtn.addEventListener('click', () => {
+          this._handleTrackHeaderClick('text');
+        });
+      }
+
       // Text Shower Click -> Quick Open-up Panel
       if (this.els.textShowerCard) {
         this.els.textShowerCard.addEventListener('click', () => {
@@ -596,6 +620,18 @@
         } else if (e.code === 'KeyE') {
           e.preventDefault();
           this._openQuickTextEditor();
+        } else if (e.code === 'KeyA' || e.code === 'KeyN') {
+          e.preventDefault();
+          this._handleTrackHeaderClick('text');
+        } else if (e.key === '+' || e.key === '=') {
+          e.preventDefault();
+          if (this.timeline) this.timeline.zoomIn();
+        } else if (e.key === '-' || e.key === '_') {
+          e.preventDefault();
+          if (this.timeline) this.timeline.zoomOut();
+        } else if (e.code === 'Digit0' && (e.ctrlKey || e.metaKey)) {
+          e.preventDefault();
+          if (this.timeline) this.timeline.zoomToFit();
         } else if (e.code === 'Escape') {
           if (typeof VideoEditorQuickPanel !== 'undefined' && VideoEditorQuickPanel.isOpen && VideoEditorQuickPanel.isOpen()) {
             VideoEditorQuickPanel.close();
@@ -830,6 +866,18 @@
         },
         onCueSplit: (cue, idx) => {
           this._splitCueAtIndex(idx);
+        },
+        onCueAddRequested: (timeMs) => {
+          this.seekTo(timeMs);
+          const newCue = VideoEditorState.addCue(timeMs, null, 'دەقی ژێرنووسی نوێ');
+          if (this.timeline) this.timeline.setCues(VideoEditorState.getCues());
+          const cues = VideoEditorState.getCues();
+          const idx = cues.findIndex((c) => c === newCue);
+          VideoEditorState.setActiveCue(newCue, idx);
+          VideoEditorOverlay.renderActiveCue(newCue, VideoEditorState.overlayConfig);
+          VideoEditorOverlay.updateTextShower(newCue, idx);
+          this._openQuickTextEditor(newCue, idx);
+          VideoEditorUI.showToast('Added new Kurdish cue at timeline position', 'success');
         },
         onHeaderClick: (trackType) => {
           this._handleTrackHeaderClick(trackType);

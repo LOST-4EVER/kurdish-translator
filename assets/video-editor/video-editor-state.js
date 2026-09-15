@@ -507,12 +507,24 @@
       return newCue;
     }
 
-    addCue(startMs, endMs, text = 'نووسینی نوێی کوردی', origText = '') {
+    addCue(startMs, endMs = null, text = 'دەقی ژێرنووسی نوێ', origText = '') {
+      const start = Math.max(0, Math.round(startMs));
+      let calculatedEnd = endMs;
+      if (!calculatedEnd) {
+        const nextCue = this.cues.find((c) => c.start > start);
+        if (nextCue) {
+          calculatedEnd = Math.min(start + 2500, Math.max(start + 400, nextCue.start - 50));
+        } else {
+          calculatedEnd = start + 2500;
+        }
+      }
+      const end = Math.max(start + 200, Math.round(calculatedEnd));
+
       const newCue = {
         index: this.cues.length + 1,
-        start: Math.max(0, Math.round(startMs)),
-        end: Math.max(startMs + 500, Math.round(endMs || startMs + 2000)),
-        text: text || 'نووسینی نوێی کوردی',
+        start,
+        end,
+        text: text || 'دەقی ژێرنووسی نوێ',
         origText: origText || '',
       };
 

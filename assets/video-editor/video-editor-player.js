@@ -180,8 +180,11 @@
       });
 
       player.addEventListener('waiting', () => {
-        if (!player.paused && !player.ended) {
+        const hasVideo = !!(this.videoFile && this.videoUrl && player.src && player.readyState >= 2);
+        if (hasVideo && !player.paused && !player.ended) {
           this.showLoadingOverlay('Buffering...', 'Fetching media stream frames');
+        } else {
+          this.hideLoadingOverlay();
         }
       });
 
@@ -409,6 +412,10 @@
     }
 
     showLoadingOverlay(title = 'Loading Video...', sub = 'Decoding media stream & metadata') {
+      if (!this.videoFile && !this.videoUrl) {
+        this.hideLoadingOverlay();
+        return;
+      }
       const overlay = document.getElementById('studioVideoLoadingOverlay');
       const t = document.getElementById('studioVideoLoadingText');
       const s = document.getElementById('studioVideoLoadingSub');
@@ -565,6 +572,8 @@
         this.onVideoLoadedCallback(file);
       }
 
+      this._extractAndDecodeAudioWaveform(file);
+
       VideoEditorUI.showToast(
         `Loaded video: ${file.name} (${ext.toUpperCase()})`,
         'success',
@@ -573,15 +582,43 @@
       return true;
     }
 
+    _extractAndDecodeAudioWaveform(file) {
+      if (!file) return;
+      try {
+        const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+        if (!AudioContextClass) return;
+        const audioCtx = new AudioContextClass();
+        const reader = new FileReader();
+        reader.onload = () => {
+          const arrayBuffer = reader.result;
+          audioCtx.decodeAudioData(arrayBuffer, (decodedBuffer) => {
+            try { audioCtx.close(); } catch (_) {}
+            if (window.VideoEditor && window.VideoEditor.timeline) {
+              window.VideoEditor.timeline.setAudioData(decodedBuffer);
+            }
+          }, () => {
+            try { audioCtx.close(); } catch (_) {}
+          });
+        };
+        reader.readAsArrayBuffer(file);
+      } catch (_) {}
+    }
+
     play() {
       const player = this.els.videoPlayer;
-      if (!player) return Promise.resolve();
+      const hasVideo = !!(player && (this.videoFile || this.videoUrl) && player.src && player.readyState >= 1);
+      if (!hasVideo) {
+        this.hideLoadingOverlay();
+        this._startSimulatedPlayback();
+        return Promise.resolve();
+      }
       return player.play().catch((err) => {
         console.warn('Playback prevented:', err);
       });
     }
 
     pause() {
+      this._stopSimulatedPlayback();
       const player = this.els.videoPlayer;
       if (!player) return;
       player.pause();
@@ -589,12 +626,23 @@
 
     togglePlay() {
       const player = this.els.videoPlayer;
-      if (!player) return;
-
+      const hasVideo = !!(player && (this.videoFile || this.videoUrl) && player.src && player.readyState >= 1);
       const viewport = this.els.viewportWrapper || document.getElementById('studioViewportWrapper');
       const rect = viewport ? viewport.getBoundingClientRect() : { left: 0, top: 0, width: 200, height: 200 };
       const centerX = rect.left + rect.width / 2;
       const centerY = rect.top + rect.height / 2;
+
+      if (!hasVideo) {
+        this.hideLoadingOverlay();
+        if (this._simulatedPlaying) {
+          this._stopSimulatedPlayback();
+          this._showGestureRipple('pause', centerX, centerY);
+        } else {
+          this._startSimulatedPlayback();
+          this._showGestureRipple('play', centerX, centerY);
+        }
+        return;
+      }
 
       if (player.paused || player.ended) {
         player.play().then(() => {
@@ -608,11 +656,68 @@
       }
     }
 
+    _startSimulatedPlayback() {
+      this._stopSimulatedPlayback();
+      this._simulatedPlaying = true;
+      this._simulatedLastTime = performance.now();
+      if (this.els.playPauseBtn) {
+        this.els.playPauseBtn.innerHTML = `
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+            <rect x="6" y="4" width="4" height="16" rx="1.5"></rect>
+            <rect x="14" y="4" width="4" height="16" rx="1.5"></rect>
+          </svg>
+        `;
+        this.els.playPauseBtn.setAttribute('aria-label', 'Pause');
+      }
+
+      const tick = () => {
+        if (!this._simulatedPlaying) return;
+        const now = performance.now();
+        const deltaMs = (now - this._simulatedLastTime) * (this.currentPlaybackRate || 1);
+        this._simulatedLastTime = now;
+        const durMs = (window.VideoEditor && window.VideoEditor.timeline ? window.VideoEditor.timeline.duration : 10000) || 10000;
+        this._simulatedCurrentMs = Math.min(durMs, (this._simulatedCurrentMs || 0) + deltaMs);
+
+        this.updateTimeDisplay(this._simulatedCurrentMs, durMs);
+        if (this.onTimeUpdateCallback) {
+          this.onTimeUpdateCallback(this._simulatedCurrentMs, durMs);
+        }
+
+        if (this._simulatedCurrentMs >= durMs) {
+          this._stopSimulatedPlayback();
+          return;
+        }
+
+        this._simulatedRaf = requestAnimationFrame(tick);
+      };
+
+      this._simulatedRaf = requestAnimationFrame(tick);
+    }
+
+    _stopSimulatedPlayback() {
+      this._simulatedPlaying = false;
+      if (this._simulatedRaf) {
+        cancelAnimationFrame(this._simulatedRaf);
+        this._simulatedRaf = null;
+      }
+      if (this.els.playPauseBtn) {
+        this.els.playPauseBtn.innerHTML = `
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+            <polygon points="5 3 19 12 5 21 5 3"></polygon>
+          </svg>
+        `;
+        this.els.playPauseBtn.setAttribute('aria-label', 'Play');
+      }
+    }
+
     seekTo(timeMs, immediate = false) {
       const player = this.els.videoPlayer;
-      const durMs = (player && player.duration) ? player.duration * 1000 : 0;
+      const hasVideo = !!(player && (this.videoFile || this.videoUrl) && player.src && player.readyState >= 1);
+      const durMs = (hasVideo && player.duration) ? player.duration * 1000 : (window.VideoEditor && window.VideoEditor.timeline ? window.VideoEditor.timeline.duration : 0);
       const clampedMs = Math.max(0, durMs > 0 ? Math.min(durMs, timeMs) : timeMs);
       const targetSec = clampedMs / 1000;
+
+      this._simulatedCurrentMs = clampedMs;
 
       // Latency-free instant UI and subtitle update
       this.updateTimeDisplay(clampedMs, durMs);
@@ -620,7 +725,10 @@
         this.onTimeUpdateCallback(clampedMs, durMs);
       }
 
-      if (!player) return;
+      if (!hasVideo) {
+        this.hideLoadingOverlay();
+        return;
+      }
 
       // Direct frame-accurate seeking
       try {

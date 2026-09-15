@@ -590,7 +590,8 @@
         previewCtx = previewCanvas.getContext('2d');
       }
 
-      const stream = canvas.captureStream(30);
+      const targetFps = (this.els && this.els.exportFpsSel) ? (parseInt(this.els.exportFpsSel.value, 10) || 30) : 30;
+      const stream = canvas.captureStream(targetFps);
       this.activeStream = stream;
 
       // Audio state preservation
@@ -603,44 +604,60 @@
       video.volume = 1.0;
       video.playbackRate = 1.0;
 
-      // Robust audio capture via Web Audio API destination with fallback to captureStream
-      try {
-        const AudioContextClass = window.AudioContext || window.webkitAudioContext;
-        if (AudioContextClass) {
-          if (!this.audioContext || this.audioContext.state === 'closed') {
-            this.audioContext = new AudioContextClass();
-          }
-          if (this.audioContext.state === 'suspended') {
-            await this.audioContext.resume();
-          }
-          this.audioDestNode = this.audioContext.createMediaStreamDestination();
-          
-          try {
-            if (!video._mediaSourceNode) {
-              video._mediaSourceNode = this.audioContext.createMediaElementSource(video);
-            }
-            this.audioSourceNode = video._mediaSourceNode;
-            this.audioSourceNode.disconnect();
-            this.audioSourceNode.connect(this.audioDestNode);
-            this.audioSourceNode.connect(this.audioContext.destination);
-          } catch (srcErr) {
-            console.warn('Audio node connection notice:', srcErr);
-          }
+      const audioEnhance = (this.els && this.els.exportAudioEnhanceSel) ? this.els.exportAudioEnhanceSel.value : 'boost';
 
-          const audioTracks = this.audioDestNode.stream.getAudioTracks();
-          if (audioTracks.length > 0) {
-            stream.addTrack(audioTracks[0]);
-          }
-        }
-      } catch (err) {
-        console.warn('Web Audio stream setup fallback:', err);
+      // Robust audio capture via Web Audio API destination with fallback to captureStream
+      if (audioEnhance !== 'mute') {
         try {
-          const directStream = video.captureStream ? video.captureStream() : (video.mozCaptureStream ? video.mozCaptureStream() : null);
-          if (directStream) {
-            const tracks = directStream.getAudioTracks();
-            if (tracks.length > 0) stream.addTrack(tracks[0]);
+          const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+          if (AudioContextClass) {
+            if (!this.audioContext || this.audioContext.state === 'closed') {
+              this.audioContext = new AudioContextClass();
+            }
+            if (this.audioContext.state === 'suspended') {
+              await this.audioContext.resume();
+            }
+            this.audioDestNode = this.audioContext.createMediaStreamDestination();
+            
+            try {
+              if (!video._mediaSourceNode) {
+                video._mediaSourceNode = this.audioContext.createMediaElementSource(video);
+              }
+              this.audioSourceNode = video._mediaSourceNode;
+              this.audioSourceNode.disconnect();
+
+              if (audioEnhance === 'boost') {
+                const biquad = this.audioContext.createBiquadFilter();
+                biquad.type = 'peaking';
+                biquad.frequency.value = 2800;
+                biquad.gain.value = 3.5;
+                biquad.Q.value = 1.0;
+                this.audioSourceNode.connect(biquad);
+                biquad.connect(this.audioDestNode);
+                biquad.connect(this.audioContext.destination);
+              } else {
+                this.audioSourceNode.connect(this.audioDestNode);
+                this.audioSourceNode.connect(this.audioContext.destination);
+              }
+            } catch (srcErr) {
+              console.warn('Audio node connection notice:', srcErr);
+            }
+
+            const audioTracks = this.audioDestNode.stream.getAudioTracks();
+            if (audioTracks.length > 0) {
+              stream.addTrack(audioTracks[0]);
+            }
           }
-        } catch (e) {}
+        } catch (err) {
+          console.warn('Web Audio stream setup fallback:', err);
+          try {
+            const directStream = video.captureStream ? video.captureStream() : (video.mozCaptureStream ? video.mozCaptureStream() : null);
+            if (directStream) {
+              const tracks = directStream.getAudioTracks();
+              if (tracks.length > 0) stream.addTrack(tracks[0]);
+            }
+          } catch (e) {}
+        }
       }
 
       // Determine best supported MIME type based on container preference
@@ -811,9 +828,12 @@
         // Draw upscale/downscale video frame onto high-res canvas
         ctx.drawImage(video, 0, 0, width, height);
 
+        // Subtitle burn mode check
+        const burnSubs = (this.els && this.els.exportBurnModeSel) ? this.els.exportBurnModeSel.value === 'hardcode' : true;
+
         // Find active subtitle cue
         const curMs = video.currentTime * 1000 + syncOffsetMs;
-        const cue = cues.find((c) => curMs >= c.start && curMs <= c.end);
+        const cue = burnSubs ? cues.find((c) => curMs >= c.start && curMs <= c.end) : null;
 
         if (cue) {
           const text = stripTags(cue.text || '');
