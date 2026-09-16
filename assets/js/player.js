@@ -793,6 +793,7 @@ const SubtitlePlayer = (() => {
   return {
     init,
     load,
+    loadCues: load,
     toggle,
     play,
     pause,

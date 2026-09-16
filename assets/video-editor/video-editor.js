@@ -1176,7 +1176,15 @@
         const appCues = window._getAppWorkCues();
         if (appCues && appCues.length > 0) {
           VideoEditorState.setCues(appCues, false);
-          if (this.timeline) this.timeline.setCues(appCues);
+          if (this.timeline) {
+            this.timeline.setCues(appCues);
+            if (!this.els.videoPlayer || !this.els.videoPlayer.duration) {
+              const maxEnd = Math.max(...appCues.map((c) => c.end || 0));
+              if (maxEnd > 0) {
+                this.timeline.setDuration(maxEnd + 3000);
+              }
+            }
+          }
           if (this.els.appliedSubsBadge) {
             this.els.appliedSubsBadge.textContent = `${appCues.length} Cues`;
           }

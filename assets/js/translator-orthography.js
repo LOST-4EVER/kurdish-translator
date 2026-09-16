@@ -489,6 +489,100 @@ const TranslatorOrthography = (() => {
     return res;
   }
 
+  /**
+   * Sliding-window token-based Contextual Grammar Engine.
+   * Inspects preceding (token[i-1]), current (token[i]), and succeeding (token[i+1])
+   * tokens to enforce natural Sorani Kurdish grammar, izafe linking, clitic attachment,
+   * preverbal fusion, and dialogue naturalization.
+   */
+  function applyContextualGrammar(str) {
+    if (!str || typeof str !== 'string') return '';
+    const tokens = str.split(/(\s+|[.,!?;:،؛؟«»"()[\]{}<>\n\r]+)/);
+    if (!tokens || !tokens.length) return str;
+
+    const verbalPrefixes = new Set(['دە', 'ئە', 'نا', 'نە', 'مە', 'بی', 'ب', 'تێ', 'ڕێ', 'پێ', 'وەر', 'دەر', 'دا', 'هەڵ', 'ھەڵ', 'لێ']);
+    const prepositions = new Set(['لەگەڵ', 'بۆ', 'پێ', 'لێ', 'تێ', 'دەربارەی', 'لەبەر']);
+    const nounSuffixes = new Set(['تر', 'ترین', 'ەوە', 'یش', 'مان', 'تان', 'یان', 'ەکەم', 'ەکەت', 'ەکەی', 'ەکەمان', 'ەکەتان', 'ەکەیان', 'ەکان', 'ەکانمان', 'ەکانتان', 'ەکانویان', 'ەکە']);
+
+    for (let i = 0; i < tokens.length; i++) {
+      const cur = tokens[i];
+      if (!cur || /^\s+$/.test(cur) || /^[.,!?;:،؛؟«»"()[\]{}<>\n\r]+$/.test(cur)) continue;
+
+      // Find prev and next non-delimiter token indices
+      let prevIdx = -1;
+      for (let p = i - 1; p >= 0; p--) {
+        if (tokens[p] && !/^\s+$/.test(tokens[p])) {
+          prevIdx = p;
+          break;
+        }
+      }
+      let nextIdx = -1;
+      for (let n = i + 1; n < tokens.length; n++) {
+        if (tokens[n] && !/^\s+$/.test(tokens[n])) {
+          nextIdx = n;
+          break;
+        }
+      }
+
+      const prevToken = prevIdx !== -1 ? tokens[prevIdx] : '';
+      const nextToken = nextIdx !== -1 ? tokens[nextIdx] : '';
+
+      // Rule 1: Preposition + Personal Pronoun Cliticization (e.g. لەگەڵ + من -> لەگەڵم, بۆ + من -> بۆم, پێ + من -> پێم, لێ + من -> لێم)
+      if (prepositions.has(cur) && nextIdx !== -1) {
+        let clitic = null;
+        if (nextToken === 'من') clitic = 'م';
+        else if (nextToken === 'تۆ') clitic = 'ت';
+        else if (nextToken === 'ئەو') clitic = 'ی';
+        else if (nextToken === 'ئێمە') clitic = 'مان';
+        else if (nextToken === 'ئێوە') clitic = 'تان';
+        else if (nextToken === 'ئەوان') clitic = 'یان';
+
+        if (clitic) {
+          tokens[i] = cur + clitic;
+          tokens[nextIdx] = '';
+          for (let s = i + 1; s < nextIdx; s++) tokens[s] = '';
+          continue;
+        }
+      }
+
+      // Rule 2: Verbal prefix fusion (e.g. دە + زانم -> دەزانم, نا + کەم -> ناکەم, ب + ڕۆین -> بڕۆین)
+      if (verbalPrefixes.has(cur) && nextIdx !== -1 && !/^[.,!?;:،؛؟]/.test(nextToken)) {
+        if (cur === 'ب') {
+          // Subjunctive prefix 'ب' attaches only to verb roots
+          if (/^(?:ڕۆ|رۆ|چ|کە|زان|بین|د|خ|خوێن|گر|کڕ|فرۆش|هێن|ژ|مر|بەخش|نووس|ترس|وەست|گەڕ|سەیر)/.test(nextToken)) {
+            tokens[i] = 'ب' + nextToken;
+            tokens[nextIdx] = '';
+            for (let s = i + 1; s < nextIdx; s++) tokens[s] = '';
+            continue;
+          }
+        } else if (!/^(?:من|تۆ|ئەو|ئێمە|ئێوە|ئەوان|ئەم|ئەو|کە|لە|بۆ|بە|وەک|چی|کێ)$/.test(nextToken)) {
+          tokens[i] = cur + nextToken;
+          tokens[nextIdx] = '';
+          for (let s = i + 1; s < nextIdx; s++) tokens[s] = '';
+          continue;
+        }
+      }
+
+      // Rule 3: Noun Suffix fusion (e.g. گەورە + تر -> گەورەتر, کتێب + ەکان -> کتێبەکان)
+      if (nounSuffixes.has(cur) && prevIdx !== -1 && !/^[.,!?;:،؛؟]/.test(prevToken)) {
+        tokens[prevIdx] = tokens[prevIdx] + cur;
+        tokens[i] = '';
+        for (let s = prevIdx + 1; s < i; s++) tokens[s] = '';
+        continue;
+      }
+
+      // Rule 4: Isolated Izafe linker correction (e.g. کتێب + ی + من -> کتێبی من)
+      if ((cur === 'ی' || cur === 'یی') && prevIdx !== -1 && !/^[.,!?;:،؛؟]/.test(prevToken)) {
+        tokens[prevIdx] = tokens[prevIdx] + cur;
+        tokens[i] = '';
+        for (let s = prevIdx + 1; s < i; s++) tokens[s] = '';
+        continue;
+      }
+    }
+
+    return tokens.join('');
+  }
+
   /** Kurdish Punctuation & Orthographic Normalization */
   function normalizeText(text, cleanPunctuation = true, useKurdishDigits = false) {
     if (!text) return '';
@@ -496,6 +590,7 @@ const TranslatorOrthography = (() => {
 
     s = normalizeSoraniAlphabet(s);
     s = rejoinVerbalAffixes(s);
+    s = applyContextualGrammar(s);
     s = naturalizeDialogue(s);
     s = normalizeDigits(s, useKurdishDigits);
 
@@ -826,6 +921,7 @@ const TranslatorOrthography = (() => {
     normalizeDigits,
     normalizeSoraniAlphabet,
     rejoinVerbalAffixes,
+    applyContextualGrammar,
     naturalizeDialogue,
     normalizeText,
     postprocessSorani,

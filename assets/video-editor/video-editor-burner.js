@@ -842,9 +842,10 @@
           const baseFontSize = Math.max(20, Math.round(height * 0.045 * scaleFactor));
           const fontFamily = cue.fontFamily || overlayCfg.fontFamily || '"Noto Naskh Arabic", "Inter", -apple-system, sans-serif';
 
+          const isRtl = /[\u0600-\u06FF\u0750-\u077F\uFB50-\uFDFF\uFE70-\uFEFF]/.test(text || '');
           ctx.font = `bold ${baseFontSize}px ${fontFamily}`;
           ctx.textAlign = 'center';
-          ctx.direction = 'ltr';
+          ctx.direction = isRtl ? 'rtl' : 'ltr';
 
           const maxTextWidth = width * 0.85;
           const lines = this.wrapText(ctx, text, maxTextWidth);
@@ -952,7 +953,7 @@
 
           // Render primary Kurdish text lines
           ctx.font = `bold ${baseFontSize}px ${fontFamily}`;
-          ctx.direction = 'ltr';
+          ctx.direction = isRtl ? 'rtl' : 'ltr';
           const textColor = cue.color || overlayCfg.color || '#ffffff';
           const strokeWidth = Math.max(2, Math.round(baseFontSize * (effect === 'outline' ? 0.14 : (effect === 'cinema' ? 0.1 : 0.08))));
           const startY = yCenter - (totalBoxHeight / 2) + baseFontSize * 0.9;

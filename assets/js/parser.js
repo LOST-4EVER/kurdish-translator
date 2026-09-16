@@ -9,6 +9,8 @@ const SubParser = (() => {
   // ---------- Regex ----------
   // WebVTT allows both mm:ss.mmm and hh:mm:ss.mmm (hours optional).
   const TIMECODE = /(\d{1,2}:\d{2}(?::\d{2})?[,.]\d{1,3})\s*-->\s*(\d{1,2}:\d{2}(?::\d{2})?[,.]\d{1,3})/;
+  const SBV_TIMECODE = /^(\d{1,2}:\d{2}:\d{2}\.\d{3}),(\d{1,2}:\d{2}:\d{2}\.\d{3})$/m;
+  const LRC_LINE = /^\[\d{2}:\d{2}(?:\.\d{2,3})?\]/m;
   const ASS_TIMECODE = /(\d+:\d{2}:\d{2}[.,]\d{1,3})/;
   const SUB_LINE = /^\{(\d+)\}\{(\d+)\}(.*)$/;
 
@@ -115,6 +117,8 @@ const SubParser = (() => {
     if (/^\{\d+\}\{\d+\}/.test(t.split('\n')[0])) return 'sub';
     if (/<SYNC\b[^>]*\bStart\s*=/i.test(t)) return 'smi';
     if (TIMECODE.test(t)) return 'srt';
+    if (SBV_TIMECODE.test(t)) return 'sbv';
+    if (LRC_LINE.test(t)) return 'lrc';
     return 'unknown';
   }
 
@@ -617,12 +621,96 @@ const SubParser = (() => {
     return cues;
   }
 
+  // ---------- YouTube SubViewer (.sbv) ----------
+  function parseSBV(content) {
+    const rawLines = content.replace(/\r/g, '').split('\n');
+    const cues = [];
+    let current = null;
+    const SBV_RE = /^(\d{1,2}:\d{2}:\d{2}\.\d{3}),(\d{1,2}:\d{2}:\d{2}\.\d{3})$/;
+
+    for (let i = 0; i < rawLines.length; i++) {
+      const line = rawLines[i].trim();
+      const m = line.match(SBV_RE);
+      if (m) {
+        if (current && current.text.length) {
+          cues.push({
+            index: cues.length + 1,
+            start: toMs(current.rawStart),
+            end: toMs(current.rawEnd),
+            rawStart: current.rawStart,
+            rawEnd: current.rawEnd,
+            text: current.text.join('\n').trim(),
+            placement: 'bottom',
+            align: 'center'
+          });
+        }
+        current = { rawStart: m[1], rawEnd: m[2], text: [] };
+        continue;
+      }
+      if (!line) continue;
+      if (current) {
+        current.text.push(line);
+      }
+    }
+    if (current && current.text.length) {
+      cues.push({
+        index: cues.length + 1,
+        start: toMs(current.rawStart),
+        end: toMs(current.rawEnd),
+        rawStart: current.rawStart,
+        rawEnd: current.rawEnd,
+        text: current.text.join('\n').trim(),
+        placement: 'bottom',
+        align: 'center'
+      });
+    }
+    return cues;
+  }
+
+  // ---------- LRC (Lyrics) ----------
+  function parseLRC(content) {
+    const rawLines = content.replace(/\r/g, '').split('\n');
+    const items = [];
+    const LRC_TAG = /\[(\d{2}):(\d{2})(?:\.(\d{2,3}))?\]/g;
+    for (const line of rawLines) {
+      const trimmed = line.trim();
+      if (!trimmed || /^\[(?:ti|ar|al|by|offset|length):/i.test(trimmed)) continue;
+      let match;
+      const timestamps = [];
+      while ((match = LRC_TAG.exec(trimmed)) !== null) {
+        const m = parseInt(match[1], 10) || 0;
+        const s = parseInt(match[2], 10) || 0;
+        let ms = 0;
+        if (match[3]) {
+          const frac = match[3];
+          ms = frac.length === 2 ? parseInt(frac, 10) * 10 : parseInt(frac, 10);
+        }
+        timestamps.push(m * 60000 + s * 1000 + ms);
+      }
+      const text = trimmed.replace(/\[\d{2}:\d{2}(?:\.\d{2,3})?\]/g, '').trim();
+      if (text && timestamps.length) {
+        for (const t of timestamps) {
+          items.push({ start: t, text });
+        }
+      }
+    }
+    items.sort((a, b) => a.start - b.start);
+    const cues = [];
+    for (let i = 0; i < items.length; i++) {
+      const cur = items[i];
+      const next = items[i + 1];
+      const end = next ? Math.max(cur.start + 500, next.start - 50) : cur.start + 3500;
+      cues.push({ index: i + 1, start: cur.start, end, text: cur.text, placement: 'bottom', align: 'center' });
+    }
+    return cues;
+  }
+
   function parse(content, formatHint) {
     const raw = typeof content === 'string' ? content : (content != null ? String(content) : '');
     let format = detect(raw);
     if (format === 'unknown' && formatHint) {
       const h = formatHint.toLowerCase().replace(/^\./, '');
-      if (['srt', 'vtt', 'ass', 'ssa', 'sub', 'smi', 'txt'].includes(h)) {
+      if (['srt', 'vtt', 'ass', 'ssa', 'sub', 'smi', 'sbv', 'lrc', 'txt'].includes(h)) {
         format = h;
       }
     }
@@ -633,6 +721,8 @@ const SubParser = (() => {
     switch (format) {
       case 'vtt': result = { format, cues: parseSRTVTT(raw) }; break;
       case 'srt': result = { format, cues: parseSRTVTT(raw) }; break;
+      case 'sbv': result = { format, cues: parseSBV(raw) }; break;
+      case 'lrc': result = { format, cues: parseLRC(raw) }; break;
       case 'ass':
       case 'ssa': {
         const { cues, meta } = parseASS(raw);
@@ -868,6 +958,21 @@ Style: Top,Noto Naskh Arabic,44,16777215,65535,0,0,-1,0,1,3.2,1.8,8,40,40,35,0,1
         return '<SAMI>\n<HEAD><TITLE>Kurdish Subtitles</TITLE>\n<STYLE TYPE="text/css">\n<!--\nP { font-family: \'Noto Naskh Arabic\', \'Vazirmatn\', \'Noto Sans Arabic\', sans-serif; font-size: 24pt; text-align: center; color: #FFFFFF; direction: rtl; }\n.KURD { Name: Kurdish; lang: ckb; SAMIType: CC; }\n-->\n</STYLE>\n</HEAD>\n<BODY>\n' +
           cueList.map((c) => `<SYNC Start=${c.start}><P class=KURD>${normalizeTextForSAMI(c.text)}</P></SYNC>`).join('\n') +
           '\n</BODY>\n</SAMI>\n';
+      case 'sbv':
+        return cueList.map((c) => {
+          const t1 = splitMs(c.start);
+          const t2 = splitMs(c.end);
+          const startStr = `${t1.h}:${pad(t1.m)}:${pad(t1.s)}.${pad(t1.ms, 3)}`;
+          const endStr = `${t2.h}:${pad(t2.m)}:${pad(t2.s)}.${pad(t2.ms, 3)}`;
+          return `${startStr},${endStr}\n${normalizeTextForStandard(c.text)}`;
+        }).join('\n\n') + '\n';
+      case 'lrc':
+        return cueList.map((c) => {
+          const t = splitMs(c.start);
+          const cs = Math.min(99, Math.floor(t.ms / 10));
+          const min = pad(t.m + t.h * 60);
+          return `[${min}:${pad(t.s)}.${pad(cs, 2)}] ${normalizeTextForStandard(c.text).replace(/\n/g, ' ')}`;
+        }).join('\n') + '\n';
       case 'txt':
         return cueList.map((c) => normalizeTextForStandard(c.text)).join('\n\n') + '\n';
       default:

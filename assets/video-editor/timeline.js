@@ -1,8 +1,8 @@
 /**
  * timeline.js — VN-style compact multi-track timeline for Video Studio.
- * Features left track header icons (🎵+, [T]+, 🖼+, 🎬+, 🔊),
- * golden Kurdish subtitle cue blocks with text preview, video filmstrip clip,
- * full-height scrubber needle, time ruler with tick dots, and zero-lag seeking.
+ * Features left track header icons, golden Kurdish subtitle cue blocks
+ * with text preview, video filmstrip clip, full-height scrubber needle,
+ * time ruler with tick dots, and zero-lag seeking.
  */
 (() => {
   'use strict';
@@ -659,15 +659,17 @@
       const width = Math.max(20, Math.round(durationSeconds * this.zoom));
       const height = 24;
       const dpr = Math.min(2, window.devicePixelRatio || 1);
+      const safeCanvasWidth = Math.min(4096, Math.round(width * dpr));
 
-      canvas.width = Math.round(width * dpr);
+      canvas.width = safeCanvasWidth;
       canvas.height = Math.round(height * dpr);
       canvas.style.width = `${width}px`;
       canvas.style.height = `${height}px`;
 
       const ctx = canvas.getContext('2d');
       if (!ctx) return;
-      ctx.scale(dpr, dpr);
+      const scaleX = safeCanvasWidth / (width || 1);
+      ctx.scale(scaleX, dpr);
       ctx.clearRect(0, 0, width, height);
 
       const barWidth = 2;

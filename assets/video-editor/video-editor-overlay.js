@@ -339,13 +339,14 @@
 
       const kurdishText = stripTags(cue.text || '');
       this.els.videoOverlayText.textContent = kurdishText;
-      this.els.videoOverlayText.setAttribute('dir', 'ltr');
+      this.els.videoOverlayText.setAttribute('dir', hasArabic(kurdishText) ? 'rtl' : 'ltr');
 
       // Check if original English/source text should be displayed alongside Kurdish
       const hasOrig = Boolean(config && config.showOrig && cue.origText && cue.origText.trim() && cue.origText.trim() !== kurdishText.trim());
       if (hasOrig && this.els.videoOverlayOrig) {
-        this.els.videoOverlayOrig.textContent = stripTags(cue.origText);
-        this.els.videoOverlayOrig.setAttribute('dir', 'ltr');
+        const origClean = stripTags(cue.origText);
+        this.els.videoOverlayOrig.textContent = origClean;
+        this.els.videoOverlayOrig.setAttribute('dir', hasArabic(origClean) ? 'rtl' : 'ltr');
         this.els.videoOverlayOrig.classList.remove('hidden');
       } else if (this.els.videoOverlayOrig) {
         this.els.videoOverlayOrig.classList.add('hidden');
@@ -588,11 +589,13 @@
           if (hasOrig) {
             const safeText = text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
             const safeOrig = stripTags(cue.origText).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-            this.els.textShowerText.innerHTML = `<div class="vn-shower-kurdish" dir="ltr">${safeText}</div><div class="vn-shower-orig" dir="ltr"><span class="vn-shower-orig-tag">EN</span> <span>${safeOrig}</span></div>`;
-            this.els.textShowerText.setAttribute('dir', 'ltr');
+            const kDir = hasArabic(text) ? 'rtl' : 'ltr';
+            const oDir = hasArabic(cue.origText) ? 'rtl' : 'ltr';
+            this.els.textShowerText.innerHTML = `<div class="vn-shower-kurdish" dir="${kDir}">${safeText}</div><div class="vn-shower-orig" dir="${oDir}"><span class="vn-shower-orig-tag">EN</span> <span>${safeOrig}</span></div>`;
+            this.els.textShowerText.setAttribute('dir', kDir);
           } else {
             this.els.textShowerText.textContent = text;
-            this.els.textShowerText.setAttribute('dir', 'ltr');
+            this.els.textShowerText.setAttribute('dir', hasArabic(text) ? 'rtl' : 'ltr');
           }
         }
 
@@ -609,8 +612,9 @@
         if (nearestCue) {
           if (this.els.textShowerNum) this.els.textShowerNum.textContent = `Next #${nearestCue.index + 1}`;
           if (this.els.textShowerText) {
-            this.els.textShowerText.textContent = stripTags(nearestCue.cue.text);
-            this.els.textShowerText.setAttribute('dir', 'ltr');
+            const nextTxt = stripTags(nearestCue.cue.text);
+            this.els.textShowerText.textContent = nextTxt;
+            this.els.textShowerText.setAttribute('dir', hasArabic(nextTxt) ? 'rtl' : 'ltr');
           }
         } else {
           if (this.els.textShowerNum) this.els.textShowerNum.textContent = 'No Subtitle';

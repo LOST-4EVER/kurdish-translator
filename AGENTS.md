@@ -15,7 +15,7 @@ Deployed to GitHub Pages from the `main` branch
   content in the center safe zone; don't overwrite it with the rounded version.
 - `sw.js`: precaches the app shell on install (list in `ASSETS`), cache-first
   for same-origin GETs, network-only for cross-origin (Google Translate).
-  **Version the cache** (`kurdish-translator-v150`) whenever you change any
+  **Version the cache** (`kurdish-translator-v151`) whenever you change any
   cached asset, or users get stale files.
 - **HTTP 206 Bypass**: Service Worker must NEVER call `cache.put()` on HTTP 206
   (Partial Content) or requests with a `Range` header; doing so throws a

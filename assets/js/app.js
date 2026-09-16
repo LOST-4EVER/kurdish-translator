@@ -1285,9 +1285,7 @@
       return copy;
     });
     baseCues = workCues.map((c) => ({ ...c }));
-    if (typeof SubtitlePlayer !== 'undefined' && SubtitlePlayer.loadCues) {
-      SubtitlePlayer.loadCues(workCues);
-    }
+    loadPreview(workCues);
     if (forceRebuild || !rowEls || rowEls.length !== workCues.length) {
       buildEditor();
     } else {
