@@ -1,6 +1,6 @@
 # 🎬 Kurdî Subtitle Translator | وەرگێڕی پێشکەوتووی ژێرنووسی کوردی
 
-[![Version v139](https://img.shields.io/badge/Version-v139-7c5cfc?style=flat-square&logo=github)](https://LOST-4EVER.github.io/kurdish-translator/)
+[![Version v150](https://img.shields.io/badge/Version-v150-7c5cfc?style=flat-square&logo=github)](https://LOST-4EVER.github.io/kurdish-translator/)
 [![Progressive Web App](https://img.shields.io/badge/PWA-Installable%20%26%20Offline-0ea5e9?style=flat-square&logo=pwa&logoColor=white)](https://LOST-4EVER.github.io/kurdish-translator/)
 [![Target Kurdish Sorani](https://img.shields.io/badge/Target%20Language-Kurdish%20Sorani%20(ckb)-fbbf24?style=flat-square)](https://LOST-4EVER.github.io/kurdish-translator/)
 [![100% Client-Side](https://img.shields.io/badge/Privacy-100%25%20In--Browser-10b981?style=flat-square&logoColor=white)](https://LOST-4EVER.github.io/kurdish-translator/)
@@ -222,7 +222,28 @@ node --check assets/js/parser.js && node --check assets/js/translator-dict.js &&
 
 ## 📜 Release History & Changelog
 
-### 🚀 Version v139 (Current)
+### 🚀 Version v150 (Current)
+- **Security & XSS Hardening:** Applied strict font family whitelisting (`SAFE_FONT_RE`), strict CSS color format verification (`SAFE_COLOR_RE`), and pervasive HTML escaping (`escapeHtml()`) across cinema player and video studio inspectors.
+- **PWA HTTP 206 Media Streaming Fix:** Upgraded service worker cache engine to `kurdish-translator-v150` with automatic cache bypass for HTTP 206 Partial Content byte-range requests.
+- **Memory & Cache Optimization:** Immediate object URL revocation (`URL.revokeObjectURL()`) on video reloads and 1,000-item FIFO translation cache eviction.
+- **Sorani Kurdish Orthography Engine Precision:** Accurately inflected Heavy R (`ڕ`) and Velarized L (`ڵ`) stems, punctuation-aware suffix placement (`یش`), and zero-width non-joiner (`\u200C`) preservation.
+- **Pure SVG UI Assets:** Standardized all UI icons and badges to clean inline SVGs without emoji or unicode artifacts.
+
+### 📦 Version v149
+- **MKV & MOV Pre-Import Inspectors:** Pre-demuxer inspection modals for Matroska (.mkv) and QuickTime (.mov) containers with track selection, audio channel routing, and dialog frequency boosting.
+- **Granular Undo / Redo Command Architecture:** Command pattern implementation (`UPDATE_TEXT`, `UPDATE_TIMING`, `SPLIT_CUE`, `DELETE_CUE`, `ADD_CUE`, `MERGE_CUES`, `SHIFT_ALL`).
+
+### 📦 Version v148
+- **Hardware & PWA Capabilities Integration:** Screen WakeLock API, Tactile Haptic Feedback API, Battery & CPU Concurrency Guard, and native Web Share API.
+- **ASS/SSA Placement Tags:** Full support for `{\an1}`-`{\an9}` and `{\pos(x,y)}` positioning across player and canvas video burner.
+
+### 📦 Version v147
+- **Live Translator & Video Studio Sync:** Real-time bidirectional connection between subtitle editor and video timeline.
+- **Export Suite Enhancements:** MP4/WebM video burning with 5 stylized subtitle visual effects.
+
+*For complete details across all versions, see [CHANGELOG.md](./CHANGELOG.md).*
+
+### 🚀 Version v139
 - **Advanced Command-Pattern Undo / Redo:** Granular, reversible command architecture for subtitle editing (`UPDATE_TEXT`, `UPDATE_TIMING`, `SPLIT_CUE`, `DELETE_CUE`, `ADD_CUE`, `MERGE_CUES`, `SHIFT_ALL`) eliminating laggy monolithic state clones.
 - **Hardware & PWA Capabilities Integration (`video-editor-hardware.js`):**
   - **Screen WakeLock API:** Automatically keeps the screen awake during video playback and hardware subtitle burning to prevent sleep timeouts.

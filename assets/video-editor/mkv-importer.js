@@ -901,7 +901,7 @@
       }
 
       if (trimTimeDisplay) {
-        trimTimeDisplay.textContent = `In: ${formatTimecode(this.trimInMs)} ➔ Out: ${formatTimecode(this.trimOutMs)}`;
+        trimTimeDisplay.innerHTML = `In: ${formatTimecode(this.trimInMs)} <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="vertical-align:-1px; margin:0 3px;"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg> Out: ${formatTimecode(this.trimOutMs)}`;
       }
       if (trimRangeDuration) {
         trimRangeDuration.textContent = `Trimmed: ${formatTimecode(rangeMs)} (${Math.round(rangeMs / 1000)}s)`;
@@ -974,7 +974,7 @@
           window.VideoEditorPlayer.seekTo(settings.trimInMs);
           if (typeof Toast !== 'undefined' && Toast.show) {
             Toast.show(`${ext} imported with custom trim range`, 'success', {
-              subtext: `${formatTimecode(settings.trimInMs)} ➔ ${formatTimecode(settings.trimOutMs)}`
+              subtext: `${formatTimecode(settings.trimInMs)} → ${formatTimecode(settings.trimOutMs)}`
             });
           }
         } else {

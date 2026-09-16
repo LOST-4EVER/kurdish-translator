@@ -3,7 +3,7 @@
  * Exposes AppVersion as a global module.
  */
 const AppVersion = (() => {
-  const APP_VERSION = 'v149';
+  const APP_VERSION = 'v150';
   let isRefreshing = false;
   let hasShownUpdateNotice = false;
   let hasUpdateAvailable = false;
@@ -185,7 +185,7 @@ const AppVersion = (() => {
 
     const whatsNewStrong = els.btnToggleChangelog ? els.btnToggleChangelog.querySelector('strong') : null;
     if (whatsNewStrong) {
-      whatsNewStrong.textContent = ckb ? `نوێکارییەکانی وەشانی ١٣٨` : `What's New in ${APP_VERSION}`;
+      whatsNewStrong.textContent = ckb ? `نوێکارییەکانی وەشانی ١٥٠` : `What's New in ${APP_VERSION}`;
     }
 
     updateNetworkStatus();
@@ -193,7 +193,7 @@ const AppVersion = (() => {
 
     if (hasUpdateAvailable) {
       if (els.refreshStatusTxt) {
-        els.refreshStatusTxt.textContent = `${ckb ? 'وەشانی نوێ بەردەستە' : 'New version available'} (${latestDiscoveredVer || 'v140+'})`;
+        els.refreshStatusTxt.textContent = `${ckb ? 'وەشانی نوێ بەردەستە' : 'New version available'} (${latestDiscoveredVer || 'v151+'})`;
         els.refreshStatusTxt.style.color = '#f43f5e';
       }
     } else {

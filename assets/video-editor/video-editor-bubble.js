@@ -207,7 +207,7 @@
       if (this.els.bubbleTimeTag) {
         const startStr = this._formatTime(cue.start);
         const endStr = this._formatTime(cue.end);
-        this.els.bubbleTimeTag.textContent = `${startStr} ➔ ${endStr}`;
+        this.els.bubbleTimeTag.innerHTML = `${startStr} <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="vertical-align:-1px; margin:0 3px;"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg> ${endStr}`;
       }
     }
 
@@ -811,7 +811,7 @@
       if (this.els.quickTimeTag) {
         const startStr = this._formatTime(cue.start);
         const endStr = this._formatTime(cue.end);
-        this.els.quickTimeTag.textContent = `${startStr} ➔ ${endStr}`;
+        this.els.quickTimeTag.innerHTML = `${startStr} <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="vertical-align:-1px; margin:0 3px;"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg> ${endStr}`;
       }
       if (this.els.quickDurTag) {
         const durSec = ((cue.end - cue.start) / 1000).toFixed(2);

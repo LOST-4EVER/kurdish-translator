@@ -748,7 +748,7 @@ const TranslatorOrthography = (() => {
           if (/\b(?:but also|but even)\b/i.test(origCurClean) || /^(?:بەڵام هەروەها|بەڵام تەنانەت)/.test(cur)) {
             cur = cur.replace(/^(?:بەڵام هەروەها|بەڵام تەنانەت|هەروەها)\s*/, 'بەڵکو ');
             if (!/یش\b|یش\s/.test(cur)) {
-              cur = cur.replace(/(\S+)$/, '$1یش');
+              cur = cur.replace(/(\S+?)([.,!?;:،؛؟\s]*)$/, '$1یش$2');
             }
           }
         }

@@ -15,31 +15,59 @@ Deployed to GitHub Pages from the `main` branch
   content in the center safe zone; don't overwrite it with the rounded version.
 - `sw.js`: precaches the app shell on install (list in `ASSETS`), cache-first
   for same-origin GETs, network-only for cross-origin (Google Translate).
-  **Version the cache** (`kurdish-translator-v1`) whenever you change any
+  **Version the cache** (`kurdish-translator-v150`) whenever you change any
   cached asset, or users get stale files.
+- **HTTP 206 Bypass**: Service Worker must NEVER call `cache.put()` on HTTP 206
+  (Partial Content) or requests with a `Range` header; doing so throws a
+  `DOMException` and breaks video seeking.
 - `app.js` registers the service worker and shows an Install button via the
   `beforeinstallprompt` event.
 
 ## Commands
 
-- Syntax check any file: `node --check assets/js/<file>.js`
+- Syntax check any file: `node --check assets/js/<file>.js` or `npm run lint`
 - Unit-test logic in Node (no DOM needed): `require` the file, e.g.
   `node -e "const P=require('./assets/js/parser.js'); P.parse('...')"`.
-  Works for `parser.js` and `translator.js` only.
+  Works for `parser.js`, `translator-dict.js`, `translator-orthography.js`, and `translator.js`.
 - `app.js` and `player.js` touch the DOM on load and **cannot** be `require`d or
   run in Node. Verify them with a DOM harness (jsdom) or manual browser test.
 - No install/build/test steps exist. There is nothing to run before committing.
 
 ## Architecture & wiring
 
-- Scripts load in this exact order in `index.html`: `parser.js` → `translator-dict.js`
-  → `translator-orthography.js` → `translator.js` → `i18n.js` → `toast.js` →
-  `player.js` → `app-version.js` → `app-tour.js` → `app-quality.js` →
-  `app-fullscreen.js` → `app.js`. They expose globals (`SubParser`, `TranslatorDict`,
-  `TranslatorOrthography`, `Translator`, `UI_I18N`, `Toast`, `SubtitlePlayer`,
-  `AppVersion`, `AppTour`, `AppQuality`, `AppFullscreen`) via top-level `const` in
-  the shared classic-script lexical scope — they do **not** attach to `window`.
-  Do not reorder the scripts; `app.js` initializes all modules on load.
+- Scripts load in this exact order in `index.html`:
+  1. `parser.js` (`SubParser`)
+  2. `translator-dict.js` (`TranslatorDict`)
+  3. `translator-orthography.js` (`TranslatorOrthography`)
+  4. `translator.js` (`Translator`)
+  5. `i18n.js` (`UI_I18N`)
+  6. `toast.js` (`Toast`)
+  7. `player.js` (`SubtitlePlayer`)
+  8. `app-version.js` (`AppVersion`)
+  9. `app-tour.js` (`AppTour`)
+  10. `app-quality.js` (`AppQuality`)
+  11. `app-fullscreen.js` (`AppFullscreen`)
+  12. `wasm-engine.js` (`VideoEditorWasmEngine`)
+  13. `video-editor-ui.js` (`VideoEditorUI`)
+  14. `video-editor-state.js` (`VideoEditorState`)
+  15. `video-editor-hardware.js` (`VideoEditorHardware`)
+  16. `video-editor-player.js` (`VideoEditorPlayer`)
+  17. `video-editor-overlay.js` (`VideoEditorOverlay`)
+  18. `video-editor-inspector.js` (`VideoEditorInspector`)
+  19. `video-editor-popovers.js` (`VideoEditorPopovers`)
+  20. `video-editor-burner.js` (`VideoEditorBurner`)
+  21. `timeline.js` (`VideoEditorTimeline`)
+  22. `video-editor-bubble.js` (`VideoEditorBubble`)
+  23. `mov-importer.js` (`MovImporter`)
+  24. `mkv-importer.js` (`MkvImporter`)
+  25. `video-editor.js` (`VideoEditor`)
+  26. `app-storage.js` (`AppStorage`)
+  27. `app-decoder.js` (`AppDecoder`)
+  28. `app-editor.js` (`AppEditor`)
+  29. `app.js`
+  They expose globals via top-level `const` in the shared classic-script lexical
+  scope — they do **not** attach to `window`. Do not reorder the scripts; `app.js`
+  initializes all modules on load.
 - `parser.js`, `translator-dict.js`, `translator-orthography.js`, and `translator.js`
   each end with a `module.exports` guard so they work both as classic scripts and
   via `require()` in Node.
@@ -60,7 +88,13 @@ Deployed to GitHub Pages from the `main` branch
   dialogue idioms.
 - **Orthography & Naturalization**: `translator-orthography.js` handles Sorani
   punctuation, character normalization, prefix attachment (`دە-`, `نا-`, `نە-`),
-  and dialogue naturalization (`naturalizeDialogue`).
+  Heavy R (`ڕ`) and Velarized L (`ڵ`) stems, and dialogue naturalization (`naturalizeDialogue`).
+- **Memory & Object URLs**: Whenever assigning a new media file (`video.src = URL.createObjectURL(file)`),
+  always call `URL.revokeObjectURL(oldUrl)` first to prevent massive browser memory leaks.
+- **Security & XSS**: User-controlled subtitle content rendered to the DOM must be sanitized
+  with `escapeHtml()`. Subtitle styles (font family, colors) must be verified against
+  `SAFE_FONT_RE` and `SAFE_COLOR_RE` before assigning to `style` properties or canvas contexts.
+- **UI Icons**: Always use inline SVGs instead of emoji icons for actions, badges, and controls.
 - **Preview editor**: the preview tab has a live subtitle editor (`app.js`
   `buildEditor`). Each cue is an auto-growing textarea; typing updates the cue
   on the player screen instantly (`SubtitlePlayer.updateText`) and a debounced

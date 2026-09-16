@@ -556,7 +556,7 @@
           idxSpan.textContent = `#${index + 1}`;
         }
 
-        pill.title = `#${index + 1} [${this.formatTimecode(targetCue.start)} ➔ ${this.formatTimecode(targetCue.end)}]: ${cleanText}`;
+        pill.title = `#${index + 1} [${this.formatTimecode(targetCue.start)} → ${this.formatTimecode(targetCue.end)}]: ${cleanText}`;
       } else {
         this._renderCues();
       }
@@ -825,7 +825,7 @@
           </div>
           <div class="vn-cue-handle right-handle" data-handle="right" title="Drag to trim end time"></div>
         `;
-        pill.title = `#${idx + 1} [${this.formatTimecode(cue.start)} ➔ ${this.formatTimecode(cue.end)}]: ${cleanText}`;
+        pill.title = `#${idx + 1} [${this.formatTimecode(cue.start)} → ${this.formatTimecode(cue.end)}]: ${cleanText}`;
 
         let isDraggingPill = false;
         let startX = 0;
@@ -1066,7 +1066,7 @@
       popup.innerHTML = `
         <div class="vn-hold-popup-header">
           <span class="vn-hold-popup-tag">#${idx + 1}</span>
-          <span class="vn-hold-popup-time">${this.formatTimecode(cue.start, false)} ➔ ${this.formatTimecode(cue.end, false)}</span>
+          <span class="vn-hold-popup-time">${this.formatTimecode(cue.start, false)} <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="vertical-align:-1px; margin:0 3px;"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg> ${this.formatTimecode(cue.end, false)}</span>
         </div>
         <div class="vn-hold-popup-text" dir="ltr">${cleanText || '—'}</div>
         <div class="vn-hold-popup-actions">
