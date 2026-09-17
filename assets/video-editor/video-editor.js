@@ -679,13 +679,13 @@
             VideoEditorQuickPanel.close();
           } else if (typeof VideoEditorPopovers !== 'undefined' && VideoEditorPopovers.closeAll && Object.values(this.els.popovers || {}).some((p) => p && !p.classList.contains('hidden'))) {
             VideoEditorPopovers.closeAll();
-          } else if (VideoEditorBubble.isOpen && typeof VideoEditorBubble.isOpen === 'function' && VideoEditorBubble.isOpen()) {
+          } else if (typeof VideoEditorBubble !== 'undefined' && VideoEditorBubble.isOpen && typeof VideoEditorBubble.isOpen === 'function' && VideoEditorBubble.isOpen()) {
             VideoEditorBubble.close();
           } else if (this.els.helpModal && !this.els.helpModal.classList.contains('hidden')) {
             this.els.helpModal.classList.add('hidden');
-          } else if (VideoEditorInspector.els && VideoEditorInspector.els.cueInfoModal && !VideoEditorInspector.els.cueInfoModal.classList.contains('hidden')) {
+          } else if (typeof VideoEditorInspector !== 'undefined' && VideoEditorInspector.close && VideoEditorInspector.els && VideoEditorInspector.els.cueInfoModal && !VideoEditorInspector.els.cueInfoModal.classList.contains('hidden')) {
             VideoEditorInspector.close();
-          } else if (VideoEditorBurner.els && VideoEditorBurner.els.burnModal && !VideoEditorBurner.els.burnModal.classList.contains('hidden')) {
+          } else if (typeof VideoEditorBurner !== 'undefined' && VideoEditorBurner.closeModal && VideoEditorBurner.els && VideoEditorBurner.els.burnModal && !VideoEditorBurner.els.burnModal.classList.contains('hidden')) {
             VideoEditorBurner.closeModal();
           } else {
             this.exitStudioMode();
@@ -695,8 +695,18 @@
     }
 
     _openQuickTextEditor(targetCue = null, targetIdx = -1) {
-      const cue = targetCue || VideoEditorState.activeCue || (this._getNearestCue() && this._getNearestCue().cue);
-      const idx = targetIdx >= 0 ? targetIdx : (VideoEditorState.activeCueIndex >= 0 ? VideoEditorState.activeCueIndex : (this._getNearestCue() && this._getNearestCue().index));
+      let cue = targetCue || VideoEditorState.activeCue;
+      let idx = targetIdx >= 0 ? targetIdx : VideoEditorState.activeCueIndex;
+
+      if (!cue || idx < 0) {
+        const nearest = this._getNearestCue();
+        if (nearest) {
+          cue = nearest.cue;
+          idx = nearest.index;
+          VideoEditorState.setActiveCue(cue, idx);
+        }
+      }
+
       if (cue && idx >= 0) {
         if (typeof VideoEditorQuickPanel !== 'undefined' && VideoEditorQuickPanel.open) {
           VideoEditorQuickPanel.open(cue, idx);
@@ -704,7 +714,21 @@
           VideoEditorBubble.open(cue, idx);
         }
       } else {
-        VideoEditorUI.showToast('No active subtitle. Click + on Kurdish track to create one.', 'info');
+        const curMs = this.els.videoPlayer ? Math.round(this.els.videoPlayer.currentTime * 1000) : 0;
+        const newCue = VideoEditorState.addCue(curMs, curMs + 2500, 'دەقی ژێرنووسی نوێ');
+        if (this.timeline) this.timeline.setCues(VideoEditorState.getCues());
+        const cues = VideoEditorState.getCues();
+        const newIdx = cues.findIndex((c) => c === newCue);
+        const validIdx = newIdx >= 0 ? newIdx : 0;
+        VideoEditorState.setActiveCue(newCue, validIdx);
+        VideoEditorOverlay.renderActiveCue(newCue, VideoEditorState.overlayConfig);
+        VideoEditorOverlay.updateTextShower(newCue, validIdx);
+        if (typeof VideoEditorQuickPanel !== 'undefined' && VideoEditorQuickPanel.open) {
+          VideoEditorQuickPanel.open(newCue, validIdx);
+        } else if (typeof VideoEditorBubble !== 'undefined' && VideoEditorBubble.open) {
+          VideoEditorBubble.open(newCue, validIdx);
+        }
+        VideoEditorUI.showToast('ژێرنووسی نوێ دروستکرا', 'success', 'New Subtitle');
       }
     }
 

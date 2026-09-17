@@ -6,7 +6,7 @@
 (() => {
   'use strict';
 
-  const hasArabic = (str) => /[\u0600-\u06FF\u0750-\u077F\uFB50-\uFDFF\uFE70-\uFEFF]/.test(str || '');
+  const isRtlText = (str) => (!str || !str.trim() || /[\u0600-\u06FF\u0750-\u077F\uFB50-\uFDFF\uFE70-\uFEFF]/.test(str));
   const stripTags = (str) => {
     if (!str) return '';
     return str
@@ -217,6 +217,8 @@
         if (!this._hasMoved && Math.hypot(dx, dy) > 4) {
           this._hasMoved = true;
           container.classList.add('is-dragging');
+          const safeOverlay = document.getElementById('studioSafeZonesOverlay');
+          if (safeOverlay) safeOverlay.classList.remove('hidden');
         }
 
         if (!this._hasMoved) return;
@@ -231,6 +233,12 @@
         if (Math.abs(rawXPct - 50) < 2.5) {
           rawXPct = 50;
           isSnappedX = true;
+        } else if (Math.abs(rawXPct - 10) < 2.5) {
+          rawXPct = 10;
+          isSnappedX = true;
+        } else if (Math.abs(rawXPct - 90) < 2.5) {
+          rawXPct = 90;
+          isSnappedX = true;
         }
 
         let isSnappedY = false;
@@ -244,6 +252,11 @@
           rawYPct = 12;
           isSnappedY = true;
         }
+
+        if ((isSnappedX || isSnappedY) && !this._lastSnapped) {
+          window.VideoEditorHardware?.haptic(12);
+        }
+        this._lastSnapped = isSnappedX || isSnappedY;
 
         if (guideX) {
           if (isSnappedX) guideX.classList.remove('hidden');
@@ -279,7 +292,11 @@
         if (activePointers.size > 0 && (e.pointerType === 'touch' || e.touches?.length)) return;
 
         this._isDragging = false;
+        this._lastSnapped = false;
         container.classList.remove('is-dragging');
+
+        const safeOverlay = document.getElementById('studioSafeZonesOverlay');
+        if (safeOverlay) safeOverlay.classList.add('hidden');
 
         if (guideX) guideX.classList.add('hidden');
         if (guideY) guideY.classList.add('hidden');
@@ -354,14 +371,14 @@
       this._lastRenderedCueHash = renderHash;
 
       this.els.videoOverlayText.textContent = kurdishText;
-      this.els.videoOverlayText.setAttribute('dir', hasArabic(kurdishText) ? 'rtl' : 'ltr');
+      this.els.videoOverlayText.setAttribute('dir', isRtlText(kurdishText) ? 'rtl' : 'ltr');
 
       // Check if original English/source text should be displayed alongside Kurdish
       const hasOrig = Boolean(cfg.showOrig && origText.trim() && origText.trim() !== kurdishText.trim());
       if (hasOrig && this.els.videoOverlayOrig) {
         const origClean = stripTags(origText);
         this.els.videoOverlayOrig.textContent = origClean;
-        this.els.videoOverlayOrig.setAttribute('dir', hasArabic(origClean) ? 'rtl' : 'ltr');
+        this.els.videoOverlayOrig.setAttribute('dir', isRtlText(origClean) ? 'rtl' : 'ltr');
         this.els.videoOverlayOrig.classList.remove('hidden');
       } else if (this.els.videoOverlayOrig) {
         this.els.videoOverlayOrig.classList.add('hidden');
@@ -411,13 +428,25 @@
           container.classList.remove('pos-bottom', 'pos-center', 'pos-top');
         } else {
           const pos = cfg.position || 'bottom';
-          container.classList.remove('pos-bottom', 'pos-center', 'pos-top', 'pos-bottom-left', 'pos-bottom-right', 'pos-top-left', 'pos-top-right');
+          container.classList.remove('pos-bottom', 'pos-center', 'pos-top', 'pos-bottom-left', 'pos-bottom-right', 'pos-top-left', 'pos-top-right', 'pos-mid-left', 'pos-mid-right');
           if (pos === 'center') {
             container.style.left = '50%';
             container.style.right = 'auto';
             container.style.top = '50%';
             container.style.bottom = 'auto';
             container.style.transform = 'translate(-50%, -50%)';
+          } else if (pos === 'mid-left') {
+            container.style.left = '8%';
+            container.style.right = 'auto';
+            container.style.top = '50%';
+            container.style.bottom = 'auto';
+            container.style.transform = 'translateY(-50%)';
+          } else if (pos === 'mid-right') {
+            container.style.left = 'auto';
+            container.style.right = '8%';
+            container.style.top = '50%';
+            container.style.bottom = 'auto';
+            container.style.transform = 'translateY(-50%)';
           } else if (pos === 'top') {
             container.style.left = '50%';
             container.style.right = 'auto';
@@ -506,13 +535,25 @@
           container.classList.remove('pos-bottom', 'pos-center', 'pos-top');
         } else {
           const pos = config.position || 'bottom';
-          container.classList.remove('pos-bottom', 'pos-center', 'pos-top', 'pos-bottom-left', 'pos-bottom-right', 'pos-top-left', 'pos-top-right');
+          container.classList.remove('pos-bottom', 'pos-center', 'pos-top', 'pos-bottom-left', 'pos-bottom-right', 'pos-top-left', 'pos-top-right', 'pos-mid-left', 'pos-mid-right');
           if (pos === 'center') {
             container.style.left = '50%';
             container.style.right = 'auto';
             container.style.top = '50%';
             container.style.bottom = 'auto';
             container.style.transform = 'translate(-50%, -50%)';
+          } else if (pos === 'mid-left') {
+            container.style.left = '8%';
+            container.style.right = 'auto';
+            container.style.top = '50%';
+            container.style.bottom = 'auto';
+            container.style.transform = 'translateY(-50%)';
+          } else if (pos === 'mid-right') {
+            container.style.left = 'auto';
+            container.style.right = '8%';
+            container.style.top = '50%';
+            container.style.bottom = 'auto';
+            container.style.transform = 'translateY(-50%)';
           } else if (pos === 'top') {
             container.style.left = '50%';
             container.style.right = 'auto';
@@ -612,13 +653,13 @@
           if (hasOrig) {
             const safeText = text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
             const safeOrig = stripTags(cue.origText).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-            const kDir = hasArabic(text) ? 'rtl' : 'ltr';
-            const oDir = hasArabic(cue.origText) ? 'rtl' : 'ltr';
+            const kDir = isRtlText(text) ? 'rtl' : 'ltr';
+            const oDir = isRtlText(cue.origText) ? 'rtl' : 'ltr';
             this.els.textShowerText.innerHTML = `<div class="vn-shower-kurdish" dir="${kDir}">${safeText}</div><div class="vn-shower-orig" dir="${oDir}"><span class="vn-shower-orig-tag">EN</span> <span>${safeOrig}</span></div>`;
             this.els.textShowerText.setAttribute('dir', kDir);
           } else {
             this.els.textShowerText.textContent = text;
-            this.els.textShowerText.setAttribute('dir', hasArabic(text) ? 'rtl' : 'ltr');
+            this.els.textShowerText.setAttribute('dir', isRtlText(text) ? 'rtl' : 'ltr');
           }
         }
 

@@ -33,6 +33,7 @@
       this.cues = [];         // Array of subtitle cues
       this.activeCueIndex = -1;
       this.zoom = this.options.pixelsPerSecond;
+      this.userZoomed = false; // Tracks if user has actively chosen a custom zoom level
       this.isDragging = false;
       this.trackWidth = 0;
       this.hasVideo = false;
@@ -132,7 +133,13 @@
                 <div class="vn-hover-line"></div>
                 <div class="vn-hover-tooltip">00:00</div>
               </div>
+
+              <!-- Magnetic Snap Guideline -->
+              <div class="vn-snap-guide hidden" id="vnSnapGuide"></div>
             </div>
+
+            <!-- Timeline Zoom Level Floating Pill Indicator -->
+            <div class="vn-timeline-zoom-badge" id="vnZoomBadge">48 px/s</div>
           </div>
         </div>
       `;
@@ -153,7 +160,55 @@
         needleTime: this.container.querySelector('.vn-needle-time'),
         hoverIndicator: this.container.querySelector('.vn-hover-indicator'),
         hoverTooltip: this.container.querySelector('.vn-hover-tooltip'),
+        snapGuide: this.container.querySelector('#vnSnapGuide'),
+        zoomBadge: this.container.querySelector('#vnZoomBadge'),
       };
+    }
+
+    _showSnapGuide(xPx) {
+      if (this.dom.snapGuide) {
+        this.dom.snapGuide.style.left = `${Math.round(xPx)}px`;
+        this.dom.snapGuide.classList.remove('hidden');
+      }
+    }
+
+    _hideSnapGuide() {
+      if (this.dom.snapGuide) {
+        this.dom.snapGuide.classList.add('hidden');
+      }
+    }
+
+    _showZoomBadge(zoomVal) {
+      if (!this.dom.zoomBadge) return;
+      const pps = Math.round(zoomVal);
+      const pct = Math.round((zoomVal / 48) * 100);
+      this.dom.zoomBadge.textContent = `${pps} px/s · ${pct}%`;
+      this.dom.zoomBadge.classList.add('visible');
+      if (!this._zoomBadgeClickBound) {
+        this._zoomBadgeClickBound = true;
+        this.dom.zoomBadge.style.cursor = 'pointer';
+        this.dom.zoomBadge.title = 'Click to cycle zoom presets (Fit → 100% → 200% → 400%)';
+        this.dom.zoomBadge.addEventListener('click', (e) => {
+          e.stopPropagation();
+          const presets = [48, 96, 192, 384];
+          let nextZoom = presets[0];
+          for (let i = 0; i < presets.length; i++) {
+            if (this.zoom < presets[i] - 4) {
+              nextZoom = presets[i];
+              break;
+            } else if (i === presets.length - 1) {
+              this.zoomToFit(true);
+              return;
+            }
+          }
+          const focalSec = this._getAnchorFocalSec();
+          this.setZoom(nextZoom, focalSec, false, true);
+        });
+      }
+      if (this._zoomBadgeTimer) clearTimeout(this._zoomBadgeTimer);
+      this._zoomBadgeTimer = setTimeout(() => {
+        if (this.dom.zoomBadge) this.dom.zoomBadge.classList.remove('visible');
+      }, 1200);
     }
 
     _bindEvents() {
@@ -262,6 +317,7 @@
       }, { passive: true });
 
       // Mouse wheel zoom with Ctrl/Cmd or horizontal timeline scrolling (prevents scrolling outside the timeline)
+      let wheelZoomTimeout = null;
       this.dom.viewport.addEventListener('wheel', (e) => {
         e.preventDefault();
         e.stopPropagation();
@@ -269,8 +325,12 @@
           const viewportRect = this.dom.viewport.getBoundingClientRect();
           const clientOffset = e.clientX - viewportRect.left;
           const focalSec = (this.dom.viewport.scrollLeft + clientOffset) / Math.max(1, this.zoom);
-          const factor = e.deltaY < 0 ? 1.15 : 0.85;
-          this.setZoom(this.zoom * factor, focalSec);
+          const factor = Math.exp(-e.deltaY * 0.006);
+          this.setZoom(this.zoom * factor, focalSec, true, true);
+          if (wheelZoomTimeout) clearTimeout(wheelZoomTimeout);
+          wheelZoomTimeout = setTimeout(() => {
+            this.setZoom(this.zoom, focalSec, false, true);
+          }, 120);
         } else {
           // Translate vertical or horizontal wheel delta strictly into timeline horizontal scrolling
           const delta = Math.abs(e.deltaX) > Math.abs(e.deltaY) ? e.deltaX : e.deltaY;
@@ -278,12 +338,32 @@
         }
       }, { passive: false });
 
+      // Safari Trackpad Pinch Gesture API
+      let initialGestureZoom = this.zoom;
+      let gestureFocalSec = 0;
+      this.dom.viewport.addEventListener('gesturestart', (e) => {
+        e.preventDefault();
+        initialGestureZoom = this.zoom;
+        const viewportRect = this.dom.viewport.getBoundingClientRect();
+        const midX = e.clientX - viewportRect.left;
+        gestureFocalSec = (this.dom.viewport.scrollLeft + midX) / Math.max(1, this.zoom);
+      });
+      this.dom.viewport.addEventListener('gesturechange', (e) => {
+        e.preventDefault();
+        if (typeof e.scale === 'number' && e.scale > 0) {
+          this.setZoom(initialGestureZoom * e.scale, gestureFocalSec, true, true);
+        }
+      });
+      this.dom.viewport.addEventListener('gestureend', (e) => {
+        e.preventDefault();
+        this.setZoom(this.zoom, gestureFocalSec, false, true);
+      });
+
       // Multi-touch pinch-to-zoom gesture engine
       let touchPinchActive = false;
       let initialPinchDist = 0;
       let initialPinchZoom = this.zoom;
       let pinchFocalSec = 0;
-      let pinchClientOffset = 0;
 
       this.dom.viewport.addEventListener('touchstart', (e) => {
         if (e.touches.length === 2) {
@@ -296,7 +376,7 @@
           initialPinchZoom = this.zoom;
           const viewportRect = this.dom.viewport.getBoundingClientRect();
           const midX = (t1.clientX + t2.clientX) / 2;
-          pinchClientOffset = midX - viewportRect.left;
+          const pinchClientOffset = midX - viewportRect.left;
           pinchFocalSec = (this.dom.viewport.scrollLeft + pinchClientOffset) / Math.max(1, this.zoom);
         }
       }, { passive: false });
@@ -309,16 +389,48 @@
           const currentDist = Math.hypot(t2.clientX - t1.clientX, t2.clientY - t1.clientY);
           if (initialPinchDist > 8) {
             const scale = currentDist / initialPinchDist;
-            this.setZoom(initialPinchZoom * scale, pinchFocalSec);
+            this.setZoom(initialPinchZoom * scale, pinchFocalSec, true, true);
           }
         }
       }, { passive: false });
 
       const endTouchPinch = () => {
-        touchPinchActive = false;
+        if (touchPinchActive) {
+          touchPinchActive = false;
+          this.setZoom(this.zoom, pinchFocalSec, false, true);
+        }
       };
       this.dom.viewport.addEventListener('touchend', endTouchPinch, { passive: true });
       this.dom.viewport.addEventListener('touchcancel', endTouchPinch, { passive: true });
+
+      // Middle-mouse drag / Alt+drag viewport pan support
+      this.dom.viewport.addEventListener('pointerdown', (e) => {
+        if (e.button === 1 || (e.button === 0 && e.altKey && !e.target.closest('.vn-cue-pill'))) {
+          e.preventDefault();
+          let isPanning = true;
+          const panStartX = e.clientX;
+          const panScrollStart = this.dom.viewport.scrollLeft;
+          this.dom.viewport.style.cursor = 'grabbing';
+          try { this.dom.viewport.setPointerCapture(e.pointerId); } catch (_) {}
+
+          const onPanMove = (me) => {
+            if (!isPanning) return;
+            const dx = me.clientX - panStartX;
+            this.dom.viewport.scrollLeft = panScrollStart - dx;
+          };
+          const onPanUp = (ue) => {
+            isPanning = false;
+            this.dom.viewport.style.cursor = '';
+            try { this.dom.viewport.releasePointerCapture(ue.pointerId); } catch (_) {}
+            this.dom.viewport.removeEventListener('pointermove', onPanMove);
+            this.dom.viewport.removeEventListener('pointerup', onPanUp);
+            this.dom.viewport.removeEventListener('pointercancel', onPanUp);
+          };
+          this.dom.viewport.addEventListener('pointermove', onPanMove, { passive: true });
+          this.dom.viewport.addEventListener('pointerup', onPanUp);
+          this.dom.viewport.addEventListener('pointercancel', onPanUp);
+        }
+      });
 
       // Double-tap on ruler/canvas toggles between fit-to-view and detail zoom
       let lastRulerTapTime = 0;
@@ -329,11 +441,11 @@
           if (now - lastRulerTapTime < 340 && Math.abs(e.clientX - lastRulerTapX) < 45) {
             lastRulerTapTime = 0;
             if (this.zoom > 50) {
-              this.zoomToFit();
+              this.zoomToFit(true);
             } else {
               const viewportRect = this.dom.viewport.getBoundingClientRect();
               const focalSec = (this.dom.viewport.scrollLeft + (e.clientX - viewportRect.left)) / Math.max(1, this.zoom);
-              this.setZoom(80, focalSec);
+              this.setZoom(80, focalSec, false, true);
             }
           } else {
             lastRulerTapTime = now;
@@ -341,6 +453,24 @@
           }
         });
       }
+
+      // Keyboard shortcuts for timeline zoom: +/= (Zoom in), - (Zoom out), 0 or Shift+Z (Fit)
+      this._onKeyDown = (e) => {
+        const tag = (e.target && e.target.tagName) ? e.target.tagName.toLowerCase() : '';
+        if (tag === 'input' || tag === 'textarea' || (e.target && e.target.isContentEditable)) return;
+        if (e.ctrlKey || e.metaKey) return;
+        if (e.key === '+' || e.key === '=') {
+          e.preventDefault();
+          this.zoomIn();
+        } else if (e.key === '-' || e.key === '_') {
+          e.preventDefault();
+          this.zoomOut();
+        } else if (e.key === '0' || (e.shiftKey && (e.key === 'Z' || e.key === 'z'))) {
+          e.preventDefault();
+          this.zoomToFit(true);
+        }
+      };
+      window.addEventListener('keydown', this._onKeyDown);
 
       // Prevent outer page scrolling from wheel gestures inside the timeline container
       if (this.container) {
@@ -503,6 +633,11 @@
 
     setDuration(durationMs) {
       this.duration = Math.max(0, durationMs || 0);
+      if (!this.userZoomed) {
+        this.zoom = this.getMinZoom();
+      } else {
+        this.zoom = Math.max(this.getMinZoom(), Math.min(this.getMaxZoom(), this.zoom));
+      }
       this._updateDimensions();
       this._renderRuler();
       this._renderCues();
@@ -569,25 +704,41 @@
       this.updateCue(index, { text });
     }
 
+    _getAnchorFocalSec() {
+      if (!this.dom.viewport) return (this.currentTime || 0) / 1000;
+      const scrollLeft = this.dom.viewport.scrollLeft;
+      const viewWidth = this.dom.viewport.clientWidth;
+      const playheadPx = ((this.currentTime || 0) / 1000) * this.zoom;
+      // If playhead is currently inside or near the visible viewport, anchor strictly to playhead
+      if (playheadPx >= scrollLeft - 10 && playheadPx <= scrollLeft + viewWidth + 10) {
+        return (this.currentTime || 0) / 1000;
+      }
+      // Otherwise anchor to the center of the viewport
+      return (scrollLeft + viewWidth / 2) / Math.max(1, this.zoom);
+    }
+
     getMinZoom() {
       const durationSeconds = Math.max(1, (this.duration || 10000) / 1000);
       const viewportWidth = Math.max(200, (this.dom.viewport ? this.dom.viewport.clientWidth : 800) - 40);
-      // Min zoom allows fitting the whole media in the viewport (or a sensible floor)
+      // Min zoom allows fitting the whole media in the viewport with margin
       const fitZoom = viewportWidth / durationSeconds;
       return Math.max(0.5, Math.min(fitZoom, 80));
     }
 
     getMaxZoom() {
       const minZoom = this.getMinZoom();
-      return Math.max(minZoom * 6, 240);
+      return Math.max(minZoom * 12, 600);
     }
 
-    setZoom(pixelsPerSecond, focalSec = null) {
+    setZoom(pixelsPerSecond, focalSec = null, isInteractive = false, isUserInitiated = false) {
+      if (isUserInitiated) {
+        this.userZoomed = true;
+      }
       const oldZoom = this.zoom;
       const minZoom = this.getMinZoom();
       const maxZoom = this.getMaxZoom();
       const clamped = Math.max(minZoom, Math.min(maxZoom, pixelsPerSecond));
-      if (Math.abs(clamped - oldZoom) < 0.1) return;
+      if (Math.abs(clamped - oldZoom) < 0.05) return;
 
       let focalOffset = 0;
       if (focalSec !== null && this.dom.viewport) {
@@ -596,10 +747,15 @@
       }
 
       this.zoom = clamped;
+      this._showZoomBadge(clamped);
 
       this._updateDimensions();
       this._renderRuler();
-      this._renderCues();
+      if (isInteractive && this._cuePillMap.size === (this.cues ? this.cues.length : 0)) {
+        this._updateCuePositionsOnly();
+      } else {
+        this._renderCues();
+      }
       this._updatePlayhead();
 
       if (focalSec !== null && this.dom.viewport) {
@@ -608,26 +764,45 @@
       }
     }
 
-    zoomToFit() {
+    _updateCuePositionsOnly() {
+      if (!this.cues || !this.cues.length) return;
+      this.cues.forEach((cue, idx) => {
+        const pill = this._cuePillMap.get(idx);
+        if (!pill) return;
+        const startSec = (cue.start || 0) / 1000;
+        const endSec = Math.max(startSec + 0.1, (cue.end || (cue.start + 1000)) / 1000);
+        const durationSec = endSec - startSec;
+        const leftPx = startSec * this.zoom;
+        const widthPx = Math.max(16, durationSec * this.zoom);
+        pill.style.left = `${leftPx}px`;
+        pill.style.width = `${widthPx}px`;
+      });
+    }
+
+    zoomToFit(force = false) {
+      if (!force && this.userZoomed) {
+        return; // Preserve user's manual zoom setting unless explicitly forced
+      }
+      this.userZoomed = false;
       const fitZoom = this.getMinZoom();
-      this.setZoom(fitZoom);
+      this.setZoom(fitZoom, null, false, false);
       if (this.dom.viewport) {
         this.dom.viewport.scrollLeft = 0;
       }
     }
 
     zoomIn() {
-      const focalSec = (this.dom.viewport ? this.dom.viewport.scrollLeft + this.dom.viewport.clientWidth / 2 : 0) / Math.max(1, this.zoom);
-      this.setZoom(this.zoom * 1.3, focalSec);
+      const focalSec = this._getAnchorFocalSec();
+      this.setZoom(this.zoom * 1.35, focalSec, false, true);
     }
 
     zoomOut() {
-      const focalSec = (this.dom.viewport ? this.dom.viewport.scrollLeft + this.dom.viewport.clientWidth / 2 : 0) / Math.max(1, this.zoom);
-      this.setZoom(this.zoom / 1.3, focalSec);
+      const focalSec = this._getAnchorFocalSec();
+      this.setZoom(this.zoom / 1.35, focalSec, false, true);
     }
 
     resetZoom() {
-      this.zoomToFit();
+      this.zoomToFit(true);
     }
 
     setHasVideo(hasVideo, videoName = '', videoEl = null) {
@@ -870,11 +1045,11 @@
       ctx.scale(dpr, dpr);
       ctx.clearRect(0, 0, canvasWidth, height);
 
-      // Adaptive intervals based on zoom level
-      const intervals = [1, 2, 5, 10, 15, 30, 60, 120, 300, 600, 1800, 3600];
+      // Adaptive intervals based on zoom level (supports sub-second zoom down to 100ms)
+      const intervals = [0.1, 0.2, 0.5, 1, 2, 5, 10, 15, 30, 60, 120, 300, 600, 1800, 3600];
       let majorInterval = intervals[0];
       for (let i = 0; i < intervals.length; i++) {
-        if (intervals[i] * this.zoom >= 50) {
+        if (intervals[i] * this.zoom >= 52) {
           majorInterval = intervals[i];
           break;
         }
@@ -884,28 +1059,38 @@
       const startSec = Math.max(0, Math.floor((scrollLeft - 20) / this.zoom));
       const endSec = Math.min(totalSec, Math.ceil((scrollLeft + canvasWidth + 20) / this.zoom));
 
-      ctx.fillStyle = 'rgba(255, 255, 255, 0.45)';
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.65)';
       ctx.font = '10px "Inter", -apple-system, sans-serif';
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
 
-      const step = majorInterval >= 10 ? Math.max(1, Math.floor(majorInterval / 5)) : 1;
+      const step = majorInterval >= 10 ? Math.max(1, Math.floor(majorInterval / 5)) : (majorInterval < 1 ? majorInterval / 2 : 1);
 
-      for (let s = startSec - (startSec % step); s <= endSec; s += step) {
+      const numSteps = Math.ceil((endSec - startSec) / step) + 2;
+      const initialStepIdx = Math.floor(startSec / step);
+
+      for (let k = 0; k <= numSteps; k++) {
+        const s = +( (initialStepIdx + k) * step ).toFixed(2);
         if (s < 0 || s > totalSec) continue;
         const x = (s * this.zoom) - scrollLeft;
-        if (x < -20 || x > canvasWidth + 20) continue;
-        const isMajor = s % majorInterval === 0;
+        if (x < -24 || x > canvasWidth + 24) continue;
+        const isMajor = Math.abs(s % majorInterval) < 0.001 || Math.abs((s % majorInterval) - majorInterval) < 0.001;
 
         if (isMajor) {
-          const timeStr = this.formatTimecode(s * 1000, false);
+          let timeStr;
+          if (majorInterval < 1) {
+            const ms = Math.round(s * 1000);
+            timeStr = this.formatTimecode(ms, true).slice(0, -1); // e.g. 00:03.4
+          } else {
+            timeStr = this.formatTimecode(s * 1000, false);
+          }
           ctx.fillText(timeStr, x, 11);
-        } else if (this.zoom * step >= 8) {
-          ctx.fillStyle = 'rgba(255, 255, 255, 0.2)';
+        } else if (this.zoom * step >= 7) {
+          ctx.fillStyle = 'rgba(255, 255, 255, 0.25)';
           ctx.beginPath();
           ctx.arc(x, 11, 1.2, 0, Math.PI * 2);
           ctx.fill();
-          ctx.fillStyle = 'rgba(255, 255, 255, 0.45)';
+          ctx.fillStyle = 'rgba(255, 255, 255, 0.65)';
         }
       }
     }
@@ -926,7 +1111,7 @@
         const durationSec = endSec - startSec;
 
         const leftPx = startSec * this.zoom;
-        const widthPx = Math.max(12, durationSec * this.zoom);
+        const widthPx = Math.max(16, durationSec * this.zoom);
 
         const pill = document.createElement('div');
         pill.className = 'vn-cue-pill';
@@ -935,16 +1120,18 @@
         pill.style.width = `${widthPx}px`;
 
         const cleanText = (cue.text || '').replace(/<[^>]+>/g, '').replace(/\{[^}]*\}/g, '').trim();
+        const isRtl = /[\u0600-\u06FF\u0750-\u077F\uFB50-\uFDFF\uFE70-\uFEFF]/.test(cleanText);
+        if (isRtl) pill.classList.add('rtl-cue');
 
         const durText = `${durationSec.toFixed(1)}s`;
         pill.innerHTML = `
-          <div class="vn-cue-handle left-handle" data-handle="left" title="Drag to trim start time"></div>
+          <div class="vn-cue-handle left-handle" data-handle="left" title="Drag to trim start time"><span class="vn-handle-grip"></span></div>
           <div class="vn-cue-pill-inner">
             <span class="vn-cue-idx-tag">#${idx + 1}</span>
             <span class="vn-cue-text">${cleanText || 'نووسینی نوێ'}</span>
             <span class="vn-cue-dur-tag">${durText}</span>
           </div>
-          <div class="vn-cue-handle right-handle" data-handle="right" title="Drag to trim end time"></div>
+          <div class="vn-cue-handle right-handle" data-handle="right" title="Drag to trim end time"><span class="vn-handle-grip"></span></div>
         `;
         pill.title = `#${idx + 1} [${this.formatTimecode(cue.start)} → ${this.formatTimecode(cue.end)}]: ${cleanText}`;
 
@@ -1082,12 +1269,24 @@
             if (snapped && !pill._isSnapped) {
               pill._isSnapped = true;
               pill.classList.add('snapped');
+              if (handleType === 'right') {
+                this._showSnapGuide((newEnd / 1000) * this.zoom);
+              } else {
+                this._showSnapGuide((newStart / 1000) * this.zoom);
+              }
               if (window.VideoEditorHardware && window.VideoEditorHardware.haptic) {
                 window.VideoEditorHardware.haptic(15);
+              }
+            } else if (snapped && pill._isSnapped) {
+              if (handleType === 'right') {
+                this._showSnapGuide((newEnd / 1000) * this.zoom);
+              } else {
+                this._showSnapGuide((newStart / 1000) * this.zoom);
               }
             } else if (!snapped && pill._isSnapped) {
               pill._isSnapped = false;
               pill.classList.remove('snapped');
+              this._hideSnapGuide();
             }
 
             const finalLeftPx = (newStart / 1000) * this.zoom;
@@ -1103,6 +1302,7 @@
             clearHoldTimer();
             pill._isSnapped = false;
             pill.classList.remove('snapped');
+            this._hideSnapGuide();
             pill.removeEventListener('pointermove', onPointerMove);
             pill.removeEventListener('pointerup', onPointerUp);
             pill.removeEventListener('pointercancel', onPointerUp);
@@ -1186,35 +1386,44 @@
 
       popup.innerHTML = `
         <div class="vn-hold-popup-header">
-          <span class="vn-hold-popup-tag">#${idx + 1}</span>
-          <span class="vn-hold-popup-time">${this.formatTimecode(cue.start, false)} <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="vertical-align:-1px; margin:0 3px;"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg> ${this.formatTimecode(cue.end, false)}</span>
+          <div class="vn-hold-popup-title-wrap">
+            <span class="vn-hold-popup-tag">#${idx + 1}</span>
+            <span class="vn-hold-popup-time">${this.formatTimecode(cue.start, false)} <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="vertical-align:-1px; margin:0 3px;"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg> ${this.formatTimecode(cue.end, false)}</span>
+          </div>
+          <button type="button" class="vn-hold-close-btn" data-action="close" title="Close menu">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+          </button>
         </div>
-        <div class="vn-hold-popup-text" dir="ltr">${cleanText || '—'}</div>
+        <div class="vn-hold-popup-text" dir="${isArabic ? 'rtl' : 'ltr'}">${cleanText || '—'}</div>
         <div class="vn-hold-popup-actions">
-          <button type="button" class="vn-hold-btn vn-hold-btn-edit" data-action="edit" title="Edit subtitle text">
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
-            <span>Edit</span>
-          </button>
-          <button type="button" class="vn-hold-btn vn-hold-btn-split" data-action="split" title="Split cue at current playhead">
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="6" cy="6" r="3"></circle><circle cx="6" cy="18" r="3"></circle><line x1="20" y1="4" x2="8.12" y2="15.88"></line><line x1="14.47" y1="14.48" x2="20" y2="20"></line><line x1="8.12" y1="8.12" x2="12" y2="12"></line></svg>
-            <span>Split</span>
-          </button>
-          <button type="button" class="vn-hold-btn vn-hold-btn-duplicate" data-action="duplicate" title="Duplicate cue">
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
-            <span>Copy</span>
-          </button>
-          <button type="button" class="vn-hold-btn vn-hold-btn-nudge-prev" data-action="nudge-prev" title="Nudge timing -100ms">
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><polyline points="15 18 9 12 15 6"></polyline></svg>
-            <span>-0.1s</span>
-          </button>
-          <button type="button" class="vn-hold-btn vn-hold-btn-nudge-next" data-action="nudge-next" title="Nudge timing +100ms">
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><polyline points="9 18 15 12 9 6"></polyline></svg>
-            <span>+0.1s</span>
-          </button>
-          <button type="button" class="vn-hold-btn vn-hold-btn-delete" data-action="delete" title="Delete subtitle cue">
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></svg>
-            <span>Delete</span>
-          </button>
+          <div class="vn-hold-actions-row">
+            <button type="button" class="vn-hold-btn vn-hold-btn-edit" data-action="edit" title="Edit subtitle text (دەستکاری)">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
+              <span>Edit</span>
+            </button>
+            <button type="button" class="vn-hold-btn vn-hold-btn-split" data-action="split" title="Split cue at current playhead (بڕین)">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="6" cy="6" r="3"></circle><circle cx="6" cy="18" r="3"></circle><line x1="20" y1="4" x2="8.12" y2="15.88"></line><line x1="14.47" y1="14.48" x2="20" y2="20"></line><line x1="8.12" y1="8.12" x2="12" y2="12"></line></svg>
+              <span>Split</span>
+            </button>
+            <button type="button" class="vn-hold-btn vn-hold-btn-duplicate" data-action="duplicate" title="Duplicate cue (لەبەرگرتنەوە)">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+              <span>Copy</span>
+            </button>
+            <button type="button" class="vn-hold-btn vn-hold-btn-delete" data-action="delete" title="Delete subtitle cue (سڕینەوە)">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></svg>
+              <span>Delete</span>
+            </button>
+          </div>
+          <div class="vn-hold-actions-row vn-hold-nudge-row">
+            <button type="button" class="vn-hold-btn vn-hold-btn-nudge" data-action="nudge-prev" title="Shift timing earlier by -100ms">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><polyline points="15 18 9 12 15 6"></polyline></svg>
+              <span>-0.1s Earlier</span>
+            </button>
+            <button type="button" class="vn-hold-btn vn-hold-btn-nudge" data-action="nudge-next" title="Shift timing later by +100ms">
+              <span>+0.1s Later</span>
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><polyline points="9 18 15 12 9 6"></polyline></svg>
+            </button>
+          </div>
         </div>
       `;
 
@@ -1229,8 +1438,8 @@
 
       const pillLeftInCanvas = pillRect.left - scrollCanvasRect.left;
       const pillTopInCanvas = pillRect.top - scrollCanvasRect.top;
-      const popupWidth = popup.offsetWidth || 192;
-      const popupHeight = popup.offsetHeight || 98;
+      const popupWidth = popup.offsetWidth || 230;
+      const popupHeight = popup.offsetHeight || 120;
 
       let targetLeft = pillLeftInCanvas + (pillRect.width / 2) - (popupWidth / 2);
       // Clamp horizontally within viewport
@@ -1252,7 +1461,7 @@
       // Prevent click inside from closing immediately
       popup.addEventListener('pointerdown', (e) => e.stopPropagation());
 
-      popup.querySelectorAll('.vn-hold-btn').forEach((btn) => {
+      popup.querySelectorAll('.vn-hold-btn, .vn-hold-close-btn').forEach((btn) => {
         btn.addEventListener('click', (e) => {
           e.stopPropagation();
           const action = btn.dataset.action;
@@ -1416,11 +1625,20 @@
     }
 
     destroy() {
+      if (this._onKeyDown) {
+        window.removeEventListener('keydown', this._onKeyDown);
+        this._onKeyDown = null;
+      }
       this._stopEdgeAutoScroll();
       if (this._pendingSeekRaf) {
         cancelAnimationFrame(this._pendingSeekRaf);
         this._pendingSeekRaf = null;
       }
+      if (this._zoomBadgeTimer) {
+        clearTimeout(this._zoomBadgeTimer);
+        this._zoomBadgeTimer = null;
+      }
+      this._hideSnapGuide();
       this._hideCueHoldPopup();
       if (this.container) {
         this.container.innerHTML = '';

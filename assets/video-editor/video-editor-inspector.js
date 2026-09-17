@@ -6,7 +6,7 @@
 (() => {
   'use strict';
 
-  const hasArabic = (str) => /[\u0600-\u06FF\u0750-\u077F\uFB50-\uFDFF\uFE70-\uFEFF]/.test(str || '');
+  const isRtlText = (str) => (!str || !str.trim() || /[\u0600-\u06FF\u0750-\u077F\uFB50-\uFDFF\uFE70-\uFEFF]/.test(str));
   const stripTags = (str) => (str || '').replace(/<[^>]+>/g, '').replace(/\{[^}]*\}/g, '').trim();
 
   class VideoEditorInspectorController {
@@ -77,14 +77,14 @@
       if (this.els.cueInfoCharsVal) this.els.cueInfoCharsVal.textContent = charCount;
       if (this.els.cueInfoWordsVal) this.els.cueInfoWordsVal.textContent = wordCount;
 
-      const isArabic = hasArabic(cleanText);
+      const isArabic = isRtlText(cleanText);
       if (this.els.cueInfoScriptVal) {
         this.els.cueInfoScriptVal.textContent = isArabic ? 'Kurdish Sorani' : 'Latin / English';
       }
 
       if (this.els.cueInfoTextInput) {
         this.els.cueInfoTextInput.value = cleanText;
-        this.els.cueInfoTextInput.setAttribute('dir', 'ltr');
+        this.els.cueInfoTextInput.setAttribute('dir', isArabic ? 'rtl' : 'ltr');
       }
 
       if (cue.origText && this.els.cueInfoOrigText) {
@@ -100,9 +100,18 @@
     }
 
     close() {
+      if (this.activeCueIndex >= 0 && this.els && this.els.cueInfoTextInput && this.onSaveCallback && this.activeCue) {
+        const text = this.els.cueInfoTextInput.value.trim();
+        if (text !== (this.activeCue.text || '')) {
+          const updatedCue = { ...this.activeCue, text };
+          this.onSaveCallback(this.activeCueIndex, updatedCue);
+        }
+      }
       if (this.els && this.els.cueInfoModal) {
         this.els.cueInfoModal.classList.add('hidden');
       }
+      this.activeCue = null;
+      this.activeCueIndex = -1;
     }
 
     _handleSave() {

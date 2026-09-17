@@ -1,12 +1,58 @@
 /* ============================================================
    Kurdî Subtitle Translator — Video Subtitle Studio Workstation
    Zero-Scroll, 100vh Workstation Layout
-   - Clean flat styling (No gradients)
-   - Emoji icon visual cues
-   - Multi-track timeline (Music, Text, Sticker, Video, Audio)
-   - Kurdish typography overlay with live diagnostics
-   - Hardware-accelerated video export suite
+   - Professional NLE Studio Dark Theme (Graphite / Obsidian)
+   - Refined SVG iconography & typography
+   - High-precision multi-track timeline & zoom engine
+   - Broadcast safe zones & 9-point subtitle placement
+   - Hardware-accelerated video playback & burn suite
    ============================================================ */
+
+:root {
+  /* Surface & Base Hierarchy (<5% HSB saturation darks, high contrast) */
+  --vn-bg-base: #090a0f;
+  --vn-bg-panel: #10121a;
+  --vn-bg-surface: #161824;
+  --vn-bg-elevated: #1e2130;
+  --vn-bg-hover: #262a3d;
+  --vn-bg-active: #2e334a;
+
+  /* Borders & Dividers */
+  --vn-border-subtle: rgba(255, 255, 255, 0.05);
+  --vn-border: rgba(255, 255, 255, 0.10);
+  --vn-border-strong: rgba(255, 255, 255, 0.20);
+  --vn-border-focus: #3b82f6;
+
+  /* Typography Colors */
+  --vn-text-primary: #f1f3f9;
+  --vn-text-secondary: #9aa1b8;
+  --vn-text-muted: #5e657c;
+
+  /* Studio Theme Accents */
+  --vn-accent: #3b82f6;
+  --vn-accent-hover: #60a5fa;
+  --vn-accent-subtle: rgba(59, 130, 246, 0.14);
+  --vn-accent-border: rgba(59, 130, 246, 0.35);
+
+  /* Timeline & Cue Palette */
+  --vn-cue-fill: #ca8a04;
+  --vn-cue-fill-hover: #d97706;
+  --vn-cue-fill-active: #eab308;
+  --vn-cue-border: #fde047;
+  --vn-cue-text: #ffffff;
+  --vn-playhead-needle: #ef4444;
+
+  /* Track Colors */
+  --vn-track-video: #38bdf8;
+  --vn-track-audio: #34d399;
+  --vn-track-music: #a78bfa;
+  --vn-track-text: #facc15;
+
+  /* Status Colors */
+  --vn-success: #10b981;
+  --vn-danger: #f87171;
+  --vn-warning: #f59e0b;
+}
 
 /* ---------- Global Studio Mode Constraints ---------- */
 html:has(body.studio-mode),
@@ -18,8 +64,8 @@ body.studio-mode {
   overflow: hidden !important;
   margin: 0 !important;
   padding: 0 !important;
-  background-color: #09080e !important;
-  color: #e6e0e9;
+  background-color: var(--vn-bg-base) !important;
+  color: var(--vn-text-primary);
   font-family: -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", Roboto, sans-serif;
   position: fixed !important;
   top: 0 !important;
@@ -55,28 +101,6 @@ body.studio-mode main {
 }
 
 /* ---------- Studio Root Container (Zero-Scroll 100vh/100dvh Flex Column) ---------- */
-html:has(body.studio-mode),
-body.studio-mode {
-  height: 100vh !important;
-  height: 100dvh !important;
-  max-height: 100vh !important;
-  max-height: 100dvh !important;
-  width: 100vw !important;
-  max-width: 100vw !important;
-  overflow: hidden !important;
-  margin: 0 !important;
-  padding: 0 !important;
-  background-color: #09080e !important;
-  color: #e6e0e9;
-  font-family: -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", Roboto, sans-serif;
-  position: fixed !important;
-  top: 0 !important;
-  left: 0 !important;
-  right: 0 !important;
-  bottom: 0 !important;
-  box-sizing: border-box !important;
-}
-
 .vn-studio-root {
   display: flex !important;
   flex-direction: column !important;
@@ -88,7 +112,7 @@ body.studio-mode {
   width: 100vw !important;
   max-width: 100vw !important;
   overflow: hidden !important;
-  background-color: #09080e;
+  background-color: var(--vn-bg-base);
   position: relative;
   user-select: none;
   box-sizing: border-box !important;
@@ -107,6 +131,9 @@ body.studio-mode {
 .vn-transport-btn span,
 .vn-tool-btn,
 .vn-tool-btn span,
+.vn-tool-icon,
+.vn-tool-icon svg,
+.vn-tool-emoji,
 .vn-play-master-btn,
 .vn-play-icon-wrap,
 .vn-pause-icon-wrap,
@@ -880,6 +907,20 @@ body.studio-mode {
   bottom: auto;
   transform: translate(-50%, -50%);
 }
+.vn-subtitle-overlay.pos-mid-left {
+  left: 8%;
+  right: auto;
+  top: 50%;
+  bottom: auto;
+  transform: translateY(-50%);
+}
+.vn-subtitle-overlay.pos-mid-right {
+  left: auto;
+  right: 8%;
+  top: 50%;
+  bottom: auto;
+  transform: translateY(-50%);
+}
 .vn-subtitle-overlay.pos-top {
   left: 50%;
   right: auto;
@@ -900,6 +941,36 @@ body.studio-mode {
   top: 8%;
   bottom: auto;
   transform: none;
+}
+
+/* Broadcast Safe Zones Overlay (Action-Safe 95%, Title-Safe 90%) */
+.vn-safe-zones-overlay {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 20;
+  transition: opacity 0.2s ease;
+}
+
+.vn-safe-zones-overlay.hidden {
+  display: none !important;
+}
+
+.vn-safe-zone {
+  position: absolute;
+  border-radius: 4px;
+}
+
+.vn-action-safe-box {
+  inset: 2.5%;
+  border: 1px dashed rgba(56, 189, 248, 0.4);
+  box-shadow: inset 0 0 0 1px rgba(56, 189, 248, 0.08);
+}
+
+.vn-title-safe-box {
+  inset: 5%;
+  border: 1px dashed rgba(16, 185, 129, 0.5);
+  box-shadow: inset 0 0 0 1px rgba(16, 185, 129, 0.08);
 }
 
 /* Subtitle Effects */
@@ -942,12 +1013,18 @@ body.studio-mode {
   color: #ffffff;
   text-shadow: 0 2px 4px rgba(0, 0, 0, 0.9), 0 0 3px rgba(0, 0, 0, 0.95);
   white-space: pre-line;
+  direction: rtl;
+  text-align: center;
+  unicode-bidi: plaintext;
+}
+
+.vn-subtitle-text[dir="ltr"] {
   direction: ltr;
   text-align: center;
 }
 
 .vn-subtitle-text[dir="rtl"] {
-  direction: ltr;
+  direction: rtl;
   text-align: center;
 }
 
@@ -1219,8 +1296,8 @@ body.studio-mode {
 }
 
 .vn-shower-content[dir="rtl"] {
-  direction: ltr;
-  text-align: left;
+  direction: rtl;
+  text-align: right;
 }
 
 .vn-shower-cps {
@@ -1574,8 +1651,8 @@ body.studio-mode {
 }
 
 .vn-cue-pill.rtl-cue .vn-cue-text {
-  direction: ltr;
-  text-align: left;
+  direction: rtl;
+  text-align: right;
 }
 
 /* Video Empty Track State */
@@ -2224,6 +2301,19 @@ body.studio-mode {
   resize: vertical;
   outline: none;
   box-sizing: border-box;
+  direction: rtl;
+  text-align: right;
+  unicode-bidi: plaintext;
+}
+
+.cue-textarea[dir="ltr"] {
+  direction: ltr;
+  text-align: left;
+}
+
+.cue-textarea[dir="rtl"] {
+  direction: rtl;
+  text-align: right;
 }
 
 .cue-textarea:focus {
@@ -2651,12 +2741,12 @@ body.studio-mode {
     height: 30px;
   }
   .vn-aspect-select {
-    max-width: 80px;
-    padding: 0 4px 0 20px;
+    max-width: 92px;
+    padding: 0 4px 0 18px;
     font-size: 0.68rem;
   }
   .vn-aspect-icon {
-    left: 5px;
+    left: 4px;
   }
   .vn-file-badge {
     max-width: 85px;
@@ -2679,20 +2769,34 @@ body.studio-mode {
     padding: 0 6px;
   }
   .vn-timecode-wrap {
-    min-width: 90px;
+    min-width: 84px;
   }
   .vn-time-current {
     font-size: 0.68rem;
   }
   .vn-bottom-bar {
-    height: 46px;
-    padding: 0 2px;
+    height: 48px;
+    padding: 0 6px;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    justify-content: flex-start;
+    gap: 4px;
+  }
+  .vn-bottom-bar::-webkit-scrollbar {
+    display: none;
   }
   .vn-tool-btn {
-    min-width: 38px;
-    height: 40px;
-    font-size: 0.62rem;
-    padding: 0 3px;
+    flex: 0 0 auto;
+    min-width: 48px;
+    height: 42px;
+    font-size: 0.63rem;
+    padding: 0 4px;
+    white-space: nowrap;
+  }
+  .vn-empty-box {
+    padding: 8px 12px;
+    margin-bottom: 24px;
   }
 }
 
@@ -3476,8 +3580,19 @@ body.studio-mode {
   resize: vertical;
   outline: none;
   transition: border-color 0.15s ease, box-shadow 0.15s ease;
+  direction: rtl;
+  text-align: right;
+  unicode-bidi: plaintext;
+}
+
+.vn-quick-textarea[dir="ltr"] {
   direction: ltr;
   text-align: left;
+}
+
+.vn-quick-textarea[dir="rtl"] {
+  direction: rtl;
+  text-align: right;
 }
 
 .vn-quick-textarea:focus {
@@ -4211,6 +4326,32 @@ body.studio-mode {
   border-bottom: 1px solid rgba(255, 255, 255, 0.08);
 }
 
+.vn-hold-popup-title-wrap {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.vn-hold-close-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  border-radius: 4px;
+  background: transparent;
+  border: none;
+  color: rgba(255, 255, 255, 0.5);
+  cursor: pointer;
+  padding: 0;
+  transition: all 0.12s ease;
+}
+
+.vn-hold-close-btn:hover {
+  background: rgba(255, 255, 255, 0.12);
+  color: #ffffff;
+}
+
 .vn-hold-popup-tag {
   font-size: 0.68rem;
   font-weight: 700;
@@ -4244,8 +4385,22 @@ body.studio-mode {
 
 .vn-hold-popup-actions {
   display: flex;
-  align-items: center;
+  flex-direction: column;
   gap: 5px;
+}
+
+.vn-hold-actions-row {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  width: 100%;
+}
+
+.vn-hold-nudge-row .vn-hold-btn {
+  font-size: 0.65rem;
+  height: 22px;
+  background: rgba(255, 255, 255, 0.05);
+  color: rgba(255, 255, 255, 0.75);
 }
 
 .vn-hold-btn {
@@ -4253,10 +4408,10 @@ body.studio-mode {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 4px;
+  gap: 3px;
   height: 26px;
-  padding: 0 6px;
-  font-size: 0.7rem;
+  padding: 0 4px;
+  font-size: 0.68rem;
   font-weight: 600;
   border-radius: 5px;
   border: 1px solid rgba(255, 255, 255, 0.1);
@@ -4264,6 +4419,7 @@ body.studio-mode {
   color: #e2e8f0;
   cursor: pointer;
   transition: all 0.12s ease;
+  white-space: nowrap;
 }
 
 .vn-hold-btn:hover {
@@ -4293,6 +4449,16 @@ body.studio-mode {
 .vn-hold-btn-split:hover {
   background: rgba(251, 191, 36, 0.2);
   border-color: rgba(251, 191, 36, 0.4);
+}
+
+.vn-hold-btn-duplicate {
+  color: #c084fc;
+  background: rgba(192, 132, 252, 0.1);
+  border-color: rgba(192, 132, 252, 0.25);
+}
+.vn-hold-btn-duplicate:hover {
+  background: rgba(192, 132, 252, 0.2);
+  border-color: rgba(192, 132, 252, 0.4);
 }
 
 .vn-hold-btn-delete {
@@ -4325,6 +4491,11 @@ body.studio-mode {
   border-radius: 0 !important;
 }
 
+.vn-player-stage.cursor-hidden,
+.vn-player-stage.cursor-hidden * {
+  cursor: none !important;
+}
+
 .vn-player-stage:fullscreen .vn-viewport-wrapper,
 .vn-player-stage:-webkit-full-screen .vn-viewport-wrapper,
 .vn-player-stage.is-fullscreen .vn-viewport-wrapper,
@@ -4351,21 +4522,21 @@ body.studio-mode {
 
 .vn-fs-hud {
   position: absolute;
-  bottom: 24px;
+  bottom: 28px;
   left: 50%;
   transform: translateX(-50%);
   display: flex;
   align-items: center;
   gap: 12px;
-  padding: 8px 16px;
-  background: rgba(18, 15, 27, 0.88);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
-  border: 1px solid rgba(255, 255, 255, 0.15);
+  padding: 8px 18px;
+  background: rgba(15, 17, 26, 0.92);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.16);
   border-radius: 9999px;
-  box-shadow: 0 12px 36px rgba(0, 0, 0, 0.75);
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.8), 0 0 0 1px rgba(255, 255, 255, 0.05);
   z-index: 1000;
-  transition: opacity 0.3s ease, transform 0.3s ease;
+  transition: opacity 0.25s cubic-bezier(0.16, 1, 0.3, 1), transform 0.25s cubic-bezier(0.16, 1, 0.3, 1);
   pointer-events: auto;
 }
 
@@ -4375,7 +4546,7 @@ body.studio-mode {
 
 .vn-fs-hud.hud-idle {
   opacity: 0;
-  transform: translate(-50%, 12px);
+  transform: translate(-50%, 14px);
   pointer-events: none;
 }
 
@@ -4394,8 +4565,9 @@ body.studio-mode {
 }
 
 .vn-fs-hud-btn:hover {
-  background: rgba(255, 255, 255, 0.2);
+  background: rgba(255, 255, 255, 0.22);
   transform: scale(1.06);
+  border-color: rgba(255, 255, 255, 0.28);
 }
 
 .vn-fs-hud-btn:active {
@@ -4560,5 +4732,67 @@ body.studio-mode {
   padding: 4px 8px;
 }
 
+/* ---------- Magnetic Snap Guideline ---------- */
+.vn-snap-guide {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  background: #38bdf8;
+  box-shadow: 0 0 8px rgba(56, 189, 248, 0.9), 0 0 16px rgba(56, 189, 248, 0.5);
+  pointer-events: none;
+  z-index: 20;
+  transition: opacity 0.1s ease;
+}
 
+.vn-snap-guide.hidden {
+  display: none !important;
+}
+
+/* ---------- Zoom Notification Badge on Timeline ---------- */
+.vn-timeline-zoom-badge {
+  position: absolute;
+  bottom: 10px;
+  right: 14px;
+  background: rgba(18, 15, 27, 0.88);
+  backdrop-filter: blur(8px);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  color: #f1f5f9;
+  font-size: 11px;
+  font-weight: 700;
+  padding: 4px 8px;
+  border-radius: 6px;
+  pointer-events: none;
+  opacity: 0;
+  transform: translateY(4px);
+  transition: opacity 0.2s ease, transform 0.2s ease;
+  z-index: 30;
+}
+
+.vn-timeline-zoom-badge.visible {
+  opacity: 1;
+  transform: translateY(0);
+}/* ---------- Studio Mode Top Toast Notification Overrides ---------- */
+body.studio-mode #toastContainer,
+body.studio-mode .toast-container {
+  top: 14px !important;
+  bottom: auto !important;
+  left: 50% !important;
+  right: auto !important;
+  transform: translateX(-50%) !important;
+  max-width: 440px !important;
+  width: calc(100% - 24px) !important;
+  z-index: 100000 !important;
+}
+
+@media (max-width: 600px) {
+  body.studio-mode #toastContainer,
+  body.studio-mode .toast-container {
+    top: 12px !important;
+    bottom: auto !important;
+    left: 50% !important;
+    right: auto !important;
+    transform: translateX(-50%) !important;
+  }
+}
 

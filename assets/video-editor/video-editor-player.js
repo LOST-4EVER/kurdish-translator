@@ -64,6 +64,8 @@
           hud.classList.toggle('hidden', !isFs);
           if (isFs) {
             this._showFsHud();
+          } else {
+            stage.classList.remove('cursor-hidden');
           }
         }
       };
@@ -75,6 +77,11 @@
         if (document.fullscreenElement || document.webkitFullscreenElement) {
           this._showFsHud();
         }
+      });
+
+      stage.addEventListener('dblclick', (e) => {
+        if (e.target && e.target.closest('button, input, select, textarea, .vn-sub-drag-indicator, .vn-subtitle-overlay, .vn-fs-hud, .vn-empty-box')) return;
+        this.toggleFullscreen();
       });
 
       // HUD Buttons
@@ -116,6 +123,8 @@
 
     _showFsHud() {
       const hud = document.getElementById('studioFsControlsHud');
+      const stage = this.els.playerStage;
+      if (stage) stage.classList.remove('cursor-hidden');
       if (!hud) return;
       hud.classList.remove('hidden', 'hud-idle');
 
@@ -125,6 +134,7 @@
       this._fsHudIdleTimer = setTimeout(() => {
         if (document.fullscreenElement || document.webkitFullscreenElement) {
           hud.classList.add('hud-idle');
+          if (stage) stage.classList.add('cursor-hidden');
         }
       }, 2600);
     }

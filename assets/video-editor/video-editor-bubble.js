@@ -6,7 +6,7 @@
 (() => {
   'use strict';
 
-  const hasArabic = (str) => /[\u0600-\u06FF\u0750-\u077F\uFB50-\uFDFF\uFE70-\uFEFF]/.test(str || '');
+  const isRtlText = (str) => (!str || !str.trim() || /[\u0600-\u06FF\u0750-\u077F\uFB50-\uFDFF\uFE70-\uFEFF]/.test(str));
   const stripTags = (str) => (str || '').replace(/<[^>]+>/g, '').replace(/\{[^}]*\}/g, '').trim();
 
   class VideoEditorBubbleManager {
@@ -158,7 +158,7 @@
       // Populate text
       if (this.els.bubbleTextarea) {
         this.els.bubbleTextarea.value = stripTags(cue.text || '');
-        this.els.bubbleTextarea.setAttribute('dir', 'ltr');
+        this.els.bubbleTextarea.setAttribute('dir', isRtlText(cue.text) ? 'rtl' : 'ltr');
       }
 
       // Original text if present
@@ -313,6 +313,7 @@
         this.els.quickTextarea.addEventListener('input', () => {
           if (this.currentIndex < 0) return;
           const newText = this.els.quickTextarea.value;
+          this.els.quickTextarea.setAttribute('dir', isRtlText(newText) ? 'rtl' : 'ltr');
           if (window.VideoEditorState) {
             window.VideoEditorState.updateCueText(this.currentIndex, newText);
           }
@@ -579,8 +580,9 @@
       this.currentIndex = index;
 
       if (this.els.quickTextarea) {
-        this.els.quickTextarea.value = stripTags(cue.text || '');
-        this.els.quickTextarea.setAttribute('dir', 'ltr');
+        const cleanVal = stripTags(cue.text || '');
+        this.els.quickTextarea.value = cleanVal;
+        this.els.quickTextarea.setAttribute('dir', isRtlText(cleanVal) ? 'rtl' : 'ltr');
       }
 
       if (this.els.quickOrigBox && this.els.quickOrigText) {
@@ -707,6 +709,9 @@
       try {
         ta.setSelectionRange(newPos, newPos);
       } catch (_) {}
+
+      // Update dir attribute dynamically
+      ta.setAttribute('dir', isRtlText(ta.value) ? 'rtl' : 'ltr');
 
       // Trigger input event logic
       if (this.currentIndex >= 0 && window.VideoEditorState) {

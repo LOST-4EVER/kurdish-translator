@@ -55,8 +55,52 @@ const Toast = (() => {
     }
 
     const duration = opts.duration || (type === 'error' ? 4500 : 3000);
+    const safeTitle = escapeHtml(String(title || ''));
+    const safeSubtext = opts.subtext ? escapeHtml(String(opts.subtext)) : '';
+    const safeActionLabel = opts.actionLabel ? escapeHtml(String(opts.actionLabel)) : '';
 
-    // Limit active toasts to max 3 to prevent stacking and screen clutter
+    // Deduplication key
+    const dedupeKey = opts.dedupeKey || `${type}:::${String(title || '').trim()}:::${String(opts.subtext || '').trim()}`;
+
+    // Check if an identical active toast already exists - stack them together!
+    const existing = activeToasts.find((t) => !t.isDismissed && t.key === dedupeKey);
+    if (existing) {
+      existing.count = (existing.count || 1) + 1;
+      
+      // Update or create duplicate count badge
+      let badge = existing.card.querySelector('.toast-count-badge');
+      if (!badge) {
+        badge = document.createElement('span');
+        badge.className = 'toast-count-badge';
+        const titleEl = existing.card.querySelector('.toast-title');
+        if (titleEl) {
+          titleEl.appendChild(badge);
+        } else {
+          existing.card.appendChild(badge);
+        }
+      }
+      badge.textContent = `×${existing.count}`;
+      existing.card.classList.add('is-stacked');
+
+      // Trigger pop/bump animation
+      existing.card.classList.remove('toast-bump');
+      void existing.card.offsetWidth; // Force reflow
+      existing.card.classList.add('toast-bump');
+
+      // Reset progress bar animation
+      const pBar = existing.card.querySelector('.toast-progress-bar');
+      if (pBar) {
+        pBar.style.animation = 'none';
+        void pBar.offsetWidth;
+        pBar.style.animation = `toastProgress ${duration}ms linear forwards`;
+      }
+
+      // Restart dismissal timer for full duration
+      existing.restartTimer(duration);
+      return existing;
+    }
+
+    // Limit active toasts to max 3 to prevent stacking clutter
     while (activeToasts.length >= 3) {
       const oldest = activeToasts.shift();
       if (oldest && oldest.dismiss) oldest.dismiss();
@@ -67,9 +111,6 @@ const Toast = (() => {
     if (opts.subtext) toastCard.classList.add('has-subtext');
 
     const iconHtml = ICONS[type] || ICONS.info;
-    const safeTitle = escapeHtml(String(title || ''));
-    const safeSubtext = opts.subtext ? escapeHtml(String(opts.subtext)) : '';
-    const safeActionLabel = opts.actionLabel ? escapeHtml(String(opts.actionLabel)) : '';
 
     let actionBtnHtml = '';
     if (safeActionLabel) {
@@ -100,6 +141,7 @@ const Toast = (() => {
     const dismiss = () => {
       if (isDismissed) return;
       isDismissed = true;
+      toastHandle.isDismissed = true;
       clearTimeout(dismissTimer);
       const idx = activeToasts.indexOf(toastHandle);
       if (idx !== -1) activeToasts.splice(idx, 1);
@@ -110,15 +152,31 @@ const Toast = (() => {
       }, 240);
     };
 
-    const toastHandle = { dismiss, card: toastCard };
-    activeToasts.push(toastHandle);
-
     const startTimer = () => {
       isPaused = false;
       clearTimeout(dismissTimer);
       startTime = Date.now();
       dismissTimer = setTimeout(dismiss, remaining);
     };
+
+    const restartTimer = (newDuration) => {
+      isPaused = false;
+      clearTimeout(dismissTimer);
+      remaining = newDuration || duration;
+      startTime = Date.now();
+      dismissTimer = setTimeout(dismiss, remaining);
+    };
+
+    const toastHandle = {
+      dismiss,
+      card: toastCard,
+      key: dedupeKey,
+      count: 1,
+      isDismissed: false,
+      startTimer,
+      restartTimer,
+    };
+    activeToasts.push(toastHandle);
 
     const pauseTimer = () => {
       if (isPaused) return;
