@@ -34,11 +34,25 @@
     </div>
 
     <div class="vn-header-right">
-      <!-- Connect / Apply Subtitles Button -->
+      <!-- Direct App Sync Button -->
       <button type="button" class="vn-connect-btn" id="studioApplyCurrentSubsBtn" title="Sync subtitles from Kurdish translation tab">
         <span class="vn-connect-pulse"></span>
         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>
         <span id="studioSubsBadge" class="vn-subs-badge-text">Subs</span>
+      </button>
+
+      <!-- Save Session Button with Unsaved Indicator -->
+      <button type="button" class="vn-icon-btn studio-save-btn" id="studioSaveSessionBtn" title="Save changes to project (Ctrl+S)" aria-label="Save changes">
+        <span class="vn-unsaved-dot hidden" id="studioUnsavedDot" title="Unsaved changes"></span>
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path><polyline points="17 21 17 13 7 13 7 21"></polyline><polyline points="7 3 7 8 15 8"></polyline></svg>
+      </button>
+
+      <!-- Undo and Redo in Top Header Bar (Accessible on both mobile and desktop) -->
+      <button type="button" class="vn-icon-btn studio-undo-btn" id="studioTopUndoBtn" title="Undo change (Ctrl+Z)" aria-label="Undo">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><polyline points="1 4 1 10 7 10"></polyline><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"></path></svg>
+      </button>
+      <button type="button" class="vn-icon-btn studio-redo-btn" id="studioTopRedoBtn" title="Redo change (Ctrl+Y)" aria-label="Redo">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><polyline points="23 4 23 10 17 10"></polyline><path d="M20.49 15a9 9 0 1 1-2.13-9.36L23 10"></path></svg>
       </button>
 
       <!-- Sub file input for manual file choice -->
@@ -193,23 +207,23 @@
       <button type="button" class="vn-sync-pill" id="studioSyncPillBtn" title="Adjust subtitle sync timing offset">
         <span id="studioSyncOffsetDisplay">0ms</span>
       </button>
-      <!-- Timeline Zoom Controls -->
-      <div class="vn-zoom-group" style="display:flex; align-items:center; gap:2px;">
+      <!-- Timeline Zoom Controls (Hidden on compact mobile screens to keep transport uncluttered) -->
+      <div class="vn-zoom-group hidden-mobile">
         <button type="button" class="vn-icon-btn-small" id="studioZoomOutBtn" title="Zoom Out Timeline (-)" aria-label="Zoom Out">
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line><line x1="8" y1="11" x2="14" y2="11"></line></svg>
         </button>
-        <button type="button" class="vn-icon-btn-small" id="studioZoomFitBtn" title="Fit Timeline to Screen" aria-label="Fit Zoom" style="font-size:0.65rem; font-weight:700; width:auto; padding:0 4px;">
+        <button type="button" class="vn-icon-btn-small" id="studioZoomFitBtn" title="Fit Timeline to Screen" aria-label="Fit Zoom" style="font-size:0.65rem; font-weight:700; width:auto; padding:0 5px;">
           Fit
         </button>
         <button type="button" class="vn-icon-btn-small" id="studioZoomInBtn" title="Zoom In Timeline (+)" aria-label="Zoom In">
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line><line x1="11" y1="8" x2="11" y2="14"></line><line x1="8" y1="11" x2="14" y2="11"></line></svg>
         </button>
       </div>
-      <button type="button" class="vn-icon-btn-small" id="studioUndoBtn" title="Undo change" aria-label="Undo">
-        <span><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="1 4 1 10 7 10"></polyline><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"></path></svg></span>
+      <button type="button" class="vn-transport-icon-btn studio-undo-btn" id="studioUndoBtn" title="Undo change (Ctrl+Z)" aria-label="Undo">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><polyline points="1 4 1 10 7 10"></polyline><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"></path></svg>
       </button>
-      <button type="button" class="vn-icon-btn-small" id="studioRedoBtn" title="Redo change" aria-label="Redo">
-        <span><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"></polyline><path d="M20.49 15a9 9 0 1 1-2.13-9.36L23 10"></path></svg></span>
+      <button type="button" class="vn-transport-icon-btn studio-redo-btn" id="studioRedoBtn" title="Redo change (Ctrl+Y)" aria-label="Redo">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><polyline points="23 4 23 10 17 10"></polyline><path d="M20.49 15a9 9 0 1 1-2.13-9.36L23 10"></path></svg>
       </button>
     </div>
   </section>
@@ -240,6 +254,14 @@
 
   <!-- Bottom Action Toolbar -->
   <footer class="vn-bottom-bar">
+    <button type="button" class="vn-tool-btn studio-undo-btn" id="vnToolUndoBtn" title="Undo change (Ctrl+Z)">
+      <span class="vn-tool-emoji"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><polyline points="1 4 1 10 7 10"></polyline><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"></path></svg></span>
+      <span>Undo</span>
+    </button>
+    <button type="button" class="vn-tool-btn studio-redo-btn" id="vnToolRedoBtn" title="Redo change (Ctrl+Y)">
+      <span class="vn-tool-emoji"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><polyline points="23 4 23 10 17 10"></polyline><path d="M20.49 15a9 9 0 1 1-2.13-9.36L23 10"></path></svg></span>
+      <span>Redo</span>
+    </button>
     <button type="button" class="vn-tool-btn" id="vnToolAddCueBtn" title="Add new Kurdish subtitle cue at current playhead (+ Cue)">
       <span class="vn-tool-emoji"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="16"></line><line x1="8" y1="12" x2="16" y2="12"></line></svg></span>
       <span>+ Cue</span>
@@ -793,6 +815,20 @@
     </div>
     <div class="vn-popover-body">
       <div class="vn-more-menu-list">
+        <button type="button" class="vn-more-menu-item studio-undo-btn" id="vnMoreUndoBtn">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><polyline points="1 4 1 10 7 10"></polyline><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"></path></svg>
+          <div class="vn-more-item-info">
+            <span class="vn-more-item-title">Undo Change (Ctrl+Z)</span>
+            <span class="vn-more-item-desc">Revert last subtitle or timing edit</span>
+          </div>
+        </button>
+        <button type="button" class="vn-more-menu-item studio-redo-btn" id="vnMoreRedoBtn">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><polyline points="23 4 23 10 17 10"></polyline><path d="M20.49 15a9 9 0 1 1-2.13-9.36L23 10"></path></svg>
+          <div class="vn-more-item-info">
+            <span class="vn-more-item-title">Redo Change (Ctrl+Y)</span>
+            <span class="vn-more-item-desc">Reapply previously reverted edit</span>
+          </div>
+        </button>
         <button type="button" class="vn-more-menu-item" id="vnMoreImportSubBtn">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>
           <div class="vn-more-item-info">

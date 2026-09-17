@@ -709,10 +709,18 @@
   }
 
   // ---------- Subtitle editor ----------
+  const HAS_FIELD_SIZING = typeof CSS !== 'undefined' && CSS.supports && CSS.supports('field-sizing', 'content');
+
   function autoGrow(el) {
-    if (!el || el.scrollHeight === 0) return;
+    if (!el || HAS_FIELD_SIZING || el.scrollHeight === 0) return;
+    const currentHeight = el.offsetHeight;
     el.style.height = 'auto';
-    el.style.height = `${el.scrollHeight}px`;
+    const newHeight = el.scrollHeight;
+    if (Math.abs(currentHeight - newHeight) > 2) {
+      el.style.height = `${newHeight}px`;
+    } else {
+      el.style.height = `${currentHeight}px`;
+    }
   }
 
   function updateStatus() {
@@ -724,10 +732,13 @@
   }
 
   // ---------- Line-by-Line Detection & Inspector Engine ----------
+  const STRIP_TAGS_RE = /<[^>]+>|\{[^}]*\}/g;
+  const UNTRANSLATED_ENG_RE = /\b[a-zA-Z]{3,}\b/;
+  const ARABIC_LETTERS_RE = /[\u0643\u064A\u0649\u0629]/;
 
   function inspectCue(cue, textOverride) {
     const text = textOverride !== undefined ? textOverride : (cue.text || '');
-    const clean = text.replace(/<[^>]+>/g, '').replace(/\{[^}]*\}/g, '').trim();
+    const clean = text.replace(STRIP_TAGS_RE, '').trim();
     const duration = Math.max(0.1, ((cue.end || 0) - (cue.start || 0)) / 1000);
     const chars = clean.length;
     const cps = duration > 0 ? (chars / duration) : 0;
@@ -740,8 +751,8 @@
     const isTooShort = duration < 0.6;
     const isTooLong = duration > 8.0;
     const isLongLine = maxLineLen > 42;
-    const hasUntranslated = /\b[a-zA-Z]{3,}\b/.test(clean);
-    const hasArabicLetters = /[\u0643\u064A\u0649\u0629]/.test(clean);
+    const hasUntranslated = UNTRANSLATED_ENG_RE.test(clean);
+    const hasArabicLetters = ARABIC_LETTERS_RE.test(clean);
     const isDialogue = lines.some((l) => l.trim().startsWith('- ') || l.trim().startsWith('– ')) || clean.includes('\n- ');
     const hasWarning = isFast || isTooShort || isTooLong || isLongLine || hasUntranslated || hasArabicLetters;
 
@@ -898,6 +909,15 @@
     const frag = document.createDocumentFragment();
     const rows = new Array(workCues.length);
     const inputs = new Array(workCues.length);
+
+    const svgTimeSep = '<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:-1px;"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>';
+    const svgCopy = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>';
+    const svgWarn = '<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="display:inline-block; vertical-align:-1px; margin-right:3px;"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>';
+    const svgUntrans = '<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="display:inline-block; vertical-align:-1px; margin-right:3px;"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>';
+    const svgDial = '<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="display:inline-block; vertical-align:-1px; margin-right:3px;"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>';
+    const svgRetrans = '<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon></svg>';
+    const svgPolish = '<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"></path></svg>';
+
     workCues.forEach((c, i) => {
       const row = document.createElement('div');
       row.className = 'ed-row';
@@ -920,7 +940,7 @@
       time.className = 'ed-time';
       const startStr = SubParser.fmtSRT(c.start);
       const endStr = SubParser.fmtSRT(c.end);
-      time.innerHTML = `<span class="ed-time-start">${startStr}</span><span class="ed-time-sep"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:-1px;"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg></span><span class="ed-time-end">${endStr}</span>`;
+      time.innerHTML = `<span class="ed-time-start">${startStr}</span><span class="ed-time-sep">${svgTimeSep}</span><span class="ed-time-end">${endStr}</span>`;
       time.classList.toggle('hidden', !showTime);
 
       meta.appendChild(idx);
@@ -950,7 +970,7 @@
         copyBtn.className = 'ed-orig-copy-btn';
         copyBtn.title = currentUiLang === 'ckb' ? 'لەبەرگرتنەوەی دەقی سەرەکی' : 'Copy original text';
         copyBtn.setAttribute('aria-label', 'Copy original text');
-        copyBtn.innerHTML = `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>`;
+        copyBtn.innerHTML = svgCopy;
 
         origBox.appendChild(origTag);
         origBox.appendChild(origTxt);
@@ -964,7 +984,6 @@
       input.rows = Math.min(6, Math.max(1, (input.value.match(/\n/g) || []).length + 1));
       input.setAttribute('dir', dirFor(input.value));
       input.setAttribute('aria-label', `Cue ${i + 1} text`);
-      input.addEventListener('input', () => autoGrow(input));
       inputs[i] = input;
       body.appendChild(input);
 
@@ -990,10 +1009,6 @@
       metrics.appendChild(durPill);
       metrics.appendChild(cpsPill);
       metrics.appendChild(charsPill);
-
-      const svgWarn = '<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="display:inline-block; vertical-align:-1px; margin-right:3px;"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>';
-      const svgUntrans = '<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="display:inline-block; vertical-align:-1px; margin-right:3px;"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>';
-      const svgDial = '<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="display:inline-block; vertical-align:-1px; margin-right:3px;"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>';
 
       if (insp.isFast) {
         const p = document.createElement('span');
@@ -1028,14 +1043,14 @@
       retransBtn.className = 'ed-row-action-btn ed-retrans-btn';
       retransBtn.title = currentUiLang === 'ckb' ? 'وەرگێڕانەوەی ئەم دێڕە' : 'Retranslate this line';
       retransBtn.setAttribute('aria-label', 'Retranslate line');
-      retransBtn.innerHTML = `<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon></svg><span>${currentUiLang === 'ckb' ? 'وەرگێڕانەوە' : 'Retranslate'}</span>`;
+      retransBtn.innerHTML = `${svgRetrans}<span>${currentUiLang === 'ckb' ? 'وەرگێڕانەوە' : 'Retranslate'}</span>`;
 
       const polishBtn = document.createElement('button');
       polishBtn.type = 'button';
       polishBtn.className = 'ed-row-action-btn ed-polish-btn';
       polishBtn.title = currentUiLang === 'ckb' ? 'ڕێکخستنی کوردی ئەم دێڕە' : 'Polish Kurdish';
       polishBtn.setAttribute('aria-label', 'Polish Kurdish');
-      polishBtn.innerHTML = `<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"></path></svg><span>${currentUiLang === 'ckb' ? 'ڕێکخستن' : 'Polish'}</span>`;
+      polishBtn.innerHTML = `${svgPolish}<span>${currentUiLang === 'ckb' ? 'ڕێکخستن' : 'Polish'}</span>`;
 
       actions.appendChild(retransBtn);
       actions.appendChild(polishBtn);

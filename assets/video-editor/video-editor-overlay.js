@@ -96,11 +96,15 @@
       this._startYPct = 88;
       this._currentXPct = 50;
       this._currentYPct = 88;
+      this._lastRenderedCueHash = null;
+      this._lastShowerHash = null;
     }
 
     init(els, options = {}) {
       this.els = els;
       this.options = options;
+      this._lastRenderedCueHash = null;
+      this._lastShowerHash = null;
 
       this._bindGestureEvents();
     }
@@ -337,14 +341,25 @@
         return;
       }
 
+      const cfg = config || {};
       const kurdishText = stripTags(cue.text || '');
+      const origText = cue.origText || '';
+      const customPosStr = cfg.customPos ? `${cfg.customPos.xPct}_${cfg.customPos.yPct}` : '';
+      const cuePosStr = cue.pos ? `${cue.pos.x}_${cue.pos.y}` : '';
+      const renderHash = `${kurdishText}|${origText}|${cfg.showOrig}|${cfg.position}|${customPosStr}|${cuePosStr}|${cue.fontFamily || cfg.fontFamily}|${cue.color || cfg.color}|${cue.fontSize || cfg.fontSize}|${this._isDragging}`;
+
+      if (this._lastRenderedCueHash === renderHash && this.els.videoOverlayContainer && !this.els.videoOverlayContainer.classList.contains('hidden')) {
+        return;
+      }
+      this._lastRenderedCueHash = renderHash;
+
       this.els.videoOverlayText.textContent = kurdishText;
       this.els.videoOverlayText.setAttribute('dir', hasArabic(kurdishText) ? 'rtl' : 'ltr');
 
       // Check if original English/source text should be displayed alongside Kurdish
-      const hasOrig = Boolean(config && config.showOrig && cue.origText && cue.origText.trim() && cue.origText.trim() !== kurdishText.trim());
+      const hasOrig = Boolean(cfg.showOrig && origText.trim() && origText.trim() !== kurdishText.trim());
       if (hasOrig && this.els.videoOverlayOrig) {
-        const origClean = stripTags(cue.origText);
+        const origClean = stripTags(origText);
         this.els.videoOverlayOrig.textContent = origClean;
         this.els.videoOverlayOrig.setAttribute('dir', hasArabic(origClean) ? 'rtl' : 'ltr');
         this.els.videoOverlayOrig.classList.remove('hidden');
@@ -388,14 +403,14 @@
           container.style.transform = placement.hAlign === 'center' ? 'translate(-50%, -50%)' : 'translateY(-50%)';
           container.classList.remove('pos-bottom', 'pos-top');
           container.classList.add('pos-center');
-        } else if (config.customPos && typeof config.customPos.xPct === 'number' && typeof config.customPos.yPct === 'number') {
-          container.style.left = `${config.customPos.xPct}%`;
-          container.style.top = `${config.customPos.yPct}%`;
+        } else if (cfg.customPos && typeof cfg.customPos.xPct === 'number' && typeof cfg.customPos.yPct === 'number') {
+          container.style.left = `${cfg.customPos.xPct}%`;
+          container.style.top = `${cfg.customPos.yPct}%`;
           container.style.bottom = 'auto';
           container.style.transform = 'translate(-50%, -50%)';
           container.classList.remove('pos-bottom', 'pos-center', 'pos-top');
         } else {
-          const pos = config.position || 'bottom';
+          const pos = cfg.position || 'bottom';
           container.classList.remove('pos-bottom', 'pos-center', 'pos-top', 'pos-bottom-left', 'pos-bottom-right', 'pos-top-left', 'pos-top-right');
           if (pos === 'center') {
             container.style.left = '50%';
@@ -450,12 +465,12 @@
 
       // Cue-specific font and color
       if (textEl) {
-        textEl.style.fontFamily = cue.fontFamily || config.fontFamily || "'Noto Naskh Arabic', 'Vazirmatn', sans-serif";
-        textEl.style.color = cue.color || config.color || '#ffffff';
+        textEl.style.fontFamily = cue.fontFamily || cfg.fontFamily || "'Noto Naskh Arabic', 'Vazirmatn', sans-serif";
+        textEl.style.color = cue.color || cfg.color || '#ffffff';
         if (cue.fontSize) {
           textEl.style.fontSize = `clamp(0.85rem, ${(cue.fontSize / 18) * 3.2}cqi, 4.5rem)`;
         } else {
-          const baseRem = parseFloat(config.fontSize) || 1.25;
+          const baseRem = parseFloat(cfg.fontSize) || 1.25;
           textEl.style.fontSize = `clamp(0.85rem, ${baseRem * 3.2}cqi, 4.5rem)`;
         }
       }
@@ -466,6 +481,7 @@
     }
 
     clearOverlay() {
+      this._lastRenderedCueHash = null;
       if (this.els && this.els.videoOverlayContainer) {
         this.els.videoOverlayContainer.classList.add('hidden');
       }
@@ -579,6 +595,13 @@
 
     updateTextShower(cue, idx, nearestCue = null) {
       if (!this.els || !this.els.textShowerCard) return;
+
+      const showerHash = cue
+        ? `cue_${idx}_${cue.text}_${cue.origText || ''}_${cue.start}_${cue.end}`
+        : (nearestCue ? `next_${nearestCue.index}_${nearestCue.cue.text}` : 'none');
+
+      if (this._lastShowerHash === showerHash) return;
+      this._lastShowerHash = showerHash;
 
       if (cue) {
         const text = stripTags(cue.text || '');

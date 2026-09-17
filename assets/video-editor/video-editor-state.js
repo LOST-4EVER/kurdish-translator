@@ -48,6 +48,9 @@
       this.listeners = {};
       this._lastTextEditTime = 0;
       this._lastTextEditIndex = -1;
+      this.isDirty = false;
+      this.lastSavedTimestamp = Date.now();
+      this._autoSaveTimer = null;
     }
 
     on(event, cb) {
@@ -63,6 +66,60 @@
         this.listeners[event].forEach((cb) => {
           try { cb(data); } catch (e) { console.error(e); }
         });
+      }
+    }
+
+    markDirty() {
+      if (!this.isDirty) {
+        this.isDirty = true;
+        this.emit('dirtyStateChange', { isDirty: true, lastSaved: this.lastSavedTimestamp });
+      }
+      this._scheduleAutoDraftSave();
+    }
+
+    markClean() {
+      this.isDirty = false;
+      this.lastSavedTimestamp = Date.now();
+      this.emit('dirtyStateChange', { isDirty: false, lastSaved: this.lastSavedTimestamp });
+    }
+
+    _scheduleAutoDraftSave() {
+      clearTimeout(this._autoSaveTimer);
+      this._autoSaveTimer = setTimeout(() => {
+        try {
+          if (this.cues && this.cues.length) {
+            localStorage.setItem('kurdish_translator_studio_draft', JSON.stringify({
+              cues: this.cues,
+              savedAt: Date.now(),
+            }));
+          }
+        } catch (_) {}
+      }, 3000);
+    }
+
+    saveToApp() {
+      try {
+        if (typeof window._updateAppWorkCues === 'function') {
+          window._updateAppWorkCues(this.cues, true);
+        }
+        try {
+          localStorage.setItem('kurdish_translator_studio_saved', JSON.stringify({
+            cues: this.cues,
+            savedAt: Date.now(),
+          }));
+        } catch (_) {}
+
+        this.markClean();
+
+        if (typeof Toast !== 'undefined') {
+          Toast.show('Saved to Project', 'success', { subtext: `${this.cues.length} subtitle cues committed.` });
+        } else if (window.VideoEditorUI && window.VideoEditorUI.showToast) {
+          window.VideoEditorUI.showToast('Saved all changes to project', 'success');
+        }
+        return true;
+      } catch (err) {
+        console.error('saveToApp failed:', err);
+        return false;
       }
     }
 
@@ -89,6 +146,7 @@
         this.undoStack.shift();
       }
       this.redoStack = [];
+      this.markDirty();
       this._emitHistoryChange();
     }
 
@@ -565,6 +623,62 @@
 
       this.emit('cuesChange', this.cues);
       return true;
+    }
+
+    duplicateCue(index) {
+      if (index < 0 || index >= this.cues.length) return null;
+      const sourceCue = this.cues[index];
+      const cueDuration = Math.max(500, sourceCue.end - sourceCue.start);
+      const newStart = sourceCue.end + 20;
+      const newEnd = newStart + cueDuration;
+
+      const duplicatedCue = {
+        index: this.cues.length + 1,
+        start: newStart,
+        end: newEnd,
+        text: sourceCue.text,
+        origText: sourceCue.origText || '',
+      };
+
+      this.cues.splice(index + 1, 0, duplicatedCue);
+      this._reindex();
+
+      this._pushCommand({
+        type: CMD.ADD_CUE,
+        index: index + 1,
+        newCue: { ...duplicatedCue },
+      });
+
+      this.activeCueIndex = index + 1;
+      this.activeCue = this.cues[this.activeCueIndex];
+      this.emit('cuesChange', this.cues);
+      return duplicatedCue;
+    }
+
+    nudgeCue(index, deltaMs = 0) {
+      if (index < 0 || index >= this.cues.length || !deltaMs) return null;
+      const cue = this.cues[index];
+      const prevStart = cue.start;
+      const prevEnd = cue.end;
+
+      const newStart = Math.max(0, cue.start + deltaMs);
+      const duration = cue.end - cue.start;
+      const newEnd = newStart + duration;
+
+      cue.start = newStart;
+      cue.end = newEnd;
+
+      this._pushCommand({
+        type: CMD.NUDGE_TIMING,
+        index,
+        prevStart,
+        prevEnd,
+        nextStart: cue.start,
+        nextEnd: cue.end,
+      });
+
+      this.emit('cuesChange', this.cues);
+      return cue;
     }
 
     nudgeCueTiming(index, startDeltaMs = 0, endDeltaMs = 0) {

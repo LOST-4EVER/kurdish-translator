@@ -328,7 +328,40 @@ const TranslatorDict = (() => {
     ['hollow purple', 'تەقینەوەی وەنەوشەیی (هۆڵۆو پەڕپڵ)', 'Jujutsu Art', 'هێزی تێکەڵاوی گۆجۆ'],
     ['water dragon', 'ئەژدیهای ئاو', 'Anime Jutsu', 'هێرشی ئەژدیهای ئاوی'],
     ['fire dragon', 'ئەژدیهای ئاگر', 'Anime Jutsu', 'هێرشی ئاگری ئەژدیها'],
-    ['demon slayer', 'کوشندەی شەیتانەکان', 'Anime Title', 'ڕاوچی دێوەکان'],
+    ['demon slayer', 'ڕاوچیی شەیتانەکان', 'Anime Title', 'کوشندەی دێوەکان,ڕاوچی شەیتان'],
+    ['domain expansion', 'فراوانکردنی بواری دەسەڵات (دۆمەین ئێکسپانشن)', 'Jujutsu Art', 'بواری بێسنوور'],
+    ['infinite void', 'بۆشایی بێسنوور (ئینفینیت ڤۆید)', 'Jujutsu Art', 'بۆشایی ڕەها'],
+    ['malevolent shrine', 'مەزارگەی بەدکار (مەلێڤۆلێنت شراین)', 'Jujutsu Art', 'پەرستگای شەڕەنگێز'],
+    ['black flash', 'بروسکەی ڕەش (بلاک فلاش)', 'Jujutsu Art', 'لێدانی بروسکەی ڕەش'],
+    ['super saiyan', 'سوپەر سایان (جەنگاوەری زێڕین)', 'Dragon Ball', 'سایانی گۆڕاو'],
+    ['ultra instinct', 'ئۆڵترا ئینستینکت (هۆشیاریی ڕەها)', 'Dragon Ball', 'دەسەڵاتی خوداوەند'],
+    ['gear second', 'گێڕی دووەم', 'One Piece Art', 'خێرایی خوێن'],
+    ['gear fourth', 'گێڕی چوارەم (باوند مان)', 'One Piece Art', 'شێوازی لاستیکی هێرشبەر'],
+    ['gear fifth', 'گێڕی پێنجەم (خودای خۆر)', 'One Piece Art', 'ئازادی ڕەها'],
+    ['conquerors haki', 'هاکی سەرکەوتووان (پاشایان)', 'One Piece Art', 'هاکی شاهانە'],
+    ['armament haki', 'هاکی چەکداری (زریپۆش)', 'One Piece Art', 'زریپۆشی هاکی'],
+    ['observation haki', 'هاکی چاودێری (پێشبینی)', 'One Piece Art', 'پێشبینی جووڵە'],
+    ['devil fruit', 'میوەی شەیتان', 'One Piece Item', 'میوەی نەفرەتلێکراو'],
+    ['shinzou wo sasageyo', 'دڵەکانتان پێشکەش بکەن!', 'Attack on Titan', 'دڵەکانتان ببەخشن'],
+    ['survey corps', 'دەستەی گەڕان و پشکنین', 'Attack on Titan', 'فەیلەقی چاودێری'],
+    ['colossal titan', 'زەبەلاحی مەزن', 'Attack on Titan', 'تایتانی زەبەلاح'],
+    ['armored titan', 'زەبەلاحی زریپۆش', 'Attack on Titan', 'تایتانی زرێپۆش'],
+    ['attack titan', 'زەبەلاحی هێرشبەر', 'Attack on Titan', 'تایتانی هێرش'],
+    ['shadow monarch', 'پاشای سێبەرەکان', 'Solo Leveling', 'سەروەری تاریکی'],
+    ['death note', 'تێنووسی مەرگ', 'Death Note', 'دەفتەری مردن'],
+    ['stand user', 'بەکارهێنەری ستاند', 'JoJo Power', 'خاوەن هێزی ستاند'],
+    ['plus ultra', 'پڵەس ئۆڵترا (بەرەو ئەوپەڕی توانا)!', 'My Hero Academia', 'تێپەڕاندنی سنوورەکان'],
+    ['one for all', 'یەک بۆ هەمووان', 'My Hero Academia', 'هێزی کۆکراوە'],
+    ['all for one', 'هەمووان بۆ یەک', 'My Hero Academia', 'دزینی هێزەکان'],
+    ['shinra tensei', 'شینرا تێنسێی (پاڵنەری خوایی)', 'Naruto Art', 'پاڵنەری پەین'],
+    ['bansho tenin', 'بانشۆ تێنین (ڕاکێشانی گەردوونی)', 'Naruto Art', 'ڕاکێشانی پەین'],
+    ['rasenshuriken', 'ڕاسێنشوریکێن (ئەستێرەی بای چاکرا)', 'Naruto Art', 'هێرشی ڕاسێنگانی با'],
+    ['i will never give up', 'هەرگیز کۆڵ نادەم!', 'Anime Catchphrase', 'هەرگیز پاشەکشە ناکەم'],
+    ['this is my ninja way', 'ئەمە ڕێبازی نینجایی منە!', 'Anime Catchphrase', 'ڕێگای من'],
+    ['i will become the pirate king', 'من دەبمە پاشای چەتەکانی دەریا!', 'Anime Catchphrase', 'پاشای دەریا دەبم'],
+    ['witness true despair', 'تامی بێئومێدیی ڕاستەقینە بکە!', 'Anime Catchphrase', 'بێئومێدی ڕەها'],
+    ['prepare to die', 'ئامادەی مردن بە!', 'Anime Catchphrase', 'خۆت بۆ مەرگ ئامادە بکە'],
+    ['you haven’t seen anything yet', 'هێشتا هیچت نەدیوە!', 'Anime Catchphrase', 'هێشتا سەرەتایە'],
 
     // --- Expanded Conversational & Cinema Subtitle Tropes ---
     ['i love you', 'خۆشم دەوێیت', 'Romance', 'عاشقتم,خۆشەویستمی'],
@@ -1023,6 +1056,46 @@ const TranslatorDict = (() => {
     'otaku': 'هۆگری ئەنیمی',
     'jutsu': 'تەکنیک / جادووی شەڕ',
     'titan': 'دێوەزمە / تایتان',
+    'shinigami': 'دروێنەکەری ڕۆحەکان (شینیگامی)',
+    'bankai': 'بانکای (دەسەڵاتی کۆتایی شمشێر)',
+    'zanpakuto': 'زانپاکتۆ (شمشێری ڕۆح)',
+    'reiatsu': 'ڕێیاتسۆ (فشاری وزەی ڕۆحی)',
+    'rasengan': 'ڕاسێنگان (گۆی چاکرا)',
+    'rasenshuriken': 'ڕاسێنشوریکێن',
+    'chidori': 'چیدۆری (شمشێری بروسکە)',
+    'sharingan': 'شارینگان (چاوی سورینج)',
+    'byakugan': 'بیاکوگان (چاوی سپی)',
+    'rinnegan': 'ڕینێگان (چاوی گەردوونی)',
+    'amaterasu': 'ئاماتێراسو (ئاگری ڕەش)',
+    'susanoo': 'سوسانۆ (زریپۆشی خوایی)',
+    'kamehameha': 'کامێهامێها',
+    'haki': 'هاکی (هێزی ویست)',
+    'genjutsu': 'گێنجووتسو (هونەری وەهم)',
+    'ninjutsu': 'نینجووتسو',
+    'taijutsu': 'تایجووتسو',
+    'shinra': 'شینرا',
+    'hashira': 'هاشیرا (ستوونی جەنگاوەران)',
+    'tanjiro': 'تانجیرۆ',
+    'nezuko': 'نێزوکۆ',
+    'luffy': 'لوفی',
+    'zoro': 'زۆرۆ',
+    'naruto': 'ناروتۆ',
+    'sasuke': 'ساسکێ',
+    'itachi': 'ئیتاچی',
+    'kakashi': 'کاکاشی',
+    'gojo': 'گۆجۆ',
+    'sukuna': 'سوکونا',
+    'yuji': 'یوجی',
+    'megumi': 'مێگومی',
+    'nobara': 'نۆبارا',
+    'eren': 'ئێرێن',
+    'mikasa': 'میکاسا',
+    'armin': 'ئارمین',
+    'levi': 'لیڤای',
+    'ichigo': 'ئیچیگۆ',
+    'aizen': 'ئایزێن',
+    'goku': 'گۆکو',
+    'vegeta': 'ڤێجیتا',
     'bro': 'برا',
     'brother': 'برا',
     'sis': 'خوشکە',
@@ -1181,19 +1254,27 @@ const TranslatorDict = (() => {
       .replace(/([-—–]{2,})/g, '—');
   }
 
+  // Pre-compiled matchers for untranslated English replacements
+  const PRECOMPILED_UNTRANSLATED_MATCHERS = Object.entries(UNTRANSLATED_ENGLISH_MAP).map(([word, kurdishWord]) => {
+    const escaped = word.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const re = new RegExp('(^|[\\s،؛؟.,!?:;\\-—–\'"«»\\[{(<])' + escaped + '(?=[\\s،؛؟.,!?:;\\-—–\'"«»\\]})>]|$)', 'gi');
+    return { re, kurdishWord };
+  });
+
   /**
    * Clean untranslated English remnants in machine-translated subtitle lines.
    */
   function cleanUntranslatedEnglish(str) {
     if (!str || typeof str !== 'string') return '';
     let s = str;
-    // Replace isolated English title words with Kurdish equivalents using positive lookahead
-    Object.keys(UNTRANSLATED_ENGLISH_MAP).forEach((word) => {
-      const kurdishWord = UNTRANSLATED_ENGLISH_MAP[word];
-      const escaped = word.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-      const re = new RegExp('(^|[\\s،؛؟.,!?:;\\-—–\'"«»\\[{(<])' + escaped + '(?=[\\s،؛؟.,!?:;\\-—–\'"«»\\]})>]|$)', 'gi');
-      s = s.replace(re, '$1' + kurdishWord);
-    });
+    for (let i = 0; i < PRECOMPILED_UNTRANSLATED_MATCHERS.length; i++) {
+      const entry = PRECOMPILED_UNTRANSLATED_MATCHERS[i];
+      entry.re.lastIndex = 0;
+      if (entry.re.test(s)) {
+        entry.re.lastIndex = 0;
+        s = s.replace(entry.re, '$1' + entry.kurdishWord);
+      }
+    }
     return s;
   }
 

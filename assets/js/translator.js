@@ -935,10 +935,18 @@ const Translator = (() => {
         const prep = preprocessSource(p.text, srcLang, tgtLang);
         try {
           const t = await translateChunk(prep, srcLang, tgtLang, signal);
-          let norm = normalizeText(restoreNewlines(restore(t, p.toks).trim()), isArabic, useKurdishDigits);
+          let restored = restoreNewlines(restore(t.trim(), p.toks));
+          restored = cleanLeftoverTokens(restored);
+          let norm = (tgtLang === 'ckb')
+            ? postprocessSorani(restored, { kurdishDigits: useKurdishDigits })
+            : normalizeText(restored, isArabic, useKurdishDigits);
           norm = fixPlacementAndTagOrder(norm, lines[i]);
           if (norm && norm !== origNorm[i]) {
             results[i] = norm;
+            if (lines[i] && lines[i].trim()) {
+              const k = `${srcLang}:${tgtLang}:${lines[i].trim()}`;
+              setTranslationCache(k, norm);
+            }
             if (opts.onBatch) opts.onBatch(results, doneLines + k + 1, totalLines + retryTotal);
           }
         } catch {}

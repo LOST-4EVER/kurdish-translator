@@ -410,6 +410,10 @@
         window.VideoEditorHardware.releaseWakeLock('export');
       }
       this._cleanupAudioAndStreams();
+      if (this._lastExportUrl) {
+        try { URL.revokeObjectURL(this._lastExportUrl); } catch (_) {}
+        this._lastExportUrl = null;
+      }
       if (this.els && this.els.burnModal) {
         this.els.burnModal.classList.add('hidden');
       }
@@ -750,7 +754,14 @@
         const isMp4 = selectedMime.includes('mp4');
         const ext = isMp4 ? 'mp4' : 'webm';
         const blob = new Blob(this.recordedChunks, { type: selectedMime });
+
+        if (this._lastExportUrl) {
+          try { URL.revokeObjectURL(this._lastExportUrl); } catch (_) {}
+          this._lastExportUrl = null;
+        }
+
         const url = URL.createObjectURL(blob);
+        this._lastExportUrl = url;
         const originalName = VideoEditorPlayer.videoFile ? VideoEditorPlayer.videoFile.name.replace(/\.[^/.]+$/, '') : 'video';
         const exportName = `${originalName}.kurdish.subbed.${ext}`;
 

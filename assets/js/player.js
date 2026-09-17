@@ -125,6 +125,7 @@ const SubtitlePlayer = (() => {
     // Auto-fit preview text on container resize (orientation change, tab switch, window resize)
     if (typeof ResizeObserver !== 'undefined' && el.screen) {
       const ro = new ResizeObserver(() => {
+        updateScreenDimensions();
         fitText();
       });
       ro.observe(el.screen);
@@ -524,27 +525,48 @@ const SubtitlePlayer = (() => {
   const SAFE_FONT_RE = /^[a-zA-Z0-9\s,._\-']+$/;
   const SAFE_COLOR_RE = /^(#[0-9a-fA-F]{3,8}|rgba?\(\s*\d+\s*,\s*\d+\s*,\s*\d+(?:\s*,\s*[\d.]+\s*)?\)|[a-zA-Z]+)$/;
 
+  let cachedScreenW = 0;
+  let cachedScreenH = 0;
+
+  function updateScreenDimensions() {
+    if (!el.screen) return;
+    cachedScreenW = el.screen.clientWidth || 0;
+    cachedScreenH = el.screen.clientHeight || 0;
+  }
+
   function renderScreenCues(screenEl, activeList) {
     if (!screenEl) return;
 
-    let zoneTop = screenEl.querySelector('.screen-zone.pos-top');
-    let zoneMid = screenEl.querySelector('.screen-zone.pos-mid');
-    let zoneBottom = screenEl.querySelector('.screen-zone.pos-bottom');
+    let zoneTop = screenEl._zoneTop;
+    let zoneMid = screenEl._zoneMid;
+    let zoneBottom = screenEl._zoneBottom;
 
-    if (!zoneTop) {
-      zoneTop = document.createElement('div');
-      zoneTop.className = 'screen-zone pos-top';
-      screenEl.appendChild(zoneTop);
+    if (!zoneTop || !zoneTop.parentNode) {
+      zoneTop = screenEl.querySelector('.screen-zone.pos-top');
+      if (!zoneTop) {
+        zoneTop = document.createElement('div');
+        zoneTop.className = 'screen-zone pos-top';
+        screenEl.appendChild(zoneTop);
+      }
+      screenEl._zoneTop = zoneTop;
     }
-    if (!zoneMid) {
-      zoneMid = document.createElement('div');
-      zoneMid.className = 'screen-zone pos-mid';
-      screenEl.appendChild(zoneMid);
+    if (!zoneMid || !zoneMid.parentNode) {
+      zoneMid = screenEl.querySelector('.screen-zone.pos-mid');
+      if (!zoneMid) {
+        zoneMid = document.createElement('div');
+        zoneMid.className = 'screen-zone pos-mid';
+        screenEl.appendChild(zoneMid);
+      }
+      screenEl._zoneMid = zoneMid;
     }
-    if (!zoneBottom) {
-      zoneBottom = document.createElement('div');
-      zoneBottom.className = 'screen-zone pos-bottom';
-      screenEl.appendChild(zoneBottom);
+    if (!zoneBottom || !zoneBottom.parentNode) {
+      zoneBottom = screenEl.querySelector('.screen-zone.pos-bottom');
+      if (!zoneBottom) {
+        zoneBottom = document.createElement('div');
+        zoneBottom.className = 'screen-zone pos-bottom';
+        screenEl.appendChild(zoneBottom);
+      }
+      screenEl._zoneBottom = zoneBottom;
     }
 
     zoneTop.innerHTML = '';
@@ -730,8 +752,11 @@ const SubtitlePlayer = (() => {
     const textEls = el.screen.querySelectorAll('.screen-text');
     if (!textEls.length) return;
 
-    const screenW = el.screen.clientWidth;
-    const screenH = el.screen.clientHeight;
+    if (!cachedScreenW || !cachedScreenH) {
+      updateScreenDimensions();
+    }
+    const screenW = cachedScreenW;
+    const screenH = cachedScreenH;
     if (!screenW || !screenH) return;
 
     const base = Math.round(Math.min(screenW * 0.052, screenH * 0.16));

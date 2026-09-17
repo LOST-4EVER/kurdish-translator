@@ -84,6 +84,32 @@ const TranslatorOrthography = (() => {
     ['کول', 'کوڵ'], ['کوڵاو', 'کوڵاو'], ['قەل', 'قەڵ'], ['مەل', 'مەڵ']
   ];
 
+  // Pre-compiled matchers for velarized L stems
+  const PRECOMPILED_VELARIZED_L = VELARIZED_L_STEMS.map(([plain, velar]) => ({
+    re: new RegExp('(^|\\s)' + plain + '([\\u0600-\\u06ff]*)(?=\\s|$|[.,!?;:،؛؟])', 'g'),
+    velar
+  }));
+
+  // Hoisted Sets for line-splitting syntactic evaluation
+  const SPLIT_PREPOSITIONS = new Set([
+    'لە', 'بۆ', 'بە', 'بێ', 'وەک', 'وەکو', 'لەگەڵ', 'پێش', 'دوای', 'دەربارەی',
+    'لەسەر', 'لەژێر', 'لەناو', 'بەرەو', 'لای', 'تەنیشت', 'لەلایەن', 'سەبارەت',
+    'لەبەر', 'بەرامبەر', 'لەپشت', 'بەبێ'
+  ]);
+  const SPLIT_DEMONSTRATIVES = new Set(['ئەم', 'ئەو', 'ئەمە', 'ئەوە']);
+  const SPLIT_AUXILIARIES = new Set([
+    'دەبێت', 'دەبم', 'دەبیت', 'دەبین', 'دەبن', 'بوو', 'بووم', 'بوویت', 'بووین', 'بوون',
+    'نییە', 'نیم', 'نیت', 'نین', 'هەیە', 'هەم', 'هەت', 'هەن', 'دەکات', 'دەکەم',
+    'دەکەیت', 'دەکەین', 'دەکەن', 'کردووە', 'کردووم', 'کردووتە', 'بێت', 'بم', 'بیت',
+    'بین', 'بن', 'نەبوو', 'نەبووە', 'تر', 'ترین', 'دەکەوێت', 'دەڕوات'
+  ]);
+  const SPLIT_ANIME_COMPOUNDS = new Set([
+    'فراوانکردنی:دۆمەین', 'سوپەر:سایان', 'گێڕی:پێنجەم', 'گێڕی:دووەم', 'گێڕی:چوارەم',
+    'هەناسەدانی:ئاو', 'هەناسەدانی:خۆر', 'تێنووسی:مەرگ', 'دەستەی:گەڕان', 'ڕاوچیی:شەیتانەکان',
+    'تەکنیکی:نەفرەتلێکراو', 'وزەی:نەفرەت', 'پاڵنەری:خوایی', 'ڕاکێشانی:گەردوونی', 'دۆمەینی:سادە',
+    'پاشای:سێبەرەکان', 'پاشای:نەفرەتەکان', 'بروسکەی:ڕەش', 'بروسکەی:چیدۆری', 'هێرشی:ڕاسێنگان'
+  ]);
+
   /** Normalize Arabic characters into Kurdish Sorani alphabet & orthography. */
   function normalizeSoraniAlphabet(str) {
     if (!str) return '';
@@ -119,10 +145,11 @@ const TranslatorOrthography = (() => {
       .replace(/سپاس/g, 'سوپاس');
 
     // Velarized L (ڵ) corrections
-    VELARIZED_L_STEMS.forEach(([plain, velar]) => {
-      const re = new RegExp('(^|\\s)' + plain + '([\\u0600-\\u06ff]*)(?=\\s|$|[.,!?;:،؛؟])', 'g');
-      s = s.replace(re, '$1' + velar + '$2');
-    });
+    for (let i = 0; i < PRECOMPILED_VELARIZED_L.length; i++) {
+      const item = PRECOMPILED_VELARIZED_L[i];
+      item.re.lastIndex = 0;
+      s = s.replace(item.re, '$1' + item.velar + '$2');
+    }
 
     return s;
   }
@@ -388,6 +415,45 @@ const TranslatorOrthography = (() => {
     [/قسەی لەسەر مەکە/g, 'باسی مەکە'],
     [/هێرشی ڕاسێنگان/g, 'ڕاسێنگان'],
     [/بروسکەی چیدۆری/g, 'چیدۆری'],
+    // Anime & Iconic Shonen Battle Dialogue
+    [/سەمای خودای ئاگرین/g, 'سەمای خودای ئاگر (هینۆکامی کاگورا)'],
+    [/دەستەی ڕاوکەرانی دێو|ڕاوکەرانی شەیتان/g, 'دەستەی ڕاوچیی شەیتانەکان'],
+    [/هاشیرای ستوون/g, 'هاشیرا'],
+    [/هێزی شاراوەی بانکای/g, 'بانکای'],
+    [/شەپۆلی ڕووناکی مانگ/g, 'گێتسوگا تێنشۆ'],
+    [/گۆی خولاوەی چاکرا/g, 'ڕاسێنگان'],
+    [/شمشێری هەزار چۆلەکە/g, 'چیدۆری'],
+    [/ئاگری ڕەشی بێکوژانەوە/g, 'ئاماتێراسو'],
+    [/زریپۆشی گەورەی سوسانۆ/g, 'سوسانۆ'],
+    [/پاڵنەری خوایی شینرا/g, 'شینرا تێنسێی'],
+    [/ڕاکێشانی گەردوونی بانشۆ/g, 'بانشۆ تێنین'],
+    [/تەقینەوەی وەنەوشەیی هۆڵۆو/g, 'هۆڵۆو پەڕپڵ'],
+    [/بۆشایی بێسنووری ئینفینیت/g, 'ئینفینیت ڤۆید'],
+    [/مەزارگەی بەدکاری سوکونا/g, 'مەلێڤۆلێنت شراین'],
+    [/هاکی سەرکەوتووان|هاکی پاشایان/g, 'هاکی سەرکەوتووان (پاشایان)'],
+    [/هاکی زریپۆش/g, 'هاکی چەکداری'],
+    [/هاکی پێشبینی/g, 'هاکی چاودێری'],
+    [/میوەی لاستیکی گۆمو/g, 'گۆمو گۆمو نۆ'],
+    [/جەنگاوەری زێڕینی سایان/g, 'سوپەر سایان'],
+    [/پاشای دەریا دەبم|دەبمە پاشای چەتەکان/g, 'دەبمە پاشای چەتەکانی دەریا!'],
+    [/دەبمە پێشەوای هۆکاگێ/g, 'دەبمە هۆکاگێ!'],
+    [/هەرگیز پاشەکشە ناکەم لە وتەکەم/g, 'ئەمە ڕێبازی نینجایی منە!'],
+    [/تامی بێئومێدی بکە/g, 'تامی بێئومێدیی ڕاستەقینە بکە!'],
+    [/شایەتحاڵی هێز بە/g, 'شایەتحاڵی هێزی ڕاستەقینە بە!'],
+    [/هێشتا هیچت نەدیوە/g, 'هێشتا هیچت نەدیوە!'],
+    [/هێزی تەواوم نەبینیوە|شێوازی کۆتاییمت نەدیوە/g, 'هێشتا شێوازی کۆتاییمت نەدیوە!'],
+    [/دەستکەمم مەگرە|مەمخەرە ژێر پرسیار/g, 'دەستکەمم مەگرە!'],
+    [/بە هەر نرخێک بێت دەتپارێزم/g, 'بە هەر نرخێک بێت دەتپارێزم!'],
+    [/کۆڵ مەدە تانجیرۆ/g, 'کۆڵ مەدە!'],
+    [/دڵەکانتان پێشکەش بە ئازادی بکەن/g, 'دڵەکانتان پێشکەش بکەن!'],
+    [/هەستەوە ئەی سێبەر|هەستەوە سوپای سێبەر/g, 'هەستەوە!'],
+    [/ئەمە هێزی ستاندەکەمە/g, 'ئەمە هێزی ستاندەکەمە!'],
+    [/کات بوەستە!|کات بوەستێنە/g, 'زە وۆڕڵد، کات بوەستە!'],
+    [/هەزار جار نەفرەتت لێ بێت/g, 'هەزار جار نەفرەتت لێ بێت!'],
+    [/تۆ ڕکابەرێکی شایستە بوویت/g, 'ڕکابەرێکی شایستە بوویت!'],
+    [/بە ئارامی بنوو جەنگاوەر/g, 'بە ئارامی بنوو'],
+    [/ئەمە کۆتایی ڕێگاکەیە/g, 'ئەمە کۆتاییەکەیە!'],
+    [/هەمووتان پێکەوە وەرن|ڕووبەڕووی هەمووتان دەبمەوە/g, 'ڕووبەڕووی هەمووتان دەبمەوە!'],
     // Kurdish spoken idioms & natural phrasing
     [/لەگەڵ من(?=\s|$|[.,!?;:،؛؟])/g, 'لەگەڵم'],
     [/لەگەڵ تۆ(?=\s|$|[.,!?;:،؛؟])/g, 'لەگەڵت'],
@@ -501,8 +567,9 @@ const TranslatorOrthography = (() => {
     if (!tokens || !tokens.length) return str;
 
     const verbalPrefixes = new Set(['دە', 'ئە', 'نا', 'نە', 'مە', 'بی', 'ب', 'تێ', 'ڕێ', 'پێ', 'وەر', 'دەر', 'دا', 'هەڵ', 'ھەڵ', 'لێ']);
-    const prepositions = new Set(['لەگەڵ', 'بۆ', 'پێ', 'لێ', 'تێ', 'دەربارەی', 'لەبەر']);
-    const nounSuffixes = new Set(['تر', 'ترین', 'ەوە', 'یش', 'مان', 'تان', 'یان', 'ەکەم', 'ەکەت', 'ەکەی', 'ەکەمان', 'ەکەتان', 'ەکەیان', 'ەکان', 'ەکانمان', 'ەکانتان', 'ەکانویان', 'ەکە']);
+    const objectPrefixes = new Set(['دەم', 'دەت', 'دەی', 'دەمان', 'دەتان', 'دەیان', 'نام', 'نات', 'نای', 'نامان', 'ناتان', 'نایان', 'نەم', 'نەت', 'نەی', 'نەمان', 'نەتان', 'نەیان', 'بم', 'بت', 'بی', 'بمان', 'بتان', 'بیان', 'مەم', 'مەت', 'مەی']);
+    const prepositions = new Set(['لەگەڵ', 'بۆ', 'پێ', 'لێ', 'تێ', 'دەربارەی', 'لەبەر', 'لەناو', 'لەسەر', 'لەژێر', 'بەرامبەر', 'لەلایەن', 'بەبێ', 'بێ']);
+    const nounSuffixes = new Set(['تر', 'ترین', 'ەوە', 'یش', 'مان', 'تان', 'یان', 'ەکەم', 'ەکەت', 'ەکەی', 'ەکەمان', 'ەکەتان', 'ەکەیان', 'ەکان', 'ەکانمان', 'ەکانتان', 'ەکانویان', 'ەکە', 'یە', 'یەکە', 'یەکەم', 'یەکەت', 'یەکەی']);
 
     for (let i = 0; i < tokens.length; i++) {
       const cur = tokens[i];
@@ -538,18 +605,28 @@ const TranslatorOrthography = (() => {
         else if (nextToken === 'ئەوان') clitic = 'یان';
 
         if (clitic) {
-          tokens[i] = cur + clitic;
+          tokens[i] = (cur.endsWith('ە') || cur.endsWith('ی')) ? (cur.slice(0, -1) + clitic) : (cur + clitic);
           tokens[nextIdx] = '';
           for (let s = i + 1; s < nextIdx; s++) tokens[s] = '';
           continue;
         }
       }
 
-      // Rule 2: Verbal prefix fusion (e.g. دە + زانم -> دەزانم, نا + کەم -> ناکەم, ب + ڕۆین -> بڕۆین)
+      // Rule 2: Direct-Object Enclitic Prefixes on Verbs (e.g. دەت + بینم -> دەتبینم, دەم + کوژێت -> دەمکوژێت)
+      if (objectPrefixes.has(cur) && nextIdx !== -1 && !/^[.,!?;:،؛؟]/.test(nextToken)) {
+        if (/^(?:بین|زان|کوژ|شکێن|هێن|بڕ|پارێز|ترس|وەست|گەڕ|ناس|بیست|کڕ|فرۆش|خوێن|بژێر)/.test(nextToken)) {
+          tokens[i] = cur + nextToken;
+          tokens[nextIdx] = '';
+          for (let s = i + 1; s < nextIdx; s++) tokens[s] = '';
+          continue;
+        }
+      }
+
+      // Rule 3: Verbal prefix fusion (e.g. دە + زانم -> دەزانم, نا + کەم -> ناکەم, ب + ڕۆین -> بڕۆین)
       if (verbalPrefixes.has(cur) && nextIdx !== -1 && !/^[.,!?;:،؛؟]/.test(nextToken)) {
         if (cur === 'ب') {
           // Subjunctive prefix 'ب' attaches only to verb roots
-          if (/^(?:ڕۆ|رۆ|چ|کە|زان|بین|د|خ|خوێن|گر|کڕ|فرۆش|هێن|ژ|مر|بەخش|نووس|ترس|وەست|گەڕ|سەیر)/.test(nextToken)) {
+          if (/^(?:ڕۆ|رۆ|چ|کە|زان|بین|د|خ|خوێن|گر|کڕ|فرۆش|هێن|ژ|مر|بەخش|نووس|ترس|وەست|گەڕ|سەیر|کوژ|پارێز|فڕ)/.test(nextToken)) {
             tokens[i] = 'ب' + nextToken;
             tokens[nextIdx] = '';
             for (let s = i + 1; s < nextIdx; s++) tokens[s] = '';
@@ -563,7 +640,7 @@ const TranslatorOrthography = (() => {
         }
       }
 
-      // Rule 3: Noun Suffix fusion (e.g. گەورە + تر -> گەورەتر, کتێب + ەکان -> کتێبەکان)
+      // Rule 4: Noun Suffix fusion (e.g. گەورە + تر -> گەورەتر, کتێب + ەکان -> کتێبەکان)
       if (nounSuffixes.has(cur) && prevIdx !== -1 && !/^[.,!?;:،؛؟]/.test(prevToken)) {
         tokens[prevIdx] = tokens[prevIdx] + cur;
         tokens[i] = '';
@@ -571,7 +648,7 @@ const TranslatorOrthography = (() => {
         continue;
       }
 
-      // Rule 4: Isolated Izafe linker correction (e.g. کتێب + ی + من -> کتێبی من)
+      // Rule 5: Isolated Izafe linker correction (e.g. کتێب + ی + من -> کتێبی من)
       if ((cur === 'ی' || cur === 'یی') && prevIdx !== -1 && !/^[.,!?;:،؛؟]/.test(prevToken)) {
         tokens[prevIdx] = tokens[prevIdx] + cur;
         tokens[i] = '';
@@ -600,7 +677,10 @@ const TranslatorOrthography = (() => {
            .replace(/\?/g, '؟')
            .replace(/\s+([،؛؟.!])/g, '$1')
            .replace(/\n\s*([،؛؟.!])/g, '$1')
-           .replace(/([،؛؟])([^\s\n])/g, '$1 $2')
+           .replace(/([،؛؟])\s*([،؛؟])/g, '$1')
+           .replace(/([!])\s*([!])/g, '$1')
+           .replace(/([.؛،])\s*([؟!])/g, '$2')
+           .replace(/([،؛؟])([^\s\n،؛؟.!])/g, '$1 $2')
            .replace(/[ \t]{2,}/g, ' ')
            .trim();
     }
@@ -671,7 +751,7 @@ const TranslatorOrthography = (() => {
 
   /**
    * Intelligently split an overly long single-line Kurdish subtitle into two balanced lines.
-   * Handles speaker dialogue hyphens, conjunctions, and punctuation.
+   * Protects prepositions, demonstratives, anime compounds, and auxiliary verbs from unnatural cuts.
    */
   function splitLongKurdishLine(text, maxLineChars = 38) {
     if (!text || typeof text !== 'string') return '';
@@ -694,17 +774,35 @@ const TranslatorOrthography = (() => {
 
     for (let i = 0; i < words.length - 1; i++) {
       runningCharCount += words[i].length + 1;
+      const currentWord = words[i];
       const nextWord = words[i + 1];
       const distance = Math.abs(runningCharCount - midChar);
 
-      const hasComma = words[i].endsWith('،') || words[i].endsWith(',') || words[i].endsWith('؛') || words[i].endsWith(';');
+      const hasClauseComma = /[،؛,]$/.test(currentWord);
+      const hasTerminalPunct = /[؟!?!.]$/.test(currentWord);
       const hasSpeakerDash = /^[-—–]/.test(nextWord);
-      const isConjunction = /^(وە|کە|چونکە|بەڵام|بۆیە|لەبەرئەوەی|یان|تەنانەت|ئەگەر|کاتێک|تاوەکو|ئاخۆ|لەگەڵ)$/.test(nextWord);
+      const isStrongConjunction = /^(چونکە|بەڵام|بۆیە|لەبەرئەوەی|تەنانەت|ئەگەر|کاتێک|تاوەکو|ئاخۆ|چونکەی)$/.test(nextWord);
+      const isMildConjunction = /^(کە|وە|یان)$/.test(nextWord);
 
       let weight = distance;
-      if (hasSpeakerDash) weight -= 20;
-      if (hasComma) weight -= 12;
-      if (isConjunction) weight -= 8;
+
+      // Positive syntactic break bonuses
+      if (hasSpeakerDash) weight -= 30;
+      if (hasTerminalPunct) weight -= 22;
+      if (hasClauseComma) weight -= 16;
+      if (isStrongConjunction) weight -= 14;
+      if (isMildConjunction) weight -= 8;
+
+      // Negative penalties to prevent awkward cuts
+      if (SPLIT_PREPOSITIONS.has(currentWord)) weight += 35;
+      if (SPLIT_DEMONSTRATIVES.has(currentWord)) weight += 30;
+      if (SPLIT_AUXILIARIES.has(nextWord)) weight += 26;
+      if (currentWord === 'و' || nextWord === 'و' || nextWord === 'ی' || currentWord.endsWith('ـ')) weight += 40;
+      if (SPLIT_ANIME_COMPOUNDS.has(`${currentWord}:${nextWord}`)) weight += 50;
+
+      // Avoid single-word dangling orphans at either end
+      if (i === 0 && currentWord.length < 8) weight += 18;
+      if (i === words.length - 2 && nextWord.length < 10) weight += 18;
 
       if (weight < minDistance) {
         minDistance = weight;

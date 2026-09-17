@@ -186,7 +186,11 @@
   line-height: 1.5;
   max-width: 90%;
   word-wrap: break-word;
-  overflow-wrap: anywhere;
+  overflow-wrap: break-word;
+  word-break: normal;
+  line-break: strict;
+  hyphens: none;
+  -webkit-hyphens: none;
   white-space: pre-wrap;
   text-shadow: 0 2px 6px rgba(0, 0, 0, 0.98), 0 0 16px rgba(0, 0, 0, 0.85);
   transition: font-size 0.15s ease;

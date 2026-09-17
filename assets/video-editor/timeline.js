@@ -630,20 +630,139 @@
       this.zoomToFit();
     }
 
-    setHasVideo(hasVideo, videoName = '') {
+    setHasVideo(hasVideo, videoName = '', videoEl = null) {
       this.hasVideo = !!hasVideo;
       this.videoName = videoName || '';
+      this._videoSourceEl = videoEl;
       if (this.dom.videoClipBox) {
         if (this.hasVideo) {
           this.dom.videoClipBox.classList.remove('hidden');
           if (this.dom.videoEmptyTrack) this.dom.videoEmptyTrack.classList.add('hidden');
           if (this.dom.clipTitle) this.dom.clipTitle.textContent = this.videoName || 'Video Track';
+          this._generateFilmstripThumbnails();
         } else {
           this.dom.videoClipBox.classList.add('hidden');
           if (this.dom.videoEmptyTrack) this.dom.videoEmptyTrack.classList.remove('hidden');
+          this._clearFilmstripThumbnails();
         }
       }
       this._updateDimensions();
+    }
+
+    _clearFilmstripThumbnails() {
+      if (this._activeFilmstripVideo) {
+        try {
+          this._activeFilmstripVideo.pause();
+          this._activeFilmstripVideo.src = '';
+          this._activeFilmstripVideo.load();
+        } catch (_) {}
+        this._activeFilmstripVideo = null;
+      }
+      if (this.dom.filmstripFrames) {
+        const title = this.dom.clipTitle;
+        this.dom.filmstripFrames.innerHTML = '';
+        if (title) this.dom.filmstripFrames.appendChild(title);
+      }
+      this._filmstripThumbnails = [];
+    }
+
+    _generateFilmstripThumbnails() {
+      this._clearFilmstripThumbnails();
+      if (!this.hasVideo || !this.duration || this.duration <= 0) return;
+      const container = this.dom.filmstripFrames;
+      if (!container) return;
+
+      const video = this._videoSourceEl || (window.VideoEditorPlayer && window.VideoEditorPlayer.els ? window.VideoEditorPlayer.els.videoPlayer : null);
+      if (!video || !video.src) return;
+
+      const durationSec = this.duration / 1000;
+      if (durationSec <= 0) return;
+
+      const numThumbnails = Math.min(16, Math.max(4, Math.floor((this.trackWidth || 800) / 100)));
+      const intervalSec = durationSec / numThumbnails;
+
+      // Create a single high-performance canvas to avoid DOM explosion and base64 memory bloat
+      const stripCanvas = document.createElement('canvas');
+      stripCanvas.className = 'vn-filmstrip-canvas';
+      stripCanvas.style.cssText = 'position:absolute; inset:0; width:100%; height:100%; pointer-events:none; opacity:0.65; border-radius:3px; object-fit:cover;';
+      const dpr = Math.min(2, window.devicePixelRatio || 1);
+      const canvasW = Math.min(2048, Math.round((this.trackWidth || 800) * dpr));
+      const canvasH = Math.round(36 * dpr);
+      stripCanvas.width = canvasW;
+      stripCanvas.height = canvasH;
+
+      const ctx = stripCanvas.getContext('2d');
+      if (!ctx) return;
+
+      const title = this.dom.clipTitle;
+      container.innerHTML = '';
+      container.appendChild(stripCanvas);
+      if (title) container.appendChild(title);
+
+      const offVideo = document.createElement('video');
+      this._activeFilmstripVideo = offVideo;
+      offVideo.muted = true;
+      offVideo.playsInline = true;
+      offVideo.crossOrigin = 'anonymous';
+      offVideo.preload = 'metadata';
+      offVideo.src = video.src;
+
+      let currentIdx = 0;
+      const thumbW = canvasW / numThumbnails;
+
+      const cleanup = () => {
+        if (this._activeFilmstripVideo === offVideo) {
+          this._activeFilmstripVideo = null;
+        }
+        try {
+          offVideo.src = '';
+          offVideo.load();
+        } catch (_) {}
+      };
+
+      const captureNext = () => {
+        if (currentIdx >= numThumbnails || !this.hasVideo || this._activeFilmstripVideo !== offVideo) {
+          cleanup();
+          return;
+        }
+        const targetTime = Math.min(durationSec - 0.05, currentIdx * intervalSec);
+        try {
+          offVideo.currentTime = targetTime;
+        } catch (_) {
+          cleanup();
+        }
+      };
+
+      const onSeeked = () => {
+        if (this._activeFilmstripVideo !== offVideo) {
+          cleanup();
+          return;
+        }
+        try {
+          const destX = currentIdx * thumbW;
+          ctx.drawImage(offVideo, destX, 0, thumbW, canvasH);
+          ctx.strokeStyle = 'rgba(0, 0, 0, 0.35)';
+          ctx.lineWidth = 1;
+          ctx.beginPath();
+          ctx.moveTo(destX + thumbW, 0);
+          ctx.lineTo(destX + thumbW, canvasH);
+          ctx.stroke();
+        } catch (_) {}
+        currentIdx++;
+        captureNext();
+      };
+
+      offVideo.addEventListener('seeked', onSeeked, { passive: true });
+      offVideo.addEventListener('error', () => cleanup(), { once: true });
+      offVideo.addEventListener('loadeddata', () => {
+        captureNext();
+      }, { once: true });
+
+      try {
+        offVideo.load();
+      } catch (_) {
+        cleanup();
+      }
     }
 
     setAudioData(audioData) {
@@ -1080,6 +1199,18 @@
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="6" cy="6" r="3"></circle><circle cx="6" cy="18" r="3"></circle><line x1="20" y1="4" x2="8.12" y2="15.88"></line><line x1="14.47" y1="14.48" x2="20" y2="20"></line><line x1="8.12" y1="8.12" x2="12" y2="12"></line></svg>
             <span>Split</span>
           </button>
+          <button type="button" class="vn-hold-btn vn-hold-btn-duplicate" data-action="duplicate" title="Duplicate cue">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+            <span>Copy</span>
+          </button>
+          <button type="button" class="vn-hold-btn vn-hold-btn-nudge-prev" data-action="nudge-prev" title="Nudge timing -100ms">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><polyline points="15 18 9 12 15 6"></polyline></svg>
+            <span>-0.1s</span>
+          </button>
+          <button type="button" class="vn-hold-btn vn-hold-btn-nudge-next" data-action="nudge-next" title="Nudge timing +100ms">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><polyline points="9 18 15 12 9 6"></polyline></svg>
+            <span>+0.1s</span>
+          </button>
           <button type="button" class="vn-hold-btn vn-hold-btn-delete" data-action="delete" title="Delete subtitle cue">
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></svg>
             <span>Delete</span>
@@ -1138,6 +1269,18 @@
           } else if (action === 'split') {
             if (typeof this.options.onCueSplit === 'function') {
               this.options.onCueSplit(cue, idx);
+            }
+          } else if (action === 'duplicate') {
+            if (typeof this.options.onCueDuplicate === 'function') {
+              this.options.onCueDuplicate(cue, idx);
+            }
+          } else if (action === 'nudge-prev') {
+            if (typeof this.options.onCueNudge === 'function') {
+              this.options.onCueNudge(cue, idx, -100);
+            }
+          } else if (action === 'nudge-next') {
+            if (typeof this.options.onCueNudge === 'function') {
+              this.options.onCueNudge(cue, idx, 100);
             }
           }
         });

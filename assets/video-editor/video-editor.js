@@ -239,6 +239,25 @@
           VideoEditorOverlay.updateTextShower(activeCue, activeIdx);
         }
       });
+
+      // 12. Centralized listener for undoRedoChange
+      VideoEditorState.on('undoRedoChange', (info) => {
+        if (typeof VideoEditorUI !== 'undefined' && VideoEditorUI.updateUndoRedoUI) {
+          VideoEditorUI.updateUndoRedoUI(info.canUndo, info.canRedo);
+        }
+      });
+
+      // 13. Centralized listener for dirty/unsaved state
+      VideoEditorState.on('dirtyStateChange', (info) => {
+        const dot = document.getElementById('studioUnsavedDot');
+        if (dot) {
+          dot.classList.toggle('hidden', !info.isDirty);
+        }
+        const saveBtn = document.getElementById('studioSaveSessionBtn');
+        if (saveBtn) {
+          saveBtn.classList.toggle('has-unsaved', !!info.isDirty);
+        }
+      });
       this._syncOrigToggleUI();
 
       this.isInitialized = true;
@@ -476,13 +495,21 @@
         this.els.stepForwardBtn.addEventListener('click', () => this._stepCue(1));
       }
 
-      // Undo / Redo
-      if (this.els.undoBtn) {
-        this.els.undoBtn.addEventListener('click', () => this.undo());
-      }
-      if (this.els.redoBtn) {
-        this.els.redoBtn.addEventListener('click', () => this.redo());
-      }
+      // Undo / Redo across all surfaces (Top Header, Transport Bar, Bottom Toolbar, More Menu)
+      document.querySelectorAll('.studio-undo-btn').forEach((btn) => {
+        btn.addEventListener('click', (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          this.undo();
+        });
+      });
+      document.querySelectorAll('.studio-redo-btn').forEach((btn) => {
+        btn.addEventListener('click', (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          this.redo();
+        });
+      });
 
       // Timeline Zoom Buttons
       if (this.els.zoomInBtn) {
@@ -571,11 +598,26 @@
         });
       }
 
+      // Save Changes to Project
+      const saveBtn = document.getElementById('studioSaveSessionBtn');
+      if (saveBtn) {
+        saveBtn.addEventListener('click', () => {
+          VideoEditorState.saveToApp();
+        });
+      }
+
       // Keyboard Shortcuts
       window.addEventListener('keydown', (e) => {
         if (!this.isStudioActive) return;
         const tag = (e.target.tagName || '').toLowerCase();
         if (tag === 'input' || tag === 'textarea' || tag === 'select') return;
+
+        // Save session (Ctrl+S / Cmd+S)
+        if ((e.ctrlKey || e.metaKey) && (e.key === 's' || e.key === 'S') && !e.shiftKey) {
+          e.preventDefault();
+          VideoEditorState.saveToApp();
+          return;
+        }
 
         // Timeline & Global Undo / Redo
         if ((e.ctrlKey || e.metaKey) && (e.key === 'z' || e.key === 'Z') && !e.shiftKey) {
@@ -867,6 +909,22 @@
         onCueSplit: (cue, idx) => {
           this._splitCueAtIndex(idx);
         },
+        onCueDuplicate: (cue, idx) => {
+          const dup = VideoEditorState.duplicateCue(idx);
+          if (dup) {
+            if (this.timeline) this.timeline.setCues(VideoEditorState.getCues());
+            this.seekTo(dup.start);
+            VideoEditorUI.showToast(`Duplicated cue #${idx + 1}`, 'success');
+          }
+        },
+        onCueNudge: (cue, idx, deltaMs) => {
+          const nudged = VideoEditorState.nudgeCue(idx, deltaMs);
+          if (nudged) {
+            if (this.timeline) this.timeline.setCues(VideoEditorState.getCues());
+            this.seekTo(nudged.start);
+            VideoEditorUI.showToast(`Nudged cue timing ${deltaMs > 0 ? '+' : ''}${deltaMs}ms`, 'info');
+          }
+        },
         onCueAddRequested: (timeMs) => {
           this.seekTo(timeMs);
           const newCue = VideoEditorState.addCue(timeMs, null, 'دەقی ژێرنووسی نوێ');
@@ -957,6 +1015,9 @@
       this._initTimeline();
       this._checkAndSyncSubtitlesQuietly();
       this._syncOrigToggleUI();
+      if (typeof VideoEditorUI !== 'undefined' && VideoEditorUI.updateUndoRedoUI) {
+        VideoEditorUI.updateUndoRedoUI(VideoEditorState.canUndo(), VideoEditorState.canRedo());
+      }
 
       if (this.timeline && this.els.videoPlayer && this.els.videoPlayer.duration) {
         this.timeline.setDuration(this.els.videoPlayer.duration * 1000);
@@ -1123,6 +1184,9 @@
         if (this.timeline) this.timeline.setCues(VideoEditorState.getCues());
         const curMs = this.els.videoPlayer ? this.els.videoPlayer.currentTime * 1000 : 0;
         this._handleVideoTimeUpdate(curMs);
+        if (typeof VideoEditorUI !== 'undefined' && VideoEditorUI.updateUndoRedoUI) {
+          VideoEditorUI.updateUndoRedoUI(VideoEditorState.canUndo(), VideoEditorState.canRedo());
+        }
         VideoEditorUI.showToast('Undo performed', 'info');
       } else {
         VideoEditorUI.showToast('Nothing to undo', 'info');
@@ -1134,6 +1198,9 @@
         if (this.timeline) this.timeline.setCues(VideoEditorState.getCues());
         const curMs = this.els.videoPlayer ? this.els.videoPlayer.currentTime * 1000 : 0;
         this._handleVideoTimeUpdate(curMs);
+        if (typeof VideoEditorUI !== 'undefined' && VideoEditorUI.updateUndoRedoUI) {
+          VideoEditorUI.updateUndoRedoUI(VideoEditorState.canUndo(), VideoEditorState.canRedo());
+        }
         VideoEditorUI.showToast('Redo performed', 'info');
       } else {
         VideoEditorUI.showToast('Nothing to redo', 'info');

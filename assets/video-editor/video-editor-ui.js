@@ -102,6 +102,8 @@
         appliedSubsBadge: $('#studioSubsBadge'),
         btnImportSubFile: $('#studioImportSubBtn'),
         subFileInput: $('#studioSubFileInput'),
+        btnSaveSession: $('#studioSaveSessionBtn'),
+        unsavedDot: $('#studioUnsavedDot'),
         btnBurnExport: $('#studioBurnExportBtn'),
         moreBtn: $('#studioMoreBtn'),
 
@@ -135,6 +137,12 @@
         zoomInBtn: $('#studioZoomInBtn'),
         undoBtn: $('#studioUndoBtn'),
         redoBtn: $('#studioRedoBtn'),
+        topUndoBtn: $('#studioTopUndoBtn'),
+        topRedoBtn: $('#studioTopRedoBtn'),
+        toolUndoBtn: $('#vnToolUndoBtn'),
+        toolRedoBtn: $('#vnToolRedoBtn'),
+        moreUndoBtn: $('#vnMoreUndoBtn'),
+        moreRedoBtn: $('#vnMoreRedoBtn'),
 
         // Active Text Shower Strip
         textShowerCard: $('#studioTextShower'),
@@ -386,6 +394,37 @@
         Toast.show(msg, type, { subtext: sub });
       }
     }
+
+    /**
+     * Updates all Undo and Redo buttons across the application (Top Header, Transport Bar, Bottom Toolbar, More Menu)
+     */
+    updateUndoRedoUI(canUndo, canRedo) {
+      const undoEls = document.querySelectorAll('.studio-undo-btn');
+      undoEls.forEach((el) => {
+        if (canUndo) {
+          el.removeAttribute('disabled');
+          el.removeAttribute('aria-disabled');
+          el.classList.remove('disabled');
+        } else {
+          el.setAttribute('disabled', 'true');
+          el.setAttribute('aria-disabled', 'true');
+          el.classList.add('disabled');
+        }
+      });
+
+      const redoEls = document.querySelectorAll('.studio-redo-btn');
+      redoEls.forEach((el) => {
+        if (canRedo) {
+          el.removeAttribute('disabled');
+          el.removeAttribute('aria-disabled');
+          el.classList.remove('disabled');
+        } else {
+          el.setAttribute('disabled', 'true');
+          el.setAttribute('aria-disabled', 'true');
+          el.classList.add('disabled');
+        }
+      });
+    }
     _getFallbackHTML() {
     return `
 <div id="tabVideoEditor" class="hidden vn-studio-root">
@@ -411,6 +450,14 @@
     </div>
 
     <div class="vn-header-right">
+      <div class="vn-header-history-cluster">
+        <button type="button" class="vn-icon-btn studio-undo-btn" id="studioTopUndoBtn" title="Undo change (Ctrl+Z)" aria-label="Undo">
+          <span class="vn-btn-emoji"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="1 4 1 10 7 10"></polyline><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"></path></svg></span>
+        </button>
+        <button type="button" class="vn-icon-btn studio-redo-btn" id="studioTopRedoBtn" title="Redo change (Ctrl+Y)" aria-label="Redo">
+          <span class="vn-btn-emoji"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="23 4 23 10 17 10"></polyline><path d="M20.49 15a9 9 0 1 1-2.13-9.36L23 10"></path></svg></span>
+        </button>
+      </div>
       <button type="button" class="vn-connect-btn" id="studioApplyCurrentSubsBtn" title="Load Kurdish subtitles from translation tab">
         <span class="vn-connect-pulse"></span>
         <span class="vn-btn-emoji"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg></span>
@@ -483,10 +530,10 @@
       <button type="button" class="vn-sync-pill" id="studioSyncPillBtn" title="Adjust subtitle sync timing offset">
         <span id="studioSyncOffsetDisplay">0ms</span>
       </button>
-      <button type="button" class="vn-icon-btn-small" id="studioUndoBtn" title="Undo change" aria-label="Undo">
+      <button type="button" class="vn-transport-icon-btn studio-undo-btn" id="studioUndoBtn" title="Undo change" aria-label="Undo">
         <span class="vn-btn-emoji"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="1 4 1 10 7 10"></polyline><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"></path></svg></span>
       </button>
-      <button type="button" class="vn-icon-btn-small" id="studioRedoBtn" title="Redo change" aria-label="Redo">
+      <button type="button" class="vn-transport-icon-btn studio-redo-btn" id="studioRedoBtn" title="Redo change" aria-label="Redo">
         <span class="vn-btn-emoji"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"></polyline><path d="M20.49 15a9 9 0 1 1-2.13-9.36L23 10"></path></svg></span>
       </button>
     </div>
@@ -514,6 +561,14 @@
   </section>
 
   <footer class="vn-bottom-bar">
+    <button type="button" class="vn-tool-btn studio-undo-btn" id="vnToolUndoBtn" title="Undo change (Ctrl+Z)">
+      <span class="vn-tool-emoji"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="1 4 1 10 7 10"></polyline><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"></path></svg></span>
+      <span>Undo</span>
+    </button>
+    <button type="button" class="vn-tool-btn studio-redo-btn" id="vnToolRedoBtn" title="Redo change (Ctrl+Y)">
+      <span class="vn-tool-emoji"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"></polyline><path d="M20.49 15a9 9 0 1 1-2.13-9.36L23 10"></path></svg></span>
+      <span>Redo</span>
+    </button>
     <button type="button" class="vn-tool-btn" id="vnToolStyleBtn" title="Subtitle typography &amp; appearance">
       <span class="vn-tool-emoji"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 19l7-7 3 3-7 7-3-3z"></path><path d="M18 13l-1.5-7.5L2 2l3.5 14.5L13 18l5-5z"></path></svg></span>
       <span>Style</span>

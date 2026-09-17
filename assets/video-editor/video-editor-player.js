@@ -240,7 +240,59 @@
     _bindGestureAndTouchSystem() {
       const viewport = this.els.viewportWrapper || document.getElementById('studioViewportWrapper');
       const stage = this.els.playerStage || document.getElementById('studioPlayerStage');
+      const player = this.els.videoPlayer;
       if (!viewport) return;
+
+      let holdBoostTimer = null;
+      let isHoldBoosting = false;
+      let prevPlaybackRate = 1.0;
+      let verticalSwipeMode = null; // 'volume' | 'brightness'
+      let touchStartY = 0;
+      let startVolume = 1;
+      let currentBrightness = 100;
+      let pinchActive = false;
+      let initialPinchDist = 0;
+      let currentVideoScale = 1;
+
+      const showBoostHud = (active) => {
+        let badge = document.getElementById('studioSpeedBoostBadge');
+        if (!badge) {
+          badge = document.createElement('div');
+          badge.id = 'studioSpeedBoostBadge';
+          badge.className = 'vn-speed-boost-badge';
+          badge.innerHTML = `
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon></svg>
+            <span>2× Speed Boost</span>
+          `;
+          viewport.appendChild(badge);
+        }
+        badge.classList.toggle('active', !!active);
+      };
+
+      const startHoldBoost = () => {
+        if (!player || player.paused || isHoldBoosting) return;
+        isHoldBoosting = true;
+        prevPlaybackRate = player.playbackRate || 1.0;
+        player.playbackRate = 2.0;
+        showBoostHud(true);
+        if (window.VideoEditorHardware) {
+          window.VideoEditorHardware.haptic(20);
+        }
+      };
+
+      const endHoldBoost = () => {
+        if (holdBoostTimer) {
+          clearTimeout(holdBoostTimer);
+          holdBoostTimer = null;
+        }
+        if (isHoldBoosting) {
+          isHoldBoosting = false;
+          showBoostHud(false);
+          if (player) {
+            player.playbackRate = prevPlaybackRate || 1.0;
+          }
+        }
+      };
 
       const handlePointerOrClick = (e) => {
         // Ignore clicks on subtitle overlay, HUD, or corner buttons
@@ -302,49 +354,166 @@
 
       viewport.addEventListener('click', handlePointerOrClick);
 
-      // Touch horizontal scrub listener
+      // Long press hold-to-boost for mouse/pointer
+      viewport.addEventListener('pointerdown', (e) => {
+        if (e.target.closest('#studioSubtitleOverlay') || e.target.closest('.vn-fs-hud') || e.target.closest('.vn-fs-corner-btn')) return;
+        if (player && !player.paused) {
+          holdBoostTimer = setTimeout(() => {
+            startHoldBoost();
+          }, 380);
+        }
+      }, { passive: true });
+
+      const onPointerRelease = () => {
+        endHoldBoost();
+      };
+      viewport.addEventListener('pointerup', onPointerRelease, { passive: true });
+      viewport.addEventListener('pointercancel', onPointerRelease, { passive: true });
+      viewport.addEventListener('pointerleave', onPointerRelease, { passive: true });
+
+      // Multi-touch gestures (Pinch-to-zoom, Vertical swipe Volume/Brightness, Horizontal Scrub)
       viewport.addEventListener('touchstart', (e) => {
-        if (e.touches.length !== 1) return;
         if (e.target.closest('#studioSubtitleOverlay') || e.target.closest('.vn-fs-hud') || e.target.closest('.vn-fs-corner-btn')) return;
 
-        this._isScrubbingTouch = false;
-        this._touchStartX = e.touches[0].clientX;
-        this._touchStartTimeMs = this.els.videoPlayer ? this.els.videoPlayer.currentTime * 1000 : 0;
+        if (e.touches.length === 2) {
+          pinchActive = true;
+          this._isScrubbingTouch = false;
+          verticalSwipeMode = null;
+          endHoldBoost();
+          const t1 = e.touches[0];
+          const t2 = e.touches[1];
+          initialPinchDist = Math.hypot(t2.clientX - t1.clientX, t2.clientY - t1.clientY);
+          return;
+        }
+
+        if (e.touches.length === 1) {
+          this._isScrubbingTouch = false;
+          verticalSwipeMode = null;
+          this._touchStartX = e.touches[0].clientX;
+          touchStartY = e.touches[0].clientY;
+          this._touchStartTimeMs = this.els.videoPlayer ? this.els.videoPlayer.currentTime * 1000 : 0;
+          startVolume = player ? player.volume : 1;
+
+          if (player && !player.paused) {
+            holdBoostTimer = setTimeout(() => {
+              startHoldBoost();
+            }, 380);
+          }
+        }
       }, { passive: true });
 
       viewport.addEventListener('touchmove', (e) => {
-        if (e.touches.length !== 1) return;
-        if (!this.els.videoPlayer || !this.els.videoPlayer.duration) return;
+        if (pinchActive && e.touches.length === 2) {
+          const t1 = e.touches[0];
+          const t2 = e.touches[1];
+          const curDist = Math.hypot(t2.clientX - t1.clientX, t2.clientY - t1.clientY);
+          if (initialPinchDist > 10 && player) {
+            const scale = Math.max(1, Math.min(3, (curDist / initialPinchDist)));
+            currentVideoScale = scale;
+            player.style.transform = scale > 1 ? `scale(${scale.toFixed(2)})` : '';
+          }
+          return;
+        }
+
+        if (e.touches.length !== 1 || !this.els.videoPlayer || !this.els.videoPlayer.duration) return;
 
         const dx = e.touches[0].clientX - this._touchStartX;
-        if (!this._isScrubbingTouch && Math.abs(dx) > 18) {
-          this._isScrubbingTouch = true;
-          if (this._tapTimer) {
-            clearTimeout(this._tapTimer);
-            this._tapTimer = null;
+        const dy = e.touches[0].clientY - touchStartY;
+
+        if (Math.abs(dx) > 12 || Math.abs(dy) > 12) {
+          endHoldBoost();
+        }
+
+        const rect = viewport.getBoundingClientRect();
+        const relX = (this._touchStartX - rect.left) / rect.width;
+
+        // Determine swipe axis
+        if (!this._isScrubbingTouch && !verticalSwipeMode) {
+          if (Math.abs(dx) > 18 && Math.abs(dx) > Math.abs(dy) * 1.3) {
+            this._isScrubbingTouch = true;
+            if (this._tapTimer) {
+              clearTimeout(this._tapTimer);
+              this._tapTimer = null;
+            }
+          } else if (Math.abs(dy) > 18 && Math.abs(dy) > Math.abs(dx) * 1.3) {
+            verticalSwipeMode = relX > 0.5 ? 'volume' : 'brightness';
+            if (this._tapTimer) {
+              clearTimeout(this._tapTimer);
+              this._tapTimer = null;
+            }
           }
         }
 
         if (this._isScrubbingTouch) {
-          const rect = viewport.getBoundingClientRect();
           const durMs = this.els.videoPlayer.duration * 1000;
           const deltaSec = (dx / rect.width) * Math.min(60, durMs / 1000);
           const targetMs = Math.max(0, Math.min(durMs, this._touchStartTimeMs + deltaSec * 1000));
 
           this._updateTouchScrubHud(targetMs, deltaSec);
           this.seekTo(targetMs, true);
+        } else if (verticalSwipeMode === 'volume' && player) {
+          const deltaPct = -(dy / (rect.height * 0.7));
+          const newVol = Math.max(0, Math.min(1, startVolume + deltaPct));
+          player.volume = newVol;
+          this._showLevelHud('volume', Math.round(newVol * 100));
+        } else if (verticalSwipeMode === 'brightness' && stage) {
+          const deltaPct = -(dy / (rect.height * 0.7)) * 100;
+          currentBrightness = Math.max(25, Math.min(150, 100 + deltaPct));
+          stage.style.filter = currentBrightness !== 100 ? `brightness(${currentBrightness}%)` : '';
+          this._showLevelHud('brightness', Math.round(currentBrightness));
         }
       }, { passive: true });
 
       const onTouchEnd = () => {
+        endHoldBoost();
+        if (pinchActive) {
+          pinchActive = false;
+        }
         if (this._isScrubbingTouch) {
           this._isScrubbingTouch = false;
           this._hideTouchScrubHud();
+        }
+        if (verticalSwipeMode) {
+          verticalSwipeMode = null;
+          this._hideLevelHud();
         }
       };
 
       viewport.addEventListener('touchend', onTouchEnd, { passive: true });
       viewport.addEventListener('touchcancel', onTouchEnd, { passive: true });
+    }
+
+    _showLevelHud(type, val) {
+      const viewport = this.els.viewportWrapper || document.getElementById('studioViewportWrapper');
+      if (!viewport) return;
+
+      let hud = document.getElementById('studioLevelHud');
+      if (!hud) {
+        hud = document.createElement('div');
+        hud.id = 'studioLevelHud';
+        hud.className = 'vn-level-hud';
+        viewport.appendChild(hud);
+      }
+
+      const icon = type === 'volume'
+        ? '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon><path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"></path></svg>'
+        : '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="5"></circle><line x1="12" y1="1" x2="12" y2="3"></line><line x1="12" y1="21" x2="12" y2="23"></line><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line><line x1="1" y1="12" x2="3" y2="12"></line><line x1="21" y1="12" x2="23" y2="12"></line></svg>';
+
+      hud.innerHTML = `
+        <span class="vn-level-hud-icon">${icon}</span>
+        <span class="vn-level-hud-val">${type === 'volume' ? 'Vol' : 'Bright'} ${val}%</span>
+        <div class="vn-level-hud-track"><div class="vn-level-hud-fill" style="width:${Math.min(100, val)}%"></div></div>
+      `;
+      hud.classList.remove('hidden');
+    }
+
+    _hideLevelHud() {
+      const hud = document.getElementById('studioLevelHud');
+      if (hud) {
+        setTimeout(() => {
+          hud.classList.add('hidden');
+        }, 600);
+      }
     }
 
     _showGestureRipple(type, clientX, clientY, text = '') {
@@ -472,17 +641,19 @@
       const player = this.els.videoPlayer;
       if (!player) return;
 
-      const syncTick = () => {
+      const syncTick = (now, metadata) => {
         if (!player || player.paused || player.ended) {
           this._stopPlaybackSync();
           return;
         }
 
-        const curMs = (player.currentTime || 0) * 1000;
+        const curMs = metadata && typeof metadata.mediaTime === 'number'
+          ? metadata.mediaTime * 1000
+          : (player.currentTime || 0) * 1000;
         const durMs = (player.duration || 0) * 1000;
 
-        // Only trigger update if time progressed by >= 10ms to prevent redundant DOM thrashing
-        if (Math.abs(curMs - this._lastSyncedMs) >= 10) {
+        // Synchronize at optimal display refresh rate without DOM thrashing
+        if (Math.abs(curMs - this._lastSyncedMs) >= 15) {
           this._lastSyncedMs = curMs;
           this.updateTimeDisplay(curMs, durMs);
           if (this.onTimeUpdateCallback) {
@@ -492,16 +663,14 @@
 
         // Hardware video frame callback where supported (Chrome/Edge/Safari 15.4+)
         if ('requestVideoFrameCallback' in player) {
-          this._rvfcId = player.requestVideoFrameCallback(() => {
-            syncTick();
-          });
+          this._rvfcId = player.requestVideoFrameCallback(syncTick);
         } else {
           this._syncRaf = requestAnimationFrame(syncTick);
         }
       };
 
       if ('requestVideoFrameCallback' in player) {
-        this._rvfcId = player.requestVideoFrameCallback(() => syncTick());
+        this._rvfcId = player.requestVideoFrameCallback(syncTick);
       } else {
         this._syncRaf = requestAnimationFrame(syncTick);
       }
@@ -584,6 +753,13 @@
 
     _extractAndDecodeAudioWaveform(file) {
       if (!file) return;
+      // For large video files (> 35MB), avoid reading hundreds of megabytes into ArrayBuffer/AudioContext
+      if (file.size > 35 * 1024 * 1024) {
+        if (window.VideoEditor && window.VideoEditor.timeline) {
+          window.VideoEditor.timeline.setAudioData(null);
+        }
+        return;
+      }
       try {
         const AudioContextClass = window.AudioContext || window.webkitAudioContext;
         if (!AudioContextClass) return;
@@ -591,6 +767,10 @@
         const reader = new FileReader();
         reader.onload = () => {
           const arrayBuffer = reader.result;
+          if (!arrayBuffer) {
+            try { audioCtx.close(); } catch (_) {}
+            return;
+          }
           audioCtx.decodeAudioData(arrayBuffer, (decodedBuffer) => {
             try { audioCtx.close(); } catch (_) {}
             if (window.VideoEditor && window.VideoEditor.timeline) {
@@ -599,6 +779,9 @@
           }, () => {
             try { audioCtx.close(); } catch (_) {}
           });
+        };
+        reader.onerror = () => {
+          try { audioCtx.close(); } catch (_) {}
         };
         reader.readAsArrayBuffer(file);
       } catch (_) {}

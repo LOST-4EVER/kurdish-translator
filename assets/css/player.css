@@ -85,7 +85,11 @@
   text-shadow: 0 2px 4px rgba(0, 0, 0, 0.98), 0 0 12px rgba(0, 0, 0, 0.9), 0 4px 18px rgba(0, 0, 0, 0.95);
   max-width: 94%;
   word-wrap: break-word;
-  overflow-wrap: anywhere;
+  overflow-wrap: break-word;
+  word-break: normal;
+  line-break: strict;
+  hyphens: none;
+  -webkit-hyphens: none;
   white-space: pre-wrap;
   position: relative;
   z-index: 2;
@@ -99,6 +103,7 @@
   border: none;
   backdrop-filter: none;
   -webkit-backdrop-filter: none;
+  transform: translateZ(0);
 }
 
 .screen-text:empty {
