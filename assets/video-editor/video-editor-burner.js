@@ -811,6 +811,7 @@
         console.warn('Playback error during burn:', err);
       }
 
+      let lastCueIdx = 0;
       const drawBurnFrame = () => {
         if (!this.burnRecording || this.burnAbort) {
           video.removeEventListener('ended', onEnded);
@@ -842,9 +843,31 @@
         // Subtitle burn mode check
         const burnSubs = (this.els && this.els.exportBurnModeSel) ? this.els.exportBurnModeSel.value === 'hardcode' : true;
 
-        // Find active subtitle cue
+        // Find active subtitle cue with O(1) cursor / O(log N) binary search
         const curMs = video.currentTime * 1000 + syncOffsetMs;
-        const cue = burnSubs ? cues.find((c) => curMs >= c.start && curMs <= c.end) : null;
+        let cue = null;
+        if (burnSubs && cues && cues.length) {
+          if (lastCueIdx >= 0 && lastCueIdx < cues.length) {
+            const c = cues[lastCueIdx];
+            if (curMs >= c.start && curMs <= c.end) {
+              cue = c;
+            }
+          }
+          if (!cue) {
+            let low = 0, high = cues.length - 1;
+            while (low <= high) {
+              const mid = (low + high) >> 1;
+              const c = cues[mid];
+              if (curMs >= c.start && curMs <= c.end) {
+                cue = c;
+                lastCueIdx = mid;
+                break;
+              }
+              if (curMs < c.start) high = mid - 1;
+              else low = mid + 1;
+            }
+          }
+        }
 
         if (cue) {
           const text = stripTags(cue.text || '');

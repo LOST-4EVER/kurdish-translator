@@ -177,7 +177,12 @@ const TranslatorOrthography = (() => {
       .replace(/([\p{L}\u0600-\u06FF]+)\s+ترین(?=\s|$|[.,!?;:،؛؟])/gu, '$1ترین')
       .replace(/([\p{L}\u0600-\u06FF]+)\s+ەوە(?=\s|$|[.,!?;:،؛؟])/gu, '$1ەوە')
       .replace(/([\p{L}\u0600-\u06FF]+)\s+یش(?=\s|$|[.,!?;:،؛؟])/gu, '$1یش')
-      .replace(/([\p{L}\u0600-\u06FF]+)\s+(مان|تان|یان|ەکەم|ەکەت|ەکەی|ەکەمان|ەکەتان|ەکەیان|ەکان)(?=\s|$|[.,!?;:،؛؟])/gu, '$1$2');
+      .replace(/([\p{L}\u0600-\u06FF]+)\s+(ەکە|مان|تان|یان|ەکەم|ەکەت|ەکەی|ەکەمان|ەکەتان|ەکەیان|ەکان|ەکانمان|ەکانتان|ەکانویان)(?=\s|$|[.,!?;:،؛؟])/gu, (m, p1, p2) => {
+        if (p1.endsWith('ە') && p2.startsWith('ە')) {
+          return p1 + p2.slice(1);
+        }
+        return p1 + p2;
+      });
   }
 
   // Common phrase replacements for natural Kurdish dialogue
@@ -642,7 +647,11 @@ const TranslatorOrthography = (() => {
 
       // Rule 4: Noun Suffix fusion (e.g. گەورە + تر -> گەورەتر, کتێب + ەکان -> کتێبەکان)
       if (nounSuffixes.has(cur) && prevIdx !== -1 && !/^[.,!?;:،؛؟]/.test(prevToken)) {
-        tokens[prevIdx] = tokens[prevIdx] + cur;
+        if (tokens[prevIdx].endsWith('ە') && cur.startsWith('ە')) {
+          tokens[prevIdx] = tokens[prevIdx] + cur.slice(1);
+        } else {
+          tokens[prevIdx] = tokens[prevIdx] + cur;
+        }
         tokens[i] = '';
         for (let s = prevIdx + 1; s < i; s++) tokens[s] = '';
         continue;

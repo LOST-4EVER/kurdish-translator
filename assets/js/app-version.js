@@ -185,7 +185,9 @@ const AppVersion = (() => {
 
     const whatsNewStrong = els.btnToggleChangelog ? els.btnToggleChangelog.querySelector('strong') : null;
     if (whatsNewStrong) {
-      whatsNewStrong.textContent = ckb ? `نوێکارییەکانی وەشانی ١٥٠` : `What's New in ${APP_VERSION}`;
+      const verNum = APP_VERSION.replace('v', '');
+      const verCkb = verNum.replace(/1/g, '١').replace(/6/g, '٦').replace(/0/g, '٠');
+      whatsNewStrong.textContent = ckb ? `نوێکارییەکانی وەشانی ${verCkb}` : `What's New in ${APP_VERSION}`;
     }
 
     updateNetworkStatus();
