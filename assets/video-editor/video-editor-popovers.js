@@ -102,9 +102,14 @@
         });
       }
 
-      // Click outside to dismiss popovers
+      // Click outside or Escape to dismiss popovers
       document.addEventListener('click', (e) => {
         if (this.activePopover && !e.target.closest('.vn-popover') && !e.target.closest('.vn-tool-btn') && !e.target.closest('#studioSyncPillBtn') && !e.target.closest('#studioMoreBtn')) {
+          this.closeAll();
+        }
+      });
+      document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && this.activePopover) {
           this.closeAll();
         }
       });
@@ -562,6 +567,16 @@
       // Top popover (e.g. More menu) handles its own top styling
       if (popover.classList.contains('vn-popover-top')) return;
 
+      const isMobile = window.innerWidth <= 640;
+      if (isMobile) {
+        popover.style.left = '50%';
+        popover.style.right = 'auto';
+        popover.style.transform = 'translateX(-50%)';
+        popover.style.bottom = '56px';
+        popover.style.maxWidth = 'calc(100vw - 16px)';
+        return;
+      }
+
       if (triggerBtn) {
         const btnRect = triggerBtn.getBoundingClientRect();
         const btnCenter = btnRect.left + btnRect.width / 2 - rootRect.left;
@@ -572,12 +587,14 @@
         left = Math.max(10, Math.min(rootRect.width - popoverWidth - 10, left));
         
         popover.style.left = `${left}px`;
+        popover.style.right = 'auto';
         popover.style.transform = 'none';
-        popover.style.bottom = '52px';
+        popover.style.bottom = '56px';
       } else {
         popover.style.left = '50%';
+        popover.style.right = 'auto';
         popover.style.transform = 'translateX(-50%)';
-        popover.style.bottom = '52px';
+        popover.style.bottom = '56px';
       }
     }
 

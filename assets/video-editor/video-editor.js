@@ -345,6 +345,19 @@
       if (this.els.btnBrowseVideo && this.els.videoFileInput) {
         this.els.btnBrowseVideo.addEventListener('click', () => this.els.videoFileInput.click());
       }
+      if (this.els.videoDropzone && this.els.videoFileInput) {
+        this.els.videoDropzone.addEventListener('click', (e) => {
+          if (e.target.closest('button')) return;
+          this.els.videoFileInput.click();
+        });
+        this.els.videoDropzone.style.cursor = 'pointer';
+      }
+      if (this.els.videoFilename && this.els.videoFileInput) {
+        this.els.videoFilename.addEventListener('click', () => {
+          this.els.videoFileInput.click();
+        });
+        this.els.videoFilename.style.cursor = 'pointer';
+      }
       if (this.els.toolVideoChangeBtn && this.els.videoFileInput) {
         this.els.toolVideoChangeBtn.addEventListener('click', () => this.els.videoFileInput.click());
       }
@@ -361,6 +374,9 @@
       };
 
       if (this.els.videoFileInput) {
+        this.els.videoFileInput.addEventListener('click', () => {
+          this.els.videoFileInput.value = '';
+        });
         this.els.videoFileInput.addEventListener('change', (e) => {
           if (e.target.files && e.target.files[0]) {
             handleIncomingVideo(e.target.files[0]);
@@ -564,6 +580,9 @@
         this.els.btnImportSubFile.addEventListener('click', () => this.els.subFileInput.click());
       }
       if (this.els.subFileInput) {
+        this.els.subFileInput.addEventListener('click', () => {
+          this.els.subFileInput.value = '';
+        });
         this.els.subFileInput.addEventListener('change', (e) => {
           if (e.target.files && e.target.files[0]) {
             this.importSubtitleFile(e.target.files[0]);
@@ -1310,6 +1329,11 @@
             }
             if (this.els.appliedSubsBadge) {
               this.els.appliedSubsBadge.textContent = `${parsed.cues.length} Cues`;
+            }
+            if (typeof window._updateAppWorkCues === 'function') {
+              try {
+                window._updateAppWorkCues(parsed.cues, true);
+              } catch (_) {}
             }
             const curMs = VideoEditorPlayer.currentTimeMs || 0;
             this._handleVideoTimeUpdate(curMs);

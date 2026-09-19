@@ -359,11 +359,14 @@
         this.setZoom(this.zoom, gestureFocalSec, false, true);
       });
 
-      // Multi-touch pinch-to-zoom gesture engine
+      // Multi-touch pinch-to-zoom and pan gesture engine
       let touchPinchActive = false;
       let initialPinchDist = 0;
       let initialPinchZoom = this.zoom;
       let pinchFocalSec = 0;
+      let pinchRafId = null;
+      let pendingZoom = null;
+      let pendingScrollLeft = null;
 
       this.dom.viewport.addEventListener('touchstart', (e) => {
         if (e.touches.length === 2) {
@@ -376,8 +379,8 @@
           initialPinchZoom = this.zoom;
           const viewportRect = this.dom.viewport.getBoundingClientRect();
           const midX = (t1.clientX + t2.clientX) / 2;
-          const pinchClientOffset = midX - viewportRect.left;
-          pinchFocalSec = (this.dom.viewport.scrollLeft + pinchClientOffset) / Math.max(1, this.zoom);
+          const initialOffset = midX - viewportRect.left;
+          pinchFocalSec = (this.dom.viewport.scrollLeft + initialOffset) / Math.max(1, this.zoom);
         }
       }, { passive: false });
 
@@ -388,8 +391,28 @@
           const t2 = e.touches[1];
           const currentDist = Math.hypot(t2.clientX - t1.clientX, t2.clientY - t1.clientY);
           if (initialPinchDist > 8) {
+            const currentMidX = (t1.clientX + t2.clientX) / 2;
+            const viewportRect = this.dom.viewport.getBoundingClientRect();
+            const currentMidOffset = currentMidX - viewportRect.left;
             const scale = currentDist / initialPinchDist;
-            this.setZoom(initialPinchZoom * scale, pinchFocalSec, true, true);
+            const minZ = this.getMinZoom();
+            const maxZ = this.getMaxZoom();
+            const targetZoom = Math.max(minZ, Math.min(maxZ, initialPinchZoom * scale));
+
+            pendingZoom = targetZoom;
+            pendingScrollLeft = Math.max(0, (pinchFocalSec * targetZoom) - currentMidOffset);
+
+            if (!pinchRafId) {
+              pinchRafId = requestAnimationFrame(() => {
+                pinchRafId = null;
+                if (pendingZoom !== null) {
+                  this.setZoom(pendingZoom, pinchFocalSec, true, true);
+                  if (pendingScrollLeft !== null) {
+                    this.dom.viewport.scrollLeft = pendingScrollLeft;
+                  }
+                }
+              });
+            }
           }
         }
       }, { passive: false });
@@ -397,6 +420,13 @@
       const endTouchPinch = () => {
         if (touchPinchActive) {
           touchPinchActive = false;
+          if (pinchRafId) {
+            cancelAnimationFrame(pinchRafId);
+            pinchRafId = null;
+          }
+          if (pendingScrollLeft !== null) {
+            this.dom.viewport.scrollLeft = pendingScrollLeft;
+          }
           this.setZoom(this.zoom, pinchFocalSec, false, true);
         }
       };

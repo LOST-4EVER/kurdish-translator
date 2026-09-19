@@ -769,6 +769,8 @@ Style: Top,Noto Naskh Arabic,44,&H00FFFFFF,&H000000FF,&H00000000,&H80000000,-1,0
 Style: Sign,Noto Sans Arabic,40,&H00E0D4FF,&H000000FF,&H00000000,&H80000000,-1,0,0,0,100,100,0,0,1,2.8,1.2,5,30,30,25,178
 Style: Narration,Noto Naskh Arabic,44,&H00EFEFEF,&H000000FF,&H00000000,&H80000000,0,-1,0,0,100,100,0,0,1,3.0,1.5,2,40,40,35,178
 Style: Italics,Noto Naskh Arabic,46,&H00FFFFFF,&H000000FF,&H00000000,&H80000000,-1,-1,0,0,100,100,0,0,1,3.2,1.8,2,40,40,35,178
+Style: Award_Title,Noto Naskh Arabic,52,&H003BF5FF,&H000000FF,&H00000000,&H90000000,-1,0,0,0,100,100,1,0,1,3.6,2.2,8,40,40,45,178
+Style: Episode_Sign,Noto Sans Arabic,48,&H00FFFFFF,&H000000FF,&H00181828,&H80000000,-1,0,0,0,102,102,0,0,1,3.4,2.0,5,35,35,40,178
 
 [Events]`;
 
@@ -1033,6 +1035,17 @@ Style: Top,Noto Naskh Arabic,44,16777215,65535,0,0,-1,0,1,3.2,1.8,8,40,40,35,0,1
       order.forEach((f) => { val[f] = (c.extra && c.extra[f]) ?? ASS_FALLBACKS[f.toLowerCase()] ?? ''; });
       val[keyOf('start')] = (c.rawStart && !c._shifted && /^\d+:\d{2}:\d{2}\.\d{2}$/.test(c.rawStart)) ? c.rawStart : fmtASS(c.start);
       val[keyOf('end')] = (c.rawEnd && !c._shifted && /^\d+:\d{2}:\d{2}\.\d{2}$/.test(c.rawEnd)) ? c.rawEnd : fmtASS(c.end);
+      const styleKey = keyOf('style');
+      if ((!val[styleKey] || val[styleKey] === 'Default') && c.text) {
+        const trimmed = c.text.trim();
+        if (/^(?:ئەڵقەی|وەرزی|بەشی|پەردەی)\s+\d+/i.test(trimmed)) {
+          val[styleKey] = 'Episode_Sign';
+        } else if (/(?:^|[\s،؛؟.\n])(?:خەڵاتی|دەستنیشانکراوی فەرمی|براوەی)(?=[\s،؛؟.\n]|$|[!?:;،؛؟])/i.test(trimmed)) {
+          val[styleKey] = 'Award_Title';
+        } else if (c.placement === 'top') {
+          val[styleKey] = 'Top';
+        }
+      }
       val[keyOf('text')] = normalizeTextForASS(c.text, c.settings, c.rawText);
       lines.push(`Dialogue: ${order.map((f) => val[f]).join(',')}`);
     }

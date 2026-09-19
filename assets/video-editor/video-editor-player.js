@@ -345,9 +345,15 @@
             this.stepSeconds(5);
             this._showGestureRipple('forward', clientX, clientY, '+5s');
           } else {
-            // Center double-tap: Fullscreen
-            this.toggleFullscreen();
-            this._showGestureRipple('center', clientX, clientY);
+            // Center double-tap: Reset zoom if zoomed, otherwise toggle Fullscreen
+            if (currentVideoScale > 1.05 && player) {
+              currentVideoScale = 1;
+              player.style.transform = '';
+              this._showGestureRipple('center', clientX, clientY, '100%');
+            } else {
+              this.toggleFullscreen();
+              this._showGestureRipple('center', clientX, clientY);
+            }
           }
         } else {
           // First tap: set timer for single tap action
@@ -743,8 +749,13 @@
       if (this.els.videoPlayer) this.els.videoPlayer.classList.remove('hidden');
 
       if (this.els.videoFilename) {
-        this.els.videoFilename.textContent = file.name;
-        this.els.videoFilename.title = file.name;
+        const textNode = this.els.videoFilename.querySelector('.vn-file-name-text');
+        if (textNode) {
+          textNode.textContent = file.name;
+        } else {
+          this.els.videoFilename.textContent = file.name;
+        }
+        this.els.videoFilename.title = `Video: ${file.name} (Click to change)`;
       }
 
       if (typeof this.onVideoLoadedCallback === 'function') {

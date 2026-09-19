@@ -67,7 +67,7 @@
     progressDetail: '#progressDetail', lineCount: '#lineCount', cancelBtn: '#cancelBtn',
     liveCaption: '#liveCaption', liveOrigCaption: '#liveOrigCaption', liveTimecode: '#liveTimecode',
     livePlaceholder: '#livePlaceholder', liveFeed: '#liveFeed',
-    downloadBtn: '#downloadBtn', edDownloadBtn: '#edDownloadBtn', edSaveBtn: '#edSaveBtn', edDirtyBadge: '#edDirtyBadge', copyBtn: '#copyBtn',
+    downloadBtn: '#downloadBtn', shareBtn: '#shareBtn', edDownloadBtn: '#edDownloadBtn', edShareBtn: '#edShareBtn', edSaveBtn: '#edSaveBtn', edDirtyBadge: '#edDirtyBadge', copyBtn: '#copyBtn',
     translateAgainBtn: '#translateAgainBtn', doneFormat: '#doneFormat', doneSize: '#doneSize',
     previewBtn: '#previewBtn',
     previewTab: '#previewTab', tabTranslate: '#tabTranslate', tabPreview: '#tabPreview',
@@ -2341,6 +2341,94 @@
         toast(currentUiLang === 'ckb' ? 'کۆپیکردن سەرکەوتوو نەبوو.' : 'Copy failed on this device.', true);
       }
     });
+
+    const handleShareAction = async (btn) => {
+      flushPendingEdits();
+      prepareDownload();
+      if (!resultText || !file) {
+        toast(currentUiLang === 'ckb' ? 'هیچ ژێرنووسێک ئامادە نییە بۆ هاوبەشکردن.' : 'No subtitles ready to share yet.', true);
+        return;
+      }
+      const formatChoice = els.exportFormatSel ? els.exportFormatSel.value : 'original';
+      const chosenFormat = (parsed && formatChoice === 'original') ? parsed.format : (formatChoice || 'srt');
+      const ext = EXT_BY_FORMAT[chosenFormat] || 'srt';
+      const mime = MIME_BY_FORMAT[chosenFormat] || 'text/plain;charset=utf-8';
+      const base = cleanBaseName(file.name);
+      const tgt = (els.tgtLang && els.tgtLang.value) || 'ckb';
+      const filename = `${base}.${tgt}.${ext}`;
+
+      const textSpan = btn ? btn.querySelector('[data-i18n="btnShare"]') : null;
+      const originalText = textSpan ? textSpan.textContent : '';
+      const dict = dicts[currentUiLang] || dicts.en;
+
+      const triggerSharedUi = () => {
+        if (textSpan) {
+          textSpan.innerHTML = `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="vertical-align:-1px; margin-right:3px;"><polyline points="20 6 9 17 4 12"/></svg>${dict.btnShared || 'Shared!'}`;
+          setTimeout(() => {
+            if (textSpan) textSpan.textContent = originalText || dict.btnShare || 'Share';
+          }, 2500);
+        }
+      };
+
+      try {
+        let shared = false;
+        let subtitleFile = null;
+        try {
+          subtitleFile = new File([resultText], filename, { type: mime });
+        } catch (_) {}
+
+        if (subtitleFile && window.VideoEditorHardware && window.VideoEditorHardware.canShare({ files: [subtitleFile] })) {
+          await window.VideoEditorHardware.share({
+            title: filename,
+            text: currentUiLang === 'ckb' ? `ژێرنووسی کوردی بۆ ${base}` : `Kurdish subtitles for ${base}`,
+            files: [subtitleFile],
+          });
+          shared = true;
+        } else if (window.VideoEditorHardware && window.VideoEditorHardware.canShare({ text: resultText })) {
+          await window.VideoEditorHardware.share({
+            title: filename,
+            text: resultText.slice(0, 4000),
+          });
+          shared = true;
+        }
+
+        if (shared) {
+          triggerSharedUi();
+          if (typeof Toast !== 'undefined') {
+            Toast.success(
+              currentUiLang === 'ckb' ? 'بە سەرکەوتوویی هاوبەشکرا!' : 'Shared successfully!',
+              filename
+            );
+          }
+          return;
+        }
+      } catch (err) {
+        if (err && err.name === 'AbortError') return;
+      }
+
+      // Fallback: Copy subtitle text to clipboard and notify
+      try {
+        await navigator.clipboard.writeText(resultText);
+        triggerSharedUi();
+        if (typeof Toast !== 'undefined') {
+          Toast.success(
+            currentUiLang === 'ckb' ? 'لە کلیپبۆرد کۆپیکرا بۆ هاوبەشکردن!' : 'Copied to clipboard for sharing!',
+            currentUiLang === 'ckb' ? 'دەقی ژێرنووسەکە ئامادەیە بۆ ناردن لە پەیام و تۆڕە کۆمەڵایەتییەکان.' : 'Subtitle text is ready to paste and share.'
+          );
+        } else {
+          toast(currentUiLang === 'ckb' ? 'لە کلیپبۆرد کۆپیکرا بۆ هاوبەشکردن!' : 'Copied to clipboard for sharing!');
+        }
+      } catch (_) {
+        toast(currentUiLang === 'ckb' ? 'هاوبەشکردن دەستەبەر نەبوو لەم ئامێرەدا.' : 'Share unavailable on this browser.', true);
+      }
+    };
+
+    if (els.shareBtn) {
+      els.shareBtn.addEventListener('click', () => handleShareAction(els.shareBtn));
+    }
+    if (els.edShareBtn) {
+      els.edShareBtn.addEventListener('click', () => handleShareAction(els.edShareBtn));
+    }
 
     els.translateAgainBtn.addEventListener('click', () => {
       if (!parsed) return;
