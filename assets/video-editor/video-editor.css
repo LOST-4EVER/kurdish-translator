@@ -1746,7 +1746,8 @@ body.studio-mode main {
   border-right: 2px solid #a855f7;
   pointer-events: none;
   z-index: 2;
-  transition: width 0.04s linear;
+  transition: none;
+  will-change: width;
 }
 
 /* Full-Height Scrubber Needle */

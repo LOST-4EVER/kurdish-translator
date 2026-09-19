@@ -45,6 +45,13 @@
       this._lastPlayheadX = -1;
       this._lastRoundedSec = -1;
       this._lastIntPct = -1;
+      this._lastFillPx = -1;
+      this._cachedScrollLeft = 0;
+      this._cachedViewportWidth = 800;
+      this._lastRenderedRulerScroll = -1;
+      this._lastRenderedRulerZoom = -1;
+      this._lastRenderedRulerDuration = -1;
+      this._lastRenderedRulerVWidth = -1;
       this._pendingSeekRaf = null;
       this._pendingSeekTime = null;
       this._holdPopupEl = null;
@@ -308,6 +315,7 @@
       // Update ruler position on viewport scroll (zero-cost virtualized ruler)
       let scrollRaf = null;
       this.dom.viewport.addEventListener('scroll', () => {
+        this._cachedScrollLeft = this.dom.viewport.scrollLeft;
         if (!scrollRaf) {
           scrollRaf = requestAnimationFrame(() => {
             scrollRaf = null;
@@ -1056,8 +1064,21 @@
       if (!canvas) return;
 
       const dpr = window.devicePixelRatio || 1;
-      const scrollLeft = (this.dom.viewport ? this.dom.viewport.scrollLeft : 0) || 0;
+      const scrollLeft = (this._cachedScrollLeft !== undefined ? this._cachedScrollLeft : (this.dom.viewport ? this.dom.viewport.scrollLeft : 0)) || 0;
       const viewportWidth = (this._cachedViewportWidth || (this.dom.viewport ? this.dom.viewport.clientWidth : 800)) || 800;
+
+      if (
+        this._lastRenderedRulerScroll === scrollLeft &&
+        this._lastRenderedRulerZoom === this.zoom &&
+        this._lastRenderedRulerDuration === this.duration &&
+        this._lastRenderedRulerVWidth === viewportWidth
+      ) {
+        return;
+      }
+      this._lastRenderedRulerScroll = scrollLeft;
+      this._lastRenderedRulerZoom = this.zoom;
+      this._lastRenderedRulerDuration = this.duration;
+      this._lastRenderedRulerVWidth = viewportWidth;
 
       // Virtualized viewport-window rendering for ultra-fast zero-lag 60fps performance
       const canvasWidth = Math.min(this.trackWidth, viewportWidth + 300);
@@ -1561,7 +1582,10 @@
         if (this.duration > 0 && this.dom.audioBarFill) {
           const contentWidth = Math.round((this.duration / 1000) * this.zoom);
           const fillPx = Math.min(contentWidth, currentSec * this.zoom);
-          this.dom.audioBarFill.style.width = `${fillPx}px`;
+          if (Math.abs(fillPx - this._lastFillPx) >= 1.5) {
+            this._lastFillPx = fillPx;
+            this.dom.audioBarFill.style.width = `${fillPx}px`;
+          }
           const intPct = Math.round(Math.min(100, (this.currentTime / this.duration) * 100));
           if (intPct !== this._lastIntPct) {
             this._lastIntPct = intPct;
@@ -1579,8 +1603,10 @@
       while (low <= high) {
         const mid = (low + high) >> 1;
         const c = cues[mid];
-        if (timeMs >= c.start && timeMs <= c.end) return mid;
-        if (timeMs < c.start) high = mid - 1;
+        const start = c.start || 0;
+        const end = c.end || start;
+        if (timeMs >= start && timeMs <= end) return mid;
+        if (timeMs < start) high = mid - 1;
         else low = mid + 1;
       }
       return -1;
@@ -1591,7 +1617,7 @@
       let activeIdx = -1;
       if (this.activeCueIndex >= 0 && this.activeCueIndex < this.cues.length) {
         const c = this.cues[this.activeCueIndex];
-        if (c && this.currentTime >= c.start && this.currentTime <= c.end) {
+        if (c && this.currentTime >= (c.start || 0) && this.currentTime <= (c.end || c.start || 0)) {
           activeIdx = this.activeCueIndex;
         }
       }
@@ -1618,13 +1644,17 @@
     _ensurePlayheadInView() {
       const currentSec = this.currentTime / 1000;
       const playheadX = currentSec * this.zoom;
-      const scrollLeft = this.dom.viewport.scrollLeft;
-      const viewportWidth = this._cachedViewportWidth || this.dom.viewport.clientWidth || 800;
+      const scrollLeft = this._cachedScrollLeft !== undefined ? this._cachedScrollLeft : (this.dom.viewport ? this.dom.viewport.scrollLeft : 0);
+      const viewportWidth = this._cachedViewportWidth || (this.dom.viewport ? this.dom.viewport.clientWidth : 800) || 800;
 
       if (playheadX > scrollLeft + viewportWidth - 50) {
-        this.dom.viewport.scrollLeft = Math.max(0, playheadX - Math.round(viewportWidth * 0.25));
+        const nextScroll = Math.max(0, playheadX - Math.round(viewportWidth * 0.25));
+        this._cachedScrollLeft = nextScroll;
+        this.dom.viewport.scrollLeft = nextScroll;
       } else if (playheadX < scrollLeft) {
-        this.dom.viewport.scrollLeft = Math.max(0, playheadX - 40);
+        const nextScroll = Math.max(0, playheadX - 40);
+        this._cachedScrollLeft = nextScroll;
+        this.dom.viewport.scrollLeft = nextScroll;
       }
     }
 

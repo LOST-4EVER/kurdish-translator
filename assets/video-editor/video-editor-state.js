@@ -151,8 +151,17 @@
     }
 
     _reindex() {
-      for (let i = 0; i < this.cues.length; i++) {
-        this.cues[i].index = i + 1;
+      if (Array.isArray(this.cues)) {
+        this.cues.sort((a, b) => (a.start || 0) - (b.start || 0));
+        for (let i = 0; i < this.cues.length; i++) {
+          this.cues[i].index = i + 1;
+        }
+        if (this.activeCue) {
+          const foundIdx = this.cues.indexOf(this.activeCue);
+          if (foundIdx !== -1) {
+            this.activeCueIndex = foundIdx;
+          }
+        }
       }
     }
 
@@ -524,8 +533,9 @@
         }
 
         this.cues[index] = { ...this.cues[index], start, end };
+        this._reindex();
         if (this.activeCueIndex === index) {
-          this.activeCue = this.cues[index];
+          this.activeCue = this.cues[this.activeCueIndex];
         }
         this.emit('cuesChange', this.cues);
       }
