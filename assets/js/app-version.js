@@ -1,16 +1,24 @@
 /**
- * app-version.js — PWA lifecycle, cache management, update detection, latency diagnostics, and refresh controls.
+ * app-version.js — PWA lifecycle, Service Worker management, GitHub sync, multi-tier update detection, and diagnostics.
  * Exposes AppVersion as a global module.
  */
 const AppVersion = (() => {
-  const APP_VERSION = 'v161';
+  const APP_VERSION = 'v166';
+  const GITHUB_REPO = 'LOST-4EVER/kurdish-translator';
+  const GITHUB_API_URL = `https://api.github.com/repos/${GITHUB_REPO}/commits/main`;
+  const GITHUB_RAW_BASE = `https://raw.githubusercontent.com/${GITHUB_REPO}/main`;
+  const GH_PAGES_BASE = `https://lost-4ever.github.io/kurdish-translator`;
+
   let isRefreshing = false;
+  let isSyncingGitHub = false;
+  let isCheckingUpdates = false;
   let hasShownUpdateNotice = false;
   let hasUpdateAvailable = false;
-  let latestDiscoveredVer = '';
+  let latestDiscoveredVer = APP_VERSION;
   let lastCheckedTimestamp = Date.now();
   let timeTickerInterval = null;
   let latestGitHubMeta = null;
+  let currentServiceWorkerReg = null;
 
   function getElements() {
     return {
@@ -25,6 +33,11 @@ const AppVersion = (() => {
       networkStatusBadge: document.getElementById('networkStatusBadge'),
       networkStatusText: document.getElementById('networkStatusText'),
       updateBadgeDot: document.getElementById('updateBadgeDot'),
+      githubMetaBox: document.getElementById('githubMetaBox'),
+      ghCommitSha: document.getElementById('ghCommitSha'),
+      ghCommitMsg: document.getElementById('ghCommitMsg'),
+      ghCommitTime: document.getElementById('ghCommitTime'),
+      ghSyncStatus: document.getElementById('ghSyncStatus'),
       btnQuickRefresh: document.getElementById('btnQuickRefresh'),
       btnForceRefresh: document.getElementById('btnForceRefresh'),
       btnSyncGitHub: document.getElementById('btnSyncGitHub'),
@@ -33,7 +46,9 @@ const AppVersion = (() => {
       changelogPanel: document.getElementById('changelogPanel'),
       updateBanner: document.getElementById('updateBanner'),
       bannerVerTag: document.getElementById('bannerVerTag'),
+      bannerSubText: document.getElementById('bannerSubText'),
       bannerRefreshBtn: document.getElementById('bannerUpdateNowBtn') || document.getElementById('bannerRefreshBtn'),
+      bannerSyncGhBtn: document.getElementById('bannerSyncGhBtn'),
       bannerForceRefreshBtn: document.getElementById('bannerForceRefreshBtn'),
       bannerDismissBtn: document.getElementById('bannerCloseBtn') || document.getElementById('bannerDismissBtn'),
       installBtn: document.getElementById('installBtn'),
@@ -47,8 +62,16 @@ const AppVersion = (() => {
     return fallback;
   }
 
-  function isKurdish() {
-    return (typeof UI_I18N !== 'undefined' && UI_I18N.getCurrentLang && UI_I18N.getCurrentLang() === 'ckb');
+  function formatRelativeTime(timestamp) {
+    const elapsedSeconds = Math.max(0, Math.floor((Date.now() - timestamp) / 1000));
+    if (elapsedSeconds < 15) return getI18nText('timeJustNow', 'Just now');
+    if (elapsedSeconds < 60) return `${elapsedSeconds}s ago`;
+    const elapsedMinutes = Math.floor(elapsedSeconds / 60);
+    if (elapsedMinutes < 60) return `${elapsedMinutes}m ago`;
+    const elapsedHours = Math.floor(elapsedMinutes / 60);
+    if (elapsedHours < 24) return `${elapsedHours}h ago`;
+    const elapsedDays = Math.floor(elapsedHours / 24);
+    return `${elapsedDays}d ago`;
   }
 
   let deferredInstallPrompt = null;
@@ -98,514 +121,504 @@ const AppVersion = (() => {
             installBtn.hidden = true;
             installBtn.style.display = 'none';
             deferredInstallPrompt = null;
-            if (typeof Toast !== 'undefined') {
-              Toast.show(getI18nText('installSuccess', 'App installed successfully!'), 'success', 3000);
-            }
           }
-        } catch (err) {
-          console.warn('PWA install prompt error:', err);
+        } catch {
+          // Ignore prompt errors
         }
       });
     }
 
     window.addEventListener('appinstalled', () => {
-      deferredInstallPrompt = null;
       if (installBtn) {
         installBtn.hidden = true;
         installBtn.style.display = 'none';
       }
+      deferredInstallPrompt = null;
       if (typeof Toast !== 'undefined') {
-        Toast.show(getI18nText('installSuccess', 'App installed successfully!'), 'success', 4000);
+        Toast.show(getI18nText('appInstalled', 'App installed successfully!'), 'success', 3000);
       }
     });
   }
 
   /**
-   * Set up and bind version tags, update banners, and refresh buttons.
+   * Update the UI labels for version, timestamp, and network status.
    */
-  function init() {
-    refreshTexts();
-
-    window.addEventListener('online', updateNetworkStatus);
-    window.addEventListener('offline', updateNetworkStatus);
-
-    startTimeTicker();
-    measureLatency();
-    registerSW();
-    initInstallPrompt();
-    bindRefreshControls();
-  }
-
-  function updateTimeText() {
+  function updateUIState() {
     const els = getElements();
-    if (!els.refreshTimeTxt) return;
-    const ckb = isKurdish();
-    const sec = Math.floor((Date.now() - lastCheckedTimestamp) / 1000);
-    if (sec < 10) {
-      els.refreshTimeTxt.textContent = ckb ? 'کەمێک پێش ئێستا' : 'Just now';
-    } else if (sec < 60) {
-      els.refreshTimeTxt.textContent = ckb ? `${sec} چرکە لەمەوبەر` : `${sec}s ago`;
-    } else {
-      const min = Math.floor(sec / 60);
-      els.refreshTimeTxt.textContent = ckb ? `${min} خولەک لەمەوبەر` : `${min}m ago`;
+    if (els.currentVerTag) {
+      els.currentVerTag.textContent = latestDiscoveredVer || APP_VERSION;
     }
-  }
-
-  function startTimeTicker() {
-    if (timeTickerInterval) clearInterval(timeTickerInterval);
-    updateTimeText();
-    timeTickerInterval = setInterval(updateTimeText, 5000);
-  }
-
-  function updateNetworkStatus() {
-    const els = getElements();
-    const isOnline = navigator.onLine;
-
+    if (els.menuVerNum) {
+      els.menuVerNum.textContent = latestDiscoveredVer || APP_VERSION;
+    }
+    if (els.refreshTimeTxt) {
+      els.refreshTimeTxt.textContent = formatRelativeTime(lastCheckedTimestamp);
+    }
+    if (els.updateBadgeDot) {
+      els.updateBadgeDot.classList.toggle('active', hasUpdateAvailable);
+    }
     if (els.refreshLiveDot) {
-      els.refreshLiveDot.className = 'live-dot ' + (isOnline ? 'online' : 'offline');
+      els.refreshLiveDot.className = `live-dot ${navigator.onLine ? 'online' : 'offline'}`;
     }
     if (els.networkStatusText) {
-      els.networkStatusText.textContent = isOnline
+      els.networkStatusText.textContent = navigator.onLine
         ? getI18nText('netOnline', 'Online & Synced')
         : getI18nText('netOffline', 'Offline (Cached Shell)');
     }
-    if (els.networkStatusBadge) {
-      els.networkStatusBadge.style.color = isOnline ? '#34d399' : '#94a3b8';
-    }
-  }
 
-  function refreshTexts() {
-    const els = getElements();
-    const ckb = isKurdish();
-
-    if (els.currentVerTag) els.currentVerTag.textContent = APP_VERSION;
-    if (els.menuVerNum) els.menuVerNum.textContent = APP_VERSION;
-    const changelogVerEl = document.querySelector('.changelog-ver');
-    if (changelogVerEl) changelogVerEl.textContent = `Release ${APP_VERSION}`;
-
-    const whatsNewStrong = els.btnToggleChangelog ? els.btnToggleChangelog.querySelector('strong') : null;
-    if (whatsNewStrong) {
-      const verNum = APP_VERSION.replace('v', '');
-      const verCkb = verNum.replace(/1/g, '١').replace(/6/g, '٦').replace(/0/g, '٠');
-      whatsNewStrong.textContent = ckb ? `نوێکارییەکانی وەشانی ${verCkb}` : `What's New in ${APP_VERSION}`;
-    }
-
-    updateNetworkStatus();
-    updateTimeText();
-
-    if (hasUpdateAvailable) {
-      if (els.refreshStatusTxt) {
-        els.refreshStatusTxt.textContent = `${ckb ? 'وەشانی نوێ بەردەستە' : 'New version available'} (${latestDiscoveredVer || 'v151+'})`;
-        els.refreshStatusTxt.style.color = '#f43f5e';
+    // Render GitHub commit metadata if available
+    if (latestGitHubMeta && els.githubMetaBox) {
+      els.githubMetaBox.classList.remove('hidden');
+      if (els.ghCommitSha) {
+        els.ghCommitSha.textContent = latestGitHubMeta.sha || 'Latest';
       }
-    } else {
-      if (els.refreshStatusTxt) {
-        els.refreshStatusTxt.textContent = getI18nText('appUpToDate', 'App is up to date');
-        els.refreshStatusTxt.style.color = '';
+      if (els.ghCommitMsg) {
+        els.ghCommitMsg.textContent = latestGitHubMeta.message || 'Synced with GitHub repository';
+        els.ghCommitMsg.title = latestGitHubMeta.message || '';
+      }
+      if (els.ghCommitTime) {
+        els.ghCommitTime.textContent = latestGitHubMeta.dateStr || 'Recent commit';
+      }
+      if (els.ghSyncStatus) {
+        els.ghSyncStatus.textContent = hasUpdateAvailable
+          ? getI18nText('updateAvailable', 'Update Ready')
+          : getI18nText('githubUpToDate', 'GitHub Live');
+        els.ghSyncStatus.style.color = hasUpdateAvailable ? '#fb7185' : '#38bdf8';
       }
     }
   }
 
   /**
-   * Measure latency to Google Translate endpoint or fallback.
+   * Show the update available alert banner and badge.
    */
-  async function measureLatency() {
-    const els = getElements();
-    if (!navigator.onLine) {
-      if (els.apiLatencyVal) {
-        els.apiLatencyVal.textContent = isKurdish() ? 'ئۆفلاین' : 'Offline';
-        els.apiLatencyVal.style.color = '#94a3b8';
-      }
-      return;
-    }
-
-    const t0 = performance.now();
-    try {
-      const ctrl = new AbortController();
-      const tid = setTimeout(() => ctrl.abort(), 4000);
-      const res = await fetch('https://translate.googleapis.com/translate_a/single?client=gtx&sl=en&tl=ckb&dt=t&q=hi', {
-        method: 'GET',
-        cache: 'no-store',
-        signal: ctrl.signal,
-      });
-      clearTimeout(tid);
-      const elapsed = Math.round(performance.now() - t0);
-      if (els.apiLatencyVal) {
-        els.apiLatencyVal.textContent = `${elapsed} ms`;
-        els.apiLatencyVal.style.color = elapsed < 350 ? '#34d399' : (elapsed < 800 ? '#fbbf24' : '#fb7185');
-      }
-    } catch {
-      if (els.apiLatencyVal) {
-        els.apiLatencyVal.textContent = 'Ready (PWA)';
-        els.apiLatencyVal.style.color = '#38bdf8';
-      }
-    }
-  }
-
-  /**
-   * Register service worker and listen for updates/controller changes.
-   */
-  function registerSW() {
-    if (!('serviceWorker' in navigator)) return;
-
-    // Prevent reload loops on controllerchange
-    navigator.serviceWorker.addEventListener('controllerchange', () => {
-      if (isRefreshing) return;
-      isRefreshing = true;
-      window.location.reload();
-    });
-
-    window.addEventListener('load', () => {
-      navigator.serviceWorker.register('./sw.js')
-        .then((reg) => {
-          // Check for existing waiting worker
-          if (reg.waiting) {
-            showUpdateAvailable(reg);
-          }
-
-          // Listen for new worker installs
-          reg.addEventListener('updatefound', () => {
-            const newWorker = reg.installing;
-            if (!newWorker) return;
-            newWorker.addEventListener('statechange', () => {
-              if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
-                showUpdateAvailable(reg);
-              }
-            });
-          });
-
-          // Check on window focus and periodically
-          window.addEventListener('focus', () => {
-            reg.update().catch(() => {});
-            measureLatency();
-          });
-
-          setInterval(() => {
-            reg.update().catch(() => {});
-          }, 30 * 60 * 1000);
-        })
-        .catch((err) => {
-          console.warn('Service worker registration failed:', err);
-        });
-    });
-  }
-
-  /**
-   * Display update badge and notification banner.
-   */
-  function showUpdateAvailable(reg, newVerStr) {
-    const els = getElements();
+  function showUpdateAvailable(versionOrSha) {
     hasUpdateAvailable = true;
-    latestDiscoveredVer = newVerStr || 'v140+';
-    const verDisplay = latestDiscoveredVer;
-
-    if (els.updateBadgeDot) els.updateBadgeDot.classList.remove('hidden');
-    if (els.refreshBtn) els.refreshBtn.classList.add('has-update');
-    if (els.bannerVerTag) els.bannerVerTag.textContent = verDisplay;
-
-    if (els.refreshStatusTxt) {
-      els.refreshStatusTxt.textContent = `${getI18nText('newVersionAvailable', 'New version available')} (${verDisplay})`;
-      els.refreshStatusTxt.style.color = '#f43f5e';
+    if (versionOrSha && typeof versionOrSha === 'string') {
+      latestDiscoveredVer = versionOrSha;
     }
 
+    const els = getElements();
+    if (els.updateBadgeDot) {
+      els.updateBadgeDot.classList.add('active');
+    }
+    if (els.refreshStatusTxt) {
+      els.refreshStatusTxt.textContent = getI18nText('newVersionAvailable', 'New version available!');
+      els.refreshStatusTxt.style.color = '#fb7185';
+    }
+    if (els.bannerVerTag) {
+      els.bannerVerTag.textContent = latestDiscoveredVer || APP_VERSION;
+    }
+    if (els.bannerSubText) {
+      els.bannerSubText.textContent = latestGitHubMeta && latestGitHubMeta.message
+        ? `${latestGitHubMeta.message.slice(0, 75)} — (${latestDiscoveredVer})`
+        : getI18nText('updateAvailableSub', 'Update now to get the latest version and features.');
+    }
     if (els.updateBanner && !hasShownUpdateNotice) {
       els.updateBanner.classList.remove('hidden');
+      els.updateBanner.style.display = 'flex';
       hasShownUpdateNotice = true;
     }
+
+    updateUIState();
   }
 
   /**
-   * Fetch the latest version and commit info published to GitHub Pages / repository.
+   * Fetch commit metadata from GitHub API with fallback to raw GitHub content.
    */
-  async function fetchLatestGitHubVersion() {
-    if (!navigator.onLine) return null;
-
-    // 1. Check official GitHub API for the latest commit on the main branch
+  async function fetchGitHubCommitMeta() {
     try {
-      const ctrl = new AbortController();
-      const tid = setTimeout(() => ctrl.abort(), 3500);
-      const res = await fetch('https://api.github.com/repos/LOST-4EVER/kurdish-translator/commits/main', {
-        headers: { 'Accept': 'application/vnd.github.v3+json' },
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 4500);
+
+      const res = await fetch(`${GITHUB_API_URL}?_t=${Date.now()}`, {
+        headers: { Accept: 'application/vnd.github.v3+json' },
         cache: 'no-store',
-        signal: ctrl.signal
+        signal: controller.signal,
       });
-      clearTimeout(tid);
+      clearTimeout(timeoutId);
+
       if (res.ok) {
         const data = await res.json();
-        if (data && data.sha) {
+        const shortSha = (data.sha || '').slice(0, 7);
+        const commitMsg = data.commit && data.commit.message
+          ? data.commit.message.split('\n')[0].trim()
+          : 'Repository updated';
+        const commitDate = data.commit && (data.commit.committer ? data.commit.committer.date : data.commit.author?.date);
+        const dateStr = commitDate ? new Date(commitDate).toLocaleDateString(undefined, { month: 'short', day: 'numeric' }) : 'Today';
+
+        latestGitHubMeta = {
+          sha: shortSha,
+          fullSha: data.sha,
+          message: commitMsg,
+          dateStr: dateStr,
+          author: data.commit?.author?.name || 'Maintainer',
+          url: data.html_url || `https://github.com/${GITHUB_REPO}`,
+        };
+
+        const lastInstalledSha = localStorage.getItem('kurdish_installed_sha');
+        if (lastInstalledSha && lastInstalledSha !== shortSha) {
+          showUpdateAvailable(shortSha);
+        }
+
+        updateUIState();
+        return latestGitHubMeta;
+      }
+    } catch {
+      // Fall back to querying raw files
+    }
+
+    // Tier 2 Fallback: Fetch raw app-version.js
+    try {
+      const rawRes = await fetch(`${GITHUB_RAW_BASE}/assets/js/app-version.js?_t=${Date.now()}`, {
+        cache: 'no-store',
+      });
+      if (rawRes.ok) {
+        const text = await rawRes.text();
+        const match = text.match(/APP_VERSION\s*=\s*['"]([^'"]+)['"]/);
+        if (match && match[1]) {
+          const remoteVer = match[1];
           latestGitHubMeta = {
-            sha: data.sha.slice(0, 7),
-            message: data.commit && data.commit.message ? data.commit.message.split('\n')[0] : '',
-            date: data.commit && data.commit.committer ? data.commit.committer.date : '',
-            url: data.html_url || 'https://github.com/LOST-4EVER/kurdish-translator'
+            sha: remoteVer,
+            fullSha: remoteVer,
+            message: `Version ${remoteVer} on GitHub`,
+            dateStr: 'Live',
+            author: 'GitHub',
           };
+          if (remoteVer !== APP_VERSION) {
+            showUpdateAvailable(remoteVer);
+          }
+          updateUIState();
+          return latestGitHubMeta;
         }
       }
-    } catch {}
-
-    // 2. Scan remote files for versioning tag
-    const endpoints = [
-      'https://raw.githubusercontent.com/LOST-4EVER/kurdish-translator/main/assets/js/app-version.js?_t=' + Date.now(),
-      'https://lost-4ever.github.io/kurdish-translator/sw.js?_t=' + Date.now(),
-      'https://raw.githubusercontent.com/LOST-4EVER/kurdish-translator/main/sw.js?_t=' + Date.now()
-    ];
-
-    for (const url of endpoints) {
-      try {
-        const ctrl = new AbortController();
-        const tid = setTimeout(() => ctrl.abort(), 3500);
-        const res = await fetch(url, { cache: 'no-store', signal: ctrl.signal });
-        clearTimeout(tid);
-        if (!res.ok) continue;
-        const text = await res.text();
-        const match = text.match(/APP_VERSION\s*=\s*['"](?:v)?(\d+)['"]/i)
-          || text.match(/const\s+CACHE\s*=\s*['"](?:kurdish-translator-)?v?(\d+)['"]/i)
-          || text.match(/CACHE\s*=\s*['"]([^'"]+)['"]/);
-        if (match) {
-          const vNum = parseInt(match[1], 10);
-          return isNaN(vNum) ? match[1] : 'v' + vNum;
-        }
-      } catch {}
+    } catch {
+      // Ignore network errors in fallback
     }
+
     return null;
   }
 
   /**
-   * Sync application directly with GitHub, purging local caches and reloading.
+   * Diagnostic ping to estimate network latency to the translation endpoint.
    */
-  async function syncWithGitHub() {
-    const els = getElements();
-    if (els.refreshMenu) els.refreshMenu.classList.add('hidden');
-    if (typeof Toast !== 'undefined') {
-      Toast.show(getI18nText('syncingGitHub', 'Connecting to GitHub repository...'), 'info', 3000);
+  async function measureApiLatency() {
+    if (!navigator.onLine) {
+      const els = getElements();
+      if (els.apiLatencyVal) els.apiLatencyVal.textContent = 'Offline';
+      return;
     }
 
+    const startTime = performance.now();
     try {
-      const ghVer = await fetchLatestGitHubVersion();
-      let statusMsg = '';
-      if (latestGitHubMeta && latestGitHubMeta.sha) {
-        statusMsg = `GitHub (${latestGitHubMeta.sha}): ${latestGitHubMeta.message || 'Latest commit'}`;
-      } else if (ghVer) {
-        statusMsg = `GitHub release: ${ghVer}`;
-      }
+      const pingUrl = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=auto&tl=ckb&dt=t&q=hi&_p=${Date.now()}`;
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 3500);
 
-      if ('caches' in window) {
-        const keys = await caches.keys();
-        await Promise.all(keys.map((k) => caches.delete(k)));
-      }
-      if ('serviceWorker' in navigator) {
-        const registrations = await navigator.serviceWorker.getRegistrations();
-        await Promise.all(registrations.map((r) => r.unregister()));
-      }
+      const res = await fetch(pingUrl, {
+        method: 'GET',
+        cache: 'no-store',
+        signal: controller.signal,
+      });
+      clearTimeout(timeoutId);
 
-      if (typeof Toast !== 'undefined') {
-        Toast.show(statusMsg || getI18nText('syncComplete', 'Synced with GitHub! Reloading...'), 'success', 3500);
+      const latency = Math.round(performance.now() - startTime);
+      const els = getElements();
+      if (els.apiLatencyVal) {
+        if (res.ok) {
+          els.apiLatencyVal.textContent = `${latency} ms`;
+          els.apiLatencyVal.style.color = latency < 250 ? '#34d399' : latency < 700 ? '#facc15' : '#fb7185';
+        } else {
+          els.apiLatencyVal.textContent = 'Degraded';
+          els.apiLatencyVal.style.color = '#facc15';
+        }
       }
-
-      setTimeout(() => {
-        const targetUrl = new URL(window.location.href);
-        targetUrl.searchParams.set('_gh_sync', Date.now().toString());
-        window.location.href = targetUrl.toString();
-      }, 600);
-    } catch (err) {
-      performForceRefresh('Updating and purging cache...');
+    } catch {
+      const els = getElements();
+      if (els.apiLatencyVal) {
+        els.apiLatencyVal.textContent = 'Timeout';
+        els.apiLatencyVal.style.color = '#fb7185';
+      }
     }
   }
 
   /**
-   * Scan sw.js and GitHub Pages for version changes and report status.
+   * Check for application updates across all tiers:
+   * 1. Service Worker registration byte check
+   * 2. GitHub Commits API
+   * 3. Same-origin sw.js cache version
    */
   async function checkForAppUpdates(manual = false) {
+    if (isCheckingUpdates) return;
+    isCheckingUpdates = true;
+
     const els = getElements();
-    lastCheckedTimestamp = Date.now();
-    updateTimeText();
-
-    if (els.refreshLiveDot) {
-      els.refreshLiveDot.className = 'live-dot checking';
-    }
-
     if (manual) {
-      if (typeof Toast !== 'undefined') {
-        Toast.show(getI18nText('checkingForUpdates', 'Checking for updates...'), 'info', 2000);
-      }
       if (els.refreshStatusTxt) {
-        els.refreshStatusTxt.textContent = getI18nText('checkingForUpdates', 'Checking for updates...');
+        els.refreshStatusTxt.textContent = getI18nText('checkingUpdate', 'Checking for updates…');
+      }
+      if (typeof Toast !== 'undefined') {
+        Toast.show(getI18nText('checkingUpdate', 'Checking for updates…'), 'info', 2000);
       }
     }
 
-    measureLatency();
+    lastCheckedTimestamp = Date.now();
 
-    try {
-      if ('serviceWorker' in navigator) {
+    // 1. Service Worker Update Check
+    if ('serviceWorker' in navigator) {
+      try {
         const reg = await navigator.serviceWorker.getRegistration();
         if (reg) {
-          await reg.update().catch(() => {});
+          currentServiceWorkerReg = reg;
+          await reg.update();
+
           if (reg.waiting) {
-            showUpdateAvailable(reg);
+            showUpdateAvailable('New Version');
             if (manual && typeof Toast !== 'undefined') {
-              Toast.show(`${getI18nText('newVersionAvailable', 'New version available')}!`, 'success', 4000);
+              Toast.show(getI18nText('newVersionAvailable', 'New version available!'), 'success', 4000);
             }
+            isCheckingUpdates = false;
+            return;
+          }
+
+          if (reg.installing) {
+            reg.installing.addEventListener('statechange', () => {
+              if (reg.installing && reg.installing.state === 'installed') {
+                showUpdateAvailable('New Version');
+              }
+            });
+          }
+        }
+      } catch {
+        // Continue checking other tiers
+      }
+    }
+
+    // 2. GitHub Commits and Remote Version Check
+    await fetchGitHubCommitMeta();
+
+    // 3. Same-origin sw.js Version Check
+    try {
+      const swRes = await fetch(`./sw.js?_cb=${Date.now()}`, { cache: 'no-store' });
+      if (swRes.ok) {
+        const text = await swRes.text();
+        const match = text.match(/CACHE\s*=\s*['"]kurdish-translator-(v\d+)['"]/);
+        if (match && match[1]) {
+          const remoteSwVer = match[1];
+          if (remoteSwVer !== APP_VERSION) {
+            showUpdateAvailable(remoteSwVer);
+            if (manual && typeof Toast !== 'undefined') {
+              Toast.show(getI18nText('newVersionAvailable', 'New version available!'), 'success', 4000);
+            }
+            isCheckingUpdates = false;
             return;
           }
         }
       }
+    } catch {
+      // Ignore
+    }
 
-      let foundNew = false;
-      let serverVer = '';
+    await measureApiLatency();
 
-      // 1. Check local Service Worker cache tag
-      try {
-        const res = await fetch('./sw.js?_t=' + Date.now(), { cache: 'no-store' });
-        if (res.ok) {
-          const text = await res.text();
-          const match = text.match(/const\s+CACHE\s*=\s*['"]([^'"]+)['"]/);
-          if (match && match[1]) {
-            const cacheTag = match[1];
-            const vMatch = cacheTag.match(/v(\d+)/i);
-            const currMatch = APP_VERSION.match(/v(\d+)/i);
-
-            if (vMatch && currMatch) {
-              const serverNum = parseInt(vMatch[1], 10);
-              const currNum = parseInt(currMatch[1], 10);
-              if (serverNum > currNum) {
-                foundNew = true;
-                serverVer = 'v' + serverNum;
-              }
-            } else if (!cacheTag.includes(APP_VERSION)) {
-              foundNew = true;
-              serverVer = cacheTag;
-            }
-          }
-        }
-      } catch {}
-
-      // 2. Also check remote GitHub Pages / upstream repository if online
-      if (!foundNew && navigator.onLine) {
-        const ghVer = await fetchLatestGitHubVersion();
-        if (ghVer) {
-          const ghMatch = ghVer.match(/v(\d+)/i);
-          const currMatch = APP_VERSION.match(/v(\d+)/i);
-          if (ghMatch && currMatch) {
-            const ghNum = parseInt(ghMatch[1], 10);
-            const currNum = parseInt(currMatch[1], 10);
-            if (ghNum > currNum) {
-              foundNew = true;
-              serverVer = ghVer;
-            }
-          }
-        }
-      }
-
-      if (els.refreshLiveDot) {
-        els.refreshLiveDot.className = 'live-dot ' + (navigator.onLine ? 'online' : 'offline');
-      }
-
-      if (foundNew) {
-        showUpdateAvailable(null, serverVer);
-        if (manual && typeof Toast !== 'undefined') {
-          Toast.show(`${getI18nText('newVersionAvailable', 'New version available')}: ${serverVer}!`, 'success', 4000);
-        }
-      } else {
-        hasUpdateAvailable = false;
+    if (manual) {
+      if (!hasUpdateAvailable) {
         if (els.refreshStatusTxt) {
-          els.refreshStatusTxt.textContent = getI18nText('appUpToDate', 'App is up to date');
+          els.refreshStatusTxt.textContent = getI18nText('appUpToDate', 'App up to date');
           els.refreshStatusTxt.style.color = '';
         }
-        if (manual && typeof Toast !== 'undefined') {
-          Toast.show(getI18nText('appUpToDate', 'App is up to date') + ` (${APP_VERSION})`, 'success', 3000);
+        if (typeof Toast !== 'undefined') {
+          Toast.show(getI18nText('appUpToDate', 'App is up to date') + ` (${APP_VERSION})`, 'success', 2500);
         }
       }
-    } catch (e) {
-      if (els.refreshLiveDot) {
-        els.refreshLiveDot.className = 'live-dot ' + (navigator.onLine ? 'online' : 'offline');
-      }
-      if (manual && typeof Toast !== 'undefined') {
-        Toast.show(getI18nText('checkFailed', 'Update check failed. Working offline?'), 'warning', 3000);
-      }
     }
+
+    updateUIState();
+    isCheckingUpdates = false;
   }
 
   /**
-   * Perform a quick refresh: uses skipWaiting if available, else reloads smoothly.
+   * Completely syncs the application with GitHub:
+   * - Queries GitHub for the latest commit info
+   * - Purges all Service Worker CacheStorage buckets
+   * - Unregisters existing Service Workers
+   * - Performs a hard cache-busted reload to guarantee 100% fresh assets
    */
-  async function performQuickRefresh() {
+  async function syncWithGitHub() {
+    if (isSyncingGitHub) return;
+    isSyncingGitHub = true;
+
     const els = getElements();
-    if (els.refreshBtn) {
-      const icon = els.refreshBtn.querySelector('.refresh-icon');
-      if (icon) icon.classList.add('spin-refresh');
-      els.refreshBtn.classList.add('spinning');
+    if (els.btnSyncGitHub) {
+      els.btnSyncGitHub.disabled = true;
+      els.btnSyncGitHub.style.opacity = '0.7';
+    }
+    if (els.bannerSyncGhBtn) {
+      els.bannerSyncGhBtn.disabled = true;
     }
 
     if (typeof Toast !== 'undefined') {
-      Toast.show(getI18nText('refreshingApp', 'Refreshing app...'), 'info', 2000);
+      Toast.show(getI18nText('syncingGitHub', 'Pulling latest code from GitHub…'), 'info', 4000);
     }
 
     try {
-      if ('serviceWorker' in navigator) {
-        const reg = await navigator.serviceWorker.getRegistration();
-        if (reg) {
-          if (reg.waiting) {
-            reg.waiting.postMessage({ type: 'SKIP_WAITING' });
-            reg.waiting.postMessage('SKIP_WAITING');
-          }
-          await reg.update().catch(() => {});
-          if (reg.waiting) {
-            reg.waiting.postMessage({ type: 'SKIP_WAITING' });
-            reg.waiting.postMessage('SKIP_WAITING');
-          }
-        }
+      // 1. Fetch latest commit metadata
+      const meta = await fetchGitHubCommitMeta();
+      if (meta && meta.sha) {
+        localStorage.setItem('kurdish_installed_sha', meta.sha);
       }
-    } catch (e) {
-      console.warn('Service worker refresh trigger:', e);
-    }
 
-    setTimeout(() => {
-      if (isRefreshing) return;
-      isRefreshing = true;
-      const url = new URL(window.location.href);
-      url.searchParams.set('_v', Date.now().toString());
-      window.location.href = url.toString();
-    }, 350);
+      // 2. Instruct active Service Worker to clear its caches and skip waiting
+      if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
+        navigator.serviceWorker.controller.postMessage({ type: 'CLEAR_ALL_CACHES' });
+        navigator.serviceWorker.controller.postMessage({ type: 'SKIP_WAITING' });
+      }
+
+      // 3. Purge all CacheStorage keys from main window context
+      if ('caches' in window) {
+        const keys = await caches.keys();
+        await Promise.all(keys.map(k => caches.delete(k)));
+      }
+
+      // 4. Unregister all service workers
+      if ('serviceWorker' in navigator) {
+        const registrations = await navigator.serviceWorker.getRegistrations();
+        await Promise.all(registrations.map(r => r.unregister()));
+      }
+
+      if (typeof Toast !== 'undefined') {
+        Toast.show(getI18nText('syncComplete', 'Synced with GitHub! Reloading…'), 'success', 2000);
+      }
+
+      // 5. Trigger clean, cache-busting hard reload
+      setTimeout(() => {
+        const targetUrl = new URL(window.location.origin + window.location.pathname);
+        targetUrl.searchParams.set('_gh_sync', Date.now().toString());
+        targetUrl.searchParams.set('_nocache', Date.now().toString());
+        window.location.replace(targetUrl.toString());
+      }, 500);
+
+    } catch (err) {
+      if (typeof Toast !== 'undefined') {
+        Toast.show(getI18nText('syncError', 'GitHub sync completed with partial network bypass. Reloading…'), 'warning', 2500);
+      }
+      setTimeout(() => {
+        window.location.reload();
+      }, 600);
+    }
   }
 
   /**
-   * Perform a force refresh: clear all caches, unregister service workers, and hard-reload.
+   * Fast refresh that activates waiting Service Worker and reloads.
    */
-  async function performForceRefresh(customMsg) {
-    const els = getElements();
-    if (els.refreshBtn) {
-      els.refreshBtn.classList.add('spinning');
-    }
+  async function performQuickRefresh() {
+    if (isRefreshing) return;
+    isRefreshing = true;
+
     if (typeof Toast !== 'undefined') {
-      Toast.show(customMsg || getI18nText('clearingCache', 'Clearing cache & reloading...'), 'info', 3000);
+      Toast.show(getI18nText('refreshingApp', 'Refreshing application…'), 'info', 1500);
+    }
+
+    if ('serviceWorker' in navigator) {
+      const reg = await navigator.serviceWorker.getRegistration();
+      if (reg && reg.waiting) {
+        reg.waiting.postMessage({ type: 'SKIP_WAITING' });
+        navigator.serviceWorker.addEventListener('controllerchange', () => {
+          window.location.reload();
+        }, { once: true });
+        setTimeout(() => window.location.reload(), 600);
+        return;
+      }
+    }
+
+    window.location.reload();
+  }
+
+  /**
+   * Force refresh: Purges all CacheStorage entries and reloads.
+   */
+  async function performForceRefresh() {
+    if (isRefreshing) return;
+    isRefreshing = true;
+
+    if (typeof Toast !== 'undefined') {
+      Toast.show(getI18nText('forceRefreshing', 'Purging cache & hard reloading…'), 'warning', 2000);
     }
 
     try {
       if ('caches' in window) {
         const keys = await caches.keys();
-        await Promise.all(keys.map((k) => caches.delete(k)));
+        await Promise.all(keys.map(k => caches.delete(k)));
       }
       if ('serviceWorker' in navigator) {
-        const registrations = await navigator.serviceWorker.getRegistrations();
-        await Promise.all(registrations.map((r) => r.unregister()));
+        const reg = await navigator.serviceWorker.getRegistration();
+        if (reg) await reg.unregister();
       }
-    } catch (e) {
-      console.warn('Cache clearing error:', e);
+    } catch {
+      // Ignore
     }
 
     setTimeout(() => {
       const url = new URL(window.location.href);
       url.searchParams.set('_force', Date.now().toString());
-      window.location.href = url.toString();
+      window.location.replace(url.toString());
     }, 400);
   }
 
   /**
-   * Wire up event listeners for the refresh popover menu and buttons.
+   * Register service worker and wire listeners.
    */
-  function bindRefreshControls() {
+  function registerServiceWorker() {
+    if (!('serviceWorker' in navigator)) return;
+
+    window.addEventListener('load', async () => {
+      try {
+        const reg = await navigator.serviceWorker.register('./sw.js', { updateViaCache: 'none' });
+        currentServiceWorkerReg = reg;
+
+        reg.addEventListener('updatefound', () => {
+          const newWorker = reg.installing;
+          if (!newWorker) return;
+
+          newWorker.addEventListener('statechange', () => {
+            if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+              showUpdateAvailable('New Version');
+            }
+          });
+        });
+
+        if (reg.waiting && navigator.serviceWorker.controller) {
+          showUpdateAvailable('New Version');
+        }
+
+        // Periodic check for SW update every 15 minutes
+        setInterval(() => {
+          reg.update().catch(() => {});
+        }, 15 * 60 * 1000);
+
+      } catch (err) {
+        // Ignore registration error
+      }
+    });
+
+    let refreshing = false;
+    navigator.serviceWorker.addEventListener('controllerchange', () => {
+      if (!refreshing && hasUpdateAvailable) {
+        refreshing = true;
+        window.location.reload();
+      }
+    });
+  }
+
+  /**
+   * Initialize UI dropdown, changelog accordion, buttons, and timers.
+   */
+  function init() {
+    initInstallPrompt();
+    registerServiceWorker();
+
     const els = getElements();
 
+    // Bind Refresh button dropdown toggle
     if (els.refreshBtn && els.refreshMenu) {
       els.refreshBtn.addEventListener('click', (e) => {
         e.stopPropagation();
@@ -616,23 +629,23 @@ const AppVersion = (() => {
         } else {
           els.refreshMenu.classList.remove('hidden');
           els.refreshBtn.setAttribute('aria-expanded', 'true');
-          refreshTexts();
-          measureLatency();
+          updateUIState();
+          measureApiLatency();
+          fetchGitHubCommitMeta();
         }
       });
 
-      const closeMenu = (e) => {
-        if (!els.refreshMenu.classList.contains('hidden')) {
-          if (!els.refreshMenu.contains(e.target) && !els.refreshBtn.contains(e.target)) {
-            els.refreshMenu.classList.add('hidden');
-            els.refreshBtn.setAttribute('aria-expanded', 'false');
-          }
+      // Close dropdown when clicking outside
+      document.addEventListener('click', (e) => {
+        if (!els.refreshMenu.classList.contains('hidden') &&
+            !els.refreshMenu.contains(e.target) &&
+            !els.refreshBtn.contains(e.target)) {
+          els.refreshMenu.classList.add('hidden');
+          els.refreshBtn.setAttribute('aria-expanded', 'false');
         }
-      };
+      });
 
-      document.addEventListener('click', closeMenu);
-      document.addEventListener('touchstart', closeMenu, { passive: true });
-
+      // Close dropdown on Escape key
       document.addEventListener('keydown', (e) => {
         if (e.key === 'Escape' && !els.refreshMenu.classList.contains('hidden')) {
           els.refreshMenu.classList.add('hidden');
@@ -641,76 +654,107 @@ const AppVersion = (() => {
       });
     }
 
+    // Bind Quick Refresh Button
     if (els.btnQuickRefresh) {
-      els.btnQuickRefresh.addEventListener('click', () => {
-        if (els.refreshMenu) els.refreshMenu.classList.add('hidden');
-        performQuickRefresh();
-      });
+      els.btnQuickRefresh.addEventListener('click', () => performQuickRefresh());
     }
 
-    if (els.btnForceRefresh) {
-      els.btnForceRefresh.addEventListener('click', () => {
-        if (els.refreshMenu) els.refreshMenu.classList.add('hidden');
-        performForceRefresh();
-      });
-    }
-
-    if (els.btnSyncGitHub) {
-      els.btnSyncGitHub.addEventListener('click', () => {
-        syncWithGitHub();
-      });
-    }
-
+    // Bind Check for Updates Button
     if (els.btnCheckUpdate) {
-      els.btnCheckUpdate.addEventListener('click', () => {
-        checkForAppUpdates(true);
-      });
+      els.btnCheckUpdate.addEventListener('click', () => checkForAppUpdates(true));
     }
 
+    // Bind Sync with GitHub Button
+    if (els.btnSyncGitHub) {
+      els.btnSyncGitHub.addEventListener('click', () => syncWithGitHub());
+    }
+
+    // Bind Force Refresh Button
+    if (els.btnForceRefresh) {
+      els.btnForceRefresh.addEventListener('click', () => performForceRefresh());
+    }
+
+    // Bind Changelog Toggle
     if (els.btnToggleChangelog && els.changelogPanel) {
       els.btnToggleChangelog.addEventListener('click', (e) => {
         e.stopPropagation();
-        const isClosed = els.changelogPanel.classList.contains('hidden');
-        if (isClosed) {
-          els.changelogPanel.classList.remove('hidden');
-          els.btnToggleChangelog.setAttribute('aria-expanded', 'true');
-        } else {
-          els.changelogPanel.classList.add('hidden');
-          els.btnToggleChangelog.setAttribute('aria-expanded', 'false');
-        }
+        const isCollapsed = els.changelogPanel.classList.contains('hidden');
+        els.changelogPanel.classList.toggle('hidden', !isCollapsed);
+        els.btnToggleChangelog.setAttribute('aria-expanded', isCollapsed ? 'true' : 'false');
       });
     }
 
+    // Bind Update Banner Buttons
     if (els.bannerRefreshBtn) {
-      els.bannerRefreshBtn.addEventListener('click', () => {
-        if (els.updateBanner) els.updateBanner.classList.add('hidden');
-        performQuickRefresh();
-      });
+      els.bannerRefreshBtn.addEventListener('click', () => performQuickRefresh());
     }
-
+    if (els.bannerSyncGhBtn) {
+      els.bannerSyncGhBtn.addEventListener('click', () => syncWithGitHub());
+    }
     if (els.bannerForceRefreshBtn) {
-      els.bannerForceRefreshBtn.addEventListener('click', () => {
-        if (els.updateBanner) els.updateBanner.classList.add('hidden');
-        performForceRefresh();
-      });
+      els.bannerForceRefreshBtn.addEventListener('click', () => performForceRefresh());
     }
-
     if (els.bannerDismissBtn && els.updateBanner) {
       els.bannerDismissBtn.addEventListener('click', () => {
         els.updateBanner.classList.add('hidden');
+        els.updateBanner.style.display = 'none';
       });
+    }
+
+    // Network status listeners
+    window.addEventListener('online', () => {
+      updateUIState();
+      measureApiLatency();
+      checkForAppUpdates(false);
+      if (typeof Toast !== 'undefined') {
+        Toast.show(getI18nText('netOnline', 'Connection restored. Synced.'), 'success', 2500);
+      }
+    });
+
+    window.addEventListener('offline', () => {
+      updateUIState();
+      if (typeof Toast !== 'undefined') {
+        Toast.show(getI18nText('netOffline', 'Offline. App is running from cache.'), 'warning', 3000);
+      }
+    });
+
+    // Start background relative time ticker
+    if (timeTickerInterval) clearInterval(timeTickerInterval);
+    timeTickerInterval = setInterval(() => {
+      const el = document.getElementById('refreshTimeTxt');
+      if (el) el.textContent = formatRelativeTime(lastCheckedTimestamp);
+    }, 30000);
+
+    // Initial check and background update check after 3 seconds
+    setTimeout(() => {
+      updateUIState();
+      measureApiLatency();
+      fetchGitHubCommitMeta();
+      checkForAppUpdates(false);
+    }, 2000);
+  }
+
+  // Auto-init on DOM ready when in browser
+  if (typeof document !== 'undefined') {
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', init);
+    } else {
+      init();
     }
   }
 
   return {
-    VERSION: APP_VERSION,
-    init,
-    refreshTexts,
-    checkForAppUpdates,
-    fetchLatestGitHubVersion,
-    syncWithGitHub,
-    getGitHubMeta: () => latestGitHubMeta,
-    performQuickRefresh,
-    performForceRefresh,
+    getVersion: () => APP_VERSION,
+    getDiscoveredVersion: () => latestDiscoveredVer,
+    hasUpdate: () => hasUpdateAvailable,
+    checkForUpdates: (manual) => checkForAppUpdates(manual),
+    syncWithGitHub: () => syncWithGitHub(),
+    quickRefresh: () => performQuickRefresh(),
+    forceRefresh: () => performForceRefresh(),
+    showUpdateNotice: (ver) => showUpdateAvailable(ver),
   };
 })();
+
+if (typeof module !== 'undefined' && module.exports) {
+  module.exports = AppVersion;
+}

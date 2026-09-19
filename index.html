@@ -293,7 +293,7 @@
         </span>
         <div class="update-text-group">
           <strong data-i18n="updateAvailable">A new version is available!</strong>
-          <span data-i18n="updateAvailableSub">Update now to get the latest version and features.</span>
+          <span data-i18n="updateAvailableSub" id="bannerSubText">Update now to get the latest version and features.</span>
         </div>
       </div>
       <div class="update-banner-actions">
@@ -303,6 +303,12 @@
             <path d="M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"></path>
           </svg>
           <span data-i18n="updateNow">Update Now</span>
+        </button>
+        <button class="update-action-btn gh-sync" id="bannerSyncGhBtn" title="Pull latest code from GitHub">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M12 2A10 10 0 0 0 2 12c0 4.42 2.87 8.17 6.84 9.5.5.08.66-.23.66-.5v-1.69c-2.77.6-3.36-1.34-3.36-1.34-.46-1.16-1.11-1.47-1.11-1.47-.91-.62.07-.6.07-.6 1 .07 1.53 1.03 1.53 1.03.87 1.52 2.34 1.07 2.91.83.1-.65.35-1.09.63-1.34-2.22-.25-4.55-1.11-4.55-4.92 0-1.11.38-2 1.03-2.71-.1-.25-.45-1.29.1-2.64 0 0 .84-.27 2.75 1.02.79-.22 1.65-.33 2.5-.33.85 0 1.71.11 2.5.33 1.91-1.29 2.75-1.02 2.75-1.02.55 1.35.2 2.39.1 2.64.65.71 1.03 1.6 1.03 2.71 0 3.82-2.34 4.66-4.57 4.91.36.31.69.92.69 1.85V21c0 .27.16.59.67.5C19.14 20.16 22 16.42 22 12A10 10 0 0 0 12 2z"/>
+          </svg>
+          <span data-i18n="pullGitHub">Pull GitHub</span>
         </button>
         <button class="update-action-btn force" id="bannerForceRefreshBtn" data-i18n-title="forceRefreshTitle" title="Force Refresh">
           <span data-i18n="forceRefresh">Force Refresh</span>
@@ -981,6 +987,22 @@
                 <span class="badge-text" id="networkStatusText" data-i18n="netOnline">Online &amp; Synced</span>
               </div>
             </div>
+            <div class="github-meta-box" id="githubMetaBox">
+              <div class="github-meta-header">
+                <span class="github-branch-tag">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M12 2A10 10 0 0 0 2 12c0 4.42 2.87 8.17 6.84 9.5.5.08.66-.23.66-.5v-1.69c-2.77.6-3.36-1.34-3.36-1.34-.46-1.16-1.11-1.47-1.11-1.47-.91-.62.07-.6.07-.6 1 .07 1.53 1.03 1.53 1.03.87 1.52 2.34 1.07 2.91.83.1-.65.35-1.09.63-1.34-2.22-.25-4.55-1.11-4.55-4.92 0-1.11.38-2 1.03-2.71-.1-.25-.45-1.29.1-2.64 0 0 .84-.27 2.75 1.02.79-.22 1.65-.33 2.5-.33.85 0 1.71.11 2.5.33 1.91-1.29 2.75-1.02 2.75-1.02.55 1.35.2 2.39.1 2.64.65.71 1.03 1.6 1.03 2.71 0 3.82-2.34 4.66-4.57 4.91.36.31.69.92.69 1.85V21c0 .27.16.59.67.5C19.14 20.16 22 16.42 22 12A10 10 0 0 0 12 2z"/>
+                  </svg>
+                  <span>main</span>
+                </span>
+                <span class="github-commit-sha" id="ghCommitSha">2ef0ca5</span>
+              </div>
+              <div class="github-commit-msg" id="ghCommitMsg" title="Latest commit">Connecting to GitHub...</div>
+              <div class="github-commit-meta">
+                <span id="ghCommitTime">Synced with repository</span>
+                <span id="ghSyncStatus" style="color:#38bdf8;">GitHub Live</span>
+              </div>
+            </div>
             <div class="refresh-menu-items">
               <button class="refresh-item" id="btnQuickRefresh" role="menuitem">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -1008,7 +1030,7 @@
                 </svg>
                 <div class="item-text">
                   <strong data-i18n="syncGitHub">Sync with GitHub</strong>
-                  <span data-i18n="syncGitHubSub">Fetch latest code &amp; commits</span>
+                  <span data-i18n="syncGitHubSub">Pull latest code, commits &amp; purge cache</span>
                 </div>
               </button>
               <button class="refresh-item changelog-item" id="btnToggleChangelog" role="menuitem" aria-expanded="false">
@@ -1020,20 +1042,20 @@
                   <polyline points="10 9 9 9 8 9"></polyline>
                 </svg>
                 <div class="item-text">
-                  <strong data-i18n="whatsNew">What's New in v150</strong>
+                  <strong data-i18n="whatsNew">What's New in v166</strong>
                   <span data-i18n="whatsNewSub">View latest improvements</span>
                 </div>
               </button>
               <div class="changelog-panel hidden" id="changelogPanel">
                 <div class="changelog-badge-row">
-                  <span class="changelog-ver">Release v150</span>
+                  <span class="changelog-ver">Release v166</span>
                   <span class="changelog-date">2026</span>
                 </div>
                 <ul class="changelog-list">
-                  <li><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="display:inline-block; vertical-align:-1px; margin-right:4px;"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg><strong>Security &amp; Input Sanitization:</strong> Rigorous defense against DOM-based XSS with strict regex verification for font families and CSS colors, plus complete HTML entity encoding.</li>
-                  <li><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="display:inline-block; vertical-align:-1px; margin-right:4px;"><rect x="2" y="2" width="20" height="20" rx="2.18" ry="2.18"></rect><line x1="7" y1="2" x2="7" y2="22"></line><line x1="17" y1="2" x2="17" y2="22"></line><line x1="2" y1="12" x2="22" y2="12"></line><line x1="2" y1="7" x2="7" y2="7"></line><line x1="2" y1="17" x2="7" y2="17"></line><line x1="17" y1="17" x2="22" y2="17"></line><line x1="17" y1="7" x2="22" y2="7"></line></svg><strong>PWA HTTP 206 Streaming Fix:</strong> Service worker cache engine upgraded to <code>kurdish-translator-v150</code> with native bypass for byte-range requests on media files.</li>
+                  <li><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="display:inline-block; vertical-align:-1px; margin-right:4px;"><path d="M12 2A10 10 0 0 0 2 12c0 4.42 2.87 8.17 6.84 9.5.5.08.66-.23.66-.5v-1.69c-2.77.6-3.36-1.34-3.36-1.34-.46-1.16-1.11-1.47-1.11-1.47-.91-.62.07-.6.07-.6 1 .07 1.53 1.03 1.53 1.03.87 1.52 2.34 1.07 2.91.83.1-.65.35-1.09.63-1.34-2.22-.25-4.55-1.11-4.55-4.92 0-1.11.38-2 1.03-2.71-.1-.25-.45-1.29.1-2.64 0 0 .84-.27 2.75 1.02.79-.22 1.65-.33 2.5-.33.85 0 1.71.11 2.5.33 1.91-1.29 2.75-1.02 2.75-1.02.55 1.35.2 2.39.1 2.64.65.71 1.03 1.6 1.03 2.71 0 3.82-2.34 4.66-4.57 4.91.36.31.69.92.69 1.85V21c0 .27.16.59.67.5C19.14 20.16 22 16.42 22 12A10 10 0 0 0 12 2z"/></svg><strong>Full GitHub Sync &amp; Auto-Update:</strong> Multi-tier GitHub commit pulling, real-time repository tracking, atomic cache purging, and one-click instant update.</li>
+                  <li><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="display:inline-block; vertical-align:-1px; margin-right:4px;"><rect x="2" y="2" width="20" height="20" rx="2.18" ry="2.18"></rect><line x1="7" y1="2" x2="7" y2="22"></line><line x1="17" y1="2" x2="17" y2="22"></line><line x1="2" y1="12" x2="22" y2="12"></line><line x1="2" y1="7" x2="7" y2="7"></line><line x1="2" y1="17" x2="7" y2="17"></line><line x1="17" y1="17" x2="22" y2="17"></line><line x1="17" y1="7" x2="22" y2="7"></line></svg><strong>Video Subtitle Studio Pro:</strong> Timeline scrubbing with virtualized 60fps ruler, chronological cue index sorting, and full video player synchronization.</li>
                   <li><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="display:inline-block; vertical-align:-1px; margin-right:4px;"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path></svg><strong>Kurdish Sorani Orthography Precision:</strong> Accurate Heavy R (ڕ) and Velarized L (ڵ) stem detection, safe prefix attachment, and naturalized punctuation.</li>
-                  <li><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="display:inline-block; vertical-align:-1px; margin-right:4px;"><path d="M23 4v6h-6"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg><strong>Memory &amp; Performance Optimization:</strong> Object URL revoking on video reloads to eliminate memory leaks, FIFO translation cache management, and crisp inline SVG icons.</li>
+                  <li><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="display:inline-block; vertical-align:-1px; margin-right:4px;"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg><strong>Security &amp; Input Sanitization:</strong> Rigorous defense against DOM-based XSS with strict regex verification for font families and CSS colors, plus complete HTML entity encoding.</li>
                 </ul>
               </div>
               <button class="refresh-item force-item" id="btnForceRefresh" role="menuitem">

@@ -578,8 +578,69 @@ select:focus { outline: none; border-color: var(--md-sys-color-primary); box-sha
   padding: 6px 8px;
   background: rgba(0, 0, 0, 0.22);
   border-radius: 6px;
-  margin-bottom: 8px;
+  margin-bottom: 6px;
   border: 1px solid rgba(255, 255, 255, 0.04);
+}
+
+.github-meta-box {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  padding: 7px 9px;
+  background: rgba(56, 189, 248, 0.07);
+  border: 1px solid rgba(56, 189, 248, 0.22);
+  border-radius: 6px;
+  margin-bottom: 8px;
+  font-size: 11px;
+}
+
+.github-meta-box.hidden {
+  display: none !important;
+}
+
+.github-meta-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+}
+
+.github-branch-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 10px;
+  font-weight: 700;
+  color: #38bdf8;
+}
+
+.github-commit-sha {
+  font-family: monospace;
+  font-size: 10px;
+  font-weight: 700;
+  padding: 1px 6px;
+  background: rgba(56, 189, 248, 0.18);
+  color: #7dd3fc;
+  border-radius: 4px;
+  border: 1px solid rgba(56, 189, 248, 0.3);
+}
+
+.github-commit-msg {
+  font-size: 10.5px;
+  color: var(--md-sys-color-on-surface);
+  line-height: 1.35;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 250px;
+}
+
+.github-commit-meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 9.5px;
+  color: var(--md-sys-color-outline);
 }
 
 .network-metric {
@@ -834,6 +895,18 @@ select:focus { outline: none; border-color: var(--md-sys-color-primary); box-sha
   background: #e8def8;
   transform: translateY(-1px);
   box-shadow: 0 4px 12px rgba(208, 188, 255, 0.35);
+}
+
+.update-action-btn.gh-sync {
+  background: rgba(56, 189, 248, 0.15);
+  color: #38bdf8;
+  border: 1px solid rgba(56, 189, 248, 0.35);
+}
+
+.update-action-btn.gh-sync:hover {
+  background: rgba(56, 189, 248, 0.25);
+  color: #7dd3fc;
+  box-shadow: 0 2px 8px rgba(56, 189, 248, 0.25);
 }
 
 .update-action-btn.force {
