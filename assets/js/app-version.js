@@ -3,12 +3,13 @@
  * Exposes AppVersion as a global module.
  */
 const AppVersion = (() => {
-  const APP_VERSION = 'v166';
+  const APP_VERSION = 'v167';
   const GITHUB_REPO = 'LOST-4EVER/kurdish-translator';
   const GITHUB_API_URL = `https://api.github.com/repos/${GITHUB_REPO}/commits/main`;
   const GITHUB_RAW_BASE = `https://raw.githubusercontent.com/${GITHUB_REPO}/main`;
   const GH_PAGES_BASE = `https://lost-4ever.github.io/kurdish-translator`;
 
+  let initialized = false;
   let isRefreshing = false;
   let isSyncingGitHub = false;
   let isCheckingUpdates = false;
@@ -613,6 +614,9 @@ const AppVersion = (() => {
    * Initialize UI dropdown, changelog accordion, buttons, and timers.
    */
   function init() {
+    if (initialized) return;
+    initialized = true;
+
     initInstallPrompt();
     registerServiceWorker();
 
@@ -744,6 +748,8 @@ const AppVersion = (() => {
   }
 
   return {
+    init: () => init(),
+    refreshTexts: () => updateUIState(),
     getVersion: () => APP_VERSION,
     getDiscoveredVersion: () => latestDiscoveredVer,
     hasUpdate: () => hasUpdateAvailable,

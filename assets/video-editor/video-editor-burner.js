@@ -615,8 +615,11 @@
         try {
           const AudioContextClass = window.AudioContext || window.webkitAudioContext;
           if (AudioContextClass) {
-            if (!this.audioContext || this.audioContext.state === 'closed') {
+            if (video._audioCtx && video._audioCtx.state !== 'closed') {
+              this.audioContext = video._audioCtx;
+            } else if (!this.audioContext || this.audioContext.state === 'closed') {
               this.audioContext = new AudioContextClass();
+              video._audioCtx = this.audioContext;
             }
             if (this.audioContext.state === 'suspended') {
               await this.audioContext.resume();

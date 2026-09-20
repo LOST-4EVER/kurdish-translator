@@ -2642,7 +2642,7 @@
   }
 
   function initPWA() {
-    if (typeof AppVersion !== 'undefined') {
+    if (typeof AppVersion !== 'undefined' && typeof AppVersion.init === 'function') {
       AppVersion.init();
     }
     checkSharedSubtitle();

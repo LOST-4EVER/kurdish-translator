@@ -934,9 +934,32 @@
         return;
       }
 
-      // Direct frame-accurate seeking
+      // Fast keyframe seek during continuous scrubbing, exact frame seek on release/jump
       try {
-        player.currentTime = targetSec;
+        if (!immediate && typeof player.fastSeek === 'function') {
+          player.fastSeek(targetSec);
+        } else if (player.seeking && !immediate) {
+          // If browser video decoder is currently busy seeking, throttle via RAF to avoid decoder stall
+          this._pendingSeekTarget = targetSec;
+          if (!this._pendingSeekRaf) {
+            this._pendingSeekRaf = requestAnimationFrame(() => {
+              this._pendingSeekRaf = null;
+              if (this._pendingSeekTarget !== null && player) {
+                try {
+                  if (typeof player.fastSeek === 'function') {
+                    player.fastSeek(this._pendingSeekTarget);
+                  } else {
+                    player.currentTime = this._pendingSeekTarget;
+                  }
+                } catch (_) {}
+                this._pendingSeekTarget = null;
+              }
+            });
+          }
+        } else {
+          this._pendingSeekTarget = null;
+          player.currentTime = targetSec;
+        }
       } catch (_) {}
     }
 
@@ -1168,6 +1191,22 @@
 
       requestAnimationFrame(render);
       VideoEditorUI.showToast('Rendering crystal-clear 1080p sample video...', 'info');
+    }
+
+    get currentTimeMs() {
+      const player = this.els ? this.els.videoPlayer : null;
+      if (player && typeof player.currentTime === 'number' && !isNaN(player.currentTime)) {
+        return player.currentTime * 1000;
+      }
+      return this._simulatedCurrentMs || 0;
+    }
+
+    get durationMs() {
+      const player = this.els ? this.els.videoPlayer : null;
+      if (player && typeof player.duration === 'number' && !isNaN(player.duration) && player.duration > 0) {
+        return player.duration * 1000;
+      }
+      return (window.VideoEditor && window.VideoEditor.timeline ? window.VideoEditor.timeline.duration : 0) || 0;
     }
   }
 

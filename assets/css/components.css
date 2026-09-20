@@ -540,7 +540,7 @@ select:focus { outline: none; border-color: var(--md-sys-color-primary); box-sha
   font-size: 11px;
   font-weight: 700;
   padding: 2px 8px;
-  border-radius: 6px;
+  border-radius: 2px;
   background: var(--md-sys-color-primary-container);
   color: var(--md-sys-color-on-primary-container);
   border: 1px solid rgba(168, 85, 247, 0.35);
@@ -577,7 +577,7 @@ select:focus { outline: none; border-color: var(--md-sys-color-primary); box-sha
   justify-content: space-between;
   padding: 6px 8px;
   background: rgba(0, 0, 0, 0.22);
-  border-radius: 6px;
+  border-radius: 2px;
   margin-bottom: 6px;
   border: 1px solid rgba(255, 255, 255, 0.04);
 }
@@ -589,7 +589,7 @@ select:focus { outline: none; border-color: var(--md-sys-color-primary); box-sha
   padding: 7px 9px;
   background: rgba(56, 189, 248, 0.07);
   border: 1px solid rgba(56, 189, 248, 0.22);
-  border-radius: 6px;
+  border-radius: 2px;
   margin-bottom: 8px;
   font-size: 11px;
 }
@@ -621,7 +621,7 @@ select:focus { outline: none; border-color: var(--md-sys-color-primary); box-sha
   padding: 1px 6px;
   background: rgba(56, 189, 248, 0.18);
   color: #7dd3fc;
-  border-radius: 4px;
+  border-radius: 2px;
   border: 1px solid rgba(56, 189, 248, 0.3);
 }
 
@@ -629,10 +629,10 @@ select:focus { outline: none; border-color: var(--md-sys-color-primary); box-sha
   font-size: 10.5px;
   color: var(--md-sys-color-on-surface);
   line-height: 1.35;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  max-width: 250px;
+  white-space: normal;
+  overflow-wrap: break-word;
+  word-break: break-word;
+  max-width: 100%;
 }
 
 .github-commit-meta {
@@ -747,7 +747,7 @@ select:focus { outline: none; border-color: var(--md-sys-color-primary); box-sha
   padding: 8px;
   background: rgba(168, 85, 247, 0.08);
   border: 1px solid rgba(168, 85, 247, 0.2);
-  border-radius: 8px;
+  border-radius: 2px;
   margin: 4px 0;
   font-size: 10.5px;
   animation: changelogExpand 0.2s ease-out;
@@ -793,6 +793,8 @@ select:focus { outline: none; border-color: var(--md-sys-color-primary); box-sha
 .changelog-list li {
   line-height: 1.35;
   color: var(--md-sys-color-on-surface-variant);
+  word-break: break-word;
+  overflow-wrap: break-word;
 }
 
 .changelog-list li strong {
@@ -808,12 +810,15 @@ select:focus { outline: none; border-color: var(--md-sys-color-primary); box-sha
   padding: 12px 18px;
   background: linear-gradient(135deg, rgba(56, 189, 248, 0.15), rgba(168, 85, 247, 0.2));
   border: 1px solid rgba(168, 85, 247, 0.4);
-  border-radius: var(--md-shape-corner-medium);
+  border-radius: 2px;
   margin-bottom: 16px;
   box-shadow: 0 6px 20px rgba(168, 85, 247, 0.15);
   flex-wrap: wrap;
   animation: bannerSlideDown 0.3s cubic-bezier(0.2, 0, 0, 1);
   backdrop-filter: blur(8px);
+  box-sizing: border-box;
+  width: 100%;
+  max-width: 100%;
 }
 
 @keyframes bannerSlideDown {
@@ -826,12 +831,13 @@ select:focus { outline: none; border-color: var(--md-sys-color-primary); box-sha
   align-items: center;
   gap: 12px;
   min-width: 0;
+  flex: 1 1 240px;
 }
 
 .update-pulse-icon {
   width: 34px;
   height: 34px;
-  border-radius: 50%;
+  border-radius: 2px;
   background: rgba(168, 85, 247, 0.22);
   color: #c084fc;
   display: grid;
@@ -849,6 +855,9 @@ select:focus { outline: none; border-color: var(--md-sys-color-primary); box-sha
 .update-text-group {
   display: flex;
   flex-direction: column;
+  min-width: 0;
+  overflow-wrap: break-word;
+  word-break: break-word;
 }
 
 .update-text-group strong {
@@ -923,7 +932,7 @@ select:focus { outline: none; border-color: var(--md-sys-color-primary); box-sha
 .update-close-btn {
   width: 30px;
   height: 30px;
-  border-radius: 50%;
+  border-radius: 2px;
   border: none;
   background: transparent;
   color: var(--md-sys-color-on-surface-variant);
@@ -948,8 +957,11 @@ select:focus { outline: none; border-color: var(--md-sys-color-primary); box-sha
     right: auto;
   }
   .refresh-dropdown {
-    width: calc(100vw - 32px);
-    max-width: 280px;
+    width: calc(100vw - 24px) !important;
+    max-width: 340px !important;
+    left: 50% !important;
+    right: auto !important;
+    transform: translateX(-50%) !important;
   }
 }
 

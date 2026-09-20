@@ -299,6 +299,40 @@
         this.dom.viewport.addEventListener('pointercancel', onPointerUp);
       };
 
+      // Event delegation on cuesLayer for contextmenu (hold popup) and dblclick (seek/edit)
+      if (this.dom.cuesLayer) {
+        this.dom.cuesLayer.addEventListener('contextmenu', (e) => {
+          const pill = e.target.closest('.vn-cue-pill');
+          if (!pill) return;
+          e.preventDefault();
+          e.stopPropagation();
+          const idx = parseInt(pill.dataset.index, 10);
+          const cue = this.cues ? this.cues[idx] : null;
+          if (!cue) return;
+          if (typeof pill._clearHoldTimer === 'function') pill._clearHoldTimer();
+          if (window.VideoEditorHardware && window.VideoEditorHardware.haptic) {
+            window.VideoEditorHardware.haptic(25);
+          }
+          this._showCueHoldPopup(cue, idx, pill);
+        });
+
+        this.dom.cuesLayer.addEventListener('dblclick', (e) => {
+          const pill = e.target.closest('.vn-cue-pill');
+          if (!pill) return;
+          e.stopPropagation();
+          const idx = parseInt(pill.dataset.index, 10);
+          const cue = this.cues ? this.cues[idx] : null;
+          if (!cue) return;
+          if (typeof pill._clearHoldTimer === 'function') pill._clearHoldTimer();
+          this.activeCueIndex = idx;
+          this.setTime(cue.start, true);
+          this._updateActiveCue();
+          if (typeof this.options.onCueDoubleClick === 'function') {
+            this.options.onCueDoubleClick(cue, idx);
+          }
+        });
+      }
+
       if (this.dom.needle) {
         this.dom.needle.addEventListener('pointerdown', (e) => {
           e.stopPropagation();
@@ -693,9 +727,73 @@
     }
 
     setCues(cues) {
-      this.cues = Array.isArray(cues) ? cues : [];
-      this._renderCues();
+      const incoming = Array.isArray(cues) ? cues : [];
+      const oldLen = this.cues ? this.cues.length : 0;
+      this.cues = incoming;
+
+      // Ultra-fast in-place reconciliation when pill count matches existing DOM pills
+      if (oldLen === incoming.length && this._cuePillMap && this._cuePillMap.size === incoming.length && incoming.length > 0) {
+        this._reconcileCues();
+      } else {
+        this._renderCues();
+      }
       this._updateActiveCue();
+    }
+
+    _reconcileCues() {
+      if (!this.cues || !this._cuePillMap) return;
+      const zoom = this.zoom;
+      const len = this.cues.length;
+      for (let idx = 0; idx < len; idx++) {
+        const cue = this.cues[idx];
+        const pill = this._cuePillMap.get(idx);
+        if (!pill) {
+          this._renderCues();
+          return;
+        }
+
+        const startSec = (cue.start || 0) / 1000;
+        const endSec = Math.max(startSec + 0.1, (cue.end || (cue.start + 1000)) / 1000);
+        const durationSec = endSec - startSec;
+        const leftPx = startSec * zoom;
+        const widthPx = Math.max(16, durationSec * zoom);
+
+        if (pill._lastLeftPx !== leftPx) {
+          pill._lastLeftPx = leftPx;
+          pill.style.left = `${leftPx}px`;
+        }
+        if (pill._lastWidthPx !== widthPx) {
+          pill._lastWidthPx = widthPx;
+          pill.style.width = `${widthPx}px`;
+        }
+
+        const cleanText = (cue.text || '').replace(/<[^>]+>/g, '').replace(/\{[^}]*\}/g, '').trim();
+        if (pill._lastCleanText !== cleanText) {
+          pill._lastCleanText = cleanText;
+          if (pill._textEl) {
+            pill._textEl.textContent = cleanText || 'نووسینی نوێ';
+          }
+          const isRtl = /[\u0600-\u06FF\u0750-\u077F\uFB50-\uFDFF\uFE70-\uFEFF]/.test(cleanText);
+          pill.classList.toggle('rtl-cue', isRtl);
+        }
+
+        const durText = `${durationSec.toFixed(1)}s`;
+        if (pill._lastDurText !== durText) {
+          pill._lastDurText = durText;
+          if (pill._durEl) {
+            pill._durEl.textContent = durText;
+          }
+        }
+
+        if (pill.dataset.index !== String(idx)) {
+          pill.dataset.index = idx;
+          if (pill._idxEl) {
+            pill._idxEl.textContent = `#${idx + 1}`;
+          }
+        }
+
+        pill.title = `#${idx + 1} [${this.formatTimecode(cue.start)} → ${this.formatTimecode(cue.end)}]: ${cleanText}`;
+      }
     }
 
     updateCue(index, cue) {
@@ -1036,6 +1134,14 @@
       }
     }
 
+    _scheduleAudioWaveform() {
+      if (this._waveformRaf) return;
+      this._waveformRaf = requestAnimationFrame(() => {
+        this._waveformRaf = null;
+        this._renderAudioWaveform();
+      });
+    }
+
     _updateDimensions() {
       const durationSeconds = Math.max(1, (this.duration || 10000) / 1000);
       const viewportWidth = (this.dom.viewport ? this.dom.viewport.clientWidth : 800) || 800;
@@ -1056,7 +1162,7 @@
         }
       }
 
-      this._renderAudioWaveform();
+      this._scheduleAudioWaveform();
     }
 
     _renderRuler() {
@@ -1084,16 +1190,22 @@
       const canvasWidth = Math.min(this.trackWidth, viewportWidth + 300);
       const height = 22;
 
-      canvas.width = canvasWidth * dpr;
-      canvas.height = height * dpr;
-      canvas.style.width = `${canvasWidth}px`;
-      canvas.style.height = `${height}px`;
+      const targetCanvasWidth = Math.round(canvasWidth * dpr);
+      const targetCanvasHeight = Math.round(height * dpr);
+
+      // Only re-allocate canvas GPU backing store when dimensions actually change
+      if (canvas.width !== targetCanvasWidth || canvas.height !== targetCanvasHeight) {
+        canvas.width = targetCanvasWidth;
+        canvas.height = targetCanvasHeight;
+        canvas.style.width = `${canvasWidth}px`;
+        canvas.style.height = `${height}px`;
+      }
       canvas.style.position = 'absolute';
       canvas.style.left = `${scrollLeft}px`;
       canvas.style.top = '0';
 
       const ctx = canvas.getContext('2d');
-      ctx.scale(dpr, dpr);
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
       ctx.clearRect(0, 0, canvasWidth, height);
 
       // Adaptive intervals based on zoom level (supports sub-second zoom down to 100ms)
@@ -1186,6 +1298,15 @@
         `;
         pill.title = `#${idx + 1} [${this.formatTimecode(cue.start)} → ${this.formatTimecode(cue.end)}]: ${cleanText}`;
 
+        // Cache elements and metrics on pill for zero-allocation in-place reconciliation
+        pill._lastLeftPx = leftPx;
+        pill._lastWidthPx = widthPx;
+        pill._lastCleanText = cleanText;
+        pill._lastDurText = durText;
+        pill._idxEl = pill.querySelector('.vn-cue-idx-tag');
+        pill._textEl = pill.querySelector('.vn-cue-text');
+        pill._durEl = pill.querySelector('.vn-cue-dur-tag');
+
         let isDraggingPill = false;
         let startX = 0;
         let startY = 0;
@@ -1201,6 +1322,7 @@
             holdTimer = null;
           }
         };
+        pill._clearHoldTimer = clearHoldTimer;
 
         pill.addEventListener('pointerdown', (e) => {
           if (e.button !== 0) return;
@@ -1368,22 +1490,26 @@
               return;
             }
 
+            const targetIdx = parseInt(pill.dataset.index, 10);
+            const targetCue = this.cues ? this.cues[targetIdx] : null;
+            if (!targetCue) return;
+
             if (isDraggingPill) {
-              const finalStart = cue._tempStart !== undefined ? cue._tempStart : cue.start;
-              const finalEnd = cue._tempEnd !== undefined ? cue._tempEnd : cue.end;
-              delete cue._tempStart;
-              delete cue._tempEnd;
+              const finalStart = targetCue._tempStart !== undefined ? targetCue._tempStart : targetCue.start;
+              const finalEnd = targetCue._tempEnd !== undefined ? targetCue._tempEnd : targetCue.end;
+              delete targetCue._tempStart;
+              delete targetCue._tempEnd;
 
               if (window.VideoEditorState) {
-                window.VideoEditorState.updateCueTiming(idx, finalStart, finalEnd);
+                window.VideoEditorState.updateCueTiming(targetIdx, finalStart, finalEnd);
               }
             } else {
               // Simple click: select & seek playhead
-              this.activeCueIndex = idx;
-              this.setTime(cue.start, true);
+              this.activeCueIndex = targetIdx;
+              this.setTime(targetCue.start, true);
               this._updateActiveCue();
               if (typeof this.options.onCueSelect === 'function') {
-                this.options.onCueSelect(cue, idx);
+                this.options.onCueSelect(targetCue, targetIdx);
               }
             }
           };
@@ -1391,27 +1517,6 @@
           pill.addEventListener('pointermove', onPointerMove);
           pill.addEventListener('pointerup', onPointerUp);
           pill.addEventListener('pointercancel', onPointerUp);
-        });
-
-        pill.addEventListener('contextmenu', (e) => {
-          e.preventDefault();
-          e.stopPropagation();
-          clearHoldTimer();
-          if (window.VideoEditorHardware && window.VideoEditorHardware.haptic) {
-            window.VideoEditorHardware.haptic(25);
-          }
-          this._showCueHoldPopup(cue, idx, pill);
-        });
-
-        pill.addEventListener('dblclick', (e) => {
-          e.stopPropagation();
-          clearHoldTimer();
-          this.activeCueIndex = idx;
-          this.setTime(cue.start, true);
-          this._updateActiveCue();
-          if (typeof this.options.onCueDoubleClick === 'function') {
-            this.options.onCueDoubleClick(cue, idx);
-          }
         });
 
         this._cuePillMap.set(idx, pill);
@@ -1614,16 +1719,19 @@
 
     _updateActiveCue() {
       // 1. Fast check if current active cue is still active
+      const syncOffset = (window.VideoEditorState && typeof window.VideoEditorState.syncOffsetMs === 'number') ? window.VideoEditorState.syncOffsetMs : 0;
+      const effectiveTime = this.currentTime + syncOffset;
+
       let activeIdx = -1;
       if (this.activeCueIndex >= 0 && this.activeCueIndex < this.cues.length) {
         const c = this.cues[this.activeCueIndex];
-        if (c && this.currentTime >= (c.start || 0) && this.currentTime <= (c.end || c.start || 0)) {
+        if (c && effectiveTime >= (c.start || 0) && effectiveTime <= (c.end || c.start || 0)) {
           activeIdx = this.activeCueIndex;
         }
       }
       // 2. Binary search fallback O(log N)
       if (activeIdx === -1) {
-        activeIdx = this._findCueIndexAtTime(this.currentTime);
+        activeIdx = this._findCueIndexAtTime(effectiveTime);
       }
 
       if (activeIdx !== this.activeCueIndex) {

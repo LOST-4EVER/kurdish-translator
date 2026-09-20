@@ -229,7 +229,7 @@ body.page-dropping::after {
   padding: 2px 7px;
   font-size: 11px;
   font-weight: 700;
-  border-radius: 12px;
+  border-radius: 2px;
   background: var(--md-sys-color-primary-container);
   color: var(--md-sys-color-on-primary-container);
   margin: 0 8px;
@@ -398,7 +398,7 @@ body.page-dropping::after {
   font-size: 11px;
   font-weight: 700;
   padding: 3px 8px;
-  border-radius: 12px;
+  border-radius: 2px;
   background: rgba(139, 154, 255, 0.12);
   color: var(--md-sys-color-primary);
   border: 1px solid rgba(139, 154, 255, 0.25);
@@ -420,7 +420,7 @@ body.page-dropping::after {
   flex-shrink: 0;
   border: 2px solid var(--md-sys-color-surface-container-highest);
   border-top-color: var(--md-sys-color-primary);
-  border-radius: 50%;
+  border-radius: 2px;
   animation: spin 0.8s linear infinite;
 }
 @keyframes spin { to { transform: rotate(360deg); } }
@@ -429,7 +429,7 @@ body.page-dropping::after {
 .progress-track {
   height: 8px;
   background: var(--md-sys-color-surface-container-highest);
-  border-radius: 4px;
+  border-radius: 1px;
   overflow: hidden;
   box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.25);
   width: 100%;
@@ -439,7 +439,7 @@ body.page-dropping::after {
   overflow: hidden;
   height: 100%;
   width: 0%;
-  border-radius: 4px;
+  border-radius: 1px;
   background: linear-gradient(90deg, #7c3aed, #c084fc, #38bdf8, #7c3aed);
   background-size: 300% 100%;
   animation: shimmer 2s linear infinite;
@@ -508,14 +508,14 @@ body.page-dropping::after {
   color: #c084fc;
   background: rgba(192, 132, 252, 0.1);
   padding: 3px 8px;
-  border-radius: 12px;
+  border-radius: 2px;
   border: 1px solid rgba(192, 132, 252, 0.2);
 }
 
 .live-pulse-dot {
   width: 7px;
   height: 7px;
-  border-radius: 50%;
+  border-radius: 1px;
   background: #ef4444;
   box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7);
   animation: pulseRedDot 1.5s infinite;
@@ -533,7 +533,7 @@ body.page-dropping::after {
   color: rgba(255, 255, 255, 0.75);
   background: rgba(0, 0, 0, 0.4);
   padding: 2px 8px;
-  border-radius: 6px;
+  border-radius: 2px;
   border: 1px solid rgba(255, 255, 255, 0.1);
   letter-spacing: 0.5px;
 }

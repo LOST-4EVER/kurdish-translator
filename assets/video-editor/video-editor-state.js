@@ -242,8 +242,8 @@
           if (cmd.index >= 0 && cmd.index < this.cues.length) {
             this.cues[cmd.index].start = cmd.prevStart;
             this.cues[cmd.index].end = cmd.prevEnd;
-            this.activeCueIndex = cmd.index;
             this.activeCue = this.cues[cmd.index];
+            this._reindex();
             this.redoStack.push(cmd);
             this.emit('cuesChange', this.cues);
           }
@@ -254,8 +254,8 @@
           if (cmd.index >= 0 && cmd.index < this.cues.length) {
             const currentCue = { ...this.cues[cmd.index] };
             this.cues[cmd.index] = { ...cmd.prevCue };
-            this.activeCueIndex = cmd.index;
             this.activeCue = this.cues[cmd.index];
+            this._reindex();
             this.redoStack.push({ ...cmd, nextCue: currentCue });
             this.emit('cuesChange', this.cues);
           }
@@ -366,8 +366,8 @@
           if (cmd.index >= 0 && cmd.index < this.cues.length) {
             this.cues[cmd.index].start = cmd.nextStart;
             this.cues[cmd.index].end = cmd.nextEnd;
-            this.activeCueIndex = cmd.index;
             this.activeCue = this.cues[cmd.index];
+            this._reindex();
             this.undoStack.push(cmd);
             this.emit('cuesChange', this.cues);
           }
@@ -378,8 +378,8 @@
           if (cmd.index >= 0 && cmd.index < this.cues.length) {
             const prevCue = { ...this.cues[cmd.index] };
             this.cues[cmd.index] = { ...cmd.nextCue };
-            this.activeCueIndex = cmd.index;
             this.activeCue = this.cues[cmd.index];
+            this._reindex();
             this.undoStack.push({ ...cmd, prevCue });
             this.emit('cuesChange', this.cues);
           }
@@ -532,11 +532,13 @@
           });
         }
 
-        this.cues[index] = { ...this.cues[index], start, end };
-        this._reindex();
-        if (this.activeCueIndex === index) {
-          this.activeCue = this.cues[this.activeCueIndex];
+        const wasActive = (this.activeCueIndex === index || this.activeCue === this.cues[index]);
+        const updatedCue = { ...this.cues[index], start, end };
+        this.cues[index] = updatedCue;
+        if (wasActive) {
+          this.activeCue = updatedCue;
         }
+        this._reindex();
         this.emit('cuesChange', this.cues);
       }
     }

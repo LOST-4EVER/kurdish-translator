@@ -913,8 +913,8 @@
       }
       this.timeline = new StudioTimeline(this.els.timelineContainer, {
         pixelsPerSecond: 48,
-        onSeek: (timeMs) => {
-          this.seekTo(timeMs);
+        onSeek: (timeMs, immediate = false) => {
+          this.seekTo(timeMs, immediate);
         },
         onCueSelect: (cue, idx) => {
           VideoEditorState.setActiveCue(cue, idx);
@@ -955,7 +955,6 @@
         onCueDuplicate: (cue, idx) => {
           const dup = VideoEditorState.duplicateCue(idx);
           if (dup) {
-            if (this.timeline) this.timeline.setCues(VideoEditorState.getCues());
             this.seekTo(dup.start);
             VideoEditorUI.showToast(`Duplicated cue #${idx + 1}`, 'success');
           }
@@ -963,7 +962,6 @@
         onCueNudge: (cue, idx, deltaMs) => {
           const nudged = VideoEditorState.nudgeCue(idx, deltaMs);
           if (nudged) {
-            if (this.timeline) this.timeline.setCues(VideoEditorState.getCues());
             this.seekTo(nudged.start);
             VideoEditorUI.showToast(`Nudged cue timing ${deltaMs > 0 ? '+' : ''}${deltaMs}ms`, 'info');
           }
@@ -971,7 +969,6 @@
         onCueAddRequested: (timeMs) => {
           this.seekTo(timeMs);
           const newCue = VideoEditorState.addCue(timeMs, null, 'دەقی ژێرنووسی نوێ');
-          if (this.timeline) this.timeline.setCues(VideoEditorState.getCues());
           const cues = VideoEditorState.getCues();
           const idx = cues.findIndex((c) => c === newCue);
           VideoEditorState.setActiveCue(newCue, idx);
