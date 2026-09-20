@@ -3,11 +3,10 @@
  * Exposes AppVersion as a global module.
  */
 const AppVersion = (() => {
-  const APP_VERSION = 'v167';
+  const APP_VERSION = 'v168';
   const GITHUB_REPO = 'LOST-4EVER/kurdish-translator';
   const GITHUB_API_URL = `https://api.github.com/repos/${GITHUB_REPO}/commits/main`;
   const GITHUB_RAW_BASE = `https://raw.githubusercontent.com/${GITHUB_REPO}/main`;
-  const GH_PAGES_BASE = `https://lost-4ever.github.io/kurdish-translator`;
 
   let initialized = false;
   let isRefreshing = false;
@@ -20,6 +19,34 @@ const AppVersion = (() => {
   let timeTickerInterval = null;
   let latestGitHubMeta = null;
   let currentServiceWorkerReg = null;
+
+  /**
+   * Parses integer version number from strings like 'v168', '168', 'v1.6.8'.
+   * @param {string|number} ver
+   * @returns {number}
+   */
+  function parseVersionNumber(ver) {
+    if (!ver) return 0;
+    if (typeof ver === 'number') return ver;
+    const match = String(ver).replace(/^v/i, '').match(/^(\d+)/);
+    return match ? parseInt(match[1], 10) : 0;
+  }
+
+  /**
+   * Checks if candidate version is strictly newer than base version.
+   * @param {string|number} remoteVer
+   * @param {string|number} [currentVer=APP_VERSION]
+   * @returns {boolean}
+   */
+  function isNewerVersion(remoteVer, currentVer = APP_VERSION) {
+    if (!remoteVer) return false;
+    const remoteNum = parseVersionNumber(remoteVer);
+    const currentNum = parseVersionNumber(currentVer);
+    if (remoteNum > 0 && currentNum > 0) {
+      return remoteNum > currentNum;
+    }
+    return false;
+  }
 
   function getElements() {
     return {
@@ -146,11 +173,13 @@ const AppVersion = (() => {
    */
   function updateUIState() {
     const els = getElements();
+    const displayVer = latestDiscoveredVer || APP_VERSION;
+
     if (els.currentVerTag) {
-      els.currentVerTag.textContent = latestDiscoveredVer || APP_VERSION;
+      els.currentVerTag.textContent = displayVer;
     }
     if (els.menuVerNum) {
-      els.menuVerNum.textContent = latestDiscoveredVer || APP_VERSION;
+      els.menuVerNum.textContent = displayVer;
     }
     if (els.refreshTimeTxt) {
       els.refreshTimeTxt.textContent = formatRelativeTime(lastCheckedTimestamp);
@@ -183,20 +212,35 @@ const AppVersion = (() => {
       if (els.ghSyncStatus) {
         els.ghSyncStatus.textContent = hasUpdateAvailable
           ? getI18nText('updateAvailable', 'Update Ready')
-          : getI18nText('githubUpToDate', 'GitHub Live');
+          : getI18nText('githubUpToDate', 'GitHub Live (Up to date)');
         els.ghSyncStatus.style.color = hasUpdateAvailable ? '#fb7185' : '#38bdf8';
       }
     }
   }
 
   /**
-   * Show the update available alert banner and badge.
+   * Show the update available alert banner and badge if a genuine update exists.
    */
   function showUpdateAvailable(versionOrSha) {
+    // Only proceed if candidate is a higher version or valid SW update notification
+    const isServiceWorkerUpdate = versionOrSha === 'New Version';
+    const isNewVer = isNewerVersion(versionOrSha, APP_VERSION);
+
+    if (!isServiceWorkerUpdate && !isNewVer) {
+      // Candidate is not newer than current app version
+      return;
+    }
+
     hasUpdateAvailable = true;
     if (versionOrSha && typeof versionOrSha === 'string') {
       latestDiscoveredVer = versionOrSha;
     }
+
+    // Check if dismissed in this session
+    let isDismissed = false;
+    try {
+      isDismissed = sessionStorage.getItem('kurdish_dismissed_update') === String(latestDiscoveredVer);
+    } catch {}
 
     const els = getElements();
     if (els.updateBadgeDot) {
@@ -214,7 +258,7 @@ const AppVersion = (() => {
         ? `${latestGitHubMeta.message.slice(0, 75)} — (${latestDiscoveredVer})`
         : getI18nText('updateAvailableSub', 'Update now to get the latest version and features.');
     }
-    if (els.updateBanner && !hasShownUpdateNotice) {
+    if (els.updateBanner && !isDismissed && !hasShownUpdateNotice) {
       els.updateBanner.classList.remove('hidden');
       els.updateBanner.style.display = 'flex';
       hasShownUpdateNotice = true;
@@ -256,11 +300,6 @@ const AppVersion = (() => {
           url: data.html_url || `https://github.com/${GITHUB_REPO}`,
         };
 
-        const lastInstalledSha = localStorage.getItem('kurdish_installed_sha');
-        if (lastInstalledSha && lastInstalledSha !== shortSha) {
-          showUpdateAvailable(shortSha);
-        }
-
         updateUIState();
         return latestGitHubMeta;
       }
@@ -268,7 +307,7 @@ const AppVersion = (() => {
       // Fall back to querying raw files
     }
 
-    // Tier 2 Fallback: Fetch raw app-version.js
+    // Tier 2 Fallback: Fetch raw app-version.js to inspect remote version
     try {
       const rawRes = await fetch(`${GITHUB_RAW_BASE}/assets/js/app-version.js?_t=${Date.now()}`, {
         cache: 'no-store',
@@ -285,7 +324,7 @@ const AppVersion = (() => {
             dateStr: 'Live',
             author: 'GitHub',
           };
-          if (remoteVer !== APP_VERSION) {
+          if (isNewerVersion(remoteVer, APP_VERSION)) {
             showUpdateAvailable(remoteVer);
           }
           updateUIState();
@@ -345,7 +384,7 @@ const AppVersion = (() => {
   /**
    * Check for application updates across all tiers:
    * 1. Service Worker registration byte check
-   * 2. GitHub Commits API
+   * 2. GitHub Commits API / Raw version check
    * 3. Same-origin sw.js cache version
    */
   async function checkForAppUpdates(manual = false) {
@@ -405,7 +444,7 @@ const AppVersion = (() => {
         const match = text.match(/CACHE\s*=\s*['"]kurdish-translator-(v\d+)['"]/);
         if (match && match[1]) {
           const remoteSwVer = match[1];
-          if (remoteSwVer !== APP_VERSION) {
+          if (isNewerVersion(remoteSwVer, APP_VERSION)) {
             showUpdateAvailable(remoteSwVer);
             if (manual && typeof Toast !== 'undefined') {
               Toast.show(getI18nText('newVersionAvailable', 'New version available!'), 'success', 4000);
@@ -465,7 +504,10 @@ const AppVersion = (() => {
       // 1. Fetch latest commit metadata
       const meta = await fetchGitHubCommitMeta();
       if (meta && meta.sha) {
-        localStorage.setItem('kurdish_installed_sha', meta.sha);
+        try {
+          localStorage.setItem('kurdish_installed_sha', meta.sha);
+          localStorage.setItem('kurdish_installed_ver', APP_VERSION);
+        } catch {}
       }
 
       // 2. Instruct active Service Worker to clear its caches and skip waiting
@@ -700,6 +742,9 @@ const AppVersion = (() => {
     }
     if (els.bannerDismissBtn && els.updateBanner) {
       els.bannerDismissBtn.addEventListener('click', () => {
+        try {
+          sessionStorage.setItem('kurdish_dismissed_update', String(latestDiscoveredVer || APP_VERSION));
+        } catch {}
         els.updateBanner.classList.add('hidden');
         els.updateBanner.style.display = 'none';
       });
@@ -729,7 +774,7 @@ const AppVersion = (() => {
       if (el) el.textContent = formatRelativeTime(lastCheckedTimestamp);
     }, 30000);
 
-    // Initial check and background update check after 3 seconds
+    // Initial check and background update check after 2 seconds
     setTimeout(() => {
       updateUIState();
       measureApiLatency();
@@ -764,3 +809,4 @@ const AppVersion = (() => {
 if (typeof module !== 'undefined' && module.exports) {
   module.exports = AppVersion;
 }
+

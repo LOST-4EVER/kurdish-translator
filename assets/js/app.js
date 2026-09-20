@@ -74,7 +74,6 @@
     videoEditorTab: '#videoEditorTab', tabVideoEditor: '#tabVideoEditor',
     openVideoStudioCtaBtn: '#openVideoStudioCtaBtn', openVideoStudioDoneBtn: '#openVideoStudioDoneBtn',
     installBtn: '#installBtn',
-    toast: '#toast',
     editorList: '#editorList', editorStatus: '#editorStatus',
     edDetectionBar: '#edDetectionBar',
     edFilterAll: '#edFilterAll', edFilterWarnings: '#edFilterWarnings',
@@ -236,7 +235,6 @@
       try { localStorage.setItem(key, val); } catch {}
     },
   };
-  let toastTimer;
   function toast(msg, isError = false, subtext = '', options = {}) {
     if (typeof Toast !== 'undefined') {
       if (isError) {
@@ -244,12 +242,8 @@
       } else {
         Toast.show(msg, options.type || 'info', { subtext, actionLabel: options.actionLabel, onAction: options.onAction });
       }
-    } else if (els.toast) {
-      els.toast.textContent = msg;
-      els.toast.classList.toggle('error', isError);
-      els.toast.classList.add('show');
-      clearTimeout(toastTimer);
-      toastTimer = setTimeout(() => els.toast.classList.remove('show'), 3200);
+    } else {
+      console.log(`[Toast] ${isError ? 'Error: ' : ''}${msg} ${subtext}`);
     }
   }
 
