@@ -219,15 +219,18 @@ const AppVersion = (() => {
   }
 
   /**
-   * Show the update available alert banner and badge if a genuine update exists.
+   * Show the update available alert banner and badge if and only if a genuine newer version exists.
    */
   function showUpdateAvailable(versionOrSha) {
-    // Only proceed if candidate is a higher version or valid SW update notification
-    const isServiceWorkerUpdate = versionOrSha === 'New Version';
-    const isNewVer = isNewerVersion(versionOrSha, APP_VERSION);
-
-    if (!isServiceWorkerUpdate && !isNewVer) {
-      // Candidate is not newer than current app version
+    // Strictly require that the candidate version is newer than the currently running version
+    if (!isNewerVersion(versionOrSha, APP_VERSION)) {
+      hasUpdateAvailable = false;
+      const els = getElements();
+      if (els.updateBadgeDot) els.updateBadgeDot.classList.remove('active');
+      if (els.updateBanner) {
+        els.updateBanner.classList.add('hidden');
+        els.updateBanner.style.display = 'none';
+      }
       return;
     }
 
@@ -403,30 +406,13 @@ const AppVersion = (() => {
 
     lastCheckedTimestamp = Date.now();
 
-    // 1. Service Worker Update Check
+    // 1. Service Worker update check
     if ('serviceWorker' in navigator) {
       try {
         const reg = await navigator.serviceWorker.getRegistration();
         if (reg) {
           currentServiceWorkerReg = reg;
           await reg.update();
-
-          if (reg.waiting) {
-            showUpdateAvailable('New Version');
-            if (manual && typeof Toast !== 'undefined') {
-              Toast.show(getI18nText('newVersionAvailable', 'New version available!'), 'success', 4000);
-            }
-            isCheckingUpdates = false;
-            return;
-          }
-
-          if (reg.installing) {
-            reg.installing.addEventListener('statechange', () => {
-              if (reg.installing && reg.installing.state === 'installed') {
-                showUpdateAvailable('New Version');
-              }
-            });
-          }
         }
       } catch {
         // Continue checking other tiers
@@ -460,15 +446,18 @@ const AppVersion = (() => {
 
     await measureApiLatency();
 
-    if (manual) {
-      if (!hasUpdateAvailable) {
-        if (els.refreshStatusTxt) {
-          els.refreshStatusTxt.textContent = getI18nText('appUpToDate', 'App up to date');
-          els.refreshStatusTxt.style.color = '';
-        }
-        if (typeof Toast !== 'undefined') {
-          Toast.show(getI18nText('appUpToDate', 'App is up to date') + ` (${APP_VERSION})`, 'success', 2500);
-        }
+    if (!hasUpdateAvailable) {
+      if (els.updateBadgeDot) els.updateBadgeDot.classList.remove('active');
+      if (els.updateBanner) {
+        els.updateBanner.classList.add('hidden');
+        els.updateBanner.style.display = 'none';
+      }
+      if (els.refreshStatusTxt) {
+        els.refreshStatusTxt.textContent = getI18nText('appUpToDate', 'App up to date');
+        els.refreshStatusTxt.style.color = '';
+      }
+      if (manual && typeof Toast !== 'undefined') {
+        Toast.show(getI18nText('appUpToDate', 'App is up to date') + ` (${APP_VERSION})`, 'success', 2500);
       }
     }
 
@@ -624,14 +613,10 @@ const AppVersion = (() => {
 
           newWorker.addEventListener('statechange', () => {
             if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
-              showUpdateAvailable('New Version');
+              checkForAppUpdates(false);
             }
           });
         });
-
-        if (reg.waiting && navigator.serviceWorker.controller) {
-          showUpdateAvailable('New Version');
-        }
 
         // Periodic check for SW update every 15 minutes
         setInterval(() => {
