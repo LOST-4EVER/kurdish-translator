@@ -51,9 +51,9 @@ const AppVersion = (() => {
   function getElements() {
     return {
       currentVerTag: document.getElementById('currentVerTag'),
-      menuVerNum: document.getElementById('menuVerNum'),
+      menuVerNum: document.getElementById('menuVerNum') || document.getElementById('currentVerTag'),
       refreshBtn: document.getElementById('refreshBtn'),
-      refreshMenu: document.getElementById('refreshDropdown') || document.getElementById('refreshMenu'),
+      refreshMenu: document.getElementById('refreshDropdown') || document.getElementById('refreshMenu') || document.getElementById('refreshMenuWrap'),
       refreshStatusTxt: document.getElementById('refreshStatusTxt'),
       refreshTimeTxt: document.getElementById('refreshTimeTxt'),
       refreshLiveDot: document.getElementById('refreshLiveDot'),
@@ -73,7 +73,7 @@ const AppVersion = (() => {
       btnToggleChangelog: document.getElementById('btnToggleChangelog'),
       changelogPanel: document.getElementById('changelogPanel'),
       updateBanner: document.getElementById('updateBanner'),
-      bannerVerTag: document.getElementById('bannerVerTag'),
+      bannerVerTag: document.getElementById('bannerVerTag') || document.getElementById('currentVerTag'),
       bannerSubText: document.getElementById('bannerSubText'),
       bannerRefreshBtn: document.getElementById('bannerUpdateNowBtn') || document.getElementById('bannerRefreshBtn'),
       bannerSyncGhBtn: document.getElementById('bannerSyncGhBtn'),
