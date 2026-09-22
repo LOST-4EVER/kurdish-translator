@@ -3,9 +3,10 @@
  * Exposes AppVersion as a global module.
  */
 const AppVersion = (() => {
-  const APP_VERSION = 'v168';
+  const APP_VERSION = 'v169';
   const GITHUB_REPO = 'LOST-4EVER/kurdish-translator';
   const GITHUB_API_URL = `https://api.github.com/repos/${GITHUB_REPO}/commits/main`;
+  const GITHUB_RELEASES_URL = `https://api.github.com/repos/${GITHUB_REPO}/releases/latest`;
   const GITHUB_RAW_BASE = `https://raw.githubusercontent.com/${GITHUB_REPO}/main`;
 
   let initialized = false;
@@ -21,31 +22,57 @@ const AppVersion = (() => {
   let currentServiceWorkerReg = null;
 
   /**
-   * Parses integer version number from strings like 'v168', '168', 'v1.6.8'.
+   * Parses version string into numeric parts array.
+   * Handles formats like 'v169', '169', 'v1.6.9', '169.0.1', 'release-169', etc.
    * @param {string|number} ver
-   * @returns {number}
+   * @returns {number[]}
    */
-  function parseVersionNumber(ver) {
-    if (!ver) return 0;
-    if (typeof ver === 'number') return ver;
-    const match = String(ver).replace(/^v/i, '').match(/^(\d+)/);
-    return match ? parseInt(match[1], 10) : 0;
+  function parseVersionParts(ver) {
+    if (!ver && ver !== 0) return [];
+    if (typeof ver === 'number') return [ver];
+    const clean = String(ver).trim().replace(/^(?:v|release[-_]?|version[-_]?)/i, '');
+    const match = clean.match(/^\d+(?:\.\d+)*/);
+    if (!match) return [];
+    return match[0].split('.').map(n => parseInt(n, 10));
   }
 
   /**
-   * Checks if candidate version is strictly newer than base version.
+   * Compares two semantic / incremental versions.
+   * Returns:
+   *   1 if v1 > v2 (v1 is newer)
+   *  -1 if v1 < v2 (v1 is older)
+   *   0 if v1 == v2 (identical)
+   * @param {string|number} v1
+   * @param {string|number} v2
+   * @returns {number}
+   */
+  function compareVersions(v1, v2) {
+    const p1 = parseVersionParts(v1);
+    const p2 = parseVersionParts(v2);
+    if (p1.length === 0 && p2.length === 0) return 0;
+    if (p1.length === 0) return -1;
+    if (p2.length === 0) return 1;
+
+    const maxLen = Math.max(p1.length, p2.length);
+    for (let i = 0; i < maxLen; i++) {
+      const num1 = i < p1.length ? p1[i] : 0;
+      const num2 = i < p2.length ? p2[i] : 0;
+      if (num1 > num2) return 1;
+      if (num1 < num2) return -1;
+    }
+    return 0;
+  }
+
+  /**
+   * Checks if candidate remote version is strictly newer than base version.
+   * Prevents false positives when on the same or older version.
    * @param {string|number} remoteVer
    * @param {string|number} [currentVer=APP_VERSION]
    * @returns {boolean}
    */
   function isNewerVersion(remoteVer, currentVer = APP_VERSION) {
-    if (!remoteVer) return false;
-    const remoteNum = parseVersionNumber(remoteVer);
-    const currentNum = parseVersionNumber(currentVer);
-    if (remoteNum > 0 && currentNum > 0) {
-      return remoteNum > currentNum;
-    }
-    return false;
+    if (!remoteVer || !currentVer) return false;
+    return compareVersions(remoteVer, currentVer) > 0;
   }
 
   function getElements() {
@@ -271,19 +298,46 @@ const AppVersion = (() => {
   }
 
   /**
-   * Fetch commit metadata from GitHub API with fallback to raw GitHub content.
+   * Fetch latest GitHub release and commit metadata, performing reliable version comparison.
    */
-  async function fetchGitHubCommitMeta() {
+  async function fetchGitHubReleaseAndMeta() {
+    let discoveredRemoteVer = null;
+    let releaseNotes = '';
+
+    // Tier 1: Check GitHub Releases API (/releases/latest)
     try {
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 4500);
+      const relCtrl = new AbortController();
+      const relTimeout = setTimeout(() => relCtrl.abort(), 3500);
+      const relRes = await fetch(`${GITHUB_RELEASES_URL}?_t=${Date.now()}`, {
+        headers: { Accept: 'application/vnd.github.v3+json' },
+        cache: 'no-store',
+        signal: relCtrl.signal,
+      });
+      clearTimeout(relTimeout);
+
+      if (relRes.ok) {
+        const relData = await relRes.json();
+        const tagVer = relData.tag_name || relData.name;
+        if (tagVer) {
+          discoveredRemoteVer = tagVer;
+          releaseNotes = relData.body ? relData.body.split('\n')[0].trim() : (relData.name || '');
+        }
+      }
+    } catch {
+      // Ignore release check failure, fallback to raw or commits
+    }
+
+    // Tier 2: Fetch Commit metadata from GitHub Commits API (/commits/main)
+    try {
+      const commitCtrl = new AbortController();
+      const commitTimeout = setTimeout(() => commitCtrl.abort(), 3500);
 
       const res = await fetch(`${GITHUB_API_URL}?_t=${Date.now()}`, {
         headers: { Accept: 'application/vnd.github.v3+json' },
         cache: 'no-store',
-        signal: controller.signal,
+        signal: commitCtrl.signal,
       });
-      clearTimeout(timeoutId);
+      clearTimeout(commitTimeout);
 
       if (res.ok) {
         const data = await res.json();
@@ -302,43 +356,63 @@ const AppVersion = (() => {
           author: data.commit?.author?.name || 'Maintainer',
           url: data.html_url || `https://github.com/${GITHUB_REPO}`,
         };
-
-        updateUIState();
-        return latestGitHubMeta;
       }
     } catch {
-      // Fall back to querying raw files
+      // Commit API failed, will check raw files
     }
 
-    // Tier 2 Fallback: Fetch raw app-version.js to inspect remote version
-    try {
-      const rawRes = await fetch(`${GITHUB_RAW_BASE}/assets/js/app-version.js?_t=${Date.now()}`, {
-        cache: 'no-store',
-      });
-      if (rawRes.ok) {
-        const text = await rawRes.text();
-        const match = text.match(/APP_VERSION\s*=\s*['"]([^'"]+)['"]/);
-        if (match && match[1]) {
-          const remoteVer = match[1];
+    // Tier 3: Fetch raw app-version.js from GitHub if release API did not yield a version
+    if (!discoveredRemoteVer) {
+      try {
+        const rawCtrl = new AbortController();
+        const rawTimeout = setTimeout(() => rawCtrl.abort(), 3500);
+        const rawRes = await fetch(`${GITHUB_RAW_BASE}/assets/js/app-version.js?_t=${Date.now()}`, {
+          cache: 'no-store',
+          signal: rawCtrl.signal,
+        });
+        clearTimeout(rawTimeout);
+
+        if (rawRes.ok) {
+          const text = await rawRes.text();
+          const match = text.match(/APP_VERSION\s*=\s*['"]([^'"]+)['"]/);
+          if (match && match[1]) {
+            discoveredRemoteVer = match[1];
+          }
+        }
+      } catch {
+        // Ignore raw file failure
+      }
+    }
+
+    // Process version comparison results
+    if (discoveredRemoteVer) {
+      if (isNewerVersion(discoveredRemoteVer, APP_VERSION)) {
+        if (!latestGitHubMeta) {
           latestGitHubMeta = {
-            sha: remoteVer,
-            fullSha: remoteVer,
-            message: `Version ${remoteVer} on GitHub`,
+            sha: discoveredRemoteVer,
+            fullSha: discoveredRemoteVer,
+            message: releaseNotes || `Version ${discoveredRemoteVer} on GitHub`,
             dateStr: 'Live',
             author: 'GitHub',
+            url: `https://github.com/${GITHUB_REPO}`,
           };
-          if (isNewerVersion(remoteVer, APP_VERSION)) {
-            showUpdateAvailable(remoteVer);
-          }
-          updateUIState();
-          return latestGitHubMeta;
+        }
+        showUpdateAvailable(discoveredRemoteVer);
+      } else {
+        // Remote version is same or older: user is on latest build!
+        hasUpdateAvailable = false;
+        latestDiscoveredVer = APP_VERSION;
+        const els = getElements();
+        if (els.updateBadgeDot) els.updateBadgeDot.classList.remove('active');
+        if (els.updateBanner) {
+          els.updateBanner.classList.add('hidden');
+          els.updateBanner.style.display = 'none';
         }
       }
-    } catch {
-      // Ignore network errors in fallback
     }
 
-    return null;
+    updateUIState();
+    return latestGitHubMeta;
   }
 
   /**
@@ -419,8 +493,8 @@ const AppVersion = (() => {
       }
     }
 
-    // 2. GitHub Commits and Remote Version Check
-    await fetchGitHubCommitMeta();
+    // 2. GitHub Release, Commits, and Remote Version Check
+    await fetchGitHubReleaseAndMeta();
 
     // 3. Same-origin sw.js Version Check
     try {
@@ -490,8 +564,8 @@ const AppVersion = (() => {
     }
 
     try {
-      // 1. Fetch latest commit metadata
-      const meta = await fetchGitHubCommitMeta();
+      // 1. Fetch latest release and commit metadata
+      const meta = await fetchGitHubReleaseAndMeta();
       if (meta && meta.sha) {
         try {
           localStorage.setItem('kurdish_installed_sha', meta.sha);
@@ -540,33 +614,48 @@ const AppVersion = (() => {
   }
 
   /**
-   * Fast refresh that activates waiting Service Worker and reloads.
+   * Fast refresh that activates waiting Service Worker, clears stale cache, and reloads.
    */
   async function performQuickRefresh() {
     if (isRefreshing) return;
     isRefreshing = true;
 
     if (typeof Toast !== 'undefined') {
-      Toast.show(getI18nText('refreshingApp', 'Refreshing application…'), 'info', 1500);
+      Toast.show(getI18nText('refreshingApp', 'Updating & reloading app…'), 'info', 1500);
     }
 
-    if ('serviceWorker' in navigator) {
-      const reg = await navigator.serviceWorker.getRegistration();
-      if (reg && reg.waiting) {
-        reg.waiting.postMessage({ type: 'SKIP_WAITING' });
-        navigator.serviceWorker.addEventListener('controllerchange', () => {
-          window.location.reload();
-        }, { once: true });
-        setTimeout(() => window.location.reload(), 600);
-        return;
+    try {
+      if ('serviceWorker' in navigator) {
+        const reg = await navigator.serviceWorker.getRegistration();
+        if (reg) {
+          if (reg.waiting) {
+            reg.waiting.postMessage({ type: 'SKIP_WAITING' });
+          }
+          if (reg.installing) {
+            reg.installing.postMessage({ type: 'SKIP_WAITING' });
+          }
+        }
+        if (navigator.serviceWorker.controller) {
+          navigator.serviceWorker.controller.postMessage({ type: 'SKIP_WAITING' });
+        }
       }
+      if ('caches' in window) {
+        const keys = await caches.keys();
+        await Promise.all(keys.filter(k => k !== 'kurdish-translator-' + APP_VERSION).map(k => caches.delete(k)));
+      }
+    } catch {
+      // Ignore
     }
 
-    window.location.reload();
+    setTimeout(() => {
+      const url = new URL(window.location.href);
+      url.searchParams.set('_v', Date.now().toString());
+      window.location.replace(url.toString());
+    }, 300);
   }
 
   /**
-   * Force refresh: Purges all CacheStorage entries and reloads.
+   * Force refresh: Purges all CacheStorage entries, unregisters SW, and hard reloads.
    */
   async function performForceRefresh() {
     if (isRefreshing) return;
@@ -582,18 +671,18 @@ const AppVersion = (() => {
         await Promise.all(keys.map(k => caches.delete(k)));
       }
       if ('serviceWorker' in navigator) {
-        const reg = await navigator.serviceWorker.getRegistration();
-        if (reg) await reg.unregister();
+        const registrations = await navigator.serviceWorker.getRegistrations();
+        await Promise.all(registrations.map(r => r.unregister()));
       }
     } catch {
       // Ignore
     }
 
     setTimeout(() => {
-      const url = new URL(window.location.href);
+      const url = new URL(window.location.origin + window.location.pathname);
       url.searchParams.set('_force', Date.now().toString());
       window.location.replace(url.toString());
-    }, 400);
+    }, 350);
   }
 
   /**
@@ -763,7 +852,7 @@ const AppVersion = (() => {
     setTimeout(() => {
       updateUIState();
       measureApiLatency();
-      fetchGitHubCommitMeta();
+      fetchGitHubReleaseAndMeta();
       checkForAppUpdates(false);
     }, 2000);
   }
@@ -783,6 +872,8 @@ const AppVersion = (() => {
     getVersion: () => APP_VERSION,
     getDiscoveredVersion: () => latestDiscoveredVer,
     hasUpdate: () => hasUpdateAvailable,
+    compareVersions: (v1, v2) => compareVersions(v1, v2),
+    isNewerVersion: (remote, current) => isNewerVersion(remote, current),
     checkForUpdates: (manual) => checkForAppUpdates(manual),
     syncWithGitHub: () => syncWithGitHub(),
     quickRefresh: () => performQuickRefresh(),
