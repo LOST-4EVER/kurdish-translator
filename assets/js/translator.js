@@ -1012,7 +1012,23 @@ const Translator = (() => {
 
   const CLIENTS = ['gtx', 'dict-chrome-ex', 'tw-ob'];
 
+  // On static hosting (GitHub Pages, S3, etc.) there is no /api/translate
+  // backend, so probing it on every chunk wastes one doomed round-trip per
+  // batch. Detect static hosting once; the probe is skipped there.
+  let STATIC_HOST_NO_PROXY = false;
+  try {
+    STATIC_HOST_NO_PROXY = typeof location !== 'undefined' &&
+      (/\.github\.io$/.test(location.hostname) ||
+       /\.pages\.dev$/.test(location.hostname) ||
+       /\.netlify\.app$/.test(location.hostname) ||
+       /\.vercel\.app$/.test(location.hostname) ||
+       /\.s3[.-]/.test(location.hostname) ||
+       /\.amazonaws\.com$/.test(location.hostname) ||
+       /^file:/.test(location.protocol));
+  } catch {}
+
   async function fetchServerProxy(text, srcLang, tgtLang, signal) {
+    if (STATIC_HOST_NO_PROXY) return null;
     if (typeof window === 'undefined' || !window.location || !window.location.origin) return null;
     const scoped = scopedSignal(signal);
     try {

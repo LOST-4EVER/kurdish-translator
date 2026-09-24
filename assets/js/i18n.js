@@ -131,7 +131,7 @@ const UI_I18N = {
     checkingUpdate: 'Checking for updates…',
     refreshingApp: 'Refreshing application…',
     forceRefreshing: 'Purging cache & hard reloading…',
-    whatsNew: "What's New in v169",
+    whatsNew: "What's New in v170",
     whatsNewSub: 'View latest improvements & features',
     syncGitHub: 'Sync with GitHub',
     syncGitHubSub: 'Pull latest code, commits & purge cache',

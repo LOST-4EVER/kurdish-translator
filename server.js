@@ -1,5 +1,4 @@
 const http = require('node:http');
-const https = require('node:https');
 const fs = require('node:fs');
 const path = require('node:path');
 
@@ -223,8 +222,21 @@ const server = http.createServer(async (req, res) => {
 
     if (req.method === 'POST') {
       let body = '';
-      req.on('data', (chunk) => { body += chunk; });
+      let size = 0;
+      let responded = false; // guard against double response on malformed chunks
+      req.on('data', (chunk) => {
+        size += chunk.length;
+        if (size > 512 * 1024) {
+          responded = true;
+          res.writeHead(413, { 'Content-Type': 'text/plain' });
+          res.end('Payload too large');
+          req.destroy();
+          return;
+        }
+        body += chunk;
+      });
       req.on('end', async () => {
+        if (responded) return;
         try {
           if (body) {
             if (body.startsWith('{')) {
@@ -241,7 +253,7 @@ const server = http.createServer(async (req, res) => {
           }
           await handleTranslation(text, sl, tl);
         } catch {
-          await handleTranslation(text, sl, tl);
+          if (!res.headersSent) await handleTranslation(text, sl, tl);
         }
       });
       return;
