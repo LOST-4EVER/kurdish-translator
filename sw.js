@@ -6,7 +6,7 @@
  * (Google's endpoint), so offline mode lets you load files and use the
  * preview player, but translating requires a connection.
  */
-const CACHE = 'kurdish-translator-v169';
+const CACHE = 'kurdish-translator-v170';
 const SHARED_CACHE = 'kurdish-shared-file';
 
 const ASSETS = [
@@ -211,17 +211,4 @@ self.addEventListener('fetch', (event) => {
     })
   );
 });
-
-self.addEventListener('message', (event) => {
-  if (!event.data) return;
-  if (event.data.type === 'SKIP_WAITING' || event.data === 'SKIP_WAITING') {
-    self.skipWaiting();
-  }
-  if (event.data.type === 'CLEAR_ALL_CACHES') {
-    caches.keys().then((keys) => {
-      return Promise.all(keys.map((k) => caches.delete(k)));
-    });
-  }
-});
-
 

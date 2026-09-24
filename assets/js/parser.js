@@ -483,13 +483,19 @@ const SubParser = (() => {
   // ---------- SAMI SMI ----------
   // A <SYNC Start=...> block runs until the next <SYNC> (or </BODY>/EOF);
   // many real SAMI files omit </SYNC> tags, so we must not rely on them.
-  const SMI_BLOCK = /<SYNC\b[^>]*?\bStart\s*=\s*"?(\d+)"?[^>]*>([\s\S]*?)(?=<SYNC\b|<\/BODY>|$)/gi;
+  // Built fresh per parse: a shared global regex would carry lastIndex across
+  // concurrent parses and skip cues.
+  const SMI_BLOCK_SRC = '<SYNC\\b[^>]*?\\bStart\\s*=\\s*"?(\\d+)"?[^>]*>([\\s\\S]*?)(?=<SYNC\\b|<\\/BODY>|$)';
 
   // Extract the text of each <P> paragraph in a SYNC block, decoding HTML.
   // Only the first non-empty paragraph is needed (single-language files have
   // one <P>; bilingual ones repeat the same text), so stop as soon as we have it.
   function samiParagraphs(content) {
-    const blocks = content.split(/<P\b[^>]*>/i);
+    // Slice at the first paragraph tag instead of splitting the whole block:
+    // nothing after the first <P> matters, so we skip re-scanning the rest.
+    const pIdx = content.search(/<P\b[^>]*>/i);
+    const tail = pIdx !== -1 ? content.slice(pIdx) : content;
+    const blocks = tail.split(/<P\b[^>]*>/i);
     for (let i = 0; i < blocks.length; i++) {
       const text = blocks[i]
         .replace(/<\/P\s*>/gi, '')
@@ -514,8 +520,8 @@ const SubParser = (() => {
     const cues = [];
     let prev = -1;
     let m;
-    SMI_BLOCK.lastIndex = 0;
-    while ((m = SMI_BLOCK.exec(content)) !== null) {
+    const smiBlock = new RegExp(SMI_BLOCK_SRC, 'gi');
+    while ((m = smiBlock.exec(content)) !== null) {
       const start = Number(m[1]);
       if (prev >= 0) {
         cues[prev].end = start;
@@ -1080,14 +1086,14 @@ Style: Top,Noto Naskh Arabic,44,16777215,65535,0,0,-1,0,1,3.2,1.8,8,40,40,35,0,1
    *
    * @param {Array<{index:number,start:number,end:number,text:string,settings?:string,extra?:object}>} cues
    * @param {{mode?: 'trim'|'merge', minDuration?: number, gap?: number}} [options]
-   * @returns {{cues: Array, fixedCount: number}}
+   * @returns {Array} The (possibly re-timed) cue array, carrying a non-enumerable
+   *          `fixedCount` property with the number of cues that were adjusted.
    */
   function fixOverlaps(cues, options = {}) {
     if (!cues || !cues.length) return { cues: [], fixedCount: 0 };
     // If format is ASS or SSA, subtitles can naturally layer simultaneously, so skip overlap shifting
     if (options.format === 'ass' || options.format === 'ssa') {
       const res = cues.map((c, i) => ({ ...c, index: i + 1 }));
-      res.cues = res;
       res.fixedCount = 0;
       return res;
     }
@@ -1155,8 +1161,10 @@ Style: Top,Noto Naskh Arabic,44,16777215,65535,0,0,-1,0,1,3.2,1.8,8,40,40,35,0,1
       delete c.originalIndex;
     });
 
-    result.cues = result;
-    result.fixedCount = fixedCount;
+    // Array with a non-enumerable fixedCount side-channel. A plain .cues
+    // property would self-reference and crash every JSON.stringify(workCues)
+    // in the undo/redo history.
+    Object.defineProperty(result, 'fixedCount', { value: fixedCount, enumerable: false });
     return result;
   }
 
