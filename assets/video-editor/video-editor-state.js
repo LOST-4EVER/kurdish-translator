@@ -1,13 +1,10 @@
 /**
- * video-editor-state.js — High-Performance State & History Store for Video Studio.
- * Handles cues array, active playhead cue, timing offsets, styling options,
- * and advanced granular command/diff undo/redo operations with typing coalescing
- * and zero-lag O(1) state mutations.
+ * video-editor-state.js — State/history store for Video Studio.
+ * Keeps cue edits deterministic and safe for the timeline, overlay, and app sync.
  */
 (() => {
   'use strict';
 
-  // Command types for granular, low-memory history recording
   const CMD = {
     UPDATE_TEXT: 'CMD_UPDATE_TEXT',
     UPDATE_TIMING: 'CMD_UPDATE_TIMING',
@@ -19,6 +16,9 @@
     UPDATE_CUE: 'CMD_UPDATE_CUE',
   };
 
+  const copyCue = (cue) => (cue && typeof cue === 'object' ? { ...cue } : cue);
+  const copyCues = (cues) => (Array.isArray(cues) ? cues.map(copyCue) : []);
+
   class VideoEditorStateManager {
     constructor() {
       this.cues = [];
@@ -27,21 +27,14 @@
       this.inspectorCue = null;
       this.inspectorCueIndex = -1;
       this.syncOffsetMs = 0;
-
       this.aspectRatio = '16:9';
-      let savedShowOrig = false;
-      try {
-        savedShowOrig = localStorage.getItem('kurdish_translator_studio_show_orig') !== '0';
-      } catch (_) {}
-
       this.overlayConfig = {
-        fontSize: '1.25', // rem
-        position: 'bottom', // 'bottom' | 'center' | 'top'
+        fontSize: '1.25',
+        position: 'bottom',
         color: '#ffffff',
         bgColor: 'transparent',
-        showOrig: savedShowOrig,
+        showOrig: this._readShowOriginal(),
       };
-
       this.undoStack = [];
       this.redoStack = [];
       this.maxHistorySteps = 600;
@@ -53,20 +46,20 @@
       this._autoSaveTimer = null;
     }
 
+    _readShowOriginal() {
+      try { return localStorage.getItem('kurdish_translator_studio_show_orig') !== '0'; } catch (_) { return true; }
+    }
+
     on(event, cb) {
       if (!this.listeners[event]) this.listeners[event] = [];
       this.listeners[event].push(cb);
-      return () => {
-        this.listeners[event] = this.listeners[event].filter((f) => f !== cb);
-      };
+      return () => { this.listeners[event] = this.listeners[event].filter((fn) => fn !== cb); };
     }
 
     emit(event, data) {
-      if (this.listeners[event]) {
-        this.listeners[event].forEach((cb) => {
-          try { cb(data); } catch (e) { console.error(e); }
-        });
-      }
+      (this.listeners[event] || []).slice().forEach((cb) => {
+        try { cb(data); } catch (err) { console.error(err); }
+      });
     }
 
     markDirty() {
@@ -74,7 +67,12 @@
         this.isDirty = true;
         this.emit('dirtyStateChange', { isDirty: true, lastSaved: this.lastSavedTimestamp });
       }
-      this._scheduleAutoDraftSave();
+      clearTimeout(this._autoSaveTimer);
+      this._autoSaveTimer = setTimeout(() => {
+        try {
+          if (this.cues.length) localStorage.setItem('kurdish_translator_studio_draft', JSON.stringify({ cues: this.cues, savedAt: Date.now() }));
+        } catch (_) {}
+      }, 3000);
     }
 
     markClean() {
@@ -83,636 +81,194 @@
       this.emit('dirtyStateChange', { isDirty: false, lastSaved: this.lastSavedTimestamp });
     }
 
-    _scheduleAutoDraftSave() {
-      clearTimeout(this._autoSaveTimer);
-      this._autoSaveTimer = setTimeout(() => {
-        try {
-          if (this.cues && this.cues.length) {
-            localStorage.setItem('kurdish_translator_studio_draft', JSON.stringify({
-              cues: this.cues,
-              savedAt: Date.now(),
-            }));
-          }
-        } catch (_) {}
-      }, 3000);
-    }
-
     saveToApp() {
       try {
-        if (typeof window._updateAppWorkCues === 'function') {
-          window._updateAppWorkCues(this.cues, true);
-        }
-        try {
-          localStorage.setItem('kurdish_translator_studio_saved', JSON.stringify({
-            cues: this.cues,
-            savedAt: Date.now(),
-          }));
-        } catch (_) {}
-
+        if (typeof window._updateAppWorkCues === 'function') window._updateAppWorkCues(this.cues, true);
+        try { localStorage.setItem('kurdish_translator_studio_saved', JSON.stringify({ cues: this.cues, savedAt: Date.now() })); } catch (_) {}
         this.markClean();
-
-        if (typeof Toast !== 'undefined') {
-          Toast.show('Saved to Project', 'success', { subtext: `${this.cues.length} subtitle cues committed.` });
-        } else if (window.VideoEditorUI && window.VideoEditorUI.showToast) {
-          window.VideoEditorUI.showToast('Saved all changes to project', 'success');
-        }
+        if (typeof Toast !== 'undefined') Toast.show('Saved to Project', 'success', { subtext: `${this.cues.length} subtitle cues committed.` });
+        else if (window.VideoEditorUI && window.VideoEditorUI.showToast) window.VideoEditorUI.showToast('Saved all changes to project', 'success');
         return true;
-      } catch (err) {
-        console.error('saveToApp failed:', err);
-        return false;
-      }
+      } catch (err) { console.error('saveToApp failed:', err); return false; }
     }
 
-    canUndo() {
-      return this.undoStack.length > 0;
-    }
-
-    canRedo() {
-      return this.redoStack.length > 0;
-    }
+    canUndo() { return this.undoStack.length > 0; }
+    canRedo() { return this.redoStack.length > 0; }
 
     _emitHistoryChange() {
-      this.emit('undoRedoChange', {
-        canUndo: this.canUndo(),
-        canRedo: this.canRedo(),
-        undoCount: this.undoStack.length,
-        redoCount: this.redoStack.length,
-      });
+      this.emit('undoRedoChange', { canUndo: this.canUndo(), canRedo: this.canRedo(), undoCount: this.undoStack.length, redoCount: this.redoStack.length });
     }
 
-    _pushCommand(cmd) {
-      this.undoStack.push(cmd);
-      if (this.undoStack.length > this.maxHistorySteps) {
-        this.undoStack.shift();
-      }
+    _pushCommand(command) {
+      this.undoStack.push(command);
+      if (this.undoStack.length > this.maxHistorySteps) this.undoStack.shift();
       this.redoStack = [];
       this.markDirty();
       this._emitHistoryChange();
     }
 
     _reindex() {
-      if (Array.isArray(this.cues)) {
-        this.cues.sort((a, b) => (a.start || 0) - (b.start || 0));
-        for (let i = 0; i < this.cues.length; i++) {
-          this.cues[i].index = i + 1;
-        }
-        if (this.activeCue) {
-          const foundIdx = this.cues.indexOf(this.activeCue);
-          if (foundIdx !== -1) {
-            this.activeCueIndex = foundIdx;
-          }
-        }
+      this.cues.sort((a, b) => (a.start || 0) - (b.start || 0));
+      this.cues.forEach((cue, index) => { cue.index = index + 1; });
+      if (this.activeCue) {
+        const index = this.cues.indexOf(this.activeCue);
+        if (index >= 0) this.activeCueIndex = index;
       }
     }
 
     setCues(newCues, recordHistory = true) {
-      if (recordHistory) {
-        const prevCues = this.cues.map((c) => ({ ...c }));
-        const nextCues = Array.isArray(newCues) ? newCues.map((c) => ({ ...c })) : [];
-        this._pushCommand({
-          type: CMD.SET_CUES,
-          prevCues,
-          nextCues,
-          prevActiveIndex: this.activeCueIndex,
-        });
-      }
-      this.cues = Array.isArray(newCues) ? newCues.map((c) => ({ ...c })) : [];
+      const nextCues = copyCues(newCues);
+      if (recordHistory) this._pushCommand({ type: CMD.SET_CUES, prevCues: copyCues(this.cues), nextCues, prevActiveIndex: this.activeCueIndex });
+      this.cues = nextCues;
       this._reindex();
       this.emit('cuesChange', this.cues);
       this._emitHistoryChange();
     }
 
-    getCues() {
-      return this.cues;
-    }
+    getCues() { return this.cues; }
 
     setActiveCue(cue, index) {
-      this.activeCue = cue;
-      this.activeCueIndex = index;
-      this.emit('activeCueChange', { cue, index });
+      this.activeCue = cue || null;
+      this.activeCueIndex = Number.isInteger(index) ? index : -1;
+      this.emit('activeCueChange', { cue: this.activeCue, index: this.activeCueIndex });
     }
 
-    setSyncOffset(ms) {
-      this.syncOffsetMs = ms;
-      this.emit('syncOffsetChange', this.syncOffsetMs);
-    }
+    setSyncOffset(ms) { this.syncOffsetMs = Number.isFinite(Number(ms)) ? Number(ms) : 0; this.emit('syncOffsetChange', this.syncOffsetMs); }
+    setOverlayConfig(config) { this.overlayConfig = Object.assign({}, this.overlayConfig, config || {}); this.emit('overlayConfigChange', this.overlayConfig); }
 
-    setOverlayConfig(newConfig) {
-      this.overlayConfig = Object.assign(this.overlayConfig, newConfig);
-      this.emit('overlayConfigChange', this.overlayConfig);
-    }
+    pushUndo() { this._pushCommand({ type: CMD.SET_CUES, prevCues: copyCues(this.cues), nextCues: null, prevActiveIndex: this.activeCueIndex }); }
 
-    /**
-     * Backward-compatible pushUndo: creates a lightweight command or snapshot
-     */
-    pushUndo() {
-      const prevCues = this.cues.map((c) => ({ ...c }));
-      this._pushCommand({
-        type: CMD.SET_CUES,
-        prevCues,
-        nextCues: null,
-        prevActiveIndex: this.activeCueIndex,
-      });
+    _restoreCues(cues, activeIndex) {
+      this.cues = copyCues(cues);
+      this._reindex();
+      if (this.cues.length && Number.isInteger(activeIndex) && activeIndex >= 0 && activeIndex < this.cues.length) this.setActiveCue(this.cues[activeIndex], activeIndex);
+      else if (!this.cues.length) this.setActiveCue(null, -1);
+      this.emit('cuesChange', this.cues);
     }
 
     undo() {
-      if (!this.undoStack.length) return false;
-      const cmd = this.undoStack.pop();
-
-      // Haptic feedback if supported on mobile devices
-      if (typeof navigator !== 'undefined' && 'vibrate' in navigator) {
-        try { navigator.vibrate(15); } catch (_) {}
-      }
-
-      switch (cmd.type) {
-        case CMD.UPDATE_TEXT: {
-          if (cmd.index >= 0 && cmd.index < this.cues.length) {
-            const currentText = this.cues[cmd.index].text;
-            this.cues[cmd.index].text = cmd.prevText;
-            this.activeCueIndex = cmd.index;
-            this.activeCue = this.cues[cmd.index];
-            this.redoStack.push({ ...cmd, nextText: currentText });
-            this.emit('cuesChange', this.cues);
-          }
-          break;
-        }
-
-        case CMD.UPDATE_TIMING:
-        case CMD.NUDGE_TIMING: {
-          if (cmd.index >= 0 && cmd.index < this.cues.length) {
-            this.cues[cmd.index].start = cmd.prevStart;
-            this.cues[cmd.index].end = cmd.prevEnd;
-            this.activeCue = this.cues[cmd.index];
-            this._reindex();
-            this.redoStack.push(cmd);
-            this.emit('cuesChange', this.cues);
-          }
-          break;
-        }
-
-        case CMD.UPDATE_CUE: {
-          if (cmd.index >= 0 && cmd.index < this.cues.length) {
-            const currentCue = { ...this.cues[cmd.index] };
-            this.cues[cmd.index] = { ...cmd.prevCue };
-            this.activeCue = this.cues[cmd.index];
-            this._reindex();
-            this.redoStack.push({ ...cmd, nextCue: currentCue });
-            this.emit('cuesChange', this.cues);
-          }
-          break;
-        }
-
-        case CMD.SPLIT_CUE: {
-          if (cmd.index >= 0 && cmd.index < this.cues.length) {
-            this.cues[cmd.index] = { ...cmd.prevCue };
-            if (this.cues[cmd.index + 1]) {
-              this.cues.splice(cmd.index + 1, 1);
-            }
-            this._reindex();
-            this.activeCueIndex = cmd.index;
-            this.activeCue = this.cues[cmd.index];
-            this.redoStack.push(cmd);
-            this.emit('cuesChange', this.cues);
-          }
-          break;
-        }
-
-        case CMD.ADD_CUE: {
-          if (cmd.index >= 0 && cmd.index < this.cues.length) {
-            this.cues.splice(cmd.index, 1);
-            this._reindex();
-            this.activeCueIndex = Math.max(0, cmd.index - 1);
-            this.activeCue = this.cues[this.activeCueIndex] || null;
-            this.redoStack.push(cmd);
-            this.emit('cuesChange', this.cues);
-          }
-          break;
-        }
-
-        case CMD.DELETE_CUE: {
-          this.cues.splice(cmd.index, 0, { ...cmd.deletedCue });
-          this._reindex();
-          this.activeCueIndex = cmd.index;
-          this.activeCue = this.cues[this.activeCueIndex];
-          this.redoStack.push(cmd);
-          this.emit('cuesChange', this.cues);
-          break;
-        }
-
-        case CMD.SET_CUES: {
-          const currentCues = this.cues.map((c) => ({ ...c }));
-          this.redoStack.push({
-            type: CMD.SET_CUES,
-            prevCues: currentCues,
-            nextCues: cmd.prevCues,
-            prevActiveIndex: this.activeCueIndex,
-          });
-          this.cues = cmd.prevCues.map((c) => ({ ...c }));
-          this._reindex();
-          if (typeof cmd.prevActiveIndex === 'number' && cmd.prevActiveIndex >= 0 && cmd.prevActiveIndex < this.cues.length) {
-            this.activeCueIndex = cmd.prevActiveIndex;
-            this.activeCue = this.cues[this.activeCueIndex];
-          }
-          this.emit('cuesChange', this.cues);
-          break;
-        }
-
-        default: {
-          // Legacy snapshot support
-          if (cmd.cues) {
-            const currentSnapshot = {
-              cues: JSON.stringify(this.cues),
-              activeCueIndex: this.activeCueIndex,
-            };
-            this.redoStack.push(currentSnapshot);
-            this.cues = JSON.parse(cmd.cues);
-            if (typeof cmd.activeCueIndex === 'number' && cmd.activeCueIndex >= 0 && cmd.activeCueIndex < this.cues.length) {
-              this.activeCueIndex = cmd.activeCueIndex;
-              this.activeCue = this.cues[this.activeCueIndex];
-            }
-            this.emit('cuesChange', this.cues);
-          }
-        }
-      }
-
+      const command = this.undoStack.pop();
+      if (!command) return false;
+      const before = copyCues(this.cues);
+      const active = this.activeCueIndex;
+      if (command.type === CMD.SET_CUES) this._restoreCues(command.prevCues, command.prevActiveIndex);
+      else if (command.type === CMD.UPDATE_TEXT) { const cue = this.cues[command.index]; if (cue) { cue.text = command.prevText; this.emit('cuesChange', this.cues); } }
+      else if (command.type === CMD.UPDATE_TIMING || command.type === CMD.NUDGE_TIMING) { const cue = this.cues[command.index]; if (cue) { cue.start = command.prevStart; cue.end = command.prevEnd; this._reindex(); this.emit('cuesChange', this.cues); } }
+      else if (command.type === CMD.UPDATE_CUE) { if (this.cues[command.index]) { this.cues[command.index] = copyCue(command.prevCue); this._reindex(); this.emit('cuesChange', this.cues); } }
+      else if (command.type === CMD.SPLIT_CUE) { this.cues[command.index] = copyCue(command.prevCue); this.cues.splice(command.index + 1, 1); this._reindex(); this.emit('cuesChange', this.cues); }
+      else if (command.type === CMD.ADD_CUE) { this.cues.splice(command.index, 1); this._reindex(); this.emit('cuesChange', this.cues); }
+      else if (command.type === CMD.DELETE_CUE) { this.cues.splice(command.index, 0, copyCue(command.deletedCue)); this._reindex(); this.emit('cuesChange', this.cues); }
+      this.redoStack.push({ ...command, before, after: copyCues(this.cues), activeBefore: active, activeAfter: this.activeCueIndex });
       this._emitHistoryChange();
       return true;
     }
 
     redo() {
-      if (!this.redoStack.length) return false;
-      const cmd = this.redoStack.pop();
-
-      // Haptic feedback if supported on mobile devices
-      if (typeof navigator !== 'undefined' && 'vibrate' in navigator) {
-        try { navigator.vibrate(15); } catch (_) {}
-      }
-
-      switch (cmd.type) {
-        case CMD.UPDATE_TEXT: {
-          if (cmd.index >= 0 && cmd.index < this.cues.length) {
-            const prevText = this.cues[cmd.index].text;
-            this.cues[cmd.index].text = cmd.nextText;
-            this.activeCueIndex = cmd.index;
-            this.activeCue = this.cues[cmd.index];
-            this.undoStack.push({ ...cmd, prevText });
-            this.emit('cuesChange', this.cues);
-          }
-          break;
-        }
-
-        case CMD.UPDATE_TIMING:
-        case CMD.NUDGE_TIMING: {
-          if (cmd.index >= 0 && cmd.index < this.cues.length) {
-            this.cues[cmd.index].start = cmd.nextStart;
-            this.cues[cmd.index].end = cmd.nextEnd;
-            this.activeCue = this.cues[cmd.index];
-            this._reindex();
-            this.undoStack.push(cmd);
-            this.emit('cuesChange', this.cues);
-          }
-          break;
-        }
-
-        case CMD.UPDATE_CUE: {
-          if (cmd.index >= 0 && cmd.index < this.cues.length) {
-            const prevCue = { ...this.cues[cmd.index] };
-            this.cues[cmd.index] = { ...cmd.nextCue };
-            this.activeCue = this.cues[cmd.index];
-            this._reindex();
-            this.undoStack.push({ ...cmd, prevCue });
-            this.emit('cuesChange', this.cues);
-          }
-          break;
-        }
-
-        case CMD.SPLIT_CUE: {
-          if (cmd.index >= 0 && cmd.index < this.cues.length) {
-            this.cues[cmd.index].end = cmd.splitTimeMs;
-            this.cues.splice(cmd.index + 1, 0, { ...cmd.newCue });
-            this._reindex();
-            this.activeCueIndex = cmd.index + 1;
-            this.activeCue = this.cues[this.activeCueIndex];
-            this.undoStack.push(cmd);
-            this.emit('cuesChange', this.cues);
-          }
-          break;
-        }
-
-        case CMD.ADD_CUE: {
-          this.cues.splice(cmd.index, 0, { ...cmd.newCue });
-          this._reindex();
-          this.activeCueIndex = cmd.index;
-          this.activeCue = this.cues[this.activeCueIndex];
-          this.undoStack.push(cmd);
-          this.emit('cuesChange', this.cues);
-          break;
-        }
-
-        case CMD.DELETE_CUE: {
-          if (cmd.index >= 0 && cmd.index < this.cues.length) {
-            this.cues.splice(cmd.index, 1);
-            this._reindex();
-            this.activeCueIndex = Math.min(cmd.index, this.cues.length - 1);
-            this.activeCue = this.cues[this.activeCueIndex] || null;
-            this.undoStack.push(cmd);
-            this.emit('cuesChange', this.cues);
-          }
-          break;
-        }
-
-        case CMD.SET_CUES: {
-          const currentCues = this.cues.map((c) => ({ ...c }));
-          this.undoStack.push({
-            type: CMD.SET_CUES,
-            prevCues: currentCues,
-            nextCues: cmd.nextCues,
-            prevActiveIndex: this.activeCueIndex,
-          });
-          this.cues = cmd.nextCues ? cmd.nextCues.map((c) => ({ ...c })) : [];
-          this._reindex();
-          this.emit('cuesChange', this.cues);
-          break;
-        }
-
-        default: {
-          if (cmd.cues) {
-            const currentSnapshot = {
-              cues: JSON.stringify(this.cues),
-              activeCueIndex: this.activeCueIndex,
-            };
-            this.undoStack.push(currentSnapshot);
-            this.cues = JSON.parse(cmd.cues);
-            if (typeof cmd.activeCueIndex === 'number' && cmd.activeCueIndex >= 0 && cmd.activeCueIndex < this.cues.length) {
-              this.activeCueIndex = cmd.activeCueIndex;
-              this.activeCue = this.cues[this.activeCueIndex];
-            }
-            this.emit('cuesChange', this.cues);
-          }
-        }
-      }
-
+      const command = this.redoStack.pop();
+      if (!command) return false;
+      if (command.after) this._restoreCues(command.after, command.activeAfter);
+      else return false;
+      this.undoStack.push({ type: CMD.SET_CUES, prevCues: command.before, nextCues: command.after, prevActiveIndex: command.activeBefore });
       this._emitHistoryChange();
       return true;
     }
 
     updateCue(index, updatedCue, recordHistory = true) {
-      if (index >= 0 && index < this.cues.length) {
-        if (recordHistory) {
-          this._pushCommand({
-            type: CMD.UPDATE_CUE,
-            index,
-            prevCue: { ...this.cues[index] },
-            nextCue: { ...this.cues[index], ...updatedCue },
-          });
-        }
-        this.cues[index] = { ...this.cues[index], ...updatedCue };
-        if (this.activeCueIndex === index) {
-          this.activeCue = this.cues[index];
-        }
-        this.emit('cuesChange', this.cues);
-      }
+      if (index < 0 || index >= this.cues.length) return;
+      const prevCue = copyCue(this.cues[index]);
+      const nextCue = Object.assign({}, prevCue, updatedCue || {});
+      if (recordHistory) this._pushCommand({ type: CMD.UPDATE_CUE, index, prevCue, nextCue });
+      this.cues[index] = nextCue;
+      if (this.activeCueIndex === index) this.activeCue = nextCue;
+      this._reindex();
+      this.emit('cuesChange', this.cues);
     }
 
     updateCueText(index, newText) {
-      if (index >= 0 && index < this.cues.length) {
-        const prevText = this.cues[index].text;
-        if (prevText === newText) return;
-
-        const now = Date.now();
-        const isConsecutiveTyping = (
-          this._lastTextEditIndex === index &&
-          (now - this._lastTextEditTime) < 850 &&
-          this.undoStack.length > 0 &&
-          this.undoStack[this.undoStack.length - 1].type === CMD.UPDATE_TEXT &&
-          this.undoStack[this.undoStack.length - 1].index === index
-        );
-
-        if (isConsecutiveTyping) {
-          // Coalesce continuous typing in the same cue into one clean undo step
-          this.undoStack[this.undoStack.length - 1].nextText = newText;
-        } else {
-          this._pushCommand({
-            type: CMD.UPDATE_TEXT,
-            index,
-            prevText,
-            nextText,
-            timestamp: now,
-          });
-        }
-
-        this._lastTextEditTime = now;
-        this._lastTextEditIndex = index;
-
-        this.cues[index] = { ...this.cues[index], text: newText };
-        if (this.activeCueIndex === index) {
-          this.activeCue = this.cues[index];
-        }
-        this.emit('cuesChange', this.cues);
-      }
+      if (index < 0 || index >= this.cues.length) return;
+      const text = String(newText == null ? '' : newText);
+      const previous = this.cues[index].text || '';
+      if (previous === text) return;
+      const now = Date.now();
+      const last = this.undoStack[this.undoStack.length - 1];
+      if (this._lastTextEditIndex === index && now - this._lastTextEditTime < 850 && last && last.type === CMD.UPDATE_TEXT && last.index === index) last.nextText = text;
+      else this._pushCommand({ type: CMD.UPDATE_TEXT, index, prevText: previous, nextText: text });
+      this._lastTextEditTime = now;
+      this._lastTextEditIndex = index;
+      this.cues[index] = { ...this.cues[index], text };
+      if (this.activeCueIndex === index) this.activeCue = this.cues[index];
+      this.emit('cuesChange', this.cues);
     }
 
-    updateCueTiming(index, newStartMs, newEndMs, recordHistory = true) {
-      if (index >= 0 && index < this.cues.length) {
-        const start = Math.max(0, Math.round(newStartMs));
-        const end = Math.max(start + 100, Math.round(newEndMs));
-        const prevStart = this.cues[index].start;
-        const prevEnd = this.cues[index].end;
-
-        if (prevStart === start && prevEnd === end) return;
-
-        if (recordHistory) {
-          this._pushCommand({
-            type: CMD.UPDATE_TIMING,
-            index,
-            prevStart,
-            prevEnd,
-            nextStart: start,
-            nextEnd: end,
-          });
-        }
-
-        const wasActive = (this.activeCueIndex === index || this.activeCue === this.cues[index]);
-        const updatedCue = { ...this.cues[index], start, end };
-        this.cues[index] = updatedCue;
-        if (wasActive) {
-          this.activeCue = updatedCue;
-        }
-        this._reindex();
-        this.emit('cuesChange', this.cues);
-      }
+    updateCueTiming(index, startMs, endMs, recordHistory = true) {
+      if (index < 0 || index >= this.cues.length) return;
+      const start = Math.max(0, Math.round(Number(startMs) || 0));
+      const end = Math.max(start + 100, Math.round(Number(endMs) || start + 100));
+      const cue = this.cues[index];
+      if (cue.start === start && cue.end === end) return;
+      if (recordHistory) this._pushCommand({ type: CMD.UPDATE_TIMING, index, prevStart: cue.start, prevEnd: cue.end, nextStart: start, nextEnd: end });
+      this.cues[index] = { ...cue, start, end };
+      if (this.activeCueIndex === index) this.activeCue = this.cues[index];
+      this._reindex();
+      this.emit('cuesChange', this.cues);
     }
 
     splitCue(index, splitTimeMs) {
-      if (index < 0 || index >= this.cues.length) return null;
-      const original = this.cues[index];
-      if (splitTimeMs <= original.start + 200 || splitTimeMs >= original.end - 200) {
-        return null;
-      }
-
-      const prevCue = { ...original };
-      const originalEnd = original.end;
-      original.end = splitTimeMs;
-
-      const newCue = {
-        index: this.cues.length + 1,
-        start: splitTimeMs + 10,
-        end: originalEnd,
-        text: original.text,
-        origText: original.origText || '',
-      };
-
+      const cue = this.cues[index];
+      if (!cue || splitTimeMs <= cue.start + 200 || splitTimeMs >= cue.end - 200) return null;
+      const prevCue = copyCue(cue);
+      const newCue = { ...cue, start: splitTimeMs + 10, end: cue.end, origText: cue.origText || '' };
+      this.cues[index] = { ...cue, end: splitTimeMs };
       this.cues.splice(index + 1, 0, newCue);
       this._reindex();
-
-      this._pushCommand({
-        type: CMD.SPLIT_CUE,
-        index,
-        prevCue,
-        newCue: { ...newCue },
-        splitTimeMs,
-      });
-
+      this._pushCommand({ type: CMD.SPLIT_CUE, index, prevCue, newCue: copyCue(newCue), splitTimeMs });
       this.emit('cuesChange', this.cues);
-      return newCue;
+      return this.cues[index + 1];
     }
 
     addCue(startMs, endMs = null, text = 'دەقی ژێرنووسی نوێ', origText = '') {
-      const start = Math.max(0, Math.round(startMs));
-      let calculatedEnd = endMs;
-      if (!calculatedEnd) {
-        const nextCue = this.cues.find((c) => c.start > start);
-        if (nextCue) {
-          calculatedEnd = Math.min(start + 2500, Math.max(start + 400, nextCue.start - 50));
-        } else {
-          calculatedEnd = start + 2500;
-        }
-      }
-      const end = Math.max(start + 200, Math.round(calculatedEnd));
-
-      const newCue = {
-        index: this.cues.length + 1,
-        start,
-        end,
-        text: text || 'دەقی ژێرنووسی نوێ',
-        origText: origText || '',
-      };
-
-      // Find insertion point
-      let insertIndex = this.cues.length;
-      for (let i = 0; i < this.cues.length; i++) {
-        if (this.cues[i].start > newCue.start) {
-          insertIndex = i;
-          break;
-        }
-      }
-
-      this.cues.splice(insertIndex, 0, newCue);
+      const start = Math.max(0, Math.round(Number(startMs) || 0));
+      const next = this.cues.find((cue) => cue.start > start);
+      const end = Math.max(start + 200, Math.round(endMs == null ? Math.min(start + 2500, next ? Math.max(start + 400, next.start - 50) : start + 2500) : endMs));
+      const cue = { start, end, text: text || 'دەقی ژێرنووسی نوێ', origText: origText || '' };
+      const index = this.cues.findIndex((item) => item.start > start);
+      const insertAt = index < 0 ? this.cues.length : index;
+      this.cues.splice(insertAt, 0, cue);
       this._reindex();
-
-      this._pushCommand({
-        type: CMD.ADD_CUE,
-        index: insertIndex,
-        newCue: { ...newCue },
-      });
-
+      this._pushCommand({ type: CMD.ADD_CUE, index: insertAt, newCue: copyCue(cue) });
       this.emit('cuesChange', this.cues);
-      return newCue;
+      return this.cues[insertAt];
     }
 
     deleteCue(index) {
       if (index < 0 || index >= this.cues.length) return false;
-      const deletedCue = { ...this.cues[index] };
-
-      this.cues.splice(index, 1);
+      const deletedCue = this.cues.splice(index, 1)[0];
       this._reindex();
-
-      this._pushCommand({
-        type: CMD.DELETE_CUE,
-        index,
-        deletedCue,
-      });
-
+      this._pushCommand({ type: CMD.DELETE_CUE, index, deletedCue: copyCue(deletedCue) });
       this.emit('cuesChange', this.cues);
       return true;
     }
 
     duplicateCue(index) {
-      if (index < 0 || index >= this.cues.length) return null;
-      const sourceCue = this.cues[index];
-      const cueDuration = Math.max(500, sourceCue.end - sourceCue.start);
-      const newStart = sourceCue.end + 20;
-      const newEnd = newStart + cueDuration;
-
-      const duplicatedCue = {
-        index: this.cues.length + 1,
-        start: newStart,
-        end: newEnd,
-        text: sourceCue.text,
-        origText: sourceCue.origText || '',
-      };
-
-      this.cues.splice(index + 1, 0, duplicatedCue);
-      this._reindex();
-
-      this._pushCommand({
-        type: CMD.ADD_CUE,
-        index: index + 1,
-        newCue: { ...duplicatedCue },
-      });
-
-      this.activeCueIndex = index + 1;
-      this.activeCue = this.cues[this.activeCueIndex];
-      this.emit('cuesChange', this.cues);
-      return duplicatedCue;
+      const cue = this.cues[index];
+      if (!cue) return null;
+      const duration = Math.max(500, cue.end - cue.start);
+      return this.addCue(cue.end + 20, cue.end + 20 + duration, cue.text, cue.origText || '');
     }
 
     nudgeCue(index, deltaMs = 0) {
-      if (index < 0 || index >= this.cues.length || !deltaMs) return null;
       const cue = this.cues[index];
-      const prevStart = cue.start;
-      const prevEnd = cue.end;
-
-      const newStart = Math.max(0, cue.start + deltaMs);
+      if (!cue || !deltaMs) return null;
       const duration = cue.end - cue.start;
-      const newEnd = newStart + duration;
-
-      cue.start = newStart;
-      cue.end = newEnd;
-
-      this._pushCommand({
-        type: CMD.NUDGE_TIMING,
-        index,
-        prevStart,
-        prevEnd,
-        nextStart: cue.start,
-        nextEnd: cue.end,
-      });
-
-      this.emit('cuesChange', this.cues);
-      return cue;
+      this.updateCueTiming(index, Math.max(0, cue.start + deltaMs), Math.max(0, cue.start + deltaMs) + duration);
+      return this.cues[index];
     }
 
     nudgeCueTiming(index, startDeltaMs = 0, endDeltaMs = 0) {
-      if (index < 0 || index >= this.cues.length) return null;
       const cue = this.cues[index];
-      const prevStart = cue.start;
-      const prevEnd = cue.end;
-
-      cue.start = Math.max(0, cue.start + startDeltaMs);
-      cue.end = Math.max(cue.start + 200, cue.end + endDeltaMs);
-
-      this._pushCommand({
-        type: CMD.NUDGE_TIMING,
-        index,
-        prevStart,
-        prevEnd,
-        nextStart: cue.start,
-        nextEnd: cue.end,
-      });
-
-      this.emit('cuesChange', this.cues);
-      return cue;
+      if (!cue) return null;
+      this.updateCueTiming(index, cue.start + startDeltaMs, cue.end + endDeltaMs);
+      return this.cues[index];
     }
   }
 
