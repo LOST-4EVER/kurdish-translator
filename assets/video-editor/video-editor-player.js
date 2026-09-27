@@ -6,6 +6,16 @@
 (() => {
   'use strict';
 
+  /** Parses "16:9" / "9:16" / "4:3" selectors into a numeric aspect ratio. */
+  const parseAspectRatio = (value, fallback) => {
+    const parts = String(value || '').split(':');
+    if (parts.length !== 2) return fallback;
+    const w = parseFloat(parts[0]);
+    const h = parseFloat(parts[1]);
+    if (!w || !h) return fallback;
+    return w / h;
+  };
+
   class VideoEditorPlayerController {
     constructor() {
       this.videoFile = null;
@@ -25,6 +35,7 @@
       this._touchStartX = 0;
       this._touchStartTimeMs = 0;
       this._touchScrubHud = null;
+      this._loadToken = 0;
     }
 
     init(els, options = {}) {
@@ -36,6 +47,16 @@
       this._bindPlayerEvents();
       this._bindGestureAndTouchSystem();
       this._bindFullscreenHud();
+
+      // Release the object URL and decoded audio when the page is discarded; without
+      // this the blob stays alive and mobile browsers can kill the tab on re-entry.
+      if (!this._pagehideBound) {
+        this._pagehideBound = true;
+        window.addEventListener('pagehide', () => this.unloadVideo({ keepPlaceholder: true }));
+        document.addEventListener('visibilitychange', () => {
+          if (document.visibilityState === 'hidden') this._stopSimulatedPlayback();
+        });
+      }
     }
 
     _bindFullscreenHud() {
@@ -647,6 +668,10 @@
       const resSpan = document.getElementById('studioVideoSpecRes');
       const fmtSpan = document.getElementById('studioVideoSpecFmt');
       if (!player || !badge || !resSpan || !fmtSpan) return;
+      if (!this.videoFile) {
+        badge.classList.add('hidden');
+        return;
+      }
 
       const w = player.videoWidth;
       const h = player.videoHeight;
@@ -738,9 +763,15 @@
         try { player.pause(); } catch (_) {}
       }
 
+      // Release the previous file completely (old blob URL, decoded waveform) before
+      // attaching the new one, so replacing a large video does not double peak memory.
       if (this.videoUrl) {
         URL.revokeObjectURL(this.videoUrl);
+        this.videoUrl = null;
       }
+      this.videoFile = null;
+      const previousTimeline = this._getTimeline();
+      if (previousTimeline) previousTimeline.setAudioBuckets(null);
 
       this.hideErrorOverlay();
       this.showLoadingOverlay('Loading Video...', `Decoding ${file.name} (${ext.toUpperCase()})`);
@@ -790,41 +821,91 @@
     }
 
     _extractAndDecodeAudioWaveform(file) {
-      if (!file) return;
+      const timeline = this._getTimeline();
+      // Each load gets a token so a slow decode for a previous file can never
+      // overwrite the waveform of the file the user actually loaded.
+      const token = ++this._loadToken;
+      if (!file || !timeline) return;
+
       // For large video files (> 35MB), avoid reading hundreds of megabytes into ArrayBuffer/AudioContext
       if (file.size > 35 * 1024 * 1024) {
-        const bigFileTimeline = this._getTimeline();
-        if (bigFileTimeline) {
-          bigFileTimeline.setAudioData(null);
-        }
+        timeline.setAudioBuckets(null);
         return;
       }
       try {
         const AudioContextClass = window.AudioContext || window.webkitAudioContext;
         if (!AudioContextClass) return;
         const audioCtx = new AudioContextClass();
+        const closeCtx = () => { try { audioCtx.close(); } catch (_) {} };
         const reader = new FileReader();
         reader.onload = () => {
           const arrayBuffer = reader.result;
-          if (!arrayBuffer) {
-            try { audioCtx.close(); } catch (_) {}
+          if (!arrayBuffer || token !== this._loadToken) {
+            closeCtx();
             return;
           }
           audioCtx.decodeAudioData(arrayBuffer, (decodedBuffer) => {
-            try { audioCtx.close(); } catch (_) {}
-            const timeline = this._getTimeline();
-            if (timeline) {
-              timeline.setAudioData(decodedBuffer);
+            closeCtx();
+            if (token !== this._loadToken) return;
+            // Reduce to a small peak envelope immediately: the decoded PCM for a
+            // long video is hundreds of MB and must not stay reachable.
+            const currentTimeline = this._getTimeline();
+            if (currentTimeline) {
+              currentTimeline.setAudioData(decodedBuffer);
             }
-          }, () => {
-            try { audioCtx.close(); } catch (_) {}
-          });
+            if (decodedBuffer && typeof decodedBuffer.getChannelData === 'function') {
+              try { decodedBuffer.getChannelData(0).fill(0); } catch (_) {}
+            }
+          }, closeCtx);
         };
-        reader.onerror = () => {
-          try { audioCtx.close(); } catch (_) {}
-        };
+        reader.onerror = closeCtx;
         reader.readAsArrayBuffer(file);
       } catch (_) {}
+    }
+
+    /**
+     * Release the loaded media: detaches the source, revokes the object URL and drops
+     * the waveform envelope. Used when replacing a file and when the page goes away.
+     */
+    unloadVideo({ keepPlaceholder = false } = {}) {
+      this._stopPlaybackSync();
+      this._stopSimulatedPlayback();
+      const player = this.els ? this.els.videoPlayer : null;
+      if (player) {
+        try { player.pause(); } catch (_) {}
+        try { player.removeAttribute('src'); player.load(); } catch (_) {}
+        player.style.transform = '';
+      }
+      if (this.videoUrl) {
+        try { URL.revokeObjectURL(this.videoUrl); } catch (_) {}
+        this.videoUrl = null;
+      }
+      this.videoFile = null;
+      this._loadToken++;
+      this._mkvFallbackAttempted = false;
+      this._lastSyncedMs = -1;
+
+      const timeline = this._getTimeline();
+      if (timeline) {
+        timeline.setAudioBuckets(null);
+        timeline.setHasVideo(false);
+      }
+      if (window.VideoEditorHardware) {
+        window.VideoEditorHardware.releaseWakeLock('playback');
+      }
+      this.hideLoadingOverlay();
+      this.hideErrorOverlay();
+
+      if (this.els) {
+        if (!keepPlaceholder && this.els.videoPlaceholder) this.els.videoPlaceholder.classList.remove('hidden');
+        if (this.els.videoPlayer) this.els.videoPlayer.classList.add('hidden');
+        if (this.els.videoFilename) {
+          this.els.videoFilename.textContent = 'No video loaded';
+          this.els.videoFilename.title = 'No video loaded';
+        }
+      }
+      this._updateSpecsBadge();
+      this.updateTimeDisplay(0, 0);
     }
 
     play() {
@@ -1007,16 +1088,27 @@
     setAspectRatio(ratio) {
       if (!this.els.viewportWrapper) return;
       const player = this.els.videoPlayer;
+      const hasNativeSize = Boolean(player && player.videoWidth > 0 && player.videoHeight > 0);
+      const nativeW = hasNativeSize ? player.videoWidth : 16;
+      const nativeH = hasNativeSize ? player.videoHeight : 9;
+      const nativeAspect = nativeW / nativeH;
+
       if (ratio === 'original' || ratio === 'auto') {
-        if (player && player.videoWidth > 0 && player.videoHeight > 0) {
-          this.els.viewportWrapper.style.setProperty('--vn-video-aspect', `${player.videoWidth} / ${player.videoHeight}`);
-        } else {
-          this.els.viewportWrapper.style.setProperty('--vn-video-aspect', '16 / 9');
-        }
+        this.els.viewportWrapper.style.setProperty('--vn-video-aspect', `${nativeW} / ${nativeH}`);
         this.els.viewportWrapper.setAttribute('data-ratio', 'original');
       } else {
         this.els.viewportWrapper.setAttribute('data-ratio', ratio);
       }
+
+      // Overlay text is sized in cqi (container inline size = width), so a portrait
+      // or square video gets a much narrower container and therefore unreadably small
+      // subtitles. Compensate by the ratio between the applied aspect and 16:9, which
+      // keeps vertical videos legible without changing landscape rendering.
+      const applied = (ratio === 'original' || ratio === 'auto')
+        ? nativeAspect
+        : parseAspectRatio(ratio, nativeAspect);
+      const scale = Math.min(2.2, Math.max(1, (16 / 9) / applied));
+      this.els.viewportWrapper.style.setProperty('--vn-sub-scale', scale.toFixed(3));
     }
 
     toggleFullscreen() {
@@ -1080,19 +1172,39 @@
     }
 
     /**
-     * Generate a crisp 1080p canvas video stream for zero-latency testing.
+     * Generate a sample video for testing without a file. Recording is real time, so
+     * the resolution/fps/bitrate/length scale to the device: a 1080p60 12 Mbps
+     * encode locks up low-memory phones and can get the tab killed.
      */
     generateSampleVideo() {
+      const cores = (navigator.hardwareConcurrency || 4);
+      const memory = navigator.deviceMemory || 4;
+      const isMobile = (navigator.maxTouchPoints || 0) > 1 && window.innerWidth < 900;
+      const isConstrained = isMobile || memory <= 4 || cores <= 4;
+
+      const width = isConstrained ? 1280 : 1920;
+      const height = isConstrained ? 720 : 1080;
+      const fps = isConstrained ? 30 : 60;
+      const durationMs = isConstrained ? 8000 : 15000;
+      const bitrate = isConstrained ? 5000000 : 12000000;
+
       const canvas = document.createElement('canvas');
-      canvas.width = 1920;
-      canvas.height = 1080;
+      canvas.width = width;
+      canvas.height = height;
       const ctx = canvas.getContext('2d', { alpha: false });
       ctx.imageSmoothingEnabled = true;
       ctx.imageSmoothingQuality = 'high';
 
-      const stream = canvas.captureStream(60);
-      const durationMs = 15000;
+      const stream = canvas.captureStream(fps);
       const startTime = performance.now();
+      let rafId = null;
+      let cancelled = false;
+
+      const stopStream = () => {
+        cancelled = true;
+        if (rafId) { cancelAnimationFrame(rafId); rafId = null; }
+        try { stream.getTracks().forEach((t) => t.stop()); } catch (_) {}
+      };
 
       // Audio Tone
       let audioCtx = null;
@@ -1115,35 +1227,47 @@
       let mimeType = 'video/webm;codecs=vp9';
       if (!MediaRecorder.isTypeSupported(mimeType)) mimeType = 'video/webm';
 
-      const rec = new MediaRecorder(stream, {
-        mimeType,
-        videoBitsPerSecond: 12000000 // 12 Mbps crystal clear
-      });
+      let rec;
+      try {
+        rec = new MediaRecorder(stream, { mimeType, videoBitsPerSecond: bitrate });
+      } catch (_) {
+        stopStream();
+        if (osc) { try { osc.stop(); } catch (_) {} }
+        if (audioCtx) { try { audioCtx.close(); } catch (_) {} }
+        VideoEditorUI.showToast('Sample video is not supported in this browser.', 'error');
+        return;
+      }
 
       rec.ondataavailable = (e) => {
         if (e.data && e.data.size > 0) chunks.push(e.data);
       };
 
       rec.onstop = () => {
+        stopStream();
         if (osc) {
           try { osc.stop(); } catch (_) {}
         }
         if (audioCtx) {
           try { audioCtx.close(); } catch (_) {}
         }
+        if (cancelled || !chunks.length) {
+          VideoEditorUI.showToast('Sample video recording produced no data.', 'warning');
+          return;
+        }
         const blob = new Blob(chunks, { type: 'video/webm' });
-        const sampleFile = new File([blob], 'sample_kurdish_preview_1080p.webm', { type: 'video/webm' });
+        const sampleFile = new File([blob], `sample_kurdish_preview_${height}p.webm`, { type: 'video/webm' });
         this.loadVideoFile(sampleFile);
       };
 
-      rec.start();
+      rec.start(500);
 
       let frame = 0;
       const render = () => {
+        if (cancelled) return;
         frame++;
         const elapsed = performance.now() - startTime;
         if (elapsed >= durationMs) {
-          rec.stop();
+          try { rec.stop(); } catch (_) { stopStream(); }
           return;
         }
 
@@ -1154,7 +1278,7 @@
         // Grid accents
         ctx.strokeStyle = 'rgba(255, 255, 255, 0.03)';
         ctx.lineWidth = 1;
-        const step = 80;
+        const step = Math.max(40, Math.round(canvas.width / 24));
         for (let x = 0; x < canvas.width; x += step) {
           ctx.beginPath();
           ctx.moveTo(x, 0);
@@ -1179,29 +1303,29 @@
         ctx.beginPath();
         const cx = canvas.width / 2 + Math.sin(frame * 0.03) * 90;
         const cy = canvas.height / 2 + Math.cos(frame * 0.03) * 45;
-        ctx.arc(cx, cy, 220, 0, Math.PI * 2);
+        ctx.arc(cx, cy, Math.min(220, canvas.height * 0.2), 0, Math.PI * 2);
         ctx.stroke();
 
         // High contrast typography
         ctx.fillStyle = '#ffffff';
-        ctx.font = 'bold 54px "Inter", sans-serif';
+        ctx.font = `bold ${Math.round(canvas.height * 0.05)}px "Inter", sans-serif`;
         ctx.textAlign = 'center';
-        ctx.fillText('Kurdish Subtitle Studio · 1080p 60fps', canvas.width / 2, canvas.height / 2 - 40);
+        ctx.fillText(`Kurdish Subtitle Studio · ${height}p ${fps}fps`, canvas.width / 2, canvas.height / 2 - 40);
 
-        ctx.font = 'bold 36px "Noto Naskh Arabic", sans-serif';
+        ctx.font = `bold ${Math.round(canvas.height * 0.033)}px "Noto Naskh Arabic", sans-serif`;
         ctx.fillStyle = '#fde047';
         ctx.fillText('تاقیکردنەوەی کوالێتی بەرز و هاوتاکردنی دەقی کوردی سۆرانی', canvas.width / 2, canvas.height / 2 + 35);
 
         const sec = (elapsed / 1000).toFixed(2);
         ctx.font = '700 24px monospace';
         ctx.fillStyle = 'rgba(255, 255, 255, 0.85)';
-        ctx.fillText(`PLAYHEAD: ${sec}s / ${(durationMs / 1000).toFixed(1)}s · 1920×1080`, canvas.width / 2, canvas.height / 2 + 105);
+        ctx.fillText(`PLAYHEAD: ${sec}s / ${(durationMs / 1000).toFixed(1)}s · ${width}×${height}`, canvas.width / 2, canvas.height / 2 + 105);
 
-        requestAnimationFrame(render);
+        rafId = requestAnimationFrame(render);
       };
 
-      requestAnimationFrame(render);
-      VideoEditorUI.showToast('Rendering crystal-clear 1080p sample video...', 'info');
+      rafId = requestAnimationFrame(render);
+      VideoEditorUI.showToast(`Rendering ${height}p${fps}fps sample video...`, 'info');
     }
 
     get currentTimeMs() {

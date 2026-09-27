@@ -7,6 +7,75 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.62.0] - 2026-09-27 (Release v173)
+
+### ⚡ Performance
+- **Translation preprocessing is ~10x faster**: `preprocessSource` ran all ~405
+  colloquialism/contraction patterns against every subtitle line. Rules are now indexed by a
+  pre-extracted trigger token (`preprocessTrigger`), and patterns containing top-level `|`
+  alternation are always run because their trigger is ambiguous. The live token set is
+  recomputed whenever a rule actually rewrites the line, so chained rewrites
+  (`lookin'` → `looking` → `looking forward`) still apply in order. Verified byte-identical
+  output over 380 curated lines and a 20 000-line fuzz corpus; 1500 unique lines went from
+  124 ms to 12 ms, and repeated lines are memoized (1 ms).
+- **Timeline no longer retains the decoded audio**: the waveform held the full decoded PCM
+  `AudioBuffer` for the whole session (a 110 MB track pinned a 110 MB array). It is now
+  downsampled once to a fixed 2048-bucket peak envelope and the buffer is released — 8192
+  bytes instead, ~14000x smaller, built in 14 ms. Zooming redraws by max-pooling the
+  envelope (`_resampleBuckets`), which is allocation-free on redraw.
+- The `accuracy` check no longer builds a normalized copy of every original line on each run
+  unless that option is actually enabled.
+
+### 🐛 Fixed
+- **Blank subtitle lines in ASS output**: "include original" joins the original and the
+  translation with a real newline, but the original still carried its literal `\N`. The
+  result serialized as `\N\N`, which players render as an empty line between the two
+  languages. `normalizeTextForASS` now collapses `\N` sitting next to a real newline, while
+  leaving genuine blank lines alone.
+- **ASS alignment silently lost on round-trip**: the parser lifts `{\anN}` out of the text
+  into `cue.placement`/`cue.align`, so serializing back dropped the alignment and cues
+  jumped back to the bottom of the frame. The tag is now re-synthesized from the cue's
+  grid position. Plain bottom-centre cues do **not** gain a tag (the `Default` style already
+  anchors at 2), and cues positioned with `{\pos}` / MicroDVD `{P:x,y}` — which the parser
+  records as `placement: 'custom'` — are left alone, since the coordinates govern and an
+  extra anchor would shift them. All 9 `{\anN}` values round-trip exactly.
+- **Waveform from a previous file could overwrite the current one**: audio decoding is
+  async, so switching files mid-decode painted the old track's waveform. Loads are now
+  tagged with a token that is bumped on every load and on unload; a late result is dropped.
+  The `AudioContext` is closed on every exit path and the PCM is zeroed after use.
+- **`buildBatches` crashed on a blank cue**: a `null`/whitespace-only line reached
+  `text.trim()` unguarded and aborted the whole translation run. Blank lines are now skipped
+  when building batches.
+
+### 📹 Video Studio loading & unloading
+- **New `unloadVideo()`** fully releases a video: stops playback (including simulated
+  playback with no media attached), detaches and resets the element, revokes the object
+  URL, clears the waveform, hides the specs badge and releases the wake lock. It runs on
+  `pagehide` and whenever the tab is hidden, so a long session no longer pins a decoded
+  video and a MediaStream in memory.
+- `loadVideoFile()` now releases the previous file completely (URL revoked, handle nulled,
+  waveform cleared) before attaching the next one, instead of leaking it.
+- **Sample video is device-adaptive**: phones and low-memory/low-core devices now get
+  720p/30fps/8s/5 Mbps instead of 1080p/60fps/15s/12 Mbps, which previously stalled or
+  failed outright on mobile. Canvas fonts and geometry scale with the chosen resolution,
+  the recorder is started with a 500 ms timeslice so times are collected, and the animation
+  frame is cancelled and the tracks stopped on teardown.
+- The specs badge is hidden rather than showing stale dimensions when no file is loaded.
+
+### 🎨 Video sizing & UI
+- **Legible subtitles on portrait and square video**: overlay text is sized in `cqi`
+  (1% of the container *width*), so a 9:16 video got tiny subtitles. `setAspectRatio()` now
+  computes the native aspect and publishes `--vn-sub-scale = clamp((16/9)/applied, 1, 2.2)`,
+  which every overlay `cqi` size is multiplied by. A `"16:9"` selector value is parsed via
+  `parseAspectRatio()` instead of being taken as a bare number.
+
+### ⚙️ PWA
+- Cache bumped to `kurdish-translator-v173` — `parser.js`, `translator.js`, `timeline.js`,
+  `video-editor-player.js` and `video-editor-overlay.js` all changed, so installed clients
+  would otherwise have kept serving the stale copies.
+
+---
+
 ## [1.61.1] - 2026-09-27 (Release v172)
 
 ### 🐛 Fixed — Video Studio

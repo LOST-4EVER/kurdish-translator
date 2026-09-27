@@ -505,11 +505,11 @@
         textEl.style.color = safeColor(cue.color, safeColor(cfg.color, '#ffffff'));
         const cueFontSize = Number(cue.fontSize);
         if (Number.isFinite(cueFontSize) && cueFontSize > 0) {
-          const sizePct = Math.min(20, Math.max(4, (cueFontSize / 18) * 3.2));
+          const sizePct = Math.min(20, Math.max(4, (cueFontSize / 18) * 3.2)) * this._subScale();
           textEl.style.fontSize = `clamp(0.85rem, ${sizePct.toFixed(2)}cqi, 4.5rem)`;
         } else {
           const baseRem = parseFloat(cfg.fontSize) || 1.25;
-          textEl.style.fontSize = `clamp(0.85rem, ${baseRem * 3.2}cqi, 4.5rem)`;
+          textEl.style.fontSize = `clamp(0.85rem, ${(baseRem * 3.2 * this._subScale()).toFixed(2)}cqi, 4.5rem)`;
         }
       }
 
@@ -631,7 +631,7 @@
       }
 
       const baseRem = Math.min(4, Math.max(0.5, parseFloat(config.fontSize) || 1.25));
-      textEl.style.fontSize = `clamp(0.85rem, ${baseRem * 3.2}cqi, 4.5rem)`;
+      textEl.style.fontSize = `clamp(0.85rem, ${(baseRem * 3.2 * this._subScale()).toFixed(2)}cqi, 4.5rem)`;
       if (config.fontFamily) {
         textEl.style.fontFamily = safeFont(config.fontFamily, textEl.style.fontFamily);
       }
@@ -639,8 +639,17 @@
       container.style.backgroundColor = safeColor(config.bgColor, 'transparent');
 
       if (origEl) {
-        origEl.style.fontSize = `clamp(0.65rem, ${baseRem * 2.3}cqi, 3rem)`;
+        origEl.style.fontSize = `clamp(0.65rem, ${(baseRem * 2.3 * this._subScale()).toFixed(2)}cqi, 3rem)`;
       }
+    }
+
+    /** Aspect compensation factor published by the player (1 = 16:9). */
+    _subScale() {
+      const raw = this.els && this.els.viewportWrapper
+        ? this.els.viewportWrapper.style.getPropertyValue('--vn-sub-scale')
+        : '';
+      const value = parseFloat(raw);
+      return Number.isFinite(value) && value > 0 ? Math.min(2.2, value) : 1;
     }
 
     updateTextShower(cue, idx, nearestCue = null) {

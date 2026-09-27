@@ -616,13 +616,75 @@ const Translator = (() => {
     [/\bp[-—–]please\b/gi, 'please'],
   ];
 
-  /** Preprocess source text to improve translation accuracy for English to Kurdish Sorani. */
+  /**
+   * Preprocess source text to improve translation accuracy for English to Kurdish Sorani.
+   *
+   * PREPROCESS_REPLACEMENTS holds ~400 regexes and runs per subtitle line, which is
+   * the hottest CPU path in the app. Most of them are anchored on a literal word, so
+   * they are indexed by that first literal and only attempted when the line actually
+   * contains it. Patterns whose first token cannot be determined statically are always
+   * run, so this can only skip replacements that provably could not have matched.
+   */
+  const WORD_RE = /[a-zA-Z]+/g;
+  const TRIGGER_RE = /^\^?\\b\[?([a-zA-Z]{2,})(?![a-zA-Z])/;
+
+  /**
+   * A pattern is only skippable when its first alternative is a plain literal word.
+   * Any top-level alternation (e.g. /\bmess\s+up\b|\bmessed\s+up\b/) means a different
+   * branch may match without that literal, so those always run.
+   */
+  function preprocessTrigger(source) {
+    let depth = 0;
+    let inClass = false;
+    for (let i = 0; i < source.length; i++) {
+      const ch = source[i];
+      if (ch === '\\') { i++; continue; }
+      if (inClass) { if (ch === ']') inClass = false; continue; }
+      if (ch === '[') { inClass = true; continue; }
+      if (ch === '(') { depth++; continue; }
+      if (ch === ')') { depth--; continue; }
+      if (ch === '|' && depth === 0) return null;
+    }
+    const m = TRIGGER_RE.exec(source);
+    return m ? m[1].toLowerCase() : null;
+  }
+
+  const PREPROCESS_INDEX = PREPROCESS_REPLACEMENTS.map(([pattern, replacement]) => ({
+    pattern,
+    replacement,
+    trigger: preprocessTrigger(pattern.source),
+  }));
+
+  const PREPROCESS_MEMO = new Map();
+  const MAX_PREPROCESS_MEMO = 4000;
+
   function preprocessSource(text, srcLang, tgtLang) {
     if (tgtLang !== 'ckb' || (srcLang !== 'en' && srcLang !== 'en-GB' && srcLang !== 'auto')) return text;
+    if (!text) return text;
+
+    const memoKey = srcLang + ' ' + text;
+    const memoized = PREPROCESS_MEMO.get(memoKey);
+    if (memoized !== undefined) return memoized;
+
     let s = text;
-    PREPROCESS_REPLACEMENTS.forEach(([pattern, replacement]) => {
-      s = s.replace(pattern, replacement);
-    });
+    if (/[A-Za-z]/.test(s)) {
+      let words = new Set(s.toLowerCase().match(WORD_RE) || []);
+      for (let i = 0; i < PREPROCESS_INDEX.length; i++) {
+        const entry = PREPROCESS_INDEX[i];
+        if (entry.trigger !== null && !words.has(entry.trigger)) continue;
+        const before = s;
+        s = s.replace(entry.pattern, entry.replacement);
+        // Rules run in order and can feed each other ("lookin'" -> "looking" enables
+        // the "looking forward" rule), so refresh the token set whenever one fires.
+        if (s !== before) words = new Set(s.toLowerCase().match(WORD_RE) || []);
+      }
+    }
+
+    if (PREPROCESS_MEMO.size >= MAX_PREPROCESS_MEMO) {
+      const oldest = PREPROCESS_MEMO.keys().next().value;
+      PREPROCESS_MEMO.delete(oldest);
+    }
+    PREPROCESS_MEMO.set(memoKey, s);
     return s;
   }
 
@@ -821,7 +883,9 @@ const Translator = (() => {
     const totalLines = lines.filter((l) => l && l.trim()).length || 1;
     const mainFraction = opts.accuracy ? 0.8 : 1.0;
 
-    const origNorm = lines.map((l) => normalizeText(l || '', isArabic, useKurdishDigits));
+    // Only the accuracy pass compares against this, and normalizing every line is
+    // one of the most expensive operations in the engine — build it on demand.
+    let origNorm = null;
 
     let doneLines = lexiconMatchedCount;
     let retryTotal = 0;
@@ -918,6 +982,7 @@ const Translator = (() => {
 
     // Accuracy pass
     if (opts.accuracy) {
+      origNorm = lines.map((l) => normalizeText(l || '', isArabic, useKurdishDigits));
       const retries = [];
       for (let i = 0; i < lines.length; i++) {
         const orig = lines[i] || '';
@@ -976,7 +1041,7 @@ const Translator = (() => {
     let chars = 0;
 
     lines.forEach((text, index) => {
-      if (!text.trim()) return;
+      if (!text || !String(text).trim()) return;
       if (results && results[index]) return; // Skip lines already matched by exact lexicon
       if (current.length >= BATCH_LINES || chars + text.length > MAX_CHARS_PER_REQUEST) {
         batches.push(current);

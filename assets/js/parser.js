@@ -820,11 +820,17 @@ Style: Top,Noto Naskh Arabic,44,16777215,65535,0,0,-1,0,1,3.2,1.8,8,40,40,35,0,1
     return res.trim();
   }
 
-  function normalizeTextForASS(text, settings = '', rawText = '') {
+  function normalizeTextForASS(text, settings = '', rawText = '', cue = null) {
     if (!text) return '';
     let res = String(text)
       .replace(/\r\n/g, '\n')
-      .replace(/\r/g, '\n');
+      .replace(/\r/g, '\n')
+      // A literal \N sitting next to a real newline means the cue text is still
+      // ASS-encoded (the original \N survived) and was joined with a plain newline.
+      // Serializing that as-is emits \N\N and players render a blank line, so
+      // collapse the double encoding to a single break. Genuine blank lines
+      // (a bare \n\n with no \N) are left alone.
+      .replace(/\\N[ \t]*\n/g, '\n');
     // Convert HTML formatting to ASS tags
     res = res
       .replace(/<i>([\s\S]*?)<\/i>/gi, '{\\i1}$1{\\i0}')
@@ -848,7 +854,26 @@ Style: Top,Noto Naskh Arabic,44,16777215,65535,0,0,-1,0,1,3.2,1.8,8,40,40,35,0,1
     // Preserve or synthesize placement override if converting from WebVTT or top-aligned cues
     const combined = `${settings} ${rawText} ${text}`;
     const hasExistingAlign = /\{\\a(?:n\d+|\d+)\}/i.test(res);
-    if (!hasExistingAlign) {
+    // The parser lifts {\anN} out of the text into cue.placement/align, so without
+    // re-synthesizing it here an ASS round trip silently drops the alignment.
+    let alignSynthesized = false;
+    // 'custom' means the source positioned the cue with {\pos}/{P:x,y}; the
+    // coordinates govern, and an extra anchor tag would shift the rendered text.
+    const rawHasAlign = /\{\\a(?:n\d+|\d+)\}/i.test(rawText);
+    if (!hasExistingAlign && cue && cue.placement !== 'custom') {
+      const v = getPlacementZone(cue);
+      const h = (cue.align === 'left' || cue.align === 'right') ? cue.align : 'center';
+      // ASS 3x3 grid: 7-9 top, 4-6 middle, 1-3 bottom; left / centre / right.
+      const AN = { top: { left: 7, center: 8, right: 9 }, mid: { left: 4, center: 5, right: 6 }, bottom: { left: 1, center: 2, right: 3 } };
+      const an = AN[v][h];
+      // 2 is the Default style's own alignment, so emitting it says nothing.
+      if (rawHasAlign || an !== 2) {
+        res = `{\\an${an}}` + res;
+        alignSynthesized = true;
+      }
+    }
+    const hasAlign = hasExistingAlign || alignSynthesized;
+    if (!hasAlign) {
       const isTop = /line:(?:0|1|2|3|4|5|10|15|20)%/i.test(settings) || /line:[0-3]\b/i.test(settings) || /<top>/i.test(combined) || /\{\\an[789]\}/i.test(rawText);
       const isMid = /line:(?:40|45|50|55|60)%/i.test(settings) || /<mid>/i.test(combined) || /\{\\an[456]\}/i.test(rawText);
       const isLeft = /align:(?:left|start)/i.test(settings);
@@ -1052,7 +1077,7 @@ Style: Top,Noto Naskh Arabic,44,16777215,65535,0,0,-1,0,1,3.2,1.8,8,40,40,35,0,1
           val[styleKey] = 'Top';
         }
       }
-      val[keyOf('text')] = normalizeTextForASS(c.text, c.settings, c.rawText);
+      val[keyOf('text')] = normalizeTextForASS(c.text, c.settings, c.rawText || c.rawAssText || '', c);
       lines.push(`Dialogue: ${order.map((f) => val[f]).join(',')}`);
     }
     return lines.join('\n') + '\n';

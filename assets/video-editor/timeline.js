@@ -1076,8 +1076,32 @@
       }
     }
 
+    /**
+     * Number of peak buckets retained for the waveform. Storing a fixed-size envelope
+     * (a few KB) instead of the decoded AudioBuffer (hundreds of MB for a long video)
+     * is what keeps zoom/pan re-renders cheap and the tab from being killed.
+     */
+    static WAVEFORM_BUCKETS = 2048;
+
     setAudioData(audioData) {
-      this.audioData = audioData;
+      if (!audioData) {
+        this.audioData = null;
+        this.audioBuckets = null;
+        this._renderAudioWaveform();
+        return;
+      }
+      // Convert once to the compact envelope, then drop the PCM reference.
+      this.audioBuckets = window.WasmEngine
+        ? window.WasmEngine.generateWaveformBuckets(audioData, StudioTimeline.WAVEFORM_BUCKETS)
+        : null;
+      this.audioData = null;
+      this._renderAudioWaveform();
+    }
+
+    /** Pre-downsampled peaks: the caller already discarded the decoded audio. */
+    setAudioBuckets(buckets) {
+      this.audioBuckets = buckets && buckets.length ? buckets : null;
+      this.audioData = null;
       this._renderAudioWaveform();
     }
 
@@ -1108,8 +1132,8 @@
       if (numBars <= 0) return;
 
       let buckets;
-      if (this.audioData && window.WasmEngine) {
-        buckets = window.WasmEngine.generateWaveformBuckets(this.audioData, numBars);
+      if (this.audioBuckets && this.audioBuckets.length) {
+        buckets = StudioTimeline._resampleBuckets(this.audioBuckets, numBars);
       } else {
         buckets = new Float32Array(numBars);
         for (let i = 0; i < numBars; i++) {
@@ -1132,6 +1156,26 @@
         const y = centerY - barH / 2;
         ctx.fillRect(x, y, barWidth, barH);
       }
+    }
+
+    /** Map a stored peak envelope onto the currently visible bar count. */
+    static _resampleBuckets(source, numBars) {
+      const srcLen = source.length;
+      if (numBars <= 0) return new Float32Array(0);
+      if (numBars === srcLen) return source;
+      const out = new Float32Array(numBars);
+      const ratio = srcLen / numBars;
+      for (let i = 0; i < numBars; i++) {
+        const start = Math.floor(i * ratio);
+        const end = Math.max(start + 1, Math.floor((i + 1) * ratio));
+        let peak = 0;
+        for (let s = start; s < end && s < srcLen; s++) {
+          const v = source[s];
+          if (v > peak) peak = v;
+        }
+        out[i] = peak;
+      }
+      return out;
     }
 
     _scheduleAudioWaveform() {
