@@ -299,9 +299,22 @@ const SubtitlePlayer = (() => {
   function skipCue(dir) {
     if (!cues.length) return 0;
     const idx = cues.findIndex((c) => pos >= c.start && pos < c.end);
-    const next = idx === -1
-      ? (dir > 0 ? 0 : cues.length - 1)
-      : clamp(idx + dir, 0, cues.length - 1);
+    let next;
+    if (idx !== -1) {
+      next = clamp(idx + dir, 0, cues.length - 1);
+    } else if (dir > 0) {
+      const nextIdx = cues.findIndex((c) => c.start > pos);
+      next = nextIdx !== -1 ? nextIdx : cues.length - 1;
+    } else {
+      let prevIdx = -1;
+      for (let i = cues.length - 1; i >= 0; i--) {
+        if (cues[i].end <= pos) {
+          prevIdx = i;
+          break;
+        }
+      }
+      next = prevIdx !== -1 ? prevIdx : 0;
+    }
     return cues[next].start;
   }
 
@@ -337,7 +350,8 @@ const SubtitlePlayer = (() => {
   const PAUSE_SVG = '<svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>';
 
   function play() {
-    if (!cues.length || pos >= total) seek(0);
+    if (!cues.length || total <= 0) return;
+    if (pos >= total) seek(0);
     if (playing) return;
     playing = true;
     startPerf = performance.now();

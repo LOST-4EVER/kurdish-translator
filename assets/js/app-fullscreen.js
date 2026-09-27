@@ -454,7 +454,7 @@ const AppFullscreen = (() => {
         isFsScrubbing = false;
         fsTouchStartX = e.touches[0].clientX;
         if (typeof SubtitlePlayer !== 'undefined') {
-          fsTouchStartMs = SubtitlePlayer.getTime();
+          fsTouchStartMs = SubtitlePlayer.position || 0;
         }
       }, { passive: true });
 
@@ -470,7 +470,7 @@ const AppFullscreen = (() => {
         }
         if (isFsScrubbing) {
           const rect = els.fsScreen.getBoundingClientRect();
-          const totalMs = SubtitlePlayer.getDuration() || 60000;
+          const totalMs = SubtitlePlayer.duration || 60000;
           const scrubSpanSec = Math.min(90, Math.max(15, totalMs / 1000));
           const deltaSec = (dx / (rect.width || 400)) * scrubSpanSec;
           const targetMs = Math.max(0, Math.min(totalMs, fsTouchStartMs + (deltaSec * 1000)));

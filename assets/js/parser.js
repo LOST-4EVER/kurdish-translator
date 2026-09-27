@@ -1115,7 +1115,11 @@ Style: Top,Noto Naskh Arabic,44,16777215,65535,0,0,-1,0,1,3.2,1.8,8,40,40,35,0,1
    *          `fixedCount` property with the number of cues that were adjusted.
    */
   function fixOverlaps(cues, options = {}) {
-    if (!cues || !cues.length) return { cues: [], fixedCount: 0 };
+    if (!cues || !cues.length) {
+      const emptyRes = [];
+      Object.defineProperty(emptyRes, 'fixedCount', { value: 0, enumerable: false });
+      return emptyRes;
+    }
     // If format is ASS or SSA, subtitles can naturally layer simultaneously, so skip overlap shifting
     if (options.format === 'ass' || options.format === 'ssa') {
       const res = cues.map((c, i) => ({ ...c, index: i + 1 }));

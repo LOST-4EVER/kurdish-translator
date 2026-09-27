@@ -2,7 +2,7 @@ const http = require('node:http');
 const fs = require('node:fs');
 const path = require('node:path');
 
-const PORT = Number(process.env.PORT) || 3000;
+const PORT = 3000;
 
 const MIME_TYPES = {
   '.html': 'text/html; charset=utf-8',
@@ -103,7 +103,13 @@ async function fetchGoogleTranslate(text, sl = 'auto', tl = 'ckb') {
           body: params.toString()
         });
         if (resp.ok) {
-          const data = await resp.json();
+          const raw = await resp.text();
+          let data;
+          try {
+            data = JSON.parse(raw);
+          } catch {
+            data = raw;
+          }
           const translated = extractTranslationFromGoogle(data);
           if (translated) {
             if (SERVER_TRANSLATION_CACHE.size >= MAX_SERVER_CACHE_SIZE) {
@@ -135,7 +141,13 @@ async function fetchGoogleTranslate(text, sl = 'auto', tl = 'ckb') {
         }
       });
       if (resp.ok) {
-        const data = await resp.json();
+        const raw = await resp.text();
+        let data;
+        try {
+          data = JSON.parse(raw);
+        } catch {
+          data = raw;
+        }
         const translated = extractTranslationFromGoogle(data);
         if (translated) {
           if (SERVER_TRANSLATION_CACHE.size >= MAX_SERVER_CACHE_SIZE) {
@@ -239,13 +251,14 @@ const server = http.createServer(async (req, res) => {
         if (responded) return;
         try {
           if (body) {
-            if (body.startsWith('{')) {
-              const json = JSON.parse(body);
+            const trimmed = body.trim();
+            if (trimmed.startsWith('{')) {
+              const json = JSON.parse(trimmed);
               text = json.q || json.text || text;
               sl = json.sl || sl;
               tl = json.tl || tl;
             } else {
-              const params = new URLSearchParams(body);
+              const params = new URLSearchParams(trimmed);
               text = params.get('q') || params.get('text') || text;
               sl = params.get('sl') || sl;
               tl = params.get('tl') || tl;
@@ -268,8 +281,16 @@ const server = http.createServer(async (req, res) => {
     reqUrl = '/index.html';
   }
 
-  // Prevent directory traversal attacks
-  const decodedPath = decodeURIComponent(reqUrl);
+  // Prevent directory traversal attacks and malformed URI crashes
+  let decodedPath;
+  try {
+    decodedPath = decodeURIComponent(reqUrl);
+  } catch {
+    res.writeHead(400, { 'Content-Type': 'text/plain; charset=utf-8' });
+    res.end('400 Bad Request');
+    return;
+  }
+
   const safePath = path.normalize(decodedPath).replace(/^(\.\.[\/\\])+/, '');
   let resolvedPath = path.resolve(__dirname, '.' + safePath);
   if (!resolvedPath.startsWith(path.resolve(__dirname))) {
@@ -285,6 +306,39 @@ const server = http.createServer(async (req, res) => {
     const ext = path.extname(filePath).toLowerCase();
     const contentType = MIME_TYPES[ext] || 'application/octet-stream';
 
+    // Support HTTP Range requests for video and audio seeking
+    const rangeHeader = req.headers.range;
+    if (rangeHeader && stats && stats.size > 0) {
+      const match = rangeHeader.match(/bytes=(\d*)-(\d*)/);
+      if (match) {
+        let start = match[1] ? parseInt(match[1], 10) : 0;
+        let end = match[2] ? parseInt(match[2], 10) : stats.size - 1;
+        if (isNaN(start) || start < 0) start = 0;
+        if (isNaN(end) || end >= stats.size) end = stats.size - 1;
+
+        if (start <= end) {
+          const chunkSize = (end - start) + 1;
+          res.writeHead(206, {
+            'Content-Range': `bytes ${start}-${end}/${stats.size}`,
+            'Accept-Ranges': 'bytes',
+            'Content-Length': chunkSize,
+            'Content-Type': contentType,
+            'Access-Control-Allow-Origin': '*',
+          });
+          const stream = fs.createReadStream(filePath, { start, end });
+          stream.pipe(res);
+          return;
+        } else {
+          res.writeHead(416, {
+            'Content-Range': `bytes */${stats.size}`,
+            'Content-Type': 'text/plain; charset=utf-8'
+          });
+          res.end('Requested range not satisfiable');
+          return;
+        }
+      }
+    }
+
     fs.readFile(filePath, (readErr, content) => {
       if (readErr) {
         res.writeHead(500, { 'Content-Type': 'text/plain' });
@@ -294,6 +348,8 @@ const server = http.createServer(async (req, res) => {
 
       res.writeHead(200, {
         'Content-Type': contentType,
+        'Content-Length': stats ? stats.size : content.length,
+        'Accept-Ranges': 'bytes',
         'Cache-Control': 'no-cache, no-store, must-revalidate',
         'Access-Control-Allow-Origin': '*',
         'X-Content-Type-Options': 'nosniff',

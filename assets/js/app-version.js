@@ -3,7 +3,7 @@
  * Exposes AppVersion as a global module.
  */
 const AppVersion = (() => {
-  const APP_VERSION = 'v175';
+  const APP_VERSION = 'v176';
   const GITHUB_REPO = 'LOST-4EVER/kurdish-translator';
   const GITHUB_API_URL = `https://api.github.com/repos/${GITHUB_REPO}/commits/main`;
   const GITHUB_RELEASES_URL = `https://api.github.com/repos/${GITHUB_REPO}/releases/latest`;
@@ -751,7 +751,7 @@ const AppVersion = (() => {
           els.refreshBtn.setAttribute('aria-expanded', 'true');
           updateUIState();
           measureApiLatency();
-          fetchGitHubCommitMeta();
+          fetchGitHubReleaseAndMeta();
         }
       });
 
