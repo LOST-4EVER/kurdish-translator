@@ -128,7 +128,10 @@
 
 .screen-text[dir="rtl"] {
   direction: rtl;
-  unicode-bidi: isolate;
+  /* plaintext, not isolate: subtitle lines routinely embed an English name
+     or term, and isolating forces the whole line RTL, which reorders the
+     Latin fragment to the wrong side. */
+  unicode-bidi: plaintext;
   line-height: 1.55;
   font-family: var(--font-subtitle);
   font-weight: 650;

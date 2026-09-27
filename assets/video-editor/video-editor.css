@@ -1029,6 +1029,8 @@ body.studio-mode main {
 
 .vn-subtitle-text[dir="rtl"] {
   direction: rtl;
+  /* plaintext, not isolate: see the note in assets/css/player.css. */
+  unicode-bidi: plaintext;
   text-align: center;
 }
 
@@ -1301,6 +1303,7 @@ body.studio-mode main {
 
 .vn-shower-content[dir="rtl"] {
   direction: rtl;
+  unicode-bidi: plaintext;
   text-align: right;
 }
 
@@ -1797,7 +1800,9 @@ body.studio-mode main {
   content: '';
   position: absolute;
   bottom: -5px;
-  left: 50%;
+  /* Counteract the clamp shift so the caret keeps pointing at the playhead
+     line even when the bubble itself has been pushed inside the timeline. */
+  left: calc(50% - var(--vn-needle-shift, 0px));
   transform: translateX(-50%);
   width: 0;
   height: 0;

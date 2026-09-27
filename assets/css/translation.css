@@ -585,7 +585,8 @@ body.page-dropping::after {
 
 .live-caption[dir="rtl"] {
   direction: rtl;
-  unicode-bidi: isolate;
+  /* See the note in player.css: live captions mix Kurdish with English. */
+  unicode-bidi: plaintext;
   line-height: 1.6;
   font-family: "Noto Sans Arabic", "Noto Naskh Arabic", "Vazirmatn", "Segoe UI", "Tahoma", sans-serif;
 }

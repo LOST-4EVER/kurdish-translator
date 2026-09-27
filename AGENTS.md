@@ -17,7 +17,7 @@ Deployed to GitHub Pages from the `main` branch
   for same-origin GETs, network-only for cross-origin (Google Translate).
   Each asset is cached **individually** (not `cache.addAll`) so one 404 can't
   leave the app with an empty cache and no offline support at all.
-  **Version the cache** (`kurdish-translator-v174`) whenever you change any
+  **Version the cache** (`kurdish-translator-v175`) whenever you change any
   cached asset, or users get stale files.
 - **HTTP 206 Bypass**: Service Worker must NEVER call `cache.put()` on HTTP 206
   (Partial Content) or requests with a `Range` header; doing so throws a

@@ -119,6 +119,10 @@
   display: flex;
   align-items: center;
   gap: 4px;
+  /* The action row is wider than a phone. Without wrapping the card clipped
+     it and the last control (Done) was unreachable. */
+  flex-wrap: wrap;
+  min-width: 0;
 }
 
 .vn-quick-icon-btn {
@@ -246,6 +250,12 @@
   font-family: 'Noto Naskh Arabic', 'Vazirmatn', 'Noto Sans Arabic', system-ui, sans-serif;
   font-size: 1.22rem;
   line-height: 1.8;
+  /* Subtitles mix Kurdish and English in one line; plaintext resolves the
+     direction per line from the first strong character instead of letting a
+     trailing English phrase sit on the wrong side of the line. */
+  unicode-bidi: plaintext;
+  text-align: start;
+  tab-size: 2;
   resize: vertical;
   outline: none;
   transition: border-color 0.15s ease, box-shadow 0.15s ease;
@@ -432,6 +442,7 @@
   font-size: 0.7rem;
   color: rgba(255, 255, 255, 0.5);
   font-weight: 500;
+  white-space: nowrap;
 }
 
 /* Timing Adjuster Tray */

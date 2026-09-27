@@ -7,6 +7,48 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.62.2] - 2026-09-27 (Release v175)
+
+### 🐛 Fixed — Playhead
+- **The caret under the timecode bubble no longer pointed at the playhead.** The
+  bubble is clamped sideways by `--vn-needle-shift` at the ends of the timeline, but
+  the little triangle stayed at the bubble's centre, so it drifted away from the line
+  it labels. It now counter-shifts by the same amount; verified algebraically to land
+  on the scrubber centre for every bubble width and shift.
+- **The bubble was oversized on phones**, swallowing about a third of the ruler. It
+  now scales down with the rest of the studio at `max-width: 640px`, and the invisible
+  grab area is slightly smaller to match.
+
+### ⚡ Live text updating
+- **Typing no longer rebuilds the timeline and overlay on every keystroke.** The Quick
+  Text panel is a live editor, and each `input` event re-rendered the cue pills and
+  re-ran the overlay pass. The state write stays immediate — undo grouping depends on
+  it and the text must never be stale — but the downstream repaint is now coalesced to
+  one pass per animation frame. `close()` flushes any queued repaint so the final
+  keystroke is never lost, and opening a different cue drops a stale queued repaint
+  rather than firing it against the wrong cue.
+
+### 🎨 UI boxes
+- **The Quick Text panel's action row was clipped on a phone.** `.vn-quick-header-right`
+  is a flex row with no wrapping inside a card that was never wide enough for it, so
+  the last control (Done) was cut off and unreachable — the wrapping was only on the
+  parent header. It now wraps, and on phones the badge row and the action row each take
+  their own full-width line with the actions spread across it.
+- The character/word counter no longer wraps onto two lines.
+- The panel textarea and the studio's other text boxes got `unicode-bidi: plaintext`
+  and `tab-size`.
+
+### ✍️ Text rendering
+- **Mixed Kurdish/English lines rendered in the wrong order.** Subtitle text almost
+  always contains an embedded English name or term, and the surfaces used
+  `unicode-bidi: isolate`, which forces the whole line RTL and pushes the Latin
+  fragment to the wrong side. Switched to `plaintext`, which resolves direction per
+  line from its own first strong character, across the preview player
+  (`.screen-text`), the editor rows (`.ed-input`), the live translation feed
+  (`.live-caption`), the studio overlay and the Quick Text shower.
+
+---
+
 ## [1.62.1] - 2026-09-27 (Release v174)
 
 ### 🐛 Fixed — Video Studio sizing (the mobile layout was unusable)

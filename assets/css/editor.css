@@ -668,6 +668,11 @@
   font-family: var(--font-kurdish);
   letter-spacing: 0.01em;
   line-height: 1.6;
+  /* A subtitle line is often Kurdish with an English name or term in it.
+     plaintext resolves the direction of each line from its own first strong
+     character, instead of forcing the whole paragraph RTL and leaving the
+     Latin fragment on the wrong side. */
+  unicode-bidi: plaintext;
 }
 
 .ed-empty { padding: 32px; text-align: center; color: var(--md-sys-color-on-surface-variant); font-size: 13.5px; }

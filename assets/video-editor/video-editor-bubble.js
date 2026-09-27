@@ -311,6 +311,10 @@
       this.currentCue = null;
       this.currentIndex = -1;
       this.options = {};
+      this._tagLead = '';
+      this._tagTrail = '';
+      this._notifyRaf = 0;
+      this._pendingNotifyIndex = null;
     }
 
     init(els, options = {}) {
@@ -585,6 +589,9 @@
 
     open(cue, index) {
       if (!cue || index < 0 || !this.els || !this.els.quickPanel) return;
+      // Drop any repaint still queued for the previous cue, or it would fire
+      // against this one after the panel has already moved on.
+      this._pendingNotifyIndex = null;
       this.currentCue = { ...cue };
       this.currentIndex = index;
 
@@ -656,19 +663,46 @@
       const cue = window.VideoEditorState.cues[index] || this.currentCue;
       if (cue && cue.text === full) return;
       window.VideoEditorState.updateCueText(index, full);
-      if (typeof this.options.onTextChange === 'function') {
-        this.options.onTextChange(
-          window.VideoEditorState.cues[index] || this.currentCue,
-          index,
-          full
-        );
+      this._scheduleNotify(index);
+    }
+
+    /**
+     * Typing used to rebuild the timeline pills and re-render the overlay on
+     * every keystroke, which is the most expensive thing this panel does while
+     * editing. The state write above stays immediate — undo grouping depends on
+     * it and the text must never be stale — but the downstream repaint is
+     * coalesced to one pass per animation frame.
+     */
+    _scheduleNotify(index) {
+      this._pendingNotifyIndex = index;
+      if (this._notifyRaf) return;
+      this._notifyRaf = requestAnimationFrame(() => {
+        this._notifyRaf = 0;
+        this._flushNotify();
+      });
+    }
+
+    _flushNotify() {
+      if (this._notifyRaf) {
+        cancelAnimationFrame(this._notifyRaf);
+        this._notifyRaf = 0;
       }
+      const index = this._pendingNotifyIndex;
+      if (index === null || index === undefined || index < 0) return;
+      this._pendingNotifyIndex = null;
+      if (typeof this.options.onTextChange !== 'function' || !window.VideoEditorState) return;
+      const cues = window.VideoEditorState.cues || [];
+      const cue = cues[index] || this.currentCue;
+      this.options.onTextChange(cue, index, cue ? cue.text : '');
     }
 
     close() {
       if (this.currentIndex >= 0 && this.els && this.els.quickTextarea) {
         this._commitBody(this.els.quickTextarea.value);
       }
+      // The last keystroke may still be sitting in a queued frame; run it now
+      // so the timeline and overlay match what the user actually typed.
+      this._flushNotify();
       if (this.els && this.els.quickPanel) {
         this.els.quickPanel.classList.add('hidden');
       }
