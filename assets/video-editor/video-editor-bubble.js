@@ -9,6 +9,20 @@
   const isRtlText = (str) => (!str || !str.trim() || /[\u0600-\u06FF\u0750-\u077F\uFB50-\uFDFF\uFE70-\uFEFF]/.test(str));
   const stripTags = (str) => (str || '').replace(/<[^>]+>/g, '').replace(/\{[^}]*\}/g, '').trim();
 
+  // The quick panel edits a cue live, so the textarea must hold the *body* of
+  // the line while the positioning/formatting tags stay parked at the edges.
+  // Writing the stripped body back on its own used to delete {\an8}, {\pos()}
+  // and <i>/<b> the moment the panel was opened.
+  const LEAD_TAGS = /^(?:\{\\[^}]*\}|<[^>]+>)+/;
+  const TRAIL_TAGS = /(?:\{\\[^}]*\}|<[^>]+>)+$/;
+  function splitEdgeTags(raw) {
+    const text = raw == null ? '' : String(raw);
+    const lead = (text.match(LEAD_TAGS) || [''])[0];
+    const rest = text.slice(lead.length);
+    const trail = (rest.match(TRAIL_TAGS) || [''])[0];
+    return { lead, trail, body: rest.slice(0, rest.length - trail.length) };
+  }
+
   class VideoEditorBubbleManager {
     constructor() {
       this.els = null;
@@ -314,14 +328,9 @@
           if (this.currentIndex < 0) return;
           const newText = this.els.quickTextarea.value;
           this.els.quickTextarea.setAttribute('dir', isRtlText(newText) ? 'rtl' : 'ltr');
-          if (window.VideoEditorState) {
-            window.VideoEditorState.updateCueText(this.currentIndex, newText);
-          }
+          this._commitBody(newText);
           this._updateStats();
           this._updateUndoRedoButtons();
-          if (typeof this.options.onTextChange === 'function') {
-            this.options.onTextChange(this.currentCue, this.currentIndex, newText);
-          }
         });
 
         this.els.quickTextarea.addEventListener('keydown', (e) => {
@@ -580,9 +589,11 @@
       this.currentIndex = index;
 
       if (this.els.quickTextarea) {
-        const cleanVal = stripTags(cue.text || '');
-        this.els.quickTextarea.value = cleanVal;
-        this.els.quickTextarea.setAttribute('dir', isRtlText(cleanVal) ? 'rtl' : 'ltr');
+        const parts = splitEdgeTags(cue.text || '');
+        this._tagLead = parts.lead;
+        this._tagTrail = parts.trail;
+        this.els.quickTextarea.value = parts.body;
+        this.els.quickTextarea.setAttribute('dir', isRtlText(parts.body) ? 'rtl' : 'ltr');
       }
 
       if (this.els.quickOrigBox && this.els.quickOrigText) {
@@ -610,14 +621,53 @@
       }, 50);
     }
 
+    /**
+     * Cues are re-sorted by start time on every change, so the index captured
+     * when the panel opened can point at a different cue. Re-resolve by cue
+     * identity first and only fall back to the stale index.
+     */
+    _resolveLiveIndex() {
+      const state = window.VideoEditorState;
+      if (!state || !this.currentCue) return this.currentIndex;
+      const cues = state.cues || [];
+      if (cues[this.currentIndex] === this.currentCue) return this.currentIndex;
+      const byRef = cues.indexOf(this.currentCue);
+      if (byRef !== -1) {
+        this.currentIndex = byRef;
+        return byRef;
+      }
+      const byStart = cues.findIndex((c) => c.start === this.currentCue.start);
+      if (byStart !== -1) {
+        this.currentIndex = byStart;
+        this.currentCue = cues[byStart];
+      }
+      return this.currentIndex;
+    }
+
+    /**
+     * Re-attach the edge tags and push the line to the state. No-ops when the
+     * text is unchanged, so opening and closing the panel is not an edit.
+     */
+    _commitBody(bodyText) {
+      if (!window.VideoEditorState) return;
+      const index = this._resolveLiveIndex();
+      if (index < 0) return;
+      const full = (this._tagLead || '') + bodyText + (this._tagTrail || '');
+      const cue = window.VideoEditorState.cues[index] || this.currentCue;
+      if (cue && cue.text === full) return;
+      window.VideoEditorState.updateCueText(index, full);
+      if (typeof this.options.onTextChange === 'function') {
+        this.options.onTextChange(
+          window.VideoEditorState.cues[index] || this.currentCue,
+          index,
+          full
+        );
+      }
+    }
+
     close() {
-      if (this.currentIndex >= 0 && this.els && this.els.quickTextarea && window.VideoEditorState) {
-        const text = this.els.quickTextarea.value;
-        window.VideoEditorState.updateCueText(this.currentIndex, text);
-        if (typeof this.options.onTextChange === 'function') {
-          const currentCue = window.VideoEditorState.cues[this.currentIndex] || this.currentCue;
-          this.options.onTextChange(currentCue, this.currentIndex, text);
-        }
+      if (this.currentIndex >= 0 && this.els && this.els.quickTextarea) {
+        this._commitBody(this.els.quickTextarea.value);
       }
       if (this.els && this.els.quickPanel) {
         this.els.quickPanel.classList.add('hidden');
@@ -647,17 +697,27 @@
     _syncFromCurrentState() {
       if (!window.VideoEditorState) return;
       const cues = window.VideoEditorState.cues;
-      if (this.currentIndex >= 0 && cues[this.currentIndex]) {
-        this.currentCue = cues[this.currentIndex];
-        if (this.els.quickTextarea && document.activeElement !== this.els.quickTextarea) {
-          this.els.quickTextarea.value = stripTags(this.currentCue.text || '');
-        } else if (this.els.quickTextarea && this.els.quickTextarea.value !== this.currentCue.text) {
-          const selStart = this.els.quickTextarea.selectionStart;
-          const selEnd = this.els.quickTextarea.selectionEnd;
-          this.els.quickTextarea.value = stripTags(this.currentCue.text || '');
-          try {
-            this.els.quickTextarea.setSelectionRange(selStart, selEnd);
-          } catch (_) {}
+      const index = this._resolveLiveIndex();
+      if (index >= 0 && cues[index]) {
+        this.currentIndex = index;
+        this.currentCue = cues[index];
+        if (this.els.quickTextarea) {
+          const parts = splitEdgeTags(this.currentCue.text || '');
+          this._tagLead = parts.lead;
+          this._tagTrail = parts.trail;
+          // Compare against the body, not the raw line: the textarea never
+          // holds the tags, so comparing it to the full text always differed
+          // and rewrote the field (and the cursor) on every undo/redo tick.
+          if (document.activeElement !== this.els.quickTextarea) {
+            this.els.quickTextarea.value = parts.body;
+          } else if (this.els.quickTextarea.value !== parts.body) {
+            const selStart = this.els.quickTextarea.selectionStart;
+            const selEnd = this.els.quickTextarea.selectionEnd;
+            this.els.quickTextarea.value = parts.body;
+            try {
+              this.els.quickTextarea.setSelectionRange(selStart, selEnd);
+            } catch (_) {}
+          }
         }
         this._refreshTimingDisplay(this.currentCue);
         this._updateStats();
@@ -714,14 +774,11 @@
       ta.setAttribute('dir', isRtlText(ta.value) ? 'rtl' : 'ltr');
 
       // Trigger input event logic
-      if (this.currentIndex >= 0 && window.VideoEditorState) {
-        window.VideoEditorState.updateCueText(this.currentIndex, ta.value);
+      if (this.currentIndex >= 0) {
+        this._commitBody(ta.value);
       }
       this._updateStats();
       this._updateUndoRedoButtons();
-      if (typeof this.options.onTextChange === 'function') {
-        this.options.onTextChange(this.currentCue, this.currentIndex, ta.value);
-      }
     }
 
     _fixCurrentCueOrthography() {
@@ -753,8 +810,8 @@
       }
 
       this.els.quickTextarea.value = text;
-      if (window.VideoEditorState) {
-        window.VideoEditorState.updateCueText(this.currentIndex, text);
+      if (this.currentIndex >= 0) {
+        this._commitBody(text);
       }
       this._updateStats();
       this._updateUndoRedoButtons();

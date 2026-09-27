@@ -6,7 +6,7 @@
  * (Google's endpoint), so offline mode lets you load files and use the
  * preview player, but translating requires a connection.
  */
-const CACHE = 'kurdish-translator-v173';
+const CACHE = 'kurdish-translator-v174';
 const SHARED_CACHE = 'kurdish-shared-file';
 
 const ASSETS = [
@@ -22,6 +22,9 @@ const ASSETS = [
   './assets/css/fullscreen.css',
   './assets/css/toast.css',
   './assets/video-editor/video-editor.css',
+  './assets/video-editor/video-editor-exporter.css',
+  './assets/video-editor/video-editor-panels.css',
+  './assets/video-editor/video-editor-responsive.css',
   './assets/video-editor/video-editor-mobile.css',
   './assets/video-editor/video-editor.html',
   './assets/video-editor/wasm-engine.js',

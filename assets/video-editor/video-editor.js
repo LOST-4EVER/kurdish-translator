@@ -392,8 +392,8 @@
       }
 
       // Handle drop of video, subtitle files, or both together
-      const subExtensions = ['.srt', '.vtt', '.ass', '.ssa', '.sub', '.smi', '.txt'];
-      const videoExtensions = ['.mov', '.mp4', '.webm', '.m4v', '.mkv', '.avi', '.ts'];
+      const subExtensions = ['.srt', '.vtt', '.ass', '.ssa', '.sub', '.smi', '.sbv', '.lrc', '.txt'];
+      const videoExtensions = ['.mov', '.mp4', '.webm', '.m4v', '.mkv', '.avi', '.ts', '.m2ts', '.mpg', '.mpeg', '.ogv', '.3gp', '.flv'];
 
       const handleDroppedFiles = (fileList) => {
         if (!fileList || !fileList.length) return;
@@ -435,29 +435,61 @@
         this.els.tabVideoEditor
       ].filter(Boolean);
 
+      // dragleave also fires when the pointer crosses into a child element, so
+      // counting enters/leaves is what keeps the highlight from flickering off
+      // the moment the cursor moves over a button inside the target.
+      let dragDepth = 0;
+      const setDragOver = (on) => {
+        if (this.els.videoDropzone) this.els.videoDropzone.classList.toggle('drag-over', on);
+      };
+
       dropTargets.forEach((target) => {
-        ['dragenter', 'dragover'].forEach((eventName) => {
-          target.addEventListener(eventName, (e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            if (this.els.videoDropzone) this.els.videoDropzone.classList.add('drag-over');
-          });
+        target.addEventListener('dragenter', (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          dragDepth++;
+          if (e.dataTransfer) e.dataTransfer.dropEffect = 'copy';
+          setDragOver(true);
         });
-        ['dragleave', 'dragexit'].forEach((eventName) => {
-          target.addEventListener(eventName, (e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            if (this.els.videoDropzone) this.els.videoDropzone.classList.remove('drag-over');
-          });
+        target.addEventListener('dragover', (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          if (e.dataTransfer) e.dataTransfer.dropEffect = 'copy';
+          setDragOver(true);
+        });
+        target.addEventListener('dragleave', (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          dragDepth = Math.max(0, dragDepth - 1);
+          if (dragDepth === 0) setDragOver(false);
+        });
+        target.addEventListener('dragend', () => {
+          dragDepth = 0;
+          setDragOver(false);
         });
         target.addEventListener('drop', (e) => {
           e.preventDefault();
           e.stopPropagation();
-          if (this.els.videoDropzone) this.els.videoDropzone.classList.remove('drag-over');
+          dragDepth = 0;
+          setDragOver(false);
           if (e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files.length) {
             handleDroppedFiles(e.dataTransfer.files);
           }
         });
+      });
+
+      // Without a window-level guard the browser handles a drop that misses
+      // every target by navigating to (or downloading) the file, which discards
+      // the unsaved project. Swallow it while the studio is open.
+      window.addEventListener('dragover', (e) => {
+        if (e.dataTransfer && Array.from(e.dataTransfer.types || []).includes('Files')) {
+          e.preventDefault();
+        }
+      });
+      window.addEventListener('drop', (e) => {
+        if (e.dataTransfer && Array.from(e.dataTransfer.types || []).includes('Files')) {
+          e.preventDefault();
+        }
       });
 
       // Try Sample Video Button

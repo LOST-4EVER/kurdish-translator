@@ -17,7 +17,7 @@ Deployed to GitHub Pages from the `main` branch
   for same-origin GETs, network-only for cross-origin (Google Translate).
   Each asset is cached **individually** (not `cache.addAll`) so one 404 can't
   leave the app with an empty cache and no offline support at all.
-  **Version the cache** (`kurdish-translator-v172`) whenever you change any
+  **Version the cache** (`kurdish-translator-v174`) whenever you change any
   cached asset, or users get stale files.
 - **HTTP 206 Bypass**: Service Worker must NEVER call `cache.put()` on HTTP 206
   (Partial Content) or requests with a `Range` header; doing so throws a
@@ -131,6 +131,19 @@ Deployed to GitHub Pages from the `main` branch
   the player and editor always show `workCues` so edits preview live.
 
 ## Key gotchas
+
+- **Studio stylesheet load order is load-bearing.** It is split across four files that
+  must stay in this order in `index.html`: `video-editor.css`,
+  `video-editor-exporter.css`, `video-editor-panels.css`,
+  `video-editor-responsive.css`, then `video-editor-mobile.css`. Concatenated they are
+  byte-identical to the old single file, so the cascade depends on the order — don't
+  reorder or merge them. `video-editor-mobile.css` must only *add* rules (safe-area,
+  `dvh`, iOS input zoom, modal scrolling); do **not** restate sizes the base already
+  scales at `max-width: 640px`. An earlier version forced 40px minimums over the base's
+  28px/26px controls, which overflowed the 34px transport bar and clipped the header
+  and tool bar. Its `.vn-timeline-section` override replaces the base `flex: 0 0 148px`
+  and must stay `!important`-free, or the drag-to-resize handle (which writes inline
+  `flex`) stops working.
 
 - **Target language is fixed to Kurdish Sorani (`ckb`)**. Source dropdown has many
   options; target is a single-value select. Downloads always name as `*.ckb.<ext>`.

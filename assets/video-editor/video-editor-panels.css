@@ -1,0 +1,650 @@
+/* ==========================================================================
+   17. QUICK OPEN-UP SUBTITLE TEXT PANEL (Simple, Fullscreen-Friendly, Kurdish)
+   ========================================================================== */
+.vn-quick-panel {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  box-sizing: border-box;
+}
+
+.vn-quick-panel.hidden {
+  display: none !important;
+}
+
+.vn-quick-panel-backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(8, 7, 13, 0.82);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+}
+
+.vn-quick-panel-card {
+  position: relative;
+  z-index: 2;
+  width: 100%;
+  max-width: 660px;
+  max-height: 90vh;
+  background: #13111c;
+  border: 1px solid rgba(168, 85, 247, 0.45);
+  border-radius: 4px;
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.8), 0 0 16px rgba(168, 85, 247, 0.15);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  animation: vnQuickPopIn 0.18s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes vnQuickPopIn {
+  from {
+    opacity: 0;
+    transform: scale(0.97) translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+.vn-quick-panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 14px;
+  background: #0d0c15;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.vn-quick-header-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.vn-quick-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 8px;
+  background: rgba(234, 179, 8, 0.18);
+  border: 1px solid rgba(234, 179, 8, 0.45);
+  border-radius: 3px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: #fde047;
+  letter-spacing: 0.02em;
+}
+
+.vn-quick-timing-wrap {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 3px;
+  padding: 2px 8px;
+}
+
+.vn-quick-timecode {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 0.74rem;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.vn-quick-dur {
+  font-size: 0.68rem;
+  color: rgba(255, 255, 255, 0.55);
+  font-weight: 500;
+}
+
+.vn-quick-cps-tag {
+  font-size: 0.68rem;
+  font-weight: 700;
+  padding: 2px 7px;
+  border-radius: 3px;
+  background: rgba(34, 197, 94, 0.18);
+  color: #4ade80;
+  border: 1px solid rgba(34, 197, 94, 0.35);
+}
+
+.vn-quick-header-right {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.vn-quick-icon-btn {
+  width: 28px;
+  height: 28px;
+  border-radius: 3px;
+  background: rgba(255, 255, 255, 0.07);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  color: #e6e0e9;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  padding: 0;
+}
+
+.vn-quick-icon-btn:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.18);
+  color: #ffffff;
+  border-color: rgba(255, 255, 255, 0.3);
+}
+
+.vn-quick-icon-btn:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+.vn-quick-nudge-btn {
+  height: 26px;
+  padding: 0 6px;
+  border-radius: 3px;
+  background: rgba(255, 255, 255, 0.07);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  color: rgba(255, 255, 255, 0.85);
+  font-size: 0.68rem;
+  font-weight: 600;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s ease;
+}
+
+.vn-quick-nudge-btn:hover {
+  background: rgba(255, 255, 255, 0.18);
+  color: #ffffff;
+  border-color: rgba(255, 255, 255, 0.3);
+}
+
+.vn-quick-divider {
+  width: 1px;
+  height: 16px;
+  background: rgba(255, 255, 255, 0.15);
+  margin: 0 4px;
+}
+
+.vn-quick-done-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  height: 28px;
+  padding: 0 12px;
+  background: #a855f7;
+  border: 1px solid #c084fc;
+  border-radius: 3px;
+  color: #ffffff;
+  font-size: 0.75rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.vn-quick-done-btn:hover {
+  background: #9333ea;
+  border-color: #e9d5ff;
+}
+
+.vn-quick-close-btn {
+  width: 28px;
+  height: 28px;
+  border-radius: 3px;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  color: #e2e8f0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  padding: 0;
+  flex-shrink: 0;
+}
+
+.vn-quick-close-btn:hover {
+  background: rgba(239, 68, 68, 0.25);
+  border-color: rgba(239, 68, 68, 0.5);
+  color: #fca5a5;
+  transform: scale(1.05);
+}
+
+.vn-quick-close-btn:active {
+  transform: scale(0.95);
+}
+
+.vn-quick-panel-body {
+  padding: 12px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  background: #13111c;
+  overflow-y: auto;
+}
+
+.vn-quick-textarea {
+  width: 100%;
+  min-height: 86px;
+  max-height: 220px;
+  box-sizing: border-box;
+  background: #0a0910;
+  border: 1.5px solid rgba(168, 85, 247, 0.45);
+  border-radius: 4px;
+  padding: 12px 14px;
+  color: #ffffff;
+  font-family: 'Noto Naskh Arabic', 'Vazirmatn', 'Noto Sans Arabic', system-ui, sans-serif;
+  font-size: 1.22rem;
+  line-height: 1.8;
+  resize: vertical;
+  outline: none;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+  direction: rtl;
+  text-align: right;
+  unicode-bidi: plaintext;
+}
+
+.vn-quick-textarea[dir="ltr"] {
+  direction: ltr;
+  text-align: left;
+}
+
+.vn-quick-textarea[dir="rtl"] {
+  direction: rtl;
+  text-align: right;
+}
+
+.vn-quick-textarea:focus {
+  border-color: #c084fc;
+  box-shadow: 0 0 0 2px rgba(168, 85, 247, 0.25);
+}
+
+/* Kurdish Helper Bar */
+.vn-quick-kurdish-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 6px 8px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 4px;
+  flex-wrap: wrap;
+}
+
+.vn-quick-char-chips,
+.vn-quick-punct-chips {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-wrap: wrap;
+}
+
+.vn-kurdish-chip {
+  min-width: 26px;
+  height: 26px;
+  padding: 0 6px;
+  border-radius: 3px;
+  background: rgba(255, 255, 255, 0.07);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  color: #f1f0f5;
+  font-family: 'Noto Naskh Arabic', 'Vazirmatn', sans-serif;
+  font-size: 0.95rem;
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.vn-kurdish-chip:hover {
+  background: rgba(168, 85, 247, 0.28);
+  border-color: #c084fc;
+  color: #ffffff;
+}
+
+.vn-quick-helper-btn {
+  height: 26px;
+  padding: 0 8px;
+  border-radius: 3px;
+  background: rgba(168, 85, 247, 0.16);
+  border: 1px solid rgba(168, 85, 247, 0.35);
+  color: #e9d5ff;
+  font-size: 0.68rem;
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.vn-quick-helper-btn:hover {
+  background: rgba(168, 85, 247, 0.28);
+  border-color: #d8b4fe;
+  color: #ffffff;
+}
+
+.vn-quick-orig-box {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 8px 10px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px dashed rgba(255, 255, 255, 0.15);
+  border-radius: 4px;
+  font-size: 0.78rem;
+  color: rgba(255, 255, 255, 0.8);
+}
+
+.vn-quick-orig-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.vn-quick-orig-label {
+  font-weight: 700;
+  color: #fde047;
+  font-size: 0.72rem;
+}
+
+.vn-quick-copy-orig {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 2px 6px;
+  background: rgba(255, 255, 255, 0.07);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 3px;
+  color: rgba(255, 255, 255, 0.85);
+  font-size: 0.65rem;
+  cursor: pointer;
+}
+
+.vn-quick-copy-orig:hover {
+  background: rgba(255, 255, 255, 0.18);
+  color: #ffffff;
+}
+
+.vn-quick-orig-text {
+  word-break: break-word;
+  line-height: 1.4;
+  direction: ltr;
+  text-align: left;
+}
+
+.vn-quick-panel-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 14px;
+  background: #0d0c15;
+  border-top: 1px solid rgba(255, 255, 255, 0.12);
+  gap: 10px;
+}
+
+.vn-quick-footer-left {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.vn-quick-text-action {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 8px;
+  border-radius: 3px;
+  background: rgba(255, 255, 255, 0.07);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  color: rgba(255, 255, 255, 0.88);
+  font-size: 0.72rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.vn-quick-text-action:hover {
+  background: rgba(255, 255, 255, 0.12);
+  color: #ffffff;
+}
+
+.vn-quick-action-danger:hover {
+  background: rgba(239, 68, 68, 0.2);
+  border-color: #ef4444;
+  color: #fca5a5;
+}
+
+.vn-quick-char-count {
+  font-size: 0.7rem;
+  color: rgba(255, 255, 255, 0.5);
+  font-weight: 500;
+}
+
+/* Timing Adjuster Tray */
+.vn-quick-timing-tray {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 14px;
+  background: #0f0d16;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+  flex-wrap: wrap;
+}
+
+.vn-quick-timing-tray.hidden {
+  display: none !important;
+}
+
+.vn-quick-timing-col {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.vn-quick-timing-col label {
+  font-size: 0.7rem;
+  color: rgba(255, 255, 255, 0.6);
+  font-weight: 600;
+}
+
+.vn-quick-timing-btns {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+}
+
+.vn-timing-btn {
+  padding: 2px 6px;
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.07);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: rgba(255, 255, 255, 0.85);
+  font-size: 0.66rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.vn-timing-btn:hover {
+  background: rgba(255, 255, 255, 0.16);
+  color: #ffffff;
+}
+
+.vn-timing-val {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: #fde047;
+  padding: 0 4px;
+}
+
+/* Format Tray */
+.vn-quick-format-tray {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 14px;
+  background: #0f0d16;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+  flex-wrap: wrap;
+}
+
+.vn-quick-format-tray.hidden {
+  display: none !important;
+}
+
+.vn-quick-tray-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.vn-quick-tray-item label {
+  font-size: 0.72rem;
+  color: rgba(255, 255, 255, 0.6);
+  font-weight: 600;
+}
+
+.vn-quick-select {
+  height: 24px;
+  background: #1e1b2b;
+  color: #e6e0e9;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 5px;
+  font-size: 0.72rem;
+  padding: 0 6px;
+  outline: none;
+}
+
+.vn-quick-chip-group {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.vn-quick-chip {
+  padding: 2px 6px;
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  color: rgba(255, 255, 255, 0.8);
+  font-size: 0.68rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.vn-quick-chip.active {
+  background: #a855f7;
+  color: #ffffff;
+  border-color: #c084fc;
+}
+
+.vn-quick-colors {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.vn-color-dot {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  border: 1.5px solid rgba(0, 0, 0, 0.3);
+  cursor: pointer;
+  transition: transform 0.15s ease;
+}
+
+.vn-color-dot:hover {
+  transform: scale(1.15);
+}
+
+.vn-color-dot.active {
+  outline: 2px solid #a855f7;
+  outline-offset: 1px;
+}
+
+/* ---------- 13. Mobile More Menu Popover ---------- */
+.vn-more-menu-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 4px 0;
+}
+
+.vn-more-menu-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 10px 12px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 8px;
+  color: #f3f0f5;
+  cursor: pointer;
+  text-align: left;
+  transition: all 0.15s ease;
+}
+
+.vn-more-menu-item:hover {
+  background: rgba(255, 255, 255, 0.1);
+  border-color: rgba(255, 255, 255, 0.2);
+  color: #ffffff;
+}
+
+.vn-more-menu-item:active {
+  transform: scale(0.98);
+}
+
+.vn-more-menu-item svg {
+  color: #facc15;
+  flex-shrink: 0;
+}
+
+.vn-more-item-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.vn-more-item-title {
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: #ffffff;
+}
+
+.vn-more-item-desc {
+  font-size: 0.68rem;
+  color: rgba(255, 255, 255, 0.55);
+}
+
+/* ---------- Resizer Touch Target Hitbox ---------- */
+.vn-studio-resizer {
+  position: relative;
+  touch-action: none;
+}
+.vn-studio-resizer::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: -12px;
+  bottom: -12px;
+  z-index: 10;
+}

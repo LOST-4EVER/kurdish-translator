@@ -7,6 +7,93 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.62.1] - 2026-09-27 (Release v174)
+
+### 🐛 Fixed — Video Studio sizing (the mobile layout was unusable)
+- **The mobile layer was overriding the base responsive stylesheet.**
+  `video-editor-mobile.css` loads after `video-editor.css` and forced a 40px
+  minimum on every icon and transport button and a 48×44px play button — on top of
+  a base that already scales them to 28px/26px inside a **34px** transport bar. The
+  play button therefore overflowed its own bar, and 5×40px of transport controls plus
+  the timecode blew the horizontal budget, clipping the header and cutting the last
+  tool off the bottom bar. The layer now only *adds* to the base (safe-area insets,
+  dynamic viewport units, iOS input zoom, modal scrolling) and no longer restates
+  sizes the base already handles.
+- **The timeline is now usable on a phone.** It is 5 lanes squeezed into 148px while
+  the video stage absorbed every spare pixel above it. It now takes `clamp(176px,
+  28dvh, 280px)`. The override replaces the base `flex: 0 0 148px` deliberately and
+  without `!important`, so the drag-to-resize handle still wins via its inline style
+  and can still shrink the timeline to the base 90px floor.
+- The tool bar gained scroll-snap and edge fades so the horizontal overflow reads as
+  intentional, and opening a popover now scrolls its own trigger back into view —
+  a tool scrolled off-screen used to open a panel pointing at nothing.
+- The video lane's "No video loaded" hint ellipsizes instead of running off the edge.
+
+### 🐛 Fixed — Playhead
+- **The timecode bubble was clipped at both ends of the timeline.** The scrubber is a
+  1px-wide element and the bubble is centred on it, so at 0:00 (and at the end) half
+  of it fell outside the scroll canvas. `timeline.js` now clamps the bubble back inside
+  via `--vn-needle-shift`. The width is cached through a `ResizeObserver` rather than
+  read per frame, so the clamp does not force layout on the playback hot path. The
+  bubble also got a 44×34px invisible grab area — the visible target was ~20px tall.
+
+### 🐛 Fixed — Text editing
+- **The Quick Text panel deleted subtitle markup on the first keystroke.** It is a
+  *live* editor: it loaded a tag-stripped copy of the line into the textarea and wrote
+  that stripped string straight back through `updateCueText`. Merely opening a cue with
+  `{\an8}`, `{\pos()}`, `{\i1}…{\i0}` or `<i>`/`<b>` and closing it again was enough to
+  delete the tags. The textarea now holds the line *body* while leading/trailing tags
+  are parked and re-attached on every write, so the panel still offers a clean editing
+  surface but the cue survives intact. `_syncFromCurrentState()` also compared the
+  stripped body against the raw text, so it always saw a difference and rewrote the
+  field (and the cursor) on every undo/redo tick.
+- **The Quick Text panel wrote to the wrong cue.** Every write used the index captured
+  when the panel opened, but cues are re-sorted by start time on any change. Writes are
+  now resolved by cue identity first (reference, then start time) and the index is
+  corrected as a side effect.
+- **The cue inspector silently deleted subtitle markup.** It loaded a *tag-stripped*
+  copy of the cue into the textarea but compared that stripped string against the raw
+  `cue.text` on dismiss, so simply opening a cue with `{\an8}`, `{\pos()}` or
+  `<i>`/`<b>` and closing it wrote the tags away. The editor now shows and accepts the
+  raw text, with metrics still computed from the visible text.
+- **Dismissing the inspector always wrote to the cue**, so the X button, the backdrop
+  and Escape all saved — there was no way to cancel, and every accidental open/close
+  polluted the undo stack. Dismissal is now non-destructive; Save is explicit and only
+  fires when the text actually changed, and the button is disabled when it hasn't.
+- Added `Ctrl`/`Cmd`+`Enter` to save, `Escape` to cancel from inside the textarea,
+  auto-growing the textarea, focus-and-select on open, and a disabled style for the
+  Save button.
+
+### 🐛 Fixed — Popovers
+- **Toggling "show original" wiped the custom subtitle position.** `emitStyle` was
+  still bound directly as a `change` listener on that one checkbox, so the event object
+  arrived as the `clearingCustomPos` argument (truthy) and cleared `customPos`. The
+  other controls were fixed for this in 1.61.1; this one was missed.
+- Popovers are placed from the trigger's rectangle, so rotating the device or opening
+  the soft keyboard left one pointing at nothing. They now reposition on `resize`,
+  `orientationchange` and `visualViewport` resize.
+
+### 🐛 Fixed — Importing
+- **Dropping a file that missed every drop target navigated the browser away**, which
+  discarded the unsaved project — the default browser drop handler is now suppressed
+  at the window level while the studio is open.
+- The drag highlight no longer flickers off when the cursor crosses a child element
+  (enter/leave are counted rather than toggled), the cursor shows a copy affordance,
+  and the drop filter accepts the formats the parser already supports but the studio
+  rejected: `.sbv`, `.lrc`, and `.m2ts`/`.mpg`/`.mpeg`/`.ogv`/`.3gp`/`.flv` for video.
+
+### ♻️ Refactor
+- **`video-editor.css` (4832 lines) split into four files** at its existing section
+  boundaries: `video-editor.css` (shell, header, stage, transport, timeline, tool
+  bar), `video-editor-exporter.css` (exporter, upscaling, MOV pre-import),
+  `video-editor-panels.css` (quick text panel, mobile menu, resizer) and
+  `video-editor-responsive.css` (breakpoints and HUD/filmstrip sections). Concatenated
+  in load order they are byte-identical to the previous file (md5
+  `0f6ec01c28315b4b8e8d5bffff76cbb3`), so the cascade is unchanged. All four are in
+  the service worker precache; cache bumped to `kurdish-translator-v174`.
+
+---
+
 ## [1.62.0] - 2026-09-27 (Release v173)
 
 ### ⚡ Performance

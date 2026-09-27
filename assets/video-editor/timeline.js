@@ -43,6 +43,7 @@
       this._cuePillMap = new Map();
       this._canvasLeft = 0;
       this._lastPlayheadX = -1;
+      this._lastNeedleShift = null;
       this._lastRoundedSec = -1;
       this._lastIntPct = -1;
       this._lastFillPx = -1;
@@ -62,6 +63,10 @@
     }
 
     _initDOM() {
+      if (this._needleResizeObserver) {
+        this._needleResizeObserver.disconnect();
+        this._needleResizeObserver = null;
+      }
       this.container.innerHTML = `
         <div class="vn-timeline-wrapper">
           <!-- Left Track Headers (Multi-track control column) -->
@@ -164,12 +169,25 @@
         rulerCanvas: this.container.querySelector('.vn-ruler-canvas'),
         rulerLane: this.container.querySelector('.vn-lane-ruler'),
         needle: this.container.querySelector('.vn-needle-scrubber'),
+        needleHead: this.container.querySelector('.vn-needle-head'),
         needleTime: this.container.querySelector('.vn-needle-time'),
         hoverIndicator: this.container.querySelector('.vn-hover-indicator'),
         hoverTooltip: this.container.querySelector('.vn-hover-tooltip'),
         snapGuide: this.container.querySelector('#vnSnapGuide'),
         zoomBadge: this.container.querySelector('#vnZoomBadge'),
       };
+
+      // The needle bubble only changes width when its timecode gains or loses a
+      // character. Observing the size keeps _clampNeedleHead off the layout
+      // path, which would otherwise run on every animation frame.
+      this._needleHalf = 0;
+      if (typeof ResizeObserver === 'function' && this.dom.needleHead) {
+        this._needleResizeObserver = new ResizeObserver(() => {
+          this._needleHalf = (this.dom.needleHead.offsetWidth || 0) / 2;
+          this._lastNeedleShift = null;
+        });
+        this._needleResizeObserver.observe(this.dom.needleHead);
+      }
     }
 
     _showSnapGuide(xPx) {
@@ -703,6 +721,28 @@
       }
     }
 
+    /**
+     * The needle is a 1px-wide element and its timecode bubble is centred on
+     * it, so at either end of the timeline half the bubble falls outside the
+     * scroll canvas and gets clipped. Push it back inside instead.
+     */
+    _clampNeedleHead(x) {
+      const head = this.dom.needleHead;
+      if (!head) return;
+      const half = this._needleHalf || 0;
+      const limit = this.trackWidth || 0;
+      let shift = 0;
+      if (half > 0 && limit > 0) {
+        if (x - half < 0) shift = half - x;
+        else if (x + half > limit) shift = limit - half - x;
+      }
+      const rounded = Math.round(shift);
+      if (rounded !== this._lastNeedleShift) {
+        this._lastNeedleShift = rounded;
+        head.style.setProperty('--vn-needle-shift', rounded + 'px');
+      }
+    }
+
     setDuration(durationMs) {
       this.duration = Math.max(0, durationMs || 0);
       if (!this.userZoomed) {
@@ -714,11 +754,13 @@
       this._renderRuler();
       this._renderCues();
       this._updatePlayhead();
+      this._clampNeedleHead((this.currentTime / 1000) * this.zoom);
     }
 
     setTime(timeMs, isInternal = false) {
       this.currentTime = Math.max(0, Math.min(this.duration || Infinity, timeMs || 0));
       this._updatePlayhead();
+      this._clampNeedleHead((this.currentTime / 1000) * this.zoom);
       this._updateActiveCue();
 
       if (!isInternal && !this.isDragging) {

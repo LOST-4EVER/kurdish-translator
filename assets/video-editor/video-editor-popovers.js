@@ -16,6 +16,8 @@
     constructor() {
       this.els = null;
       this.activePopover = null;
+      this._activeTrigger = null;
+      this._repositionBound = false;
       this.onStyleChangeCallback = null;
       this.onSyncChangeCallback = null;
       this.onSpeedChangeCallback = null;
@@ -120,6 +122,24 @@
           this.closeAll();
         }
       });
+
+      // A popover is placed from the trigger's rectangle, so a rotation, a
+      // soft-keyboard resize or a window resize leaves it pointing at nothing.
+      if (!this._repositionBound) {
+        this._repositionBound = true;
+        const reposition = () => {
+          if (!this.activePopover) return;
+          const popover = this.els.popovers[this.activePopover];
+          if (!popover) return;
+          const btn = (this.activePopover === 'sync' && this.els.syncPillBtn)
+            ? this.els.syncPillBtn
+            : (this.activePopover === 'more' ? this.els.moreBtn : this._activeTrigger);
+          this._positionPopover(popover, btn, this.activePopover);
+        };
+        window.addEventListener('resize', reposition);
+        window.addEventListener('orientationchange', reposition);
+        if (window.visualViewport) window.visualViewport.addEventListener('resize', reposition);
+      }
     }
 
     _bindControls() {
@@ -159,7 +179,7 @@
         this.els.subBgSel.addEventListener('change', () => emitStyle(false));
         this.els.subBgSel.addEventListener('input', () => emitStyle(false));
       }
-      if (this.els.subShowOrigToggle) this.els.subShowOrigToggle.addEventListener('change', emitStyle);
+      if (this.els.subShowOrigToggle) this.els.subShowOrigToggle.addEventListener('change', () => emitStyle(false));
 
       // Sync Controls
       const shiftOffset = (delta) => {
@@ -563,8 +583,25 @@
         popover.classList.remove('hidden');
         if (triggerBtn) triggerBtn.classList.add('active');
         this.activePopover = name;
+        this._activeTrigger = triggerBtn || null;
         this._positionPopover(popover, triggerBtn, name);
+        this._revealTrigger(triggerBtn);
       }
+    }
+
+    /**
+     * The tool bar is a horizontal scroller on phones, so a tool can sit
+     * outside the visible window (or half-cut by the edge fade) when its
+     * popover opens. Bring it fully into view.
+     */
+    _revealTrigger(triggerBtn) {
+      if (!triggerBtn || typeof triggerBtn.scrollIntoView !== 'function') return;
+      const bar = triggerBtn.closest ? triggerBtn.closest('.vn-bottom-bar') : null;
+      if (!bar || bar.scrollWidth <= bar.clientWidth) return;
+      const btnRect = triggerBtn.getBoundingClientRect();
+      const barRect = bar.getBoundingClientRect();
+      if (btnRect.left >= barRect.left && btnRect.right <= barRect.right) return;
+      triggerBtn.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
     }
 
     _positionPopover(popover, triggerBtn, name) {
@@ -613,6 +650,7 @@
       document.querySelectorAll('.vn-tool-btn').forEach((b) => b.classList.remove('active'));
       if (this.els.syncPillBtn) this.els.syncPillBtn.classList.remove('active');
       this.activePopover = null;
+      this._activeTrigger = null;
     }
 
     updateSyncDisplay(syncOffsetMs) {

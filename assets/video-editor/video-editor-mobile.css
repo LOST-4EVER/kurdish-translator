@@ -1,13 +1,18 @@
 /* ============================================================
-   Kurdî Subtitle Translator — Video Studio Mobile Overrides
-   Loaded AFTER video-editor.css so these rules win the cascade.
+   Kurdî Subtitle Translator — Video Studio Mobile Layer
+   Loaded AFTER video-editor.css, so this file only *adds* to it.
 
-   Fixes covered here:
-   - iOS notch / Android status bar overlap (env(safe-area-inset-*))
-   - Bottom bar sitting under the home indicator
-   - 100vh layout overflow when the mobile browser chrome shows/hides
-   - iOS Safari auto-zooming the whole studio when a field is focused
-   - Comfortable one-handed tap targets in portrait
+   video-editor.css already scales the studio down at <=640px
+   (28px icon buttons, 26px transport buttons, 34px transport bar,
+   54px scrollable tool buttons). This layer must NOT restate those
+   sizes — an earlier version forced 40px minimums over the top of
+   them, which pushed the play button outside its own 34px bar and
+   blew the horizontal budget so the header and toolbar clipped.
+
+   What belongs here is only what video-editor.css does not cover:
+   safe-area insets, dynamic viewport units, iOS input zoom, modal
+   scrolling, scroll affordance for the overflowing tool bar, and
+   popover clearance above the bottom bar.
    ============================================================ */
 
 /* ---------- Dynamic viewport + safe areas (all sizes) ---------- */
@@ -32,6 +37,13 @@ html:has(body.studio-mode) {
   padding-bottom: env(safe-area-inset-bottom, 0px) !important;
   padding-left: max(6px, env(safe-area-inset-left, 0px)) !important;
   padding-right: max(6px, env(safe-area-inset-right, 0px)) !important;
+}
+
+/* Popovers are absolutely positioned inside .vn-studio-root, so their
+   "bottom" is measured from the studio floor and must clear the bottom
+   bar plus the home indicator, not a hard-coded 52px. */
+.vn-popover:not(.vn-popover-top) {
+  bottom: calc(56px + env(safe-area-inset-bottom, 0px)) !important;
 }
 
 /* ---------- Tablet & phone ---------- */
@@ -72,32 +84,45 @@ html:has(body.studio-mode) {
     overflow-y: auto;
     -webkit-overflow-scrolling: touch;
   }
+
+  /* The empty-state hint is a single line and used to run off the edge
+     of the video lane; let it shrink and ellipsize instead. */
+  .vn-video-empty-track-text {
+    display: block;
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
 }
 
 @media (max-width: 640px) {
-  .vn-header {
-    height: calc(44px + env(safe-area-inset-top, 0px)) !important;
-    min-height: calc(44px + env(safe-area-inset-top, 0px)) !important;
-    max-height: calc(44px + env(safe-area-inset-top, 0px)) !important;
-  }
-
+  /* The tool bar holds ten actions and cannot fit a phone width. It is
+     already a horizontal scroller in video-editor.css; add snap points
+     and edge fades so the overflow reads as intentional and the active
+     tool is reachable. */
   .vn-bottom-bar {
-    height: calc(52px + env(safe-area-inset-bottom, 0px)) !important;
-    min-height: calc(52px + env(safe-area-inset-bottom, 0px)) !important;
-    max-height: calc(52px + env(safe-area-inset-bottom, 0px)) !important;
+    scroll-snap-type: x proximity;
+    scroll-padding-inline: 8px;
+    mask-image: linear-gradient(to right, transparent 0, #000 10px, #000 calc(100% - 10px), transparent 100%);
+    -webkit-mask-image: linear-gradient(to right, transparent 0, #000 10px, #000 calc(100% - 10px), transparent 100%);
   }
 
-  /* Bigger transport targets for one-handed use. */
-  .vn-transport-btn,
-  .vn-icon-btn,
-  .vn-transport-icon-btn {
-    min-width: 40px;
-    min-height: 40px;
+  .vn-tool-btn {
+    scroll-snap-align: center;
   }
 
-  .vn-play-master-btn {
-    min-width: 48px;
-    min-height: 44px;
+  /* The stage is a flexible box and the picture is letterboxed inside
+     it, so on a tall phone the leftover space all lands under the
+     video. Hand part of it to the timeline, which is where cue editing
+     actually happens and which is far too cramped at 148px.
+     flex-basis wins over height for a column flex item, so the base
+     "flex: 0 0 148px" has to be replaced here — but without
+     !important, so the resizer's inline "flex: 0 0 Npx" still wins
+     and min-height stays at the base 90px so it can still shrink. */
+  .vn-timeline-section {
+    flex: 0 0 auto;
+    height: clamp(176px, 28dvh, 280px);
   }
 
   /* The sync pill and timecode must never wrap onto two lines. */
@@ -105,25 +130,41 @@ html:has(body.studio-mode) {
   .vn-sync-pill {
     white-space: nowrap;
   }
+
+  /* The needle timecode bubble is centred on a 1px-wide scrubber, so at
+     either end of the timeline half of it is clipped. timeline.js clamps
+     the bubble back inside the scroll canvas; this only guarantees the
+     bubble is tall enough to stay grabbable. */
+  .vn-needle-head {
+    min-height: 20px;
+  }
+}
+
+/* Very narrow phones: the header runs out of room before the tool bar
+   does, and the aspect-ratio picker is the first control to go since
+   every ratio is also reachable from the More menu. */
+@media (max-width: 400px) {
+  .vn-header-history-cluster,
+  #studioTopUndoBtn,
+  #studioTopRedoBtn {
+    display: none !important;
+  }
+
+  .vn-aspect-select {
+    max-width: 52px;
+  }
 }
 
 /* Short landscape phones: give the picture priority over chrome. */
 @media (max-height: 460px) and (orientation: landscape) {
-  .vn-header {
-    height: calc(36px + env(safe-area-inset-top, 0px)) !important;
-    min-height: calc(36px + env(safe-area-inset-top, 0px)) !important;
-    max-height: calc(36px + env(safe-area-inset-top, 0px)) !important;
-  }
-
-  .vn-bottom-bar {
-    height: calc(44px + env(safe-area-inset-bottom, 0px)) !important;
-    min-height: calc(44px + env(safe-area-inset-bottom, 0px)) !important;
-    max-height: calc(44px + env(safe-area-inset-bottom, 0px)) !important;
-  }
-
   .vn-text-shower-strip {
     padding-top: 3px;
     padding-bottom: 3px;
+  }
+
+  .vn-timeline-section {
+    flex: 0 0 auto;
+    height: clamp(120px, 40dvh, 200px);
   }
 }
 
