@@ -5,6 +5,13 @@
 (() => {
   'use strict';
 
+  const escapeHtml = (str) => String(str == null ? '' : str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
+
   class VideoEditorPopoversManager {
     constructor() {
       this.els = null;
@@ -145,12 +152,12 @@
       if (this.els.subPosSel) this.els.subPosSel.addEventListener('change', () => emitStyle(true));
       if (this.els.subEffectSel) this.els.subEffectSel.addEventListener('change', () => emitStyle(false));
       if (this.els.subColorSel) {
-        this.els.subColorSel.addEventListener('change', emitStyle);
-        this.els.subColorSel.addEventListener('input', emitStyle);
+        this.els.subColorSel.addEventListener('change', () => emitStyle(false));
+        this.els.subColorSel.addEventListener('input', () => emitStyle(false));
       }
       if (this.els.subBgSel) {
-        this.els.subBgSel.addEventListener('change', emitStyle);
-        this.els.subBgSel.addEventListener('input', emitStyle);
+        this.els.subBgSel.addEventListener('change', () => emitStyle(false));
+        this.els.subBgSel.addEventListener('input', () => emitStyle(false));
       }
       if (this.els.subShowOrigToggle) this.els.subShowOrigToggle.addEventListener('change', emitStyle);
 
@@ -382,15 +389,16 @@
         if (previewArea) {
           if (matchingCues.length === 0) {
             previewArea.classList.remove('hidden');
-            previewArea.innerHTML = `<div style="font-size:0.75rem; color:rgba(255,255,255,0.5); text-align:center; padding:8px;">No matches found for "${searchVal}"</div>`;
+            previewArea.innerHTML = `<div style="font-size:0.75rem; color:rgba(255,255,255,0.5); text-align:center; padding:8px;">No matches found for "${escapeHtml(searchVal)}"</div>`;
             return;
           }
 
           previewArea.classList.remove('hidden');
           previewArea.innerHTML = matchingCues.map(({ cue, index, matchesCount }) => {
             const timeStr = `${VideoEditorPlayer.formatTime(cue.start)} - ${VideoEditorPlayer.formatTime(cue.end)}`;
-            const highlightedText = (cue.text || '').replace(regex, (m) => `<mark style="background:#facc15; color:#000000; padding:0 2px; border-radius:2px; font-weight:700;">${m}</mark>`);
-            const origBlock = cue.origText ? `<div style="font-size:0.7rem; color:rgba(255,255,255,0.6); font-style:italic; margin-top:2px;">Orig: ${cue.origText}</div>` : '';
+            // Escape before highlighting: cue text comes straight from an imported file.
+            const highlightedText = escapeHtml(cue.text || '').replace(regex, (m) => `<mark style="background:#facc15; color:#000000; padding:0 2px; border-radius:2px; font-weight:700;">${m}</mark>`);
+            const origBlock = cue.origText ? `<div style="font-size:0.7rem; color:rgba(255,255,255,0.6); font-style:italic; margin-top:2px;">Orig: ${escapeHtml(cue.origText)}</div>` : '';
 
             return `
               <div style="background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.08); padding:6px 8px; border-radius:5px; font-size:0.76rem; display:flex; flex-direction:column; gap:3px;">
@@ -501,10 +509,10 @@
           }
           const updated = cues.map((c) => ({
             ...c,
-            start: Math.max(0, (c.start !== undefined ? c.start : (c.startTime || 0)) + shiftMs),
-            end: Math.max(100, (c.end !== undefined ? c.end : (c.endTime || 0)) + shiftMs),
-            rawStart: null,
-            rawEnd: null,
+            start: Math.max(0, (c.start || 0) + shiftMs),
+            end: Math.max(100, (c.end || 0) + shiftMs),
+            // _shifted makes the serializer re-emit formatted timecodes instead of
+            // reusing the stale rawStart/rawEnd strings from the imported file.
             _shifted: true,
           }));
           VideoEditorState.setCues(updated);

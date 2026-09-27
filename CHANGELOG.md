@@ -7,6 +7,78 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.61.1] - 2026-09-27 (Release v172)
+
+### 🐛 Fixed — Video Studio
+- **Dead `window.VideoEditor` global removed**: `video-editor-player.js`, `mov-importer.js`
+  and `mkv-importer.js` referenced a global that never existed (the singleton is
+  `window.VideoStudio`). As a result the decoded **audio waveform never reached the
+  timeline**, extracted **MKV/MOV subtitle tracks were never pushed to the timeline**,
+  MOV trim-in seeking was skipped, and the no-video / no-metadata fallbacks in
+  `seekTo()`, `stepSeconds()` and simulated playback always resolved to 0 / 10s.
+- **Cue blocks could not be dragged**: `setCues()` reuses existing pills, so their
+  handlers closed over stale cue objects. Drag deltas were written to a detached cue
+  and read back from the live one, so the drag silently did nothing after any text
+  edit. Pills now re-resolve the live cue on every gesture.
+- **Redo was inverted**: `undo()` stored the *post-undo* snapshot and `redo()` restored
+  it, so redoing a change was a no-op. Redo now restores the pre-undo snapshot and
+  pushes a proper undo entry, so redo is itself undoable.
+- **Undo hit the wrong cue**: history commands stored array indices, but cues are
+  re-sorted by start time on every change. Commands now resolve their target by cue
+  identity first. Undo/redo also mark the project dirty again.
+- **Play/pause icon broke permanently** whenever simulated playback ran (pressing
+  Space with no video loaded) because it overwrote the button's `innerHTML`, deleting
+  the icon spans `_updatePlayIcon()` toggles.
+- **`stepSeconds()` could pass `Infinity` to `video.currentTime`** (throwing on the
+  media element) whenever no finite duration was known.
+- **Video went silent after the first export**: the burn engine closed the shared
+  `AudioContext` that the media element was attached to. The context is now kept
+  alive and the element is re-routed to the default destination.
+- **DSP click on loud peaks**: `enhanceSpeechInPlace` switched curve at |x| = 1.0
+  (1.0 → 0.632 in a single sample). Now uses a monotonic `tanh` soft knee.
+- **Subtitle position reset on every colour change**: `emitStyle` was bound directly
+  as a `change`/`input` listener, so the event object was read as "clear custom
+  position".
+- **Stack overflow on huge scripts**: `Math.max(...cues)` is now a reduce.
+
+### 🔒 Security
+- **XSS in the subtitle search preview**: cue text, original text and the search term
+  were interpolated into `innerHTML` unescaped. A malicious `.srt`/`.ass` executed
+  script when the user searched. Everything is escaped now.
+- **Unvalidated style injection in the studio**: `cue.fontFamily` / `cue.color` /
+  `cue.fontSize` from imported files reached DOM `style` properties and the burn
+  canvas unchecked. `SAFE_FONT_RE` / `SAFE_COLOR_RE` / numeric clamping are now applied
+  in `video-editor-overlay.js` and `video-editor-burner.js`, matching `player.js`.
+
+### ⚡ PWA
+- **Precache no longer all-or-nothing**: `cache.addAll()` meant a single 404 left the
+  installed app with an *empty* cache — no offline support at all, while still
+  reporting success. Each asset is now cached independently and failures are logged.
+- **Graceful offline fallback for the studio**: `video-editor.html` is fetched from
+  the network, then the Cache API, then retried. If all fail, the reduced template is
+  used *and* the user is told the studio opened in reduced mode (it is missing 171 of
+  245 controls, which previously failed silently).
+- Uncached-and-offline requests resolve to a real offline page instead of an
+  unhandled rejection. Cache bumped to `kurdish-translator-v172`; `404.html` and the
+  new mobile stylesheet are precached.
+- The 2s "apply subtitles" poller now only runs while the studio is open instead of
+  burning battery for the whole session.
+
+### 📱 Mobile / UI
+- New `assets/video-editor/video-editor-mobile.css` (loaded last) applies safe-area
+  insets to the header and bottom bar, so they no longer sit under the iPhone notch or
+  the Android home indicator.
+- `100dvh` throughout the studio layout, so the toolbar is no longer cut off when the
+  mobile browser chrome collapses.
+- Inputs are forced to ≥16px, stopping iOS Safari from zooming the whole workstation
+  when a field is focused.
+- Larger transport tap targets in portrait, modals scroll instead of clipping on short
+  screens, and `prefers-reduced-motion` is honoured.
+- Mouse clicks on the video play/pause immediately instead of waiting out the 240ms
+  double-tap window that only touch input needs.
+
+---
+
 ## [1.50.0] - 2026-09-16 (Release v150)
 
 ### 🔒 Security & Input Sanitization

@@ -58,7 +58,9 @@
 html:has(body.studio-mode),
 body.studio-mode {
   height: 100vh !important;
+  height: 100dvh !important;
   max-height: 100vh !important;
+  max-height: 100dvh !important;
   width: 100vw !important;
   max-width: 100vw !important;
   overflow: hidden !important;
@@ -95,7 +97,9 @@ body.studio-mode main {
   padding: 0 !important;
   margin: 0 !important;
   height: 100vh !important;
+  height: 100dvh !important;
   max-height: 100vh !important;
+  max-height: 100dvh !important;
   overflow: hidden !important;
   box-sizing: border-box !important;
 }
@@ -160,14 +164,14 @@ body.studio-mode main {
 
 /* ---------- 1. Studio Header (44px, Responsive, Zero-Scroll) ---------- */
 .vn-header {
-  flex: 0 0 46px;
-  height: 46px;
-  min-height: 46px;
-  max-height: 46px;
+  flex: 0 0 auto;
+  height: calc(46px + env(safe-area-inset-top, 0px));
+  min-height: calc(46px + env(safe-area-inset-top, 0px));
+  max-height: calc(46px + env(safe-area-inset-top, 0px));
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0 8px;
+  padding: env(safe-area-inset-top, 0px) max(8px, env(safe-area-inset-right, 0px)) 0 max(8px, env(safe-area-inset-left, 0px));
   background: #121019;
   border-bottom: 1px solid rgba(255, 255, 255, 0.09);
   z-index: 40;
@@ -1859,14 +1863,14 @@ body.studio-mode main {
 
 /* ---------- 6. Bottom Toolbar (48px) ---------- */
 .vn-bottom-bar {
-  flex: 0 0 48px;
-  height: 48px;
-  min-height: 48px;
-  max-height: 48px;
+  flex: 0 0 auto;
+  height: calc(48px + env(safe-area-inset-bottom, 0px));
+  min-height: calc(48px + env(safe-area-inset-bottom, 0px));
+  max-height: calc(48px + env(safe-area-inset-bottom, 0px));
   display: flex;
   align-items: center;
   justify-content: space-around;
-  padding: 0 6px;
+  padding: 0 max(6px, env(safe-area-inset-right, 0px)) env(safe-area-inset-bottom, 0px) max(6px, env(safe-area-inset-left, 0px));
   background: #121019;
   border-top: 1px solid rgba(255, 255, 255, 0.08);
   z-index: 30;
@@ -2727,8 +2731,10 @@ body.studio-mode main {
 /* ---------- Responsive Mobile Refinements ---------- */
 @media (max-width: 640px) {
   .vn-header {
-    height: 44px;
-    padding: 0 6px;
+    height: calc(44px + env(safe-area-inset-top, 0px));
+    min-height: calc(44px + env(safe-area-inset-top, 0px));
+    max-height: calc(44px + env(safe-area-inset-top, 0px));
+    padding: env(safe-area-inset-top, 0px) max(6px, env(safe-area-inset-right, 0px)) 0 max(6px, env(safe-area-inset-left, 0px));
     gap: 4px;
   }
   .vn-header-left {
@@ -2776,8 +2782,10 @@ body.studio-mode main {
     font-size: 0.68rem;
   }
   .vn-bottom-bar {
-    height: 48px;
-    padding: 0 6px;
+    height: calc(48px + env(safe-area-inset-bottom, 0px));
+    min-height: calc(48px + env(safe-area-inset-bottom, 0px));
+    max-height: calc(48px + env(safe-area-inset-bottom, 0px));
+    padding: 0 max(6px, env(safe-area-inset-right, 0px)) env(safe-area-inset-bottom, 0px) max(6px, env(safe-area-inset-left, 0px));
     overflow-x: auto;
     -webkit-overflow-scrolling: touch;
     scrollbar-width: none;

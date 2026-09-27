@@ -749,7 +749,7 @@
 
         // Apply In/Out restriction to Studio timeline if trimmed
         if (settings.trimInMs > 0 || (settings.trimOutMs > 0 && settings.trimOutMs < this.totalDurationMs)) {
-          if (window.VideoEditor && window.VideoEditor.timeline) {
+          if (window.VideoStudio && window.VideoStudio.timeline) {
             window.VideoEditorPlayer.seekTo(settings.trimInMs);
           }
           if (typeof Toast !== 'undefined' && Toast.show) {
@@ -768,8 +768,8 @@
         // Auto-import extracted embedded subtitles if available
         if (settings.extractedCues && settings.extractedCues.length > 0 && window.VideoEditorState) {
           window.VideoEditorState.setCues(settings.extractedCues);
-          if (window.VideoEditor && window.VideoEditor.timeline) {
-            window.VideoEditor.timeline.setCues(settings.extractedCues);
+          if (window.VideoStudio && window.VideoStudio.timeline) {
+            window.VideoStudio.timeline.setCues(settings.extractedCues);
           }
           Toast.show(`Imported ${settings.extractedCues.length} embedded subtitle cues!`, 'success');
         }

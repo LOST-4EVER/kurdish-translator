@@ -8,6 +8,9 @@
 
   const $ = (sel, ctx = document) => ctx.querySelector(sel);
   const $$ = (sel, ctx = document) => Array.from(ctx.querySelectorAll(sel));
+  // Spreading a very long cue list into Math.max() overflows the call stack on
+  // huge scripts, so reduce instead.
+  const maxCueEnd = (cues) => (cues || []).reduce((max, c) => Math.max(max, (c && c.end) || 0), 0);
 
   class VideoStudioApp {
     constructor() {
@@ -30,6 +33,9 @@
 
       // 1. Mount UI template
       this.els = await VideoEditorUI.mount();
+      if (typeof VideoEditorUI.warnIfDegraded === 'function') {
+        VideoEditorUI.warnIfDegraded();
+      }
 
       // 2. Initialize Player Controller
       VideoEditorPlayer.init(this.els, {
@@ -1053,6 +1059,7 @@
       }
 
       this._initTimeline();
+      this._startFileWatcher();
       this._checkAndSyncSubtitlesQuietly();
       this._syncOrigToggleUI();
       if (typeof VideoEditorUI !== 'undefined' && VideoEditorUI.updateUndoRedoUI) {
@@ -1066,6 +1073,10 @@
 
     exitStudioMode(explicitTarget) {
       this.isStudioActive = false;
+      this._stopFileWatcher();
+      if (window.VideoEditorHardware) {
+        window.VideoEditorHardware.releaseWakeLock('playback');
+      }
       document.body.classList.remove('studio-mode');
 
       if (this.els.videoPlayer) {
@@ -1286,7 +1297,7 @@
           if (this.timeline) {
             this.timeline.setCues(appCues);
             if (!this.els.videoPlayer || !this.els.videoPlayer.duration) {
-              const maxEnd = Math.max(...appCues.map((c) => c.end || 0));
+              const maxEnd = maxCueEnd(appCues);
               if (maxEnd > 0) {
                 this.timeline.setDuration(maxEnd + 3000);
               }
@@ -1317,7 +1328,7 @@
               this.timeline.setCues(parsed.cues);
               // If video duration is 0 or unset, adapt timeline duration to last cue
               if (!this.timeline.duration || this.timeline.duration === 0) {
-                const maxEnd = Math.max(...parsed.cues.map((c) => c.end || 0));
+                const maxEnd = maxCueEnd(parsed.cues);
                 if (maxEnd > 0) {
                   this.timeline.setDuration(maxEnd + 3000);
                   this.timeline.zoomToFit();
@@ -1345,35 +1356,37 @@
     }
 
     _setupFileWatcher() {
-      const checkAndGlow = () => {
-        let hasCues = false;
-        let count = 0;
-        if (window._getAppWorkCues && typeof window._getAppWorkCues === 'function') {
-          const appCues = window._getAppWorkCues();
-          if (appCues && appCues.length > 0) {
-            hasCues = true;
-            count = appCues.length;
-          }
-        }
+      // Poll only while the studio is open: a permanent 2s interval drains battery
+      // on mobile even when the user never enters the editor.
+      this._fileWatchTimer = null;
+      this._refreshAppSubtitleHint();
+    }
 
-        if (this.els && this.els.btnApplyCurrentSubs) {
-          if (hasCues) {
-            this.els.btnApplyCurrentSubs.classList.add('glowing');
-            this.els.btnApplyCurrentSubs.title = `${count} Kurdish subtitles ready in app! Click to connect.`;
-            if (this.els.appliedSubsBadge) {
-              this.els.appliedSubsBadge.textContent = `${count} Ready`;
-            }
-          } else {
-            this.els.btnApplyCurrentSubs.classList.remove('glowing');
-            if (this.els.appliedSubsBadge && (!VideoEditorState.getCues() || VideoEditorState.getCues().length === 0)) {
-              this.els.appliedSubsBadge.textContent = 'No Subtitle';
-            }
-          }
+    _refreshAppSubtitleHint() {
+      if (!this.els || !this.els.btnApplyCurrentSubs) return;
+      const appCues = (window._getAppWorkCues && typeof window._getAppWorkCues === 'function') ? window._getAppWorkCues() : null;
+      if (appCues && appCues.length > 0) {
+        this.els.btnApplyCurrentSubs.classList.add('glowing');
+        this.els.btnApplyCurrentSubs.title = `${appCues.length} Kurdish subtitles ready in app! Click to connect.`;
+        if (this.els.appliedSubsBadge) this.els.appliedSubsBadge.textContent = `${appCues.length} Ready`;
+      } else {
+        this.els.btnApplyCurrentSubs.classList.remove('glowing');
+        if (this.els.appliedSubsBadge && (!VideoEditorState.getCues() || VideoEditorState.getCues().length === 0)) {
+          this.els.appliedSubsBadge.textContent = 'No Subtitle';
         }
-      };
+      }
+    }
 
-      checkAndGlow();
-      setInterval(checkAndGlow, 2000);
+    _startFileWatcher() {
+      if (this._fileWatchTimer) return;
+      this._fileWatchTimer = setInterval(() => this._refreshAppSubtitleHint(), 2000);
+    }
+
+    _stopFileWatcher() {
+      if (this._fileWatchTimer) {
+        clearInterval(this._fileWatchTimer);
+        this._fileWatchTimer = null;
+      }
     }
 
     _getNearestCue() {

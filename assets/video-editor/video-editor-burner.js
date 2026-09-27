@@ -9,6 +9,12 @@
   'use strict';
 
   const hasArabic = (str) => /[\u0600-\u06FF\u0750-\u077F\uFB50-\uFDFF\uFE70-\uFEFF]/.test(str || '');
+  // Styling is read from imported subtitle files, so whitelist it before it
+  // reaches the canvas font string / fillStyle (mirrors SAFE_* in player.js).
+  const SAFE_FONT_RE = /^[a-zA-Z0-9\s,._\-'"]+$/;
+  const SAFE_COLOR_RE = /^(#[0-9a-fA-F]{3,8}|rgba?\(\s*[\d.]+\s*,\s*[\d.]+\s*,\s*[\d.]+(?:\s*,\s*[\d.]+\s*)?\)|hsla?\([^)]*\)|[a-zA-Z]+)$/;
+  const safeFont = (font, fallback) => (font && SAFE_FONT_RE.test(font) ? font : fallback);
+  const safeColor = (color, fallback) => (color && SAFE_COLOR_RE.test(color) ? color : fallback);
   const stripTags = (str) => {
     if (!str) return '';
     return str
@@ -426,12 +432,29 @@
         } catch {}
         this.activeStream = null;
       }
-      if (this.audioContext && this.audioContext.state !== 'closed') {
-        try {
-          this.audioContext.close();
-        } catch {}
-        this.audioContext = null;
+      // The MediaElementAudioSourceNode is cached on the video element, and once a
+      // media element is routed through Web Audio its audio ONLY leaves via that
+      // graph. Closing the shared context here would mute the player permanently,
+      // so keep the context alive and just drop our destination node.
+      if (this.audioDestNode) {
+        try { this.audioDestNode.disconnect(); } catch {}
+        this.audioDestNode = null;
       }
+      if (this.audioSourceNode) {
+        try {
+          this.audioSourceNode.disconnect();
+          if (this.audioContext && this.audioContext.state !== 'closed') {
+            this.audioSourceNode.connect(this.audioContext.destination);
+          }
+        } catch {}
+        this.audioSourceNode = null;
+      }
+      const video = this.els ? this.els.videoPlayer : null;
+      const shared = video && video._audioCtx;
+      if (this.audioContext && this.audioContext !== shared) {
+        try { this.audioContext.close(); } catch {}
+      }
+      this.audioContext = null;
       if (this.els && this.els.videoPlayer) {
         if ('cancelVideoFrameCallback' in this.els.videoPlayer && this.videoFrameCallbackId !== null) {
           this.els.videoPlayer.cancelVideoFrameCallback(this.videoFrameCallbackId);
@@ -877,7 +900,7 @@
 
           const scaleFactor = parseFloat(overlayCfg.fontSize || '1.25');
           const baseFontSize = Math.max(20, Math.round(height * 0.045 * scaleFactor));
-          const fontFamily = cue.fontFamily || overlayCfg.fontFamily || '"Noto Naskh Arabic", "Inter", -apple-system, sans-serif';
+          const fontFamily = safeFont(cue.fontFamily, safeFont(overlayCfg.fontFamily, '"Noto Naskh Arabic", "Inter", -apple-system, sans-serif'));
 
           const isRtl = /[\u0600-\u06FF\u0750-\u077F\uFB50-\uFDFF\uFE70-\uFEFF]/.test(text || '');
           ctx.font = `bold ${baseFontSize}px ${fontFamily}`;
@@ -950,7 +973,7 @@
           }
 
           const effect = overlayCfg.effect || 'shadow';
-          let bgColor = overlayCfg.bgColor || 'transparent';
+          let bgColor = safeColor(overlayCfg.bgColor, 'transparent');
           if (effect === 'box' && bgColor === 'transparent') {
             bgColor = 'rgba(0, 0, 0, 0.78)';
           }
@@ -991,7 +1014,7 @@
           // Render primary Kurdish text lines
           ctx.font = `bold ${baseFontSize}px ${fontFamily}`;
           ctx.direction = isRtl ? 'rtl' : 'ltr';
-          const textColor = cue.color || overlayCfg.color || '#ffffff';
+          const textColor = safeColor(cue.color, safeColor(overlayCfg.color, '#ffffff'));
           const strokeWidth = Math.max(2, Math.round(baseFontSize * (effect === 'outline' ? 0.14 : (effect === 'cinema' ? 0.1 : 0.08))));
           const startY = yCenter - (totalBoxHeight / 2) + baseFontSize * 0.9;
 

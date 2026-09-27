@@ -116,6 +116,20 @@
       }
     }
 
+    /**
+     * History commands record the cue object they produced, not just its index:
+     * _reindex() re-sorts cues by start time, so a stored index can point at a
+     * completely different cue by the time undo/redo runs. Resolve by identity
+     * first and only fall back to the recorded index.
+     */
+    _resolveIndex(command, refCue) {
+      if (refCue) {
+        const found = this.cues.indexOf(refCue);
+        if (found >= 0) return found;
+      }
+      return (command && Number.isInteger(command.index)) ? command.index : -1;
+    }
+
     setCues(newCues, recordHistory = true) {
       const nextCues = copyCues(newCues);
       if (recordHistory) this._pushCommand({ type: CMD.SET_CUES, prevCues: copyCues(this.cues), nextCues, prevActiveIndex: this.activeCueIndex });
@@ -152,23 +166,29 @@
       const before = copyCues(this.cues);
       const active = this.activeCueIndex;
       if (command.type === CMD.SET_CUES) this._restoreCues(command.prevCues, command.prevActiveIndex);
-      else if (command.type === CMD.UPDATE_TEXT) { const cue = this.cues[command.index]; if (cue) { cue.text = command.prevText; this.emit('cuesChange', this.cues); } }
-      else if (command.type === CMD.UPDATE_TIMING || command.type === CMD.NUDGE_TIMING) { const cue = this.cues[command.index]; if (cue) { cue.start = command.prevStart; cue.end = command.prevEnd; this._reindex(); this.emit('cuesChange', this.cues); } }
-      else if (command.type === CMD.UPDATE_CUE) { if (this.cues[command.index]) { this.cues[command.index] = copyCue(command.prevCue); this._reindex(); this.emit('cuesChange', this.cues); } }
-      else if (command.type === CMD.SPLIT_CUE) { this.cues[command.index] = copyCue(command.prevCue); this.cues.splice(command.index + 1, 1); this._reindex(); this.emit('cuesChange', this.cues); }
-      else if (command.type === CMD.ADD_CUE) { this.cues.splice(command.index, 1); this._reindex(); this.emit('cuesChange', this.cues); }
+      else if (command.type === CMD.UPDATE_TEXT) { const i = this._resolveIndex(command, command.nextCue); const cue = this.cues[i]; if (cue) { this.cues[i] = { ...cue, text: command.prevText }; if (this.activeCueIndex === i) this.activeCue = this.cues[i]; this.emit('cuesChange', this.cues); } }
+      else if (command.type === CMD.UPDATE_TIMING || command.type === CMD.NUDGE_TIMING) { const i = this._resolveIndex(command, command.nextCue); const cue = this.cues[i]; if (cue) { this.cues[i] = { ...cue, start: command.prevStart, end: command.prevEnd }; if (this.activeCueIndex === i) this.activeCue = this.cues[i]; this._reindex(); this.emit('cuesChange', this.cues); } }
+      else if (command.type === CMD.UPDATE_CUE) { const i = this._resolveIndex(command, command.nextCue); if (this.cues[i]) { this.cues[i] = copyCue(command.prevCue); if (this.activeCueIndex === i) this.activeCue = this.cues[i]; this._reindex(); this.emit('cuesChange', this.cues); } }
+      else if (command.type === CMD.SPLIT_CUE) { const i = this._resolveIndex(command, command.newCue) - 1; if (i >= 0 && this.cues[i + 1]) { this.cues[i] = copyCue(command.prevCue); this.cues.splice(i + 1, 1); if (this.activeCueIndex > i) this.activeCueIndex -= 1; this._reindex(); this.emit('cuesChange', this.cues); } }
+      else if (command.type === CMD.ADD_CUE) { const i = this._resolveIndex(command, command.newCue); if (i >= 0) { this.cues.splice(i, 1); if (this.activeCueIndex > i) this.activeCueIndex -= 1; this._reindex(); this.emit('cuesChange', this.cues); } }
       else if (command.type === CMD.DELETE_CUE) { this.cues.splice(command.index, 0, copyCue(command.deletedCue)); this._reindex(); this.emit('cuesChange', this.cues); }
-      this.redoStack.push({ ...command, before, after: copyCues(this.cues), activeBefore: active, activeAfter: this.activeCueIndex });
+      this.markDirty();
+      // Snapshot the state the command was undoing FROM — redo restores this,
+      // not the post-undo state (restoring `after` made redo a no-op).
+      this.redoStack.push({ command, before, activeBefore: active });
+      if (this.redoStack.length > this.maxHistorySteps) this.redoStack.shift();
       this._emitHistoryChange();
       return true;
     }
 
     redo() {
-      const command = this.redoStack.pop();
-      if (!command) return false;
-      if (command.after) this._restoreCues(command.after, command.activeAfter);
-      else return false;
-      this.undoStack.push({ type: CMD.SET_CUES, prevCues: command.before, nextCues: command.after, prevActiveIndex: command.activeBefore });
+      const entry = this.redoStack.pop();
+      if (!entry || !entry.before) return false;
+      const current = copyCues(this.cues);
+      const currentActive = this.activeCueIndex;
+      this._restoreCues(entry.before, entry.activeBefore);
+      this.undoStack.push({ type: CMD.SET_CUES, prevCues: current, nextCues: copyCues(this.cues), prevActiveIndex: currentActive });
+      this.markDirty();
       this._emitHistoryChange();
       return true;
     }
@@ -176,10 +196,10 @@
     updateCue(index, updatedCue, recordHistory = true) {
       if (index < 0 || index >= this.cues.length) return;
       const prevCue = copyCue(this.cues[index]);
-      const nextCue = Object.assign({}, prevCue, updatedCue || {});
-      if (recordHistory) this._pushCommand({ type: CMD.UPDATE_CUE, index, prevCue, nextCue });
-      this.cues[index] = nextCue;
-      if (this.activeCueIndex === index) this.activeCue = nextCue;
+      const committed = Object.assign({}, prevCue, updatedCue || {});
+      if (recordHistory) this._pushCommand({ type: CMD.UPDATE_CUE, index, prevCue, nextCue: committed });
+      this.cues[index] = committed;
+      if (this.activeCueIndex === index) this.activeCue = committed;
       this._reindex();
       this.emit('cuesChange', this.cues);
     }
@@ -197,6 +217,8 @@
       this._lastTextEditIndex = index;
       this.cues[index] = { ...this.cues[index], text };
       if (this.activeCueIndex === index) this.activeCue = this.cues[index];
+      const top = this.undoStack[this.undoStack.length - 1];
+      if (top && top.type === CMD.UPDATE_TEXT && top.index === index) top.nextCue = this.cues[index];
       this.emit('cuesChange', this.cues);
     }
 
@@ -206,9 +228,10 @@
       const end = Math.max(start + 100, Math.round(Number(endMs) || start + 100));
       const cue = this.cues[index];
       if (cue.start === start && cue.end === end) return;
-      if (recordHistory) this._pushCommand({ type: CMD.UPDATE_TIMING, index, prevStart: cue.start, prevEnd: cue.end, nextStart: start, nextEnd: end });
-      this.cues[index] = { ...cue, start, end };
-      if (this.activeCueIndex === index) this.activeCue = this.cues[index];
+      const committed = { ...cue, start, end };
+      if (recordHistory) this._pushCommand({ type: CMD.UPDATE_TIMING, index, prevStart: cue.start, prevEnd: cue.end, nextStart: start, nextEnd: end, nextCue: committed });
+      this.cues[index] = committed;
+      if (this.activeCueIndex === index) this.activeCue = committed;
       this._reindex();
       this.emit('cuesChange', this.cues);
     }
@@ -221,7 +244,7 @@
       this.cues[index] = { ...cue, end: splitTimeMs };
       this.cues.splice(index + 1, 0, newCue);
       this._reindex();
-      this._pushCommand({ type: CMD.SPLIT_CUE, index, prevCue, newCue: copyCue(newCue), splitTimeMs });
+      this._pushCommand({ type: CMD.SPLIT_CUE, index, prevCue, newCue: this.cues[index + 1], splitTimeMs });
       this.emit('cuesChange', this.cues);
       return this.cues[index + 1];
     }
@@ -235,7 +258,7 @@
       const insertAt = index < 0 ? this.cues.length : index;
       this.cues.splice(insertAt, 0, cue);
       this._reindex();
-      this._pushCommand({ type: CMD.ADD_CUE, index: insertAt, newCue: copyCue(cue) });
+      this._pushCommand({ type: CMD.ADD_CUE, index: insertAt, newCue: this.cues[insertAt] });
       this.emit('cuesChange', this.cues);
       return this.cues[insertAt];
     }

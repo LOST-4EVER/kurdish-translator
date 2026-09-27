@@ -327,6 +327,18 @@
         const now = performance.now();
         const timeSinceLastTap = now - this._lastTapTime;
         const distFromLastTap = Math.hypot(clientX - this._lastTapPos.x, clientY - this._lastTapPos.y);
+        // Mouse/pen clicks are unambiguous: play/pause immediately instead of waiting
+        // out the 240ms double-tap window that only touch input needs.
+        const isTouchLike = e.pointerType === 'touch' ||
+          (e.touches && e.touches.length > 0) ||
+          (performance.now() - (this._lastTouchAt || 0) < 800);
+
+        if (!isTouchLike) {
+          this._lastTapTime = 0;
+          this._lastTapPos = { x: clientX, y: clientY };
+          this.togglePlay();
+          return;
+        }
 
         if (timeSinceLastTap < 320 && distFromLastTap < 45) {
           // Double tap detected!
@@ -391,6 +403,7 @@
       viewport.addEventListener('touchstart', (e) => {
         if (e.target.closest('#studioSubtitleOverlay') || e.target.closest('.vn-fs-hud') || e.target.closest('.vn-fs-corner-btn')) return;
 
+        this._lastTouchAt = performance.now();
         if (e.touches.length === 2) {
           pinchActive = true;
           this._isScrubbingTouch = false;
@@ -772,12 +785,17 @@
       return true;
     }
 
+    _getTimeline() {
+      return (window.VideoStudio && window.VideoStudio.timeline) ? window.VideoStudio.timeline : null;
+    }
+
     _extractAndDecodeAudioWaveform(file) {
       if (!file) return;
       // For large video files (> 35MB), avoid reading hundreds of megabytes into ArrayBuffer/AudioContext
       if (file.size > 35 * 1024 * 1024) {
-        if (window.VideoEditor && window.VideoEditor.timeline) {
-          window.VideoEditor.timeline.setAudioData(null);
+        const bigFileTimeline = this._getTimeline();
+        if (bigFileTimeline) {
+          bigFileTimeline.setAudioData(null);
         }
         return;
       }
@@ -794,8 +812,9 @@
           }
           audioCtx.decodeAudioData(arrayBuffer, (decodedBuffer) => {
             try { audioCtx.close(); } catch (_) {}
-            if (window.VideoEditor && window.VideoEditor.timeline) {
-              window.VideoEditor.timeline.setAudioData(decodedBuffer);
+            const timeline = this._getTimeline();
+            if (timeline) {
+              timeline.setAudioData(decodedBuffer);
             }
           }, () => {
             try { audioCtx.close(); } catch (_) {}
@@ -864,22 +883,18 @@
       this._stopSimulatedPlayback();
       this._simulatedPlaying = true;
       this._simulatedLastTime = performance.now();
-      if (this.els.playPauseBtn) {
-        this.els.playPauseBtn.innerHTML = `
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
-            <rect x="6" y="4" width="4" height="16" rx="1.5"></rect>
-            <rect x="14" y="4" width="4" height="16" rx="1.5"></rect>
-          </svg>
-        `;
-        this.els.playPauseBtn.setAttribute('aria-label', 'Pause');
-      }
+      // Never rewrite playPauseBtn.innerHTML here — that destroys the #studioPlayIcon /
+      // #studioPauseIcon spans that _updatePlayIcon() toggles, permanently breaking the icon.
+      this._updatePlayIcon(true);
+      if (this.els.playPauseBtn) this.els.playPauseBtn.setAttribute('aria-label', 'Pause');
 
       const tick = () => {
         if (!this._simulatedPlaying) return;
         const now = performance.now();
         const deltaMs = (now - this._simulatedLastTime) * (this.currentPlaybackRate || 1);
         this._simulatedLastTime = now;
-        const durMs = (window.VideoEditor && window.VideoEditor.timeline ? window.VideoEditor.timeline.duration : 10000) || 10000;
+        const timeline = this._getTimeline();
+        const durMs = (timeline && timeline.duration ? timeline.duration : 10000);
         this._simulatedCurrentMs = Math.min(durMs, (this._simulatedCurrentMs || 0) + deltaMs);
 
         this.updateTimeDisplay(this._simulatedCurrentMs, durMs);
@@ -904,20 +919,15 @@
         cancelAnimationFrame(this._simulatedRaf);
         this._simulatedRaf = null;
       }
-      if (this.els.playPauseBtn) {
-        this.els.playPauseBtn.innerHTML = `
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
-            <polygon points="5 3 19 12 5 21 5 3"></polygon>
-          </svg>
-        `;
-        this.els.playPauseBtn.setAttribute('aria-label', 'Play');
-      }
+      this._updatePlayIcon(false);
+      if (this.els.playPauseBtn) this.els.playPauseBtn.setAttribute('aria-label', 'Play');
     }
 
     seekTo(timeMs, immediate = false) {
       const player = this.els.videoPlayer;
       const hasVideo = !!(player && (this.videoFile || this.videoUrl) && player.src && player.readyState >= 1);
-      const durMs = (hasVideo && player.duration) ? player.duration * 1000 : (window.VideoEditor && window.VideoEditor.timeline ? window.VideoEditor.timeline.duration : 0);
+      const timeline = this._getTimeline();
+      const durMs = (hasVideo && player.duration) ? player.duration * 1000 : (timeline && timeline.duration ? timeline.duration : 0);
       const clampedMs = Math.max(0, durMs > 0 ? Math.min(durMs, timeMs) : timeMs);
       const targetSec = clampedMs / 1000;
 
@@ -968,7 +978,8 @@
       if (!player) return;
       const curMs = (player.currentTime || 0) * 1000;
       const durMs = (player.duration || 0) * 1000;
-      const targetMs = Math.max(0, Math.min(durMs || Infinity, curMs + delta * 1000));
+      // No finite duration yet (no video, or metadata not loaded) — never pass Infinity to the media element
+      const targetMs = Math.max(0, durMs > 0 ? Math.min(durMs, curMs + delta * 1000) : Math.max(0, curMs + delta * 1000));
 
       if (window.VideoEditorHardware) {
         window.VideoEditorHardware.haptic(12);
@@ -1206,7 +1217,8 @@
       if (player && typeof player.duration === 'number' && !isNaN(player.duration) && player.duration > 0) {
         return player.duration * 1000;
       }
-      return (window.VideoEditor && window.VideoEditor.timeline ? window.VideoEditor.timeline.duration : 0) || 0;
+      const timeline = this._getTimeline();
+      return (timeline && timeline.duration) || 0;
     }
   }
 

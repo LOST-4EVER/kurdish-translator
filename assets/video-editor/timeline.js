@@ -1328,14 +1328,22 @@
           if (e.button !== 0) return;
           e.stopPropagation();
 
+          // Pills survive setCues() reconciliation, so the closed-over `cue` can be a
+          // stale object. Always resolve the live cue from this.cues on each gesture,
+          // otherwise drag deltas are written to (and read from) a detached cue.
+          const liveIdx = parseInt(pill.dataset.index, 10);
+          const liveCue = (this.cues && this.cues[liveIdx]) ? this.cues[liveIdx] : cue;
+
           const handleEl = e.target.closest('.vn-cue-handle');
           handleType = handleEl ? handleEl.dataset.handle : 'move';
           startX = e.clientX;
           startY = e.clientY;
-          origStart = cue.start;
-          origEnd = cue.end;
+          origStart = liveCue.start;
+          origEnd = liveCue.end;
           isDraggingPill = false;
           holdTriggered = false;
+          delete liveCue._tempStart;
+          delete liveCue._tempEnd;
 
           clearHoldTimer();
           // Start long-press hold timer (420ms) if not clicking a trim handle
@@ -1346,7 +1354,7 @@
               if (window.VideoEditorHardware && window.VideoEditorHardware.haptic) {
                 window.VideoEditorHardware.haptic(25);
               }
-              this._showCueHoldPopup(cue, idx, pill);
+              this._showCueHoldPopup(liveCue, liveIdx, pill);
             }, 420);
           }
 
@@ -1393,11 +1401,11 @@
             const SNAP_PX = 7;
             const snapThresholdMs = (SNAP_PX / Math.max(1, this.zoom)) * 1000;
             const snapTargets = [this.currentTime, 0];
-            if (idx > 0 && this.cues[idx - 1]) {
-              snapTargets.push(this.cues[idx - 1].end);
+            if (liveIdx > 0 && this.cues[liveIdx - 1]) {
+              snapTargets.push(this.cues[liveIdx - 1].end);
             }
-            if (idx < this.cues.length - 1 && this.cues[idx + 1]) {
-              snapTargets.push(this.cues[idx + 1].start);
+            if (liveIdx < this.cues.length - 1 && this.cues[liveIdx + 1]) {
+              snapTargets.push(this.cues[liveIdx + 1].start);
             }
 
             let snapped = false;
@@ -1467,8 +1475,8 @@
             pill.style.left = `${finalLeftPx}px`;
             pill.style.width = `${finalWidthPx}px`;
 
-            cue._tempStart = newStart;
-            cue._tempEnd = newEnd;
+            liveCue._tempStart = newStart;
+            liveCue._tempEnd = newEnd;
           };
 
           const onPointerUp = (upEvent) => {

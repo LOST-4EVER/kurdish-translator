@@ -15,13 +15,20 @@ Deployed to GitHub Pages from the `main` branch
   content in the center safe zone; don't overwrite it with the rounded version.
 - `sw.js`: precaches the app shell on install (list in `ASSETS`), cache-first
   for same-origin GETs, network-only for cross-origin (Google Translate).
-  **Version the cache** (`kurdish-translator-v151`) whenever you change any
+  Each asset is cached **individually** (not `cache.addAll`) so one 404 can't
+  leave the app with an empty cache and no offline support at all.
+  **Version the cache** (`kurdish-translator-v172`) whenever you change any
   cached asset, or users get stale files.
 - **HTTP 206 Bypass**: Service Worker must NEVER call `cache.put()` on HTTP 206
   (Partial Content) or requests with a `Range` header; doing so throws a
   `DOMException` and breaks video seeking.
 - `app.js` registers the service worker and shows an Install button via the
   `beforeinstallprompt` event.
+- **Studio markup is fetched at runtime**: `video-editor-ui.js` loads
+  `assets/video-editor/video-editor.html` (network → Cache API → retry). If all
+  three fail it renders a *reduced* fallback template that is missing most
+  controls, and shows a “reduced mode” toast. Keep `video-editor.html` in the
+  `ASSETS` precache list or the studio is unusable offline.
 
 ## Commands
 
@@ -91,9 +98,25 @@ Deployed to GitHub Pages from the `main` branch
   Heavy R (`ڕ`) and Velarized L (`ڵ`) stems, and dialogue naturalization (`naturalizeDialogue`).
 - **Memory & Object URLs**: Whenever assigning a new media file (`video.src = URL.createObjectURL(file)`),
   always call `URL.revokeObjectURL(oldUrl)` first to prevent massive browser memory leaks.
+- **Global naming**: the studio singleton is `window.VideoStudio` (NOT
+  `window.VideoEditor`). `VideoStudio.timeline` is the only timeline handle.
+  `VideoEditorBubble`'s markup was replaced by `VideoEditorQuickPanel`
+  (`vnQuick*` ids); the bubble manager is legacy and never renders.
+- **Cue identity beats cue index**: `VideoEditorState` re-sorts `cues` by
+  `start` on every change, so any code holding a cue across a mutation must
+  re-resolve it (`this.cues[i]`, `_resolveIndex()`) — never a captured index or
+  a captured cue object. Timeline cue pills survive `setCues()`
+  reconciliation, so pill handlers must re-read the live cue on every gesture.
+- **Web Audio lifetime**: once a `<video>` is routed through
+  `createMediaElementSource`, its audio only leaves via that graph. Never close
+  a shared `AudioContext` a media element is attached to, or playback goes
+  silent for the rest of the session (see `_cleanupAudioAndStreams`).
 - **Security & XSS**: User-controlled subtitle content rendered to the DOM must be sanitized
   with `escapeHtml()`. Subtitle styles (font family, colors) must be verified against
   `SAFE_FONT_RE` and `SAFE_COLOR_RE` before assigning to `style` properties or canvas contexts.
+  This applies to the studio too (`video-editor-overlay.js`, `video-editor-burner.js`),
+  not just `player.js` — cue `fontFamily` / `color` / `fontSize` come straight from
+  imported `.ass` / `.vtt` / `.srt` files.
 - **UI Icons**: Always use inline SVGs instead of emoji icons for actions, badges, and controls.
 - **Preview editor**: the preview tab has a live subtitle editor (`app.js`
   `buildEditor`). Each cue is an auto-growing textarea; typing updates the cue

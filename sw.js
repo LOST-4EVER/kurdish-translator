@@ -6,7 +6,7 @@
  * (Google's endpoint), so offline mode lets you load files and use the
  * preview player, but translating requires a connection.
  */
-const CACHE = 'kurdish-translator-v170';
+const CACHE = 'kurdish-translator-v172';
 const SHARED_CACHE = 'kurdish-shared-file';
 
 const ASSETS = [
@@ -22,6 +22,7 @@ const ASSETS = [
   './assets/css/fullscreen.css',
   './assets/css/toast.css',
   './assets/video-editor/video-editor.css',
+  './assets/video-editor/video-editor-mobile.css',
   './assets/video-editor/video-editor.html',
   './assets/video-editor/wasm-engine.js',
   './assets/video-editor/video-editor-ui.js',
@@ -52,6 +53,7 @@ const ASSETS = [
   './assets/js/app-decoder.js',
   './assets/js/app-editor.js',
   './assets/js/app.js',
+  './404.html',
   './assets/icons/icon.svg',
   './assets/icons/anime-logo.svg',
   './assets/icons/icon-192.png',
@@ -61,13 +63,17 @@ const ASSETS = [
 ];
 
 // Install: pre-cache the app shell.
+// Each asset is fetched independently: cache.addAll() is all-or-nothing, so a
+// single 404 used to leave the whole app with an empty cache and no offline
+// support at all, while still installing successfully.
 self.addEventListener('install', (event) => {
   event.waitUntil(
     caches.open(CACHE)
-      .then((cache) => cache.addAll(ASSETS))
-      .catch((err) => {
-        console.error('SW asset pre-cache failed:', err);
-      })
+      .then((cache) => Promise.all(ASSETS.map((asset) =>
+        cache.add(new Request(asset, { cache: 'reload' })).catch((err) => {
+          console.warn('SW pre-cache skipped asset:', asset, err && err.message);
+        })
+      )))
       .then(() => self.skipWaiting())
   );
 });
@@ -201,13 +207,25 @@ self.addEventListener('fetch', (event) => {
           .catch(() => {});
         return cached;
       }
-      return fetch(event.request).then((response) => {
-        if (response && response.ok && response.status === 200) {
-          const clone = response.clone();
-          caches.open(CACHE).then((cache) => cache.put(event.request, clone));
-        }
-        return response;
-      });
+      return fetch(event.request)
+        .then((response) => {
+          if (response && response.ok && response.status === 200) {
+            const clone = response.clone();
+            caches.open(CACHE).then((cache) => cache.put(event.request, clone));
+          }
+          return response;
+        })
+        .catch((err) => {
+          // Offline and uncached: fail with a real Response instead of an
+          // unhandled rejection, so the page can show its own offline UI.
+          if (event.request.destination === 'document') {
+            return caches.match('./index.html').then((shell) => shell || new Response(
+              '<!doctype html><meta charset="utf-8"><title>Offline</title><body style="font-family:system-ui;background:#0b0d12;color:#f1f3f9;display:grid;place-items:center;height:100vh;margin:0"><h1>You are offline</h1><p>Reconnect once to finish caching the app.</p>',
+              { status: 200, headers: { 'Content-Type': 'text/html; charset=utf-8' } }
+            ));
+          }
+          throw err;
+        });
     })
   );
 });

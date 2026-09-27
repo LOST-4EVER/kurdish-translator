@@ -8,6 +8,12 @@
 
   const isRtlText = (str) => (!str || !str.trim() || /[\u0600-\u06FF\u0750-\u077F\uFB50-\uFDFF\uFE70-\uFEFF]/.test(str));
   const hasArabic = isRtlText;
+  // Cue styling comes from imported subtitle files, so it must be whitelisted
+  // before it reaches a DOM style property or a canvas context (see player.js).
+  const SAFE_FONT_RE = /^[a-zA-Z0-9\s,._\-'"]+$/;
+  const SAFE_COLOR_RE = /^(#[0-9a-fA-F]{3,8}|rgba?\(\s*[\d.]+\s*,\s*[\d.]+\s*,\s*[\d.]+(?:\s*,\s*[\d.]+\s*)?\)|hsla?\([^)]*\)|[a-zA-Z]+)$/;
+  const safeFont = (font, fallback) => (font && SAFE_FONT_RE.test(font) ? font : fallback);
+  const safeColor = (color, fallback) => (color && SAFE_COLOR_RE.test(color) ? color : fallback);
   const stripTags = (str) => {
     if (!str) return '';
     return str
@@ -495,10 +501,12 @@
 
       // Cue-specific font and color
       if (textEl) {
-        textEl.style.fontFamily = cue.fontFamily || cfg.fontFamily || "'Noto Naskh Arabic', 'Vazirmatn', sans-serif";
-        textEl.style.color = cue.color || cfg.color || '#ffffff';
-        if (cue.fontSize) {
-          textEl.style.fontSize = `clamp(0.85rem, ${(cue.fontSize / 18) * 3.2}cqi, 4.5rem)`;
+        textEl.style.fontFamily = safeFont(cue.fontFamily, safeFont(cfg.fontFamily, "'Noto Naskh Arabic', 'Vazirmatn', sans-serif"));
+        textEl.style.color = safeColor(cue.color, safeColor(cfg.color, '#ffffff'));
+        const cueFontSize = Number(cue.fontSize);
+        if (Number.isFinite(cueFontSize) && cueFontSize > 0) {
+          const sizePct = Math.min(20, Math.max(4, (cueFontSize / 18) * 3.2));
+          textEl.style.fontSize = `clamp(0.85rem, ${sizePct.toFixed(2)}cqi, 4.5rem)`;
         } else {
           const baseRem = parseFloat(cfg.fontSize) || 1.25;
           textEl.style.fontSize = `clamp(0.85rem, ${baseRem * 3.2}cqi, 4.5rem)`;
@@ -622,13 +630,13 @@
         textEl.style.webkitTextStroke = '0px transparent';
       }
 
-      const baseRem = parseFloat(config.fontSize) || 1.25;
+      const baseRem = Math.min(4, Math.max(0.5, parseFloat(config.fontSize) || 1.25));
       textEl.style.fontSize = `clamp(0.85rem, ${baseRem * 3.2}cqi, 4.5rem)`;
       if (config.fontFamily) {
-        textEl.style.fontFamily = config.fontFamily;
+        textEl.style.fontFamily = safeFont(config.fontFamily, textEl.style.fontFamily);
       }
-      textEl.style.color = config.color || '#ffffff';
-      container.style.backgroundColor = config.bgColor || 'transparent';
+      textEl.style.color = safeColor(config.color, '#ffffff');
+      container.style.backgroundColor = safeColor(config.bgColor, 'transparent');
 
       if (origEl) {
         origEl.style.fontSize = `clamp(0.65rem, ${baseRem * 2.3}cqi, 3rem)`;

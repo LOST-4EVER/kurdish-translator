@@ -12,6 +12,7 @@
   class VideoEditorUIManager {
     constructor() {
       this.isMounted = false;
+      this.isDegraded = false;
       this.mountPromise = null;
       this.els = {};
     }
@@ -35,17 +36,17 @@
 
         // Check if already populated
         if (!container.querySelector('#studioTopBar')) {
-          try {
-            const resp = await fetch('assets/video-editor/video-editor.html');
-            if (resp.ok) {
-              const html = await resp.text();
-              this._injectHTML(html, container);
-            } else {
-              throw new Error(`HTTP ${resp.status}`);
-            }
-          } catch (err) {
-            console.warn('Could not fetch video-editor.html directly, using resilient fallback template:', err);
+          const html = await this._fetchStudioMarkup();
+          if (html) {
+            this._injectHTML(html, container);
+          } else {
+            // The full studio markup is unavailable (offline before the service
+            // worker finished precaching, or a blocked request). The reduced
+            // fallback template is missing most controls, so say so instead of
+            // rendering a silently broken editor.
+            console.warn('Video Studio markup unavailable; rendering minimal fallback.');
             this._injectHTML(this._getFallbackHTML(), container);
+            this.isDegraded = true;
           }
         }
 
@@ -55,6 +56,41 @@
       })();
 
       return this.mountPromise;
+    }
+
+    /**
+     * Loads video-editor.html from the network, falling back to the service
+     * worker cache (which precaches it) so the studio still opens offline.
+     */
+    async _fetchStudioMarkup() {
+      const url = 'assets/video-editor/video-editor.html';
+      const attempts = [
+        async () => {
+          const resp = await fetch(url, { cache: 'no-cache' });
+          if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+          return resp.text();
+        },
+        async () => {
+          if (typeof caches === 'undefined') return null;
+          const cached = await caches.match(url) || await caches.match(new URL(url, location.href).href);
+          return cached ? cached.text() : null;
+        },
+        async () => {
+          const resp = await fetch(url);
+          if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+          return resp.text();
+        },
+      ];
+
+      for (const attempt of attempts) {
+        try {
+          const html = await attempt();
+          if (html) return html;
+        } catch (err) {
+          console.warn('Studio markup attempt failed:', err && err.message);
+        }
+      }
+      return null;
     }
 
     _injectHTML(rawHtml, container) {
@@ -393,6 +429,19 @@
       if (typeof Toast !== 'undefined' && Toast.show) {
         Toast.show(msg, type, { subtext: sub });
       }
+    }
+
+    /**
+     * Warns once when the studio mounted with the reduced fallback markup.
+     */
+    warnIfDegraded() {
+      if (!this.isDegraded) return;
+      this.isDegraded = false;
+      this.showToast(
+        'Studio opened in reduced mode',
+        'warning',
+        'Some editor controls are unavailable. Reconnect once to finish caching, then reload.'
+      );
     }
 
     /**

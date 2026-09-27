@@ -827,13 +827,13 @@
                   e.stopPropagation();
                   if (window.VideoEditorState) {
                     window.VideoEditorState.setCues(cuesForTrack);
-                    if (window.VideoEditor && window.VideoEditor.timeline) {
-                      window.VideoEditor.timeline.setCues(cuesForTrack);
-                      if (!window.VideoEditor.timeline.duration) {
-                        const maxEnd = Math.max(...cuesForTrack.map((c) => c.end || 0));
+                    if (window.VideoStudio && window.VideoStudio.timeline) {
+                      window.VideoStudio.timeline.setCues(cuesForTrack);
+                      if (!window.VideoStudio.timeline.duration) {
+                        const maxEnd = cuesForTrack.reduce((m, c) => Math.max(m, (c && c.end) || 0), 0);
                         if (maxEnd > 0) {
-                          window.VideoEditor.timeline.setDuration(maxEnd + 3000);
-                          window.VideoEditor.timeline.zoomToFit();
+                          window.VideoStudio.timeline.setDuration(maxEnd + 3000);
+                          window.VideoStudio.timeline.zoomToFit();
                         }
                       }
                     }
@@ -860,13 +860,13 @@
             subsOnlyBtn.onclick = () => {
               if (hasCues && window.VideoEditorState) {
                 window.VideoEditorState.setCues(info.extractedCues);
-                if (window.VideoEditor && window.VideoEditor.timeline) {
-                  window.VideoEditor.timeline.setCues(info.extractedCues);
-                  if (!window.VideoEditor.timeline.duration) {
-                    const maxEnd = Math.max(...info.extractedCues.map((c) => c.end || 0));
+                if (window.VideoStudio && window.VideoStudio.timeline) {
+                  window.VideoStudio.timeline.setCues(info.extractedCues);
+                  if (!window.VideoStudio.timeline.duration) {
+                    const maxEnd = info.extractedCues.reduce((m, c) => Math.max(m, (c && c.end) || 0), 0);
                     if (maxEnd > 0) {
-                      window.VideoEditor.timeline.setDuration(maxEnd + 3000);
-                      window.VideoEditor.timeline.zoomToFit();
+                      window.VideoStudio.timeline.setDuration(maxEnd + 3000);
+                      window.VideoStudio.timeline.zoomToFit();
                     }
                   }
                 }
@@ -987,8 +987,8 @@
 
         if (settings.extractedCues && settings.extractedCues.length > 0 && window.VideoEditorState) {
           window.VideoEditorState.setCues(settings.extractedCues);
-          if (window.VideoEditor && window.VideoEditor.timeline) {
-            window.VideoEditor.timeline.setCues(settings.extractedCues);
+          if (window.VideoStudio && window.VideoStudio.timeline) {
+            window.VideoStudio.timeline.setCues(settings.extractedCues);
           }
           Toast.show(`Extracted & imported ${settings.extractedCues.length} embedded subtitle cues!`, 'success');
         }

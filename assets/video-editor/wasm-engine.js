@@ -177,15 +177,12 @@
       const len = pcmData.length;
       const linearGain = Math.pow(10, gainDb / 20);
 
-      // Soft-knee limiter curve
+      // Continuous soft-knee limiter. The previous curve switched formulas at
+      // |x| = 1.0 (1.0 -> 0.632 in one sample), which produced an audible click
+      // on every loud peak; tanh() is monotonic across the whole range.
       for (let i = 0; i < len; i++) {
-        let sample = pcmData[i] * linearGain;
-        if (sample > 1.0) {
-          sample = 1.0 - Math.exp(-sample);
-        } else if (sample < -1.0) {
-          sample = -1.0 + Math.exp(sample);
-        }
-        pcmData[i] = sample;
+        const sample = pcmData[i] * linearGain;
+        pcmData[i] = sample > 1.5 || sample < -1.5 ? Math.tanh(sample) : sample;
       }
     }
   }

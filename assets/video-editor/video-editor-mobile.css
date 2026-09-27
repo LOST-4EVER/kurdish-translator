@@ -1,0 +1,139 @@
+/* ============================================================
+   Kurdî Subtitle Translator — Video Studio Mobile Overrides
+   Loaded AFTER video-editor.css so these rules win the cascade.
+
+   Fixes covered here:
+   - iOS notch / Android status bar overlap (env(safe-area-inset-*))
+   - Bottom bar sitting under the home indicator
+   - 100vh layout overflow when the mobile browser chrome shows/hides
+   - iOS Safari auto-zooming the whole studio when a field is focused
+   - Comfortable one-handed tap targets in portrait
+   ============================================================ */
+
+/* ---------- Dynamic viewport + safe areas (all sizes) ---------- */
+body.studio-mode,
+html:has(body.studio-mode) {
+  height: 100dvh !important;
+  max-height: 100dvh !important;
+}
+
+.vn-studio-root {
+  height: 100dvh !important;
+  max-height: 100dvh !important;
+}
+
+.vn-header {
+  padding-top: env(safe-area-inset-top, 0px) !important;
+  padding-left: max(8px, env(safe-area-inset-left, 0px)) !important;
+  padding-right: max(8px, env(safe-area-inset-right, 0px)) !important;
+}
+
+.vn-bottom-bar {
+  padding-bottom: env(safe-area-inset-bottom, 0px) !important;
+  padding-left: max(6px, env(safe-area-inset-left, 0px)) !important;
+  padding-right: max(6px, env(safe-area-inset-right, 0px)) !important;
+}
+
+/* ---------- Tablet & phone ---------- */
+@media (max-width: 768px) {
+  /* Flex children must be allowed to shrink or the timeline pushes the
+     transport bar off-screen on short landscape phones. */
+  .vn-player-stage,
+  .vn-timeline-section,
+  .vn-transport-bar,
+  .vn-text-shower-strip {
+    min-height: 0;
+    flex-shrink: 1;
+  }
+
+  /* iOS Safari zooms the viewport when a focused input is under 16px,
+     which permanently magnifies the whole workstation. */
+  .vn-studio-root input,
+  .vn-studio-root select,
+  .vn-studio-root textarea {
+    font-size: max(16px, 1em);
+  }
+
+  /* Keep cue blocks grabbable without hijacking vertical page panning. */
+  .vn-timeline-viewport {
+    touch-action: pan-x;
+  }
+
+  .vn-cue-pill {
+    min-height: 22px;
+  }
+
+  /* Modals must scroll rather than clip on short screens. */
+  .vn-popover,
+  .vn-quick-panel,
+  .vn-modal,
+  .vn-cue-hold-popup {
+    max-height: calc(100dvh - 96px);
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+}
+
+@media (max-width: 640px) {
+  .vn-header {
+    height: calc(44px + env(safe-area-inset-top, 0px)) !important;
+    min-height: calc(44px + env(safe-area-inset-top, 0px)) !important;
+    max-height: calc(44px + env(safe-area-inset-top, 0px)) !important;
+  }
+
+  .vn-bottom-bar {
+    height: calc(52px + env(safe-area-inset-bottom, 0px)) !important;
+    min-height: calc(52px + env(safe-area-inset-bottom, 0px)) !important;
+    max-height: calc(52px + env(safe-area-inset-bottom, 0px)) !important;
+  }
+
+  /* Bigger transport targets for one-handed use. */
+  .vn-transport-btn,
+  .vn-icon-btn,
+  .vn-transport-icon-btn {
+    min-width: 40px;
+    min-height: 40px;
+  }
+
+  .vn-play-master-btn {
+    min-width: 48px;
+    min-height: 44px;
+  }
+
+  /* The sync pill and timecode must never wrap onto two lines. */
+  .vn-time-current,
+  .vn-sync-pill {
+    white-space: nowrap;
+  }
+}
+
+/* Short landscape phones: give the picture priority over chrome. */
+@media (max-height: 460px) and (orientation: landscape) {
+  .vn-header {
+    height: calc(36px + env(safe-area-inset-top, 0px)) !important;
+    min-height: calc(36px + env(safe-area-inset-top, 0px)) !important;
+    max-height: calc(36px + env(safe-area-inset-top, 0px)) !important;
+  }
+
+  .vn-bottom-bar {
+    height: calc(44px + env(safe-area-inset-bottom, 0px)) !important;
+    min-height: calc(44px + env(safe-area-inset-bottom, 0px)) !important;
+    max-height: calc(44px + env(safe-area-inset-bottom, 0px)) !important;
+  }
+
+  .vn-text-shower-strip {
+    padding-top: 3px;
+    padding-bottom: 3px;
+  }
+}
+
+/* ---------- Accessibility: honour reduced motion ---------- */
+@media (prefers-reduced-motion: reduce) {
+  .vn-studio-root *,
+  .vn-studio-root *::before,
+  .vn-studio-root *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+  }
+}
